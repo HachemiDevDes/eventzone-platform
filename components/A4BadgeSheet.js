@@ -16,12 +16,15 @@ import QRCode from "qrcode";
  */
 export default function A4BadgeSheet({
   templateUrl = "",
+  attendeeId = "",
   attendeeName = "Elena Rostova",
+  attendeeEmail = "",
   attendeePhoto = "",
   attendeeCompany = "InnovateTech Labs",
   attendeeJobTitle = "Delegate",
   ticketType = "VIP Access Pass",
   badgeCode = "EZ-8942-ELN",
+  eventId = "",
   eventTitle = "Global Tech Summit 2026",
   eventDate = "",
   eventLocation = "",
@@ -35,7 +38,7 @@ export default function A4BadgeSheet({
 }) {
   const [generatedQr, setGeneratedQr] = useState(qrCodeUrl || "");
 
-  // Generate QR if no URL provided
+  // Generate Unique Check-in QR if no URL provided
   useEffect(() => {
     if (qrCodeUrl) {
       setGeneratedQr(qrCodeUrl);
@@ -43,17 +46,22 @@ export default function A4BadgeSheet({
     }
     const generate = async () => {
       try {
-        const payload = JSON.stringify({
+        // Encode a structured check-in token that identifies the attendee for instant organizer check-in
+        const checkinPayload = JSON.stringify({
+          action: "checkin",
+          attendeeId: attendeeId || badgeCode || "",
           badgeCode: badgeCode || "EZ-PASS",
-          attendee: attendeeName,
-          tier: ticketType,
-          event: eventTitle,
-          verified: true
+          name: attendeeName || "",
+          email: attendeeEmail || "",
+          tier: ticketType || "",
+          eventId: eventId || "",
+          event: eventTitle || ""
         });
-        const url = await QRCode.toDataURL(payload, {
-          width: 240,
-          margin: 1,
-          color: { dark: "#0f172a", light: "#ffffff" }
+        const url = await QRCode.toDataURL(checkinPayload, {
+          width: 360,
+          margin: 0,
+          color: { dark: "#0f172a", light: "#00000000" },
+          errorCorrectionLevel: 'M'
         });
         setGeneratedQr(url);
       } catch (err) {
@@ -61,95 +69,73 @@ export default function A4BadgeSheet({
       }
     };
     generate();
-  }, [qrCodeUrl, badgeCode, attendeeName, ticketType, eventTitle]);
+  }, [qrCodeUrl, attendeeId, badgeCode, attendeeName, attendeeEmail, ticketType, eventId, eventTitle]);
 
-  // Card Background styling based on theme
+  // Card Background styling (Clean transparent floating directly on artwork)
   const getCardStyle = () => {
+    if (cardTheme === "white") {
+      return "bg-white/90 backdrop-blur-xs border border-slate-200/80 shadow-sm text-slate-900 rounded-xl p-3";
+    }
     if (cardTheme === "glass") {
-      return "bg-white/85 backdrop-blur-md border border-white/60 shadow-lg text-slate-900";
+      return "bg-white/80 backdrop-blur-md border border-white/60 shadow-md text-slate-900 rounded-xl p-3";
     }
-    if (cardTheme === "clean") {
-      return "bg-transparent border-2 border-slate-900/40 text-slate-900";
-    }
-    // Default solid white
-    return "bg-white border border-slate-200/90 shadow-md text-slate-900";
+    // Default: completely transparent / no white box
+    return "bg-transparent text-slate-900";
   };
 
-  // Render Single Attendee Badge Card
+  // Render Single Attendee Badge Card (Floating directly on template artwork)
   const renderBadgeCard = (keySuffix = "front") => {
-    const isVip = (ticketType || "").toLowerCase().includes("vip");
-    
     return (
       <div
         key={keySuffix}
-        className={`w-full max-w-[145px] sm:max-w-[170px] rounded-2xl p-3 sm:p-3.5 flex flex-col items-center justify-between text-center transition-all ${getCardStyle()}`}
-        style={{ minHeight: "185px" }}
+        className={`w-full max-w-[125px] sm:max-w-[140px] flex flex-col items-center justify-center text-center transition-all ${getCardStyle()}`}
+        style={{ 
+          fontFamily: "var(--font-plus-jakarta-sans), 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif" 
+        }}
       >
-        {/* Top Header / Tier Ribbon */}
-        <div className="w-full flex items-center justify-between gap-1 pb-1.5 border-b border-slate-100/80">
-          <span className={`px-2 py-0.5 rounded-full text-[7.5px] sm:text-[8.5px] font-extrabold uppercase tracking-wider truncate ${
-            isVip
-              ? "bg-amber-100 text-amber-900 border border-amber-300"
-              : "bg-blue-50 text-blue-700 border border-blue-200"
-          }`}>
-            {ticketType || "General Pass"}
-          </span>
-          <ShieldCheck size={11} className={isVip ? "text-amber-600" : "text-blue-600"} />
-        </div>
+        {/* 1. Badge Photo / Avatar Circle */}
+        {showPhoto && (
+          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 border-slate-900/15 shadow-sm bg-white flex items-center justify-center shrink-0 mb-2">
+            {attendeePhoto ? (
+              <img
+                src={attendeePhoto}
+                alt={attendeeName}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-blue-600 to-indigo-700 text-white font-black text-base sm:text-lg flex items-center justify-center">
+                {(attendeeName || "Attendee")
+                  .split(" ")
+                  .map((n) => n[0])
+                  .join("")
+                  .slice(0, 2)
+                  .toUpperCase()}
+              </div>
+            )}
+          </div>
+        )}
 
-        {/* Middle Attendee Info (Photo + Name + Org) */}
-        <div className="flex flex-col items-center my-auto py-1 w-full">
-          {showPhoto && (
-            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden border-2 border-slate-900/10 shadow-xs bg-slate-100 flex items-center justify-center shrink-0 mb-1.5">
-              {attendeePhoto ? (
-                <img
-                  src={attendeePhoto}
-                  alt={attendeeName}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-blue-600 to-indigo-700 text-white font-black text-sm sm:text-base flex items-center justify-center">
-                  {(attendeeName || "Attendee")
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")
-                    .slice(0, 2)
-                    .toUpperCase()}
-                </div>
-              )}
-            </div>
-          )}
-
-          <h3 className="text-xs sm:text-sm font-black text-slate-900 tracking-tight leading-tight line-clamp-1 w-full">
+        {/* 2. Attendee Credentials (Name + Company in Blue) */}
+        <div className="flex flex-col items-center justify-center w-full text-center">
+          <h3 className="text-xs sm:text-sm font-black text-slate-900 tracking-tight leading-tight line-clamp-2 w-full">
             {attendeeName || "Attendee Name"}
           </h3>
 
-          {attendeeJobTitle && (
-            <p className="text-[8px] sm:text-[9px] font-bold text-blue-600 uppercase tracking-wide line-clamp-1 mt-0.5">
-              {attendeeJobTitle}
+          {attendeeCompany && (
+            <p className="text-[8.5px] sm:text-[9.5px] font-bold text-blue-600 line-clamp-1 mt-1.5 sm:mt-2">
+              {attendeeCompany}
             </p>
           )}
-
-          <p className="text-[8px] sm:text-[9px] font-semibold text-slate-600 line-clamp-1 mt-0.5">
-            {attendeeCompany || eventTitle}
-          </p>
         </div>
 
-        {/* Bottom QR & Badge Code */}
+        {/* 3. Centered Clean QR Code (Moved down a bit) */}
         {showQr && (
-          <div className="w-full pt-1 border-t border-slate-100 flex items-center justify-between gap-1.5">
-            <div className="text-left flex flex-col leading-none">
-              <span className="text-[6.5px] uppercase font-extrabold text-slate-400">Badge ID</span>
-              <span className="text-[8px] sm:text-[9px] font-black font-mono text-slate-900 mt-0.5">
-                {badgeCode || "EZ-PASS"}
-              </span>
-            </div>
-
-            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-white p-0.5 rounded-lg border border-slate-200 shadow-2xs shrink-0 flex items-center justify-center">
+          <div className="w-full mt-3 sm:mt-3.5 flex items-center justify-center">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center shrink-0">
               {generatedQr ? (
                 <img src={generatedQr} alt="QR" className="w-full h-full object-contain" />
               ) : (
-                <QrIcon size={20} className="text-slate-700" />
+                <QrIcon size={22} className="text-slate-800" />
               )}
             </div>
           </div>
@@ -162,16 +148,17 @@ export default function A4BadgeSheet({
     <div
       id={isPrintTarget ? "printable-a4-sheet" : undefined}
       className={`relative w-full aspect-[210/297] bg-white text-slate-900 overflow-hidden shadow-2xl rounded-2xl border border-slate-300 font-sans select-none ${className}`}
-      style={{
-        backgroundImage: templateUrl ? `url(${templateUrl})` : "none",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundRepeat: "no-repeat"
-      }}
     >
-      {/* Fallback stylized background if no custom template uploaded */}
-      {!templateUrl && (
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-50 via-white to-slate-100 pointer-events-none opacity-90">
+      {/* Background Template Artwork Image */}
+      {templateUrl ? (
+        <img
+          src={templateUrl}
+          alt="A4 Badge Artwork"
+          className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0"
+        />
+      ) : (
+        /* Fallback stylized background if no custom template uploaded */
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-50 via-white to-slate-100 pointer-events-none opacity-90 z-0">
           <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-amber-500" />
         </div>
       )}
@@ -216,12 +203,6 @@ export default function A4BadgeSheet({
           
           {/* Horizontal Center Fold Line */}
           <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-0 border-b-2 border-dashed border-slate-400/50 pointer-events-none z-20" />
-          
-          {/* Center Fold Intersection Marker */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-2 py-0.5 rounded-full bg-slate-900/80 text-white text-[7px] font-bold uppercase tracking-wider backdrop-blur-xs flex items-center gap-1 z-30 pointer-events-none shadow-xs">
-            <Scissors size={8} />
-            <span>Fold Lines</span>
-          </div>
         </>
       )}
     </div>
@@ -231,14 +212,17 @@ export default function A4BadgeSheet({
 /**
  * Helper function to trigger high-precision A4 browser print / PDF export
  */
-export function printA4BadgeDocument({
+export async function printA4BadgeDocument({
   templateUrl = "",
+  attendeeId = "",
   attendeeName = "Attendee",
+  attendeeEmail = "",
   attendeePhoto = "",
   attendeeCompany = "",
   attendeeJobTitle = "",
   ticketType = "Standard Pass",
   badgeCode = "EZ-PASS",
+  eventId = "",
   eventTitle = "Event",
   qrCodeUrl = "",
   showFoldGuide = true,
@@ -248,57 +232,66 @@ export function printA4BadgeDocument({
 }) {
   if (typeof window === "undefined") return;
 
+  // Generate unique check-in QR code with transparent background if not provided
+  let resolvedQr = qrCodeUrl;
+  if (!resolvedQr && showQr) {
+    try {
+      const checkinPayload = JSON.stringify({
+        action: "checkin",
+        attendeeId: attendeeId || badgeCode || "",
+        badgeCode: badgeCode || "EZ-PASS",
+        name: attendeeName || "",
+        email: attendeeEmail || "",
+        tier: ticketType || "",
+        eventId: eventId || "",
+        event: eventTitle || ""
+      });
+      resolvedQr = await QRCode.toDataURL(checkinPayload, {
+        width: 360,
+        margin: 0,
+        color: { dark: "#0f172a", light: "#00000000" },
+        errorCorrectionLevel: 'M'
+      });
+    } catch (e) {
+      console.warn("QR code generation failed:", e);
+    }
+  }
+
   const isVip = (ticketType || "").toLowerCase().includes("vip");
-  const cardBgStyle = cardTheme === "glass" 
-    ? "background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.6); box-shadow: 0 4px 12px rgba(0,0,0,0.08);" 
-    : "background: #ffffff; border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.06);";
+  const cardBgStyle = cardTheme === "white"
+    ? "background: rgba(255, 255, 255, 0.92); border: 1px solid #e2e8f0; border-radius: 12px; padding: 4.5mm 3.5mm; box-shadow: 0 2px 6px rgba(0,0,0,0.05);"
+    : cardTheme === "glass" 
+    ? "background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.7); border-radius: 12px; padding: 4.5mm 3.5mm; box-shadow: 0 4px 12px rgba(0,0,0,0.06);" 
+    : "background: transparent; border: none; box-shadow: none; padding: 0;";
 
   const cardHtml = `
-    <div style="width: 78mm; min-height: 105mm; ${cardBgStyle} border-radius: 14px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between; align-items: center; text-align: center; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-      <!-- Card Header -->
-      <div style="width: 100%; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 6px;">
-        <span style="font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 3px 8px; border-radius: 12px; ${isVip ? 'background: #fef3c7; color: #78350f; border: 1px solid #fde68a;' : 'background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;'}">
-          ${ticketType || "General Pass"}
-        </span>
-        <span style="font-size: 8px; font-weight: 700; color: #64748b;">${eventTitle}</span>
-      </div>
+    <div style="${cardBgStyle} display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; box-sizing: border-box; font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+      <!-- 1. Photo / Avatar -->
+      ${showPhoto ? `
+        <div style="width: 68px; height: 68px; border-radius: 50%; overflow: hidden; border: 2px solid rgba(15, 23, 42, 0.15); margin-bottom: 5px; background: #ffffff; display: flex; align-items: center; justify-content: center;">
+          ${attendeePhoto 
+            ? `<img src="${attendeePhoto}" style="width: 100%; height: 100%; object-fit: cover;" />` 
+            : `<div style="width: 100%; height: 100%; background: #2563eb; color: #fff; font-weight: 900; font-size: 20px; display: flex; align-items: center; justify-content: center;">${(attendeeName || "A").slice(0, 2).toUpperCase()}</div>`
+          }
+        </div>
+      ` : ''}
 
-      <!-- Card Body -->
-      <div style="margin: auto 0; padding: 8px 0; display: flex; flex-direction: column; align-items: center;">
-        ${showPhoto ? `
-          <div style="width: 54px; height: 54px; border-radius: 50%; overflow: hidden; border: 2px solid ${isVip ? '#d97706' : '#2563eb'}; margin-bottom: 8px; background: #f8fafc; display: flex; align-items: center; justify-content: center;">
-            ${attendeePhoto 
-              ? `<img src="${attendeePhoto}" style="width: 100%; height: 100%; object-fit: cover;" />` 
-              : `<div style="width: 100%; height: 100%; background: #2563eb; color: #fff; font-weight: 900; font-size: 16px; display: flex; align-items: center; justify-content: center;">${(attendeeName || "A").slice(0, 2).toUpperCase()}</div>`
-            }
-          </div>
-        ` : ''}
-
-        <div style="font-size: 16px; font-weight: 900; color: #0f172a; line-height: 1.1; margin-bottom: 3px;">
+      <!-- 2. Name & Company (in Blue) -->
+      <div style="padding: 1px 0; display: flex; flex-direction: column; align-items: center; text-align: center; width: 100%;">
+        <div style="font-size: 14.5px; font-weight: 900; color: #0f172a; line-height: 1.15; margin-bottom: 2px;">
           ${attendeeName || "Attendee Name"}
         </div>
-        ${attendeeJobTitle ? `
-          <div style="font-size: 10px; font-weight: 800; color: #2563eb; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">
-            ${attendeeJobTitle}
+        ${attendeeCompany ? `
+          <div style="font-size: 10.5px; font-weight: 800; color: #2563eb; margin-top: 1.8mm;">
+            ${attendeeCompany}
           </div>
         ` : ''}
-        <div style="font-size: 11px; font-weight: 600; color: #475569;">
-          ${attendeeCompany || ""}
-        </div>
       </div>
 
-      <!-- Card Footer with QR -->
-      ${showQr ? `
-        <div style="width: 100%; border-top: 1px solid #f1f5f9; padding-top: 8px; display: flex; justify-content: space-between; align-items: center;">
-          <div style="text-align: left;">
-            <div style="font-size: 7.5px; font-weight: 800; color: #94a3b8; text-transform: uppercase;">Badge ID</div>
-            <div style="font-size: 11px; font-weight: 900; font-family: monospace; color: #0f172a;">${badgeCode || "EZ-PASS"}</div>
-          </div>
-          ${qrCodeUrl ? `
-            <div style="width: 44px; height: 44px; padding: 2px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;">
-              <img src="${qrCodeUrl}" style="width: 100%; height: 100%; object-fit: contain;" />
-            </div>
-          ` : ''}
+      <!-- 3. Centered Clean QR Code (Moved down a bit) -->
+      ${showQr && resolvedQr ? `
+        <div style="margin-top: 5mm; display: flex; align-items: center; justify-content: center;">
+          <img src="${resolvedQr}" style="width: 17mm; height: 17mm; object-fit: contain;" />
         </div>
       ` : ''}
     </div>
@@ -316,6 +309,9 @@ export function printA4BadgeDocument({
       <head>
         <title>A4 Badge Sheet - ${attendeeName}</title>
         <meta charset="utf-8" />
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
         <style>
           @page {
             size: A4 portrait;
@@ -332,13 +328,13 @@ export function printA4BadgeDocument({
             width: 210mm;
             height: 297mm;
             background: #ffffff;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
           }
           .a4-sheet {
             position: relative;
             width: 210mm;
             height: 297mm;
-            ${templateUrl ? `background-image: url('${templateUrl}'); background-size: cover; background-position: center; background-repeat: no-repeat;` : 'background: #ffffff;'}
+            background: #ffffff;
             overflow: hidden;
           }
           .quadrants-grid {
@@ -376,25 +372,12 @@ export function printA4BadgeDocument({
               border-bottom: 1px dashed rgba(100, 116, 139, 0.45);
               z-index: 20;
             }
-            .fold-center-label {
-              position: absolute;
-              top: 148.5mm;
-              left: 105mm;
-              transform: translate(-50%, -50%);
-              background: rgba(15, 23, 42, 0.85);
-              color: #ffffff;
-              font-size: 7px;
-              font-weight: 800;
-              text-transform: uppercase;
-              padding: 2px 6px;
-              border-radius: 10px;
-              z-index: 30;
-            }
           ` : ''}
         </style>
       </head>
       <body>
         <div class="a4-sheet">
+          ${templateUrl ? `<img src="${templateUrl}" style="position: absolute; top: 0; left: 0; width: 210mm; height: 297mm; object-fit: cover; z-index: 1;" />` : ''}
           <div class="quadrants-grid">
             <!-- Top Left Quadrant -->
             <div class="quadrant">
@@ -413,7 +396,6 @@ export function printA4BadgeDocument({
           ${showFoldGuide ? `
             <div class="fold-line-v"></div>
             <div class="fold-line-h"></div>
-            <div class="fold-center-label">✂ Fold Guide</div>
           ` : ''}
         </div>
 

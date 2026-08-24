@@ -564,10 +564,23 @@ export default function MyTicketsPage({
         const matchedEvent = events.find(e => e.id === selectedBadgePass.eventId) || {};
         const badgeTemplateUrl = selectedBadgePass.templateUrl || selectedBadgePass.badgeUrl || matchedEvent.badgeUrl || "";
         const badgeSettings = selectedBadgePass.badgeSettings || matchedEvent.badgeSettings || {};
-        const attendeeName = selectedBadgePass.attendeeName || currentUser?.fullName || "Conference Attendee";
-        const attendeePhoto = selectedBadgePass.photo || selectedBadgePass.avatar || currentUser?.avatar || currentUser?.avatar_url || "";
-        const attendeeCompany = selectedBadgePass.company || currentUser?.companyName || currentUser?.jobTitle || "Verified Delegate";
-        const attendeeJobTitle = selectedBadgePass.jobTitle || currentUser?.jobTitle || "";
+        const answers = selectedBadgePass.answers || selectedBadgePass.customAnswers || selectedBadgePass.formAnswers || {};
+        let attendeeCompany = selectedBadgePass.company || "";
+        let attendeeJobTitle = selectedBadgePass.jobTitle || selectedBadgePass.job_title || "";
+
+        if (typeof answers === "object") {
+          for (const [k, v] of Object.entries(answers)) {
+            if (!v || typeof v !== "string") continue;
+            const key = k.toLowerCase();
+            if (!attendeeCompany && (key.includes("company") || key.includes("organization") || key.includes("societe") || key.includes("entreprise"))) {
+              attendeeCompany = String(v).trim();
+            }
+            if (!attendeeJobTitle && (key.includes("job") || key.includes("title") || key.includes("function") || key.includes("profession") || key.includes("poste") || key.includes("role") || key.includes("fonction"))) {
+              attendeeJobTitle = String(v).trim();
+            }
+          }
+        }
+
         const ticketType = selectedBadgePass.ticketType || "General Admission";
         const badgeCode = selectedBadgePass.badgeCode || "EZ-PASS";
         const eventTitle = selectedBadgePass.eventTitle || "Conference Event";

@@ -13,6 +13,7 @@ import { uploadFileToBucket } from "../lib/db";
 import { useLanguage } from "../lib/i18n";
 import CustomDatePicker from "./CustomDatePicker";
 import CustomTimePicker from "./CustomTimePicker";
+import SearchableSelect from "./SearchableSelect";
 
 const PRESET_BANNERS = [
   {
@@ -688,20 +689,17 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
                 <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-2">
                   Timezone
                 </label>
-                <div className="relative">
-                  <Globe size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                  <select
-                    value={formData.timezone}
-                    onChange={(e) => handleChange("timezone", e.target.value)}
-                    className="w-full pl-11 pr-10 py-3.5 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-2xl text-xs font-semibold text-slate-800 outline-none transition-all cursor-pointer appearance-none"
-                  >
-                    {TIMEZONES.map(tz => (
-                      <option key={tz.id} value={tz.id}>
-                        {tz.name} ({tz.offset}) — {tz.time}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <SearchableSelect
+                  value={formData.timezone}
+                  onChange={(val) => handleChange("timezone", val)}
+                  options={TIMEZONES.map(tz => ({
+                    value: tz.id,
+                    label: `${tz.name} (${tz.offset}) — ${tz.time}`,
+                    badge: tz.offset
+                  }))}
+                  placeholder="Select timezone..."
+                  searchPlaceholder="Search timezone by city, country or offset..."
+                />
               </div>
 
               {/* Action Button */}
@@ -823,15 +821,13 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
                 <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-2">
                   Industry / Category
                 </label>
-                <select
+                <SearchableSelect
                   value={formData.category}
-                  onChange={(e) => handleChange("category", e.target.value)}
-                  className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-2xl text-xs font-semibold text-slate-900 outline-none transition-all cursor-pointer"
-                >
-                  {INDUSTRIES.map(ind => (
-                    <option key={ind} value={ind}>{ind}</option>
-                  ))}
-                </select>
+                  onChange={(val) => handleChange("category", val)}
+                  options={INDUSTRIES}
+                  placeholder="Select industry / category..."
+                  searchPlaceholder="Type to search industry (e.g. AI, Healthcare, Energy)..."
+                />
               </div>
 
               <div>

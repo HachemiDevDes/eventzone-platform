@@ -25,6 +25,7 @@ import {
   Sparkle
 } from "lucide-react";
 import A4BadgeSheet from "./A4BadgeSheet";
+import SearchableSelect from "./SearchableSelect";
 
 // Standard preset tier name chips
 const TIER_NAME_SUGGESTIONS = [
@@ -196,24 +197,56 @@ export default function TicketDrawer({
     setFeatures(features.filter((_, i) => i !== index));
   };
 
-  // Artwork Upload Handler
+  // Artwork Upload Handler (PNG and JPEG only)
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Restrict strictly to PNG and JPEG
+    const validTypes = ["image/png", "image/jpeg", "image/jpg"];
+    const fileName = (file.name || "").toLowerCase();
+    const isValidExt = fileName.endsWith(".png") || fileName.endsWith(".jpg") || fileName.endsWith(".jpeg");
+
+    if (!validTypes.includes(file.type) && !isValidExt) {
+      alert("Please upload a PNG or JPEG image only (.png, .jpg, .jpeg).");
+      if (e.target) e.target.value = "";
+      return;
+    }
+
     try {
       setIsUploading(true);
-      if (onUploadFile) {
-        const publicUrl = await onUploadFile(file, "floor-plans", activeEventId);
-        if (publicUrl) {
-          setBadgeUrl(publicUrl);
-        }
-      } else {
+
+      // 1. Immediately read file as Base64 Data URL so local preview is 100% reliable & never broken
+      const localDataUrl = await new Promise((resolve) => {
         const reader = new FileReader();
-        reader.onload = (event) => {
-          setBadgeUrl(event.target.result);
-        };
+        reader.onload = (event) => resolve(event.target?.result || "");
+        reader.onerror = () => resolve("");
         reader.readAsDataURL(file);
+      });
+
+      if (localDataUrl) {
+        setBadgeUrl(localDataUrl);
+      }
+
+      // 2. Also try uploading to Supabase Storage if helper provided
+      if (onUploadFile) {
+        try {
+          const publicUrl = await onUploadFile(file, "floor-plans", activeEventId);
+          if (publicUrl) {
+            // Verify if publicUrl is reachable, if so store publicUrl, else keep localDataUrl
+            const testImg = new Image();
+            testImg.onload = () => {
+              setBadgeUrl(publicUrl);
+            };
+            testImg.onerror = () => {
+              console.warn("Uploaded storage URL not directly accessible via CORS/public URL, keeping high-res Base64 template:", publicUrl);
+              if (localDataUrl) setBadgeUrl(localDataUrl);
+            };
+            testImg.src = publicUrl;
+          }
+        } catch (uploadErr) {
+          console.warn("Storage upload failed, keeping base64 Data URL:", uploadErr);
+        }
       }
     } catch (err) {
       console.error("Failed to upload badge template:", err);
@@ -999,23 +1032,34 @@ export default function TicketDrawer({
                     type="file"
                     ref={fileInputRef}
                     onChange={handleFileUpload}
-                    accept="image/png,image/jpeg,image/webp,application/pdf"
+                    accept="image/png,image/jpeg,image/jpg"
                     className="hidden"
                   />
 
                   {badgeUrl ? (
-                    <div className="rounded-xl border border-slate-200 bg-white p-3 flex items-center gap-3.5">
-                      <img
-                        src={badgeUrl}
-                        alt="Badge artwork preview"
-                        className="w-14 h-18 object-cover rounded-lg border border-slate-200"
-                      />
+                    <div className="rounded-xl border border-slate-200 bg-white p-3 flex items-center gap-3.5 shadow-xs">
+                      <div className="w-14 h-20 rounded-lg border border-slate-200 overflow-hidden bg-slate-100 shrink-0 flex items-center justify-center relative">
+                        <img
+                          src={badgeUrl}
+                          alt="Badge artwork"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            console.warn("Artwork preview error");
+                          }}
+                        />
+                      </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-xs font-bold text-slate-900">Custom Template Active</div>
+                        <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                          <span>Custom A4 Template Active</span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          Full-page background applied to badge sheet
+                        </p>
                         <button
                           type="button"
                           onClick={() => fileInputRef.current?.click()}
-                          className="mt-1 text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
+                          className="mt-1.5 text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
                         >
                           <Upload size={12} /> Replace Template
                         </button>
@@ -1035,7 +1079,7 @@ export default function TicketDrawer({
                         <div className="flex items-center gap-2 text-xs">
                           <Upload size={16} className="text-blue-600" />
                           <span className="font-bold text-blue-600">Upload A4 background template</span>
-                          <span className="text-slate-400 font-medium">(PNG, JPG, or PDF)</span>
+                          <span className="text-slate-400 font-medium">(PNG or JPEG only)</span>
                         </div>
                       )}
                     </div>
@@ -1044,52 +1088,57 @@ export default function TicketDrawer({
                   {/* Badge Controls Grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-slate-200">
                     <div className="flex flex-col gap-1">
-                      <label className="text-[11px] font-bold text-slate-600 uppercase">Card Theme</label>
-                      <select
+                      <label className="text-[11px] font-bold text-slate-600 uppercase">Card Style</label>
+                      <SearchableSelect
                         value={badgeSettings.cardTheme || "white"}
-                        onChange={(e) => setBadgeSettings({ ...badgeSettings, cardTheme: e.target.value })}
-                        className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none"
-                      >
-                        <option value="white">Solid White Card</option>
-                        <option value="glass">Translucent Glass Card</option>
-                        <option value="clean">Minimal Border Outline</option>
-                      </select>
+                        onChange={(val) => setBadgeSettings({ ...badgeSettings, cardTheme: val })}
+                        options={[
+                          { value: "white", label: "Compact White Card" },
+                          { value: "glass", label: "Translucent Glass Card" },
+                          { value: "floating", label: "Borderless / Direct on Artwork" },
+                          { value: "clean", label: "Minimal Border Outline" }
+                        ]}
+                        placeholder="Select card style..."
+                      />
                     </div>
 
                     <div className="flex flex-col gap-1">
                       <label className="text-[11px] font-bold text-slate-600 uppercase">Fold Guidelines</label>
-                      <select
+                      <SearchableSelect
                         value={badgeSettings.showFoldGuide !== false ? "true" : "false"}
-                        onChange={(e) => setBadgeSettings({ ...badgeSettings, showFoldGuide: e.target.value === "true" })}
-                        className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none"
-                      >
-                        <option value="true">Show Center Fold Crosshairs</option>
-                        <option value="false">Hide Fold Guidelines</option>
-                      </select>
+                        onChange={(val) => setBadgeSettings({ ...badgeSettings, showFoldGuide: val === "true" })}
+                        options={[
+                          { value: "true", label: "Show Center Fold Crosshairs" },
+                          { value: "false", label: "Hide Fold Guidelines" }
+                        ]}
+                        placeholder="Fold guidelines..."
+                      />
                     </div>
 
                     <div className="flex flex-col gap-1">
                       <label className="text-[11px] font-bold text-slate-600 uppercase">Attendee Photo</label>
-                      <select
+                      <SearchableSelect
                         value={badgeSettings.showPhoto !== false ? "true" : "false"}
-                        onChange={(e) => setBadgeSettings({ ...badgeSettings, showPhoto: e.target.value === "true" })}
-                        className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none"
-                      >
-                        <option value="true">Show Avatar / Photo Circle</option>
-                        <option value="false">Text &amp; QR Only</option>
-                      </select>
+                        onChange={(val) => setBadgeSettings({ ...badgeSettings, showPhoto: val === "true" })}
+                        options={[
+                          { value: "true", label: "Show Avatar / Photo Circle" },
+                          { value: "false", label: "Text & QR Only" }
+                        ]}
+                        placeholder="Attendee photo..."
+                      />
                     </div>
 
                     <div className="flex flex-col gap-1">
                       <label className="text-[11px] font-bold text-slate-600 uppercase">QR Code Pass</label>
-                      <select
+                      <SearchableSelect
                         value={badgeSettings.showQr !== false ? "true" : "false"}
-                        onChange={(e) => setBadgeSettings({ ...badgeSettings, showQr: e.target.value === "true" })}
-                        className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none"
-                      >
-                        <option value="true">Include Door Check-in QR</option>
-                        <option value="false">Badge ID Only</option>
-                      </select>
+                        onChange={(val) => setBadgeSettings({ ...badgeSettings, showQr: val === "true" })}
+                        options={[
+                          { value: "true", label: "Include Door Check-in QR" },
+                          { value: "false", label: "Badge ID Only" }
+                        ]}
+                        placeholder="QR code pass..."
+                      />
                     </div>
                   </div>
                 </div>

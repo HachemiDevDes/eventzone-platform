@@ -7,3 +7,8 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+# UI Component Guidelines: Form Dropdowns
+
+- **Searchable Selects**: Whenever rendering a dropdown selector with multiple choices (such as industries/categories, countries, wilayas/cities, partner organizations, tiers, or custom form question dropdowns), ALWAYS use `<SearchableSelect>` from `components/SearchableSelect.js` instead of native `<select>` elements.
+- **Search Behavior**: Dropdowns with more than 4 items must automatically provide a sticky search bar with real-time filtering, keyboard navigation support (Enter, Space, Up/Down arrows), clear selection button (`X`), and focus ring styling.

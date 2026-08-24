@@ -15,6 +15,7 @@ import { useLanguage } from "../lib/i18n";
 import PublicRSVPModal from "./PublicRSVPModal";
 import CountryPhoneInput from "./CountryPhoneInput";
 import { CountrySelect, CitySelect } from "./LocationInputs";
+import SearchableSelect from "./SearchableSelect";
 import FormImageUploader from "./FormImageUploader";
 import FormFileUploader from "./FormFileUploader";
 import { getFormSections } from "../lib/formPresets";
@@ -53,6 +54,99 @@ export default function EventPublicLandingPage({
 
   // Custom Form Registration State
   const [customAnswers, setCustomAnswers] = useState({});
+  const [customOtherTexts, setCustomOtherTexts] = useState({});
+
+  const isOtherOption = (opt) => {
+    if (!opt || typeof opt !== "string") return false;
+    const clean = opt.trim().toLowerCase();
+    return clean === "other" || clean.startsWith("other") || clean === "autre" || clean.startsWith("autre");
+  };
+
+  const isOtherValue = (val) => {
+    if (!val || typeof val !== "string") return false;
+    const clean = val.trim().toLowerCase();
+    return clean === "other" || clean.startsWith("other:") || clean.startsWith("other (") || clean === "autre" || clean.startsWith("autre:") || clean.startsWith("autre (");
+  };
+
+  const getOtherTextForField = (fieldId, val) => {
+    if (customOtherTexts[fieldId] !== undefined) return customOtherTexts[fieldId];
+    if (typeof val === "string") {
+      if (val.toLowerCase().startsWith("other:")) return val.slice(6).trim();
+      if (val.toLowerCase().startsWith("autre:")) return val.slice(6).trim();
+    }
+    return "";
+  };
+
+  const handleSelectChoice = (fieldId, selectedOpt) => {
+    if (isOtherOption(selectedOpt)) {
+      const existingText = customOtherTexts[fieldId] || "";
+      const fullVal = existingText.trim() ? `Other: ${existingText.trim()}` : "Other";
+      setCustomAnswers(prev => ({ ...prev, [fieldId]: fullVal }));
+    } else {
+      setCustomAnswers(prev => ({ ...prev, [fieldId]: selectedOpt }));
+    }
+    if (checkoutSectionErrors[fieldId]) {
+      setCheckoutSectionErrors(prev => ({ ...prev, [fieldId]: undefined }));
+    }
+  };
+
+  const handleRadioChoice = (fieldId, selectedOpt) => {
+    if (isOtherOption(selectedOpt)) {
+      const existingText = customOtherTexts[fieldId] || "";
+      const fullVal = existingText.trim() ? `Other: ${existingText.trim()}` : "Other";
+      setCustomAnswers(prev => ({ ...prev, [fieldId]: fullVal }));
+    } else {
+      setCustomAnswers(prev => ({ ...prev, [fieldId]: selectedOpt }));
+    }
+    if (checkoutSectionErrors[fieldId]) {
+      setCheckoutSectionErrors(prev => ({ ...prev, [fieldId]: undefined }));
+    }
+  };
+
+  const handleOtherTextChange = (fieldId, text) => {
+    setCustomOtherTexts(prev => ({ ...prev, [fieldId]: text }));
+    const fullVal = text.trim() ? `Other: ${text.trim()}` : "Other";
+    setCustomAnswers(prev => ({ ...prev, [fieldId]: fullVal }));
+    if (checkoutSectionErrors[fieldId]) {
+      setCheckoutSectionErrors(prev => ({ ...prev, [fieldId]: undefined }));
+    }
+  };
+
+  const handleCheckboxChoice = (fieldId, opt, isChecked) => {
+    const currentList = Array.isArray(customAnswers[fieldId]) ? customAnswers[fieldId] : [];
+    let updated;
+    if (isChecked) {
+      if (isOtherOption(opt)) {
+        const existingText = customOtherTexts[`${fieldId}__other`] || "";
+        const fullVal = existingText.trim() ? `Other: ${existingText.trim()}` : opt;
+        const withoutOther = currentList.filter(x => !isOtherValue(x));
+        updated = [...withoutOther, fullVal];
+      } else {
+        updated = [...currentList, opt];
+      }
+    } else {
+      if (isOtherOption(opt)) {
+        updated = currentList.filter(x => !isOtherValue(x));
+      } else {
+        updated = currentList.filter(x => x !== opt);
+      }
+    }
+    setCustomAnswers(prev => ({ ...prev, [fieldId]: updated }));
+    if (checkoutSectionErrors[fieldId]) {
+      setCheckoutSectionErrors(prev => ({ ...prev, [fieldId]: undefined }));
+    }
+  };
+
+  const handleCheckboxOtherTextChange = (fieldId, opt, text) => {
+    setCustomOtherTexts(prev => ({ ...prev, [`${fieldId}__other`]: text }));
+    const currentList = Array.isArray(customAnswers[fieldId]) ? customAnswers[fieldId] : [];
+    const withoutOther = currentList.filter(x => !isOtherValue(x));
+    const fullVal = text.trim() ? `Other: ${text.trim()}` : (opt || "Other");
+    setCustomAnswers(prev => ({ ...prev, [fieldId]: [...withoutOther, fullVal] }));
+    if (checkoutSectionErrors[fieldId]) {
+      setCheckoutSectionErrors(prev => ({ ...prev, [fieldId]: undefined }));
+    }
+  };
 
   // Feedback Survey Modal State
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -66,8 +160,8 @@ export default function EventPublicLandingPage({
   const [tierDropdownOpen, setTierDropdownOpen] = useState(false);
   const [rsvpName, setRsvpName] = useState(currentUser?.fullName || "");
   const [rsvpEmail, setRsvpEmail] = useState(currentUser?.email || "");
-  const [rsvpCompany, setRsvpCompany] = useState(currentUser?.organization || currentUser?.company || "");
-  const [rsvpJobTitle, setRsvpJobTitle] = useState(currentUser?.jobTitle || "");
+  const [rsvpCompany, setRsvpCompany] = useState("");
+  const [rsvpJobTitle, setRsvpJobTitle] = useState("");
   const [rsvpPhone, setRsvpPhone] = useState("");
   const [rsvpLoading, setRsvpLoading] = useState(false);
   const [rsvpSuccess, setRsvpSuccess] = useState(null);
@@ -402,6 +496,40 @@ export default function EventPublicLandingPage({
     return found ? found[1] : null;
   }, [customAnswers, activeTicketForm]);
 
+  // Extract Company strictly from ticket form inputs (custom ticket form fields or rsvpCompany)
+  const resolvedCompany = React.useMemo(() => {
+    if (customAnswers && typeof customAnswers === "object") {
+      const companyEntry = Object.entries(customAnswers).find(([k, v]) => {
+        if (!v || typeof v !== "string") return false;
+        const field = activeTicketForm?.fields?.find(f => f.id === k);
+        const label = field?.label?.toLowerCase() || k.toLowerCase();
+        return label.includes("company") || label.includes("organization") || label.includes("societe") || label.includes("entreprise");
+      });
+      if (companyEntry && companyEntry[1]) {
+        return String(companyEntry[1]).replace(/^(Other|Autre):\s*/i, "").trim();
+      }
+    }
+    if (rsvpCompany && rsvpCompany.trim()) return rsvpCompany.replace(/^(Other|Autre):\s*/i, "").trim();
+    return "";
+  }, [rsvpCompany, customAnswers, activeTicketForm]);
+
+  // Extract Function / Job Title strictly from ticket form inputs (custom ticket form fields or rsvpJobTitle)
+  const resolvedJobTitle = React.useMemo(() => {
+    if (customAnswers && typeof customAnswers === "object") {
+      const jobEntry = Object.entries(customAnswers).find(([k, v]) => {
+        if (!v || typeof v !== "string") return false;
+        const field = activeTicketForm?.fields?.find(f => f.id === k);
+        const label = field?.label?.toLowerCase() || k.toLowerCase();
+        return label.includes("job") || label.includes("function") || label.includes("role") || label.includes("title") || label.includes("profession") || label.includes("poste") || label.includes("fonction");
+      });
+      if (jobEntry && jobEntry[1]) {
+        return String(jobEntry[1]).replace(/^(Other|Autre):\s*/i, "").trim();
+      }
+    }
+    if (rsvpJobTitle && rsvpJobTitle.trim()) return rsvpJobTitle.replace(/^(Other|Autre):\s*/i, "").trim();
+    return "";
+  }, [rsvpJobTitle, customAnswers, activeTicketForm]);
+
   // Lock body scroll when registration is open to eliminate background double-scroll
   useEffect(() => {
     if (typeof document !== "undefined") {
@@ -577,8 +705,8 @@ export default function EventPublicLandingPage({
         const pass = await onRegisterForEvent(eventId || eventDetails?.id, {
           name: rsvpName || currentUser?.fullName || "Attendee",
           email: rsvpEmail || currentUser?.email || "visitor@eventzone.io",
-          company: rsvpCompany || currentUser?.organization || "",
-          jobTitle: rsvpJobTitle || currentUser?.jobTitle || "",
+          company: resolvedCompany || "",
+          jobTitle: resolvedJobTitle || "",
           phone: rsvpPhone || "",
           avatar: badgePhotoUrl || currentUser?.avatar || "",
           photo: badgePhotoUrl || "",
@@ -604,8 +732,8 @@ export default function EventPublicLandingPage({
             eventId: pass.eventId || eventId,
             eventTitle: title,
             attendeeName: rsvpName || "Attendee",
-            company: rsvpCompany || "",
-            jobTitle: rsvpJobTitle || "",
+            company: resolvedCompany || "",
+            jobTitle: resolvedJobTitle || "",
             ticketType: selectedTier,
           });
           const url = await QRCode.toDataURL(qrData, { 
@@ -1804,8 +1932,8 @@ export default function EventPublicLandingPage({
                                   templateUrl: selectedTierObj?.badgeUrl || eventDetails?.badgeUrl || "",
                                   attendeeName: rsvpName || currentUser?.fullName || "Attendee",
                                   attendeePhoto: badgePhotoUrl || currentUser?.avatar || "",
-                                  attendeeCompany: rsvpCompany || organization || "",
-                                  attendeeJobTitle: rsvpJobTitle || "",
+                                  attendeeCompany: resolvedCompany || organization || "",
+                                  attendeeJobTitle: resolvedJobTitle || "",
                                   ticketType: selectedTier || "General Pass",
                                   badgeCode: rsvpSuccess?.badgeCode || "EZ-PASS",
                                   eventTitle: title || "Conference Event",
@@ -2179,74 +2307,115 @@ export default function EventPublicLandingPage({
                                       )}
 
                                       {field.type === "select" && (
-                                        <select
-                                          required={field.required}
-                                          value={customAnswers[field.id] || ""}
-                                          onChange={(e) => {
-                                            setCustomAnswers(prev => ({ ...prev, [field.id]: e.target.value }));
-                                            if (checkoutSectionErrors[field.id]) {
-                                              setCheckoutSectionErrors(prev => ({ ...prev, [field.id]: undefined }));
-                                            }
-                                          }}
-                                          className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-600 rounded-xl text-xs font-semibold text-slate-900 outline-none cursor-pointer"
-                                        >
-                                          <option value="">Select option...</option>
-                                          {(field.options || []).map((opt, i) => (
-                                            <option key={i} value={opt}>{opt}</option>
-                                          ))}
-                                        </select>
-                                      )}
-
-                                      {field.type === "radio" && (
-                                        <div className="flex flex-col gap-1.5 mt-1">
-                                          {(field.options || []).map((opt, i) => (
-                                            <label key={i} className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+                                        <div className="flex flex-col gap-2">
+                                          <SearchableSelect
+                                            required={field.required}
+                                            value={isOtherValue(customAnswers[field.id]) ? ((field.options || []).find(o => isOtherOption(o)) || "Other") : (customAnswers[field.id] || "")}
+                                            onChange={(val) => {
+                                              handleSelectChoice(field.id, val);
+                                              if (checkoutSectionErrors[field.id]) {
+                                                setCheckoutSectionErrors(prev => ({ ...prev, [field.id]: undefined }));
+                                              }
+                                            }}
+                                            options={field.options || []}
+                                            placeholder="Select option..."
+                                            searchPlaceholder="Search choices..."
+                                          />
+                                          {isOtherValue(customAnswers[field.id]) && (
+                                            <div className="animate-fade-in flex items-center gap-2 p-2 bg-blue-50/50 border border-blue-200 rounded-xl">
                                               <input
-                                                type="radio"
-                                                name={field.id}
+                                                type="text"
                                                 required={field.required}
-                                                checked={customAnswers[field.id] === opt}
-                                                onChange={() => {
-                                                  setCustomAnswers(prev => ({ ...prev, [field.id]: opt }));
-                                                  if (checkoutSectionErrors[field.id]) {
-                                                    setCheckoutSectionErrors(prev => ({ ...prev, [field.id]: undefined }));
-                                                  }
-                                                }}
-                                                className="text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                                                value={getOtherTextForField(field.id, customAnswers[field.id])}
+                                                onChange={(e) => handleOtherTextChange(field.id, e.target.value)}
+                                                placeholder="Please specify / Type what's other..."
+                                                className="w-full px-3 py-2 bg-white border border-blue-300 focus:border-blue-600 rounded-lg text-xs font-semibold text-slate-900 outline-none shadow-2xs placeholder:text-slate-400"
+                                                autoFocus
                                               />
-                                              <span>{opt}</span>
-                                            </label>
-                                          ))}
+                                            </div>
+                                          )}
                                         </div>
                                       )}
 
-                                      {field.type === "checkbox" && (
-                                        <div className="flex flex-col gap-1.5 mt-1">
-                                          {(field.options || []).map((opt, i) => {
-                                            const currentList = Array.isArray(customAnswers[field.id]) ? customAnswers[field.id] : [];
-                                            const isChecked = currentList.includes(opt);
-                                            return (
-                                              <label key={i} className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
-                                                <input
-                                                  type="checkbox"
-                                                  checked={isChecked}
-                                                  onChange={(e) => {
-                                                    const updated = e.target.checked
-                                                      ? [...currentList, opt]
-                                                      : currentList.filter(x => x !== opt);
-                                                    setCustomAnswers(prev => ({ ...prev, [field.id]: updated }));
-                                                    if (checkoutSectionErrors[field.id]) {
-                                                      setCheckoutSectionErrors(prev => ({ ...prev, [field.id]: undefined }));
-                                                    }
-                                                  }}
-                                                  className="text-blue-600 focus:ring-blue-500 rounded h-3.5 w-3.5"
-                                                />
-                                                <span>{opt}</span>
-                                              </label>
-                                            );
-                                          })}
-                                        </div>
-                                      )}
+                                       {field.type === "radio" && (
+                                         <div className="flex flex-col gap-2 mt-1">
+                                           {(field.options || []).map((opt, i) => {
+                                             const isOtherOpt = isOtherOption(opt);
+                                             const isChecked = isOtherOpt
+                                               ? isOtherValue(customAnswers[field.id])
+                                               : customAnswers[field.id] === opt;
+
+                                             return (
+                                               <div key={i} className="flex flex-col gap-1.5">
+                                                 <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+                                                   <input
+                                                     type="radio"
+                                                     name={field.id}
+                                                     required={field.required && !customAnswers[field.id]}
+                                                     checked={isChecked}
+                                                     onChange={() => handleRadioChoice(field.id, opt)}
+                                                     className="text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                                                   />
+                                                   <span>{opt}</span>
+                                                 </label>
+                                                 {isOtherOpt && isChecked && (
+                                                   <div className="ml-5 animate-fade-in">
+                                                     <input
+                                                       type="text"
+                                                       required={field.required}
+                                                       value={getOtherTextForField(field.id, customAnswers[field.id])}
+                                                       onChange={(e) => handleOtherTextChange(field.id, e.target.value)}
+                                                       placeholder="Please specify / Type what's other..."
+                                                       className="w-full px-3 py-1.5 bg-white border border-blue-300 focus:border-blue-600 rounded-lg text-xs font-semibold text-slate-900 outline-none shadow-2xs placeholder:text-slate-400"
+                                                       autoFocus
+                                                     />
+                                                   </div>
+                                                 )}
+                                               </div>
+                                             );
+                                           })}
+                                         </div>
+                                       )}
+
+                                       {field.type === "checkbox" && (
+                                         <div className="flex flex-col gap-2 mt-1">
+                                           {(field.options || []).map((opt, i) => {
+                                             const currentList = Array.isArray(customAnswers[field.id]) ? customAnswers[field.id] : [];
+                                             const isOtherOpt = isOtherOption(opt);
+                                             const isChecked = isOtherOpt
+                                               ? currentList.some(x => isOtherValue(x))
+                                               : currentList.includes(opt);
+
+                                             const otherItem = isOtherOpt ? currentList.find(x => isOtherValue(x)) : null;
+
+                                             return (
+                                               <div key={i} className="flex flex-col gap-1.5">
+                                                 <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+                                                   <input
+                                                     type="checkbox"
+                                                     checked={isChecked}
+                                                     onChange={(e) => handleCheckboxChoice(field.id, opt, e.target.checked)}
+                                                     className="text-blue-600 focus:ring-blue-500 rounded h-3.5 w-3.5"
+                                                   />
+                                                   <span>{opt}</span>
+                                                 </label>
+                                                 {isOtherOpt && isChecked && (
+                                                   <div className="ml-5 animate-fade-in">
+                                                     <input
+                                                       type="text"
+                                                       value={customOtherTexts[`${field.id}__other`] || (otherItem && isOtherValue(otherItem) && otherItem.startsWith("Other: ") ? otherItem.slice(7) : "")}
+                                                       onChange={(e) => handleCheckboxOtherTextChange(field.id, opt, e.target.value)}
+                                                       placeholder="Please specify / Type what's other..."
+                                                       className="w-full px-3 py-1.5 bg-white border border-blue-300 focus:border-blue-600 rounded-lg text-xs font-semibold text-slate-900 outline-none shadow-2xs placeholder:text-slate-400"
+                                                       autoFocus
+                                                     />
+                                                   </div>
+                                                 )}
+                                               </div>
+                                             );
+                                           })}
+                                         </div>
+                                       )}
 
                                       {field.type === "switch" && (
                                         <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer mt-1">
@@ -2412,70 +2581,111 @@ export default function EventPublicLandingPage({
                                 )}
 
                                 {field.type === "select" && (
-                                  <select
-                                    required={field.required}
-                                    value={customAnswers[field.id] || ""}
-                                    onChange={(e) => {
-                                      setCustomAnswers(prev => ({ ...prev, [field.id]: e.target.value }));
-                                      if (checkoutSectionErrors[field.id]) {
-                                        setCheckoutSectionErrors(prev => ({ ...prev, [field.id]: undefined }));
-                                      }
-                                    }}
-                                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-600 rounded-xl text-xs font-semibold text-slate-900 outline-none cursor-pointer"
-                                  >
-                                    <option value="">Select option...</option>
-                                    {(field.options || []).map((opt, i) => (
-                                      <option key={i} value={opt}>{opt}</option>
-                                    ))}
-                                  </select>
+                                  <div className="flex flex-col gap-2">
+                                    <SearchableSelect
+                                      required={field.required}
+                                      value={isOtherValue(customAnswers[field.id]) ? ((field.options || []).find(o => isOtherOption(o)) || "Other") : (customAnswers[field.id] || "")}
+                                      onChange={(val) => {
+                                        handleSelectChoice(field.id, val);
+                                        if (checkoutSectionErrors[field.id]) {
+                                          setCheckoutSectionErrors(prev => ({ ...prev, [field.id]: undefined }));
+                                        }
+                                      }}
+                                      options={field.options || []}
+                                      placeholder="Select option..."
+                                      searchPlaceholder="Search choices..."
+                                    />
+                                    {isOtherValue(customAnswers[field.id]) && (
+                                      <div className="animate-fade-in flex items-center gap-2 p-2 bg-blue-50/50 border border-blue-200 rounded-xl">
+                                        <input
+                                          type="text"
+                                          required={field.required}
+                                          value={getOtherTextForField(field.id, customAnswers[field.id])}
+                                          onChange={(e) => handleOtherTextChange(field.id, e.target.value)}
+                                          placeholder="Please specify / Type what's other..."
+                                          className="w-full px-3 py-2 bg-white border border-blue-300 focus:border-blue-600 rounded-lg text-xs font-semibold text-slate-900 outline-none shadow-2xs placeholder:text-slate-400"
+                                          autoFocus
+                                        />
+                                      </div>
+                                    )}
+                                  </div>
                                 )}
 
                                 {field.type === "radio" && (
-                                  <div className="flex flex-col gap-1.5 mt-1">
-                                    {(field.options || []).map((opt, i) => (
-                                      <label key={i} className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
-                                        <input
-                                          type="radio"
-                                          name={field.id}
-                                          required={field.required}
-                                          checked={customAnswers[field.id] === opt}
-                                          onChange={() => {
-                                            setCustomAnswers(prev => ({ ...prev, [field.id]: opt }));
-                                            if (checkoutSectionErrors[field.id]) {
-                                              setCheckoutSectionErrors(prev => ({ ...prev, [field.id]: undefined }));
-                                            }
-                                          }}
-                                          className="text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
-                                        />
-                                        <span>{opt}</span>
-                                      </label>
-                                    ))}
+                                  <div className="flex flex-col gap-2 mt-1">
+                                    {(field.options || []).map((opt, i) => {
+                                      const isOtherOpt = isOtherOption(opt);
+                                      const isChecked = isOtherOpt
+                                        ? isOtherValue(customAnswers[field.id])
+                                        : customAnswers[field.id] === opt;
+
+                                      return (
+                                        <div key={i} className="flex flex-col gap-1.5">
+                                          <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+                                            <input
+                                              type="radio"
+                                              name={field.id}
+                                              required={field.required && !customAnswers[field.id]}
+                                              checked={isChecked}
+                                              onChange={() => handleRadioChoice(field.id, opt)}
+                                              className="text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                                            />
+                                            <span>{opt}</span>
+                                          </label>
+                                          {isOtherOpt && isChecked && (
+                                            <div className="ml-5 animate-fade-in">
+                                              <input
+                                                type="text"
+                                                required={field.required}
+                                                value={getOtherTextForField(field.id, customAnswers[field.id])}
+                                                onChange={(e) => handleOtherTextChange(field.id, e.target.value)}
+                                                placeholder="Please specify / Type what's other..."
+                                                className="w-full px-3 py-1.5 bg-white border border-blue-300 focus:border-blue-600 rounded-lg text-xs font-semibold text-slate-900 outline-none shadow-2xs placeholder:text-slate-400"
+                                                autoFocus
+                                              />
+                                            </div>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
                                   </div>
                                 )}
 
                                 {field.type === "checkbox" && (
-                                  <div className="flex flex-col gap-1.5 mt-1">
+                                  <div className="flex flex-col gap-2 mt-1">
                                     {(field.options || []).map((opt, i) => {
                                       const currentList = Array.isArray(customAnswers[field.id]) ? customAnswers[field.id] : [];
-                                      const isChecked = currentList.includes(opt);
+                                      const isOtherOpt = isOtherOption(opt);
+                                      const isChecked = isOtherOpt
+                                        ? currentList.some(x => isOtherValue(x))
+                                        : currentList.includes(opt);
+
+                                      const otherItem = isOtherOpt ? currentList.find(x => isOtherValue(x)) : null;
+
                                       return (
-                                        <label key={i} className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
-                                          <input
-                                            type="checkbox"
-                                            checked={isChecked}
-                                            onChange={(e) => {
-                                              const updated = e.target.checked
-                                                ? [...currentList, opt]
-                                                : currentList.filter(x => x !== opt);
-                                              setCustomAnswers(prev => ({ ...prev, [field.id]: updated }));
-                                              if (checkoutSectionErrors[field.id]) {
-                                                setCheckoutSectionErrors(prev => ({ ...prev, [field.id]: undefined }));
-                                              }
-                                            }}
-                                            className="text-blue-600 focus:ring-blue-500 rounded h-3.5 w-3.5"
-                                          />
-                                          <span>{opt}</span>
-                                        </label>
+                                        <div key={i} className="flex flex-col gap-1.5">
+                                          <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+                                            <input
+                                              type="checkbox"
+                                              checked={isChecked}
+                                              onChange={(e) => handleCheckboxChoice(field.id, opt, e.target.checked)}
+                                              className="text-blue-600 focus:ring-blue-500 rounded h-3.5 w-3.5"
+                                            />
+                                            <span>{opt}</span>
+                                          </label>
+                                          {isOtherOpt && isChecked && (
+                                            <div className="ml-5 animate-fade-in">
+                                              <input
+                                                type="text"
+                                                value={customOtherTexts[`${field.id}__other`] || (otherItem && isOtherValue(otherItem) && otherItem.startsWith("Other: ") ? otherItem.slice(7) : "")}
+                                                onChange={(e) => handleCheckboxOtherTextChange(field.id, opt, e.target.value)}
+                                                placeholder="Please specify / Type what's other..."
+                                                className="w-full px-3 py-1.5 bg-white border border-blue-300 focus:border-blue-600 rounded-lg text-xs font-semibold text-slate-900 outline-none shadow-2xs placeholder:text-slate-400"
+                                                autoFocus
+                                              />
+                                            </div>
+                                          )}
+                                        </div>
                                       );
                                     })}
                                   </div>
@@ -2683,17 +2893,14 @@ export default function EventPublicLandingPage({
                       )}
 
                       {field.type === "select" && (
-                        <select
+                        <SearchableSelect
                           required={field.required}
                           value={feedbackAnswers[field.id] || ""}
-                          onChange={(e) => setFeedbackAnswers(prev => ({ ...prev, [field.id]: e.target.value }))}
-                          className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-xl text-xs font-semibold text-slate-900 outline-none transition-all cursor-pointer"
-                        >
-                          <option value="">Select an option...</option>
-                          {(field.options || []).map((opt, idx) => (
-                            <option key={idx} value={opt}>{opt}</option>
-                          ))}
-                        </select>
+                          onChange={(val) => setFeedbackAnswers(prev => ({ ...prev, [field.id]: val }))}
+                          options={field.options || []}
+                          placeholder="Select an option..."
+                          searchPlaceholder="Search choices..."
+                        />
                       )}
 
                       {field.type === "rating" && (

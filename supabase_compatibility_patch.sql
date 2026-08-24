@@ -48,6 +48,9 @@ ALTER TABLE public.tickets ADD COLUMN IF NOT EXISTS features JSONB DEFAULT '[]':
 -- 8. Team Members additional columns
 ALTER TABLE public.team_members ADD COLUMN IF NOT EXISTS name TEXT;
 ALTER TABLE public.team_members ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Active';
+ALTER TABLE public.team_members ADD COLUMN IF NOT EXISTS phone TEXT;
+ALTER TABLE public.team_members ADD COLUMN IF NOT EXISTS department TEXT;
+ALTER TABLE public.team_members ADD COLUMN IF NOT EXISTS permissions JSONB DEFAULT '{}'::jsonb;
 
 -- 9. Floor Plans additional columns
 ALTER TABLE public.floor_plans ADD COLUMN IF NOT EXISTS background_url TEXT;

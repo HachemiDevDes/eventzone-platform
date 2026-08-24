@@ -11,12 +11,13 @@ import {
   Bold, Italic, Underline, Strikethrough,
   AlignLeft, AlignCenter, AlignRight, AlignJustify,
   List, ListOrdered, Quote, Palette, Highlighter,
-  RemoveFormatting, Code, Eye
+  RemoveFormatting
 } from "lucide-react";
 import CustomDatePicker from "./CustomDatePicker";
 import CustomSchedulePicker from "./CustomSchedulePicker";
 import { CountrySelect, CitySelect } from "./LocationInputs";
 import CountryPhoneInput from "./CountryPhoneInput";
+import SearchableSelect from "./SearchableSelect";
 
 const INDUSTRIES = [
   "Technology, AI & Software",
@@ -149,7 +150,6 @@ function RichTextEditor({
 }) {
   const editorRef = useRef(null);
   const isInternalChange = useRef(false);
-  const [isHtmlMode, setIsHtmlMode] = useState(false);
   const [colorMenuOpen, setColorMenuOpen] = useState(false);
   const [highlightMenuOpen, setHighlightMenuOpen] = useState(false);
   const [sizeMenuOpen, setSizeMenuOpen] = useState(false);
@@ -447,43 +447,18 @@ function RichTextEditor({
           <RemoveFormatting size={14} />
         </button>
 
-        {/* HTML / Raw Source Mode Toggle */}
-        <div className="ml-auto flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => setIsHtmlMode(!isHtmlMode)}
-            className={`px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer ${
-              isHtmlMode ? "bg-blue-600 text-white shadow-xs" : "hover:bg-slate-200 text-slate-600"
-            }`}
-            title="Toggle HTML Source Mode"
-          >
-            {isHtmlMode ? <Eye size={12} /> : <Code size={12} />}
-            <span>{isHtmlMode ? "Visual" : "HTML"}</span>
-          </button>
-        </div>
-
       </div>
 
       {/* ── EDITOR BODY ── */}
-      {isHtmlMode ? (
-        <textarea
-          value={value || ""}
-          onChange={(e) => onChange && onChange(e.target.value)}
-          placeholder={placeholder}
-          style={{ minHeight }}
-          className="w-full p-4 text-xs font-mono text-slate-800 bg-slate-900/5 focus:outline-none resize-y leading-relaxed border-0"
-        />
-      ) : (
-        <div
-          ref={editorRef}
-          contentEditable
-          onInput={handleInput}
-          onBlur={handleInput}
-          data-placeholder={placeholder}
-          style={{ minHeight }}
-          className="p-4 text-xs sm:text-sm text-slate-900 focus:outline-none resize-y overflow-auto leading-relaxed empty:before:content-[attr(data-placeholder)] empty:before:text-slate-400 empty:before:pointer-events-none [&_h1]:text-2xl [&_h1]:font-black [&_h1]:my-2 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:my-2 [&_h3]:text-base [&_h3]:font-bold [&_h3]:my-1.5 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-1.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-1.5 [&_blockquote]:border-l-4 [&_blockquote]:border-blue-500 [&_blockquote]:pl-3 [&_blockquote]:italic [&_blockquote]:my-2 [&_blockquote]:text-slate-600"
-        />
-      )}
+      <div
+        ref={editorRef}
+        contentEditable
+        onInput={handleInput}
+        onBlur={handleInput}
+        data-placeholder={placeholder}
+        style={{ minHeight }}
+        className="p-4 text-xs sm:text-sm text-slate-900 focus:outline-none resize-y overflow-auto leading-relaxed empty:before:content-[attr(data-placeholder)] empty:before:text-slate-400 empty:before:pointer-events-none [&_h1]:text-2xl [&_h1]:font-black [&_h1]:my-2 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:my-2 [&_h3]:text-base [&_h3]:font-bold [&_h3]:my-1.5 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-1.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-1.5 [&_blockquote]:border-l-4 [&_blockquote]:border-blue-500 [&_blockquote]:pl-3 [&_blockquote]:italic [&_blockquote]:my-2 [&_blockquote]:text-slate-600"
+      />
     </div>
   );
 }
@@ -572,7 +547,6 @@ export default function EventDetailsView({
   const [youtubeUrl, setYoutubeUrl] = useState(
     eventDetails?.youtubeUrl || eventDetails?.videoUrl || eventDetails?.youtube_url || ""
   );
-  const [newImageUrl, setNewImageUrl] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
   const imageFileInputRef = useRef(null);
 
@@ -908,34 +882,6 @@ export default function EventDetailsView({
     }
   };
 
-  const handleAddImageUrl = async (e) => {
-    e.preventDefault();
-    const clean = newImageUrl.trim();
-    if (!clean) return;
-    if (galleryImages.length >= 5) {
-      alert("Maximum 5 images allowed. Please remove an existing image before adding a new one.");
-      return;
-    }
-    const updated = [...galleryImages, clean].slice(0, 5);
-    setGalleryImages(updated);
-    const newBanner = banner || updated[0] || "";
-    if (!banner) {
-      setBanner(newBanner);
-    }
-    setNewImageUrl("");
-    const payload = { 
-      ...buildPayload(), 
-      gallery: updated, 
-      banner: newBanner, 
-      cover_url: newBanner 
-    };
-    if (onUpdateEventDetails) {
-      await onUpdateEventDetails(payload);
-    }
-    lastSavedSnapshotRef.current = getComparableSnapshot(payload);
-    setSyncStatus("saved");
-  };
-
   const handleSetPrimaryCover = async (idx) => {
     if (idx === 0) return;
     const target = galleryImages[idx];
@@ -1240,15 +1186,6 @@ export default function EventDetailsView({
                   )}
                 </div>
               </div>
-
-              {/* Direct URL Input Fallback */}
-              <input
-                type="url"
-                value={eventLogo}
-                onChange={(e) => setEventLogo(e.target.value)}
-                placeholder="Or paste event logo image URL..."
-                className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-all font-mono"
-              />
             </div>
 
             <div className="space-y-1.5">
@@ -1269,15 +1206,13 @@ export default function EventDetailsView({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-slate-700">Industry</label>
-                <select
+                <SearchableSelect
                   value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 font-medium focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
-                >
-                  {INDUSTRIES.map((ind) => (
-                    <option key={ind} value={ind}>{ind}</option>
-                  ))}
-                </select>
+                  onChange={(val) => setCategory(val)}
+                  options={INDUSTRIES}
+                  placeholder="Select industry..."
+                  searchPlaceholder="Search industry (e.g. AI, Healthcare, Energy)..."
+                />
               </div>
 
               <div className="space-y-1.5">
@@ -1562,15 +1497,13 @@ export default function EventDetailsView({
 
                         <div className="space-y-1.5">
                           <label className="text-xs font-medium text-slate-700">Streaming Platform</label>
-                          <select
+                          <SearchableSelect
                             value={virtualPlatform}
-                            onChange={(e) => setVirtualPlatform(e.target.value)}
-                            className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 font-medium focus:outline-none focus:border-blue-500 focus:bg-white transition-all shadow-2xs"
-                          >
-                            {VIRTUAL_PLATFORMS.map((p) => (
-                              <option key={p} value={p}>{p}</option>
-                            ))}
-                          </select>
+                            onChange={(val) => setVirtualPlatform(val)}
+                            options={VIRTUAL_PLATFORMS}
+                            placeholder="Select platform..."
+                            searchPlaceholder="Search streaming platform..."
+                          />
                         </div>
                       </div>
 
@@ -1722,15 +1655,16 @@ export default function EventDetailsView({
 
                               <div className="space-y-1">
                                 <label className="text-[11px] font-semibold text-slate-700">Format</label>
-                                <select
+                                <SearchableSelect
                                   value={stopFormat}
-                                  onChange={(e) => handleUpdateStop(stop.id, "format", e.target.value)}
-                                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 font-semibold focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
-                                >
-                                  <option value="In-Person">In-Person (Venue)</option>
-                                  <option value="Hybrid">Hybrid (Venue + Stream)</option>
-                                  <option value="Virtual">Virtual (Online Only)</option>
-                                </select>
+                                  onChange={(val) => handleUpdateStop(stop.id, "format", val)}
+                                  options={[
+                                    { value: "In-Person", label: "In-Person (Venue)" },
+                                    { value: "Hybrid", label: "Hybrid (Venue + Stream)" },
+                                    { value: "Virtual", label: "Virtual (Online Only)" }
+                                  ]}
+                                  placeholder="Select format..."
+                                />
                               </div>
                             </div>
 
@@ -1827,15 +1761,13 @@ export default function EventDetailsView({
                                   </div>
                                   <div className="space-y-1">
                                     <label className="text-[11px] font-semibold text-slate-700">Platform</label>
-                                    <select
-                                      value={stop.virtualPlatform || "Zoom Webinar / Meeting"}
-                                      onChange={(e) => handleUpdateStop(stop.id, "virtualPlatform", e.target.value)}
-                                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 font-medium focus:outline-none focus:border-blue-500 transition-all shadow-2xs"
-                                    >
-                                      {VIRTUAL_PLATFORMS.map((p) => (
-                                        <option key={p} value={p}>{p}</option>
-                                      ))}
-                                    </select>
+                                    <SearchableSelect
+                                       value={stop.virtualPlatform || "Zoom Webinar / Meeting"}
+                                       onChange={(val) => handleUpdateStop(stop.id, "virtualPlatform", val)}
+                                       options={VIRTUAL_PLATFORMS}
+                                       placeholder="Select platform..."
+                                       searchPlaceholder="Search streaming platform..."
+                                     />
                                   </div>
                                 </div>
                               </div>
@@ -1988,25 +1920,6 @@ export default function EventDetailsView({
                 </div>
               </div>
 
-              {/* Paste URL Form (If less than 5 images) */}
-              {galleryImages.length < 5 && (
-                <form onSubmit={handleAddImageUrl} className="flex gap-2">
-                  <input
-                    type="url"
-                    value={newImageUrl}
-                    onChange={(e) => setNewImageUrl(e.target.value)}
-                    placeholder="Or paste external image URL to add..."
-                    className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white transition-all font-mono"
-                  />
-                  <button
-                    type="submit"
-                    className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0"
-                  >
-                    Add URL
-                  </button>
-                </form>
-              )}
-
               {/* Image Cards Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-1">
                 {galleryImages.map((imgUrl, idx) => {
@@ -2158,15 +2071,6 @@ export default function EventDetailsView({
                   )}
                 </div>
               </div>
-
-              {/* Direct URL Input Fallback */}
-              <input
-                type="url"
-                value={organizerLogo}
-                onChange={(e) => setOrganizerLogo(e.target.value)}
-                placeholder="Or paste organizer logo image URL..."
-                className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-all font-mono"
-              />
             </div>
 
             <div className="space-y-1.5">

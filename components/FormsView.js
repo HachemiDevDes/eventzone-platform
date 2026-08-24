@@ -12,11 +12,12 @@ import {
   QrCode, Award, UserCheck, AlertCircle, X, Layers, RefreshCw,
   Lock, Archive, RotateCcw, Globe, MapPin, Camera, Users,
   Briefcase, Megaphone, Target, Presentation, FileSpreadsheet, Paperclip,
-  Pencil
+  Pencil, Building2, FoldVertical, UnfoldVertical, ArrowUp, ArrowDown
 } from "lucide-react";
 import QRCode from "qrcode";
 import CountryPhoneInput from "./CountryPhoneInput";
 import { CountrySelect, CitySelect } from "./LocationInputs";
+import SearchableSelect from "./SearchableSelect";
 import FormImageUploader from "./FormImageUploader";
 import FormFileUploader, { formatFileSize } from "./FormFileUploader";
 import { PRESET_SMART_FIELDS, getFormSections } from "../lib/formPresets";
@@ -138,9 +139,102 @@ export default function FormsView({
   const [builderTab, setBuilderTab] = useState("fields"); // "fields" | "settings" | "preview" | "submissions"
   const [previewDevice, setPreviewDevice] = useState("desktop"); // "desktop" | "mobile"
   const [previewAnswers, setPreviewAnswers] = useState({});
+  const [previewOtherTexts, setPreviewOtherTexts] = useState({});
   const [previewSubmitted, setPreviewSubmitted] = useState(false);
   const [previewSectionIdx, setPreviewSectionIdx] = useState(0);
   const [previewSectionErrors, setPreviewSectionErrors] = useState({});
+
+  const isOtherOption = (opt) => {
+    if (!opt || typeof opt !== "string") return false;
+    const clean = opt.trim().toLowerCase();
+    return clean === "other" || clean.startsWith("other") || clean === "autre" || clean.startsWith("autre");
+  };
+
+  const isOtherValue = (val) => {
+    if (!val || typeof val !== "string") return false;
+    const clean = val.trim().toLowerCase();
+    return clean === "other" || clean.startsWith("other:") || clean.startsWith("other (") || clean === "autre" || clean.startsWith("autre:") || clean.startsWith("autre (");
+  };
+
+  const getOtherTextForPreview = (fieldId, val) => {
+    if (previewOtherTexts[fieldId] !== undefined) return previewOtherTexts[fieldId];
+    if (typeof val === "string") {
+      if (val.toLowerCase().startsWith("other:")) return val.slice(6).trim();
+      if (val.toLowerCase().startsWith("autre:")) return val.slice(6).trim();
+    }
+    return "";
+  };
+
+  const handlePreviewSelect = (fieldId, selectedOpt) => {
+    if (isOtherOption(selectedOpt)) {
+      const existingText = previewOtherTexts[fieldId] || "";
+      const fullVal = existingText.trim() ? `Other: ${existingText.trim()}` : "Other";
+      setPreviewAnswers(prev => ({ ...prev, [fieldId]: fullVal }));
+    } else {
+      setPreviewAnswers(prev => ({ ...prev, [fieldId]: selectedOpt }));
+    }
+    if (previewSectionErrors[fieldId]) {
+      setPreviewSectionErrors(prev => ({ ...prev, [fieldId]: undefined }));
+    }
+  };
+
+  const handlePreviewRadio = (fieldId, selectedOpt) => {
+    if (isOtherOption(selectedOpt)) {
+      const existingText = previewOtherTexts[fieldId] || "";
+      const fullVal = existingText.trim() ? `Other: ${existingText.trim()}` : "Other";
+      setPreviewAnswers(prev => ({ ...prev, [fieldId]: fullVal }));
+    } else {
+      setPreviewAnswers(prev => ({ ...prev, [fieldId]: selectedOpt }));
+    }
+    if (previewSectionErrors[fieldId]) {
+      setPreviewSectionErrors(prev => ({ ...prev, [fieldId]: undefined }));
+    }
+  };
+
+  const handlePreviewOtherText = (fieldId, text) => {
+    setPreviewOtherTexts(prev => ({ ...prev, [fieldId]: text }));
+    const fullVal = text.trim() ? `Other: ${text.trim()}` : "Other";
+    setPreviewAnswers(prev => ({ ...prev, [fieldId]: fullVal }));
+    if (previewSectionErrors[fieldId]) {
+      setPreviewSectionErrors(prev => ({ ...prev, [fieldId]: undefined }));
+    }
+  };
+
+  const handlePreviewCheckbox = (fieldId, opt, isChecked) => {
+    const currentVals = previewAnswers[fieldId] || [];
+    let next;
+    if (isChecked) {
+      if (isOtherOption(opt)) {
+        const existingText = previewOtherTexts[`${fieldId}__other`] || "";
+        const fullVal = existingText.trim() ? `Other: ${existingText.trim()}` : opt;
+        const withoutOther = currentVals.filter(v => !isOtherValue(v));
+        next = [...withoutOther, fullVal];
+      } else {
+        next = [...currentVals, opt];
+      }
+    } else {
+      if (isOtherOption(opt)) {
+        next = currentVals.filter(v => !isOtherValue(v));
+      } else {
+        next = currentVals.filter(v => v !== opt);
+      }
+    }
+    setPreviewAnswers(prev => ({ ...prev, [fieldId]: next }));
+    if (previewSectionErrors[fieldId]) {
+      setPreviewSectionErrors(prev => ({ ...prev, [fieldId]: undefined }));
+    }
+  };
+
+  const handlePreviewCheckboxOtherText = (fieldId, opt, text) => {
+    setPreviewOtherTexts(prev => ({ ...prev, [`${fieldId}__other`]: text }));
+    const currentVals = previewAnswers[fieldId] || [];
+    const withoutOther = currentVals.filter(v => !isOtherValue(v));
+    const fullVal = text.trim() ? `Other: ${text.trim()}` : (opt || "Other");
+    setPreviewAnswers(prev => ({ ...prev, [fieldId]: [...withoutOther, fullVal] }));
+    if (previewSectionErrors[fieldId]) {
+      setPreviewSectionErrors(prev => ({ ...prev, [fieldId]: undefined }));
+    }
+  };
 
   // Multi-page form sections parsed from fields
   const formSections = useMemo(() => {
@@ -382,6 +476,7 @@ function generateUuid() {
       placeholder: preset.placeholder || "",
       helpText: preset.description || "",
       required: preset.required ?? false,
+      showsOnBadge: Boolean(preset.showsOnBadge),
       options: preset.options ? [...preset.options] : [],
       isLocked: false
     };
@@ -764,10 +859,18 @@ function generateUuid() {
                           {PresetIcon && <PresetIcon size={14} />}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-xs font-bold text-slate-800 group-hover:text-blue-600 truncate transition-colors">
-                            {preset.label}
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-xs font-bold text-slate-800 group-hover:text-blue-600 truncate transition-colors">
+                              {preset.label}
+                            </span>
+                            {preset.showsOnBadge && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200/80 text-[9px] font-extrabold tracking-wide uppercase shadow-2xs">
+                                <Award size={9} className="text-amber-600 shrink-0" />
+                                <span>Shows on Badge</span>
+                              </span>
+                            )}
                           </div>
-                          <div className="text-[10px] text-slate-400 truncate">
+                          <div className="text-[10px] text-slate-400 truncate mt-0.5">
                             {preset.description}
                           </div>
                         </div>
@@ -852,12 +955,12 @@ function generateUuid() {
                   >
                     {areAllCollapsed ? (
                       <>
-                        <ChevronDown size={13} className="text-blue-600" />
+                        <UnfoldVertical size={13} className="text-blue-600" />
                         <span>Expand All</span>
                       </>
                     ) : (
                       <>
-                        <ChevronUp size={13} className="text-blue-600" />
+                        <FoldVertical size={13} className="text-blue-600" />
                         <span>Collapse All</span>
                       </>
                     )}
@@ -885,6 +988,14 @@ function generateUuid() {
                   const FieldIcon = fieldDef.icon;
                   const isChoice = ["select", "radio", "checkbox"].includes(field.type);
                   const isCollapsed = Boolean(collapsedFields[field.id]);
+                  const isShowsOnBadgeField = Boolean(
+                    field.showsOnBadge ||
+                    field.type === "picture" ||
+                    field.id?.includes("picture") ||
+                    field.id?.includes("company") ||
+                    field.id?.includes("function") ||
+                    (field.label && ["badge picture", "attendee photo", "company", "organization", "job function", "job role", "job title"].some(k => field.label.toLowerCase().includes(k)))
+                  );
 
                   if (field.type === "section") {
                     const sectionNumber = (editingForm.fields.slice(0, index).filter(f => f.type === "section").length) + 2;
@@ -917,7 +1028,7 @@ function generateUuid() {
                               className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-white/80 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
                               title="Move Up"
                             >
-                              <ChevronUp size={14} />
+                              <ArrowUp size={13} />
                             </button>
                             <button
                               type="button"
@@ -926,7 +1037,7 @@ function generateUuid() {
                               className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-white/80 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
                               title="Move Down"
                             >
-                              <ChevronDown size={14} />
+                              <ArrowDown size={13} />
                             </button>
                             <div className="h-4 w-px bg-blue-200 mx-1" />
                             <button
@@ -943,7 +1054,7 @@ function generateUuid() {
                               className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-100 cursor-pointer transition-colors"
                               title="Expand Section Header"
                             >
-                              <ChevronDown size={15} />
+                              <UnfoldVertical size={14} />
                             </button>
                           </div>
                         </div>
@@ -978,7 +1089,7 @@ function generateUuid() {
                               className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-white/80 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
                               title="Move Up"
                             >
-                              <ChevronUp size={14} />
+                              <ArrowUp size={13} />
                             </button>
                             <button
                               type="button"
@@ -987,7 +1098,7 @@ function generateUuid() {
                               className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-white/80 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
                               title="Move Down"
                             >
-                              <ChevronDown size={14} />
+                              <ArrowDown size={13} />
                             </button>
                             <div className="h-4 w-px bg-blue-200 mx-1" />
                             <button
@@ -1004,7 +1115,7 @@ function generateUuid() {
                               className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 cursor-pointer transition-colors"
                               title="Collapse Section Header"
                             >
-                              <ChevronUp size={15} />
+                              <FoldVertical size={14} />
                             </button>
                           </div>
                         </div>
@@ -1073,11 +1184,21 @@ function generateUuid() {
                                 <Lock size={9} />
                                 <span>Core Required</span>
                               </span>
-                            ) : field.required ? (
-                              <span className="text-[9px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded-md border border-rose-200/60 shrink-0">
-                                Required
-                              </span>
-                            ) : null}
+                            ) : (
+                              <>
+                                {isShowsOnBadgeField && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200/80 text-amber-700 text-[9px] font-extrabold uppercase tracking-wider shrink-0 shadow-2xs">
+                                    <Award size={9} className="text-amber-600" />
+                                    <span>Shows on Badge</span>
+                                  </span>
+                                )}
+                                {field.required && (
+                                  <span className="text-[9px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded-md border border-rose-200/60 shrink-0">
+                                    Required
+                                  </span>
+                                )}
+                              </>
+                            )}
                           </div>
                         </div>
 
@@ -1090,7 +1211,7 @@ function generateUuid() {
                             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
                             title="Move Up"
                           >
-                            <ChevronUp size={14} />
+                            <ArrowUp size={13} />
                           </button>
                           <button
                             type="button"
@@ -1099,7 +1220,7 @@ function generateUuid() {
                             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
                             title="Move Down"
                           >
-                            <ChevronDown size={14} />
+                            <ArrowDown size={13} />
                           </button>
 
                           <div className="h-4 w-px bg-slate-200 mx-1" />
@@ -1128,7 +1249,7 @@ function generateUuid() {
                             className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 cursor-pointer transition-colors"
                             title="Expand Question Details"
                           >
-                            <ChevronDown size={15} />
+                            <UnfoldVertical size={14} />
                           </button>
                         </div>
                       </div>
@@ -1157,12 +1278,17 @@ function generateUuid() {
                             className="text-xs font-bold text-slate-800 bg-transparent hover:bg-slate-50 focus:bg-white border-b border-transparent focus:border-blue-600 rounded px-1.5 py-0.5 outline-none flex-1 transition-all"
                             placeholder="Enter question title..."
                           />
-                          {isLockedField && (
+                          {isLockedField ? (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-extrabold uppercase tracking-wider shrink-0">
                               <Lock size={10} />
                               <span>Core Required</span>
                             </span>
-                          )}
+                          ) : isShowsOnBadgeField ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200/80 text-amber-700 text-[10px] font-extrabold uppercase tracking-wider shrink-0 shadow-2xs">
+                              <Award size={10} className="text-amber-600" />
+                              <span>Shows on Badge</span>
+                            </span>
+                          ) : null}
                         </div>
 
                         <div className="flex items-center gap-1">
@@ -1174,7 +1300,7 @@ function generateUuid() {
                             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
                             title="Move Up"
                           >
-                            <ChevronUp size={14} />
+                            <ArrowUp size={13} />
                           </button>
                           <button
                             type="button"
@@ -1183,7 +1309,7 @@ function generateUuid() {
                             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
                             title="Move Down"
                           >
-                            <ChevronDown size={14} />
+                            <ArrowDown size={13} />
                           </button>
 
                           <div className="h-4 w-px bg-slate-200 mx-1" />
@@ -1214,7 +1340,7 @@ function generateUuid() {
                             className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 cursor-pointer transition-colors"
                             title="Collapse Question"
                           >
-                            <ChevronUp size={15} />
+                            <FoldVertical size={14} />
                           </button>
                         </div>
                       </div>
@@ -1308,6 +1434,14 @@ function generateUuid() {
                         <div className="flex items-center gap-3 p-3 bg-emerald-50/60 border border-emerald-100 rounded-2xl text-xs text-emerald-900 font-semibold">
                           <Camera size={16} className="text-emerald-600 shrink-0" />
                           <span>Attendee photo displayed and printed directly on the official conference badge.</span>
+                        </div>
+                      )}
+
+                      {/* Shows on Badge Notice Card (for non-picture badge fields like Company and Job Function) */}
+                      {isShowsOnBadgeField && field.type !== "picture" && (
+                        <div className="flex items-center gap-3 p-3 bg-amber-50/70 border border-amber-200/80 rounded-2xl text-xs text-amber-900 font-semibold shadow-2xs">
+                          <Award size={16} className="text-amber-600 shrink-0" />
+                          <span>This information is automatically formatted and printed directly on the attendee&apos;s conference badge.</span>
                         </div>
                       )}
 
@@ -1449,31 +1583,33 @@ function generateUuid() {
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
                   Form Category & Purpose
                 </label>
-                <select
+                <SearchableSelect
                   value={editingForm.type}
-                  onChange={(e) => setEditingForm(prev => ({ ...prev, type: e.target.value }))}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none cursor-pointer"
-                >
-                  <option value="ticket_registration">Ticket Registration & Checkout Intake</option>
-                  <option value="feedback_survey">Post-Event Attendee Feedback & CSAT</option>
-                  <option value="session_survey">Breakout Session / Speaker Evaluation</option>
-                  <option value="general_inquiry">Call for Papers & General Inquiries</option>
-                </select>
+                  onChange={(val) => setEditingForm(prev => ({ ...prev, type: val }))}
+                  options={[
+                    { value: "ticket_registration", label: "Ticket Registration & Checkout Intake" },
+                    { value: "feedback_survey", label: "Post-Event Attendee Feedback & CSAT" },
+                    { value: "session_survey", label: "Breakout Session / Speaker Evaluation" },
+                    { value: "general_inquiry", label: "Call for Papers & General Inquiries" }
+                  ]}
+                  placeholder="Select category..."
+                />
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
                   Publication Status
                 </label>
-                <select
+                <SearchableSelect
                   value={editingForm.status}
-                  onChange={(e) => setEditingForm(prev => ({ ...prev, status: e.target.value }))}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none cursor-pointer"
-                >
-                  <option value="active">Active (Accepting Responses)</option>
-                  <option value="draft">Draft (Hidden from Public)</option>
-                  <option value="archived">Archived</option>
-                </select>
+                  onChange={(val) => setEditingForm(prev => ({ ...prev, status: val }))}
+                  options={[
+                    { value: "active", label: "Active (Accepting Responses)" },
+                    { value: "draft", label: "Draft (Hidden from Public)" },
+                    { value: "archived", label: "Archived" }
+                  ]}
+                  placeholder="Select status..."
+                />
               </div>
             </div>
 
@@ -1795,46 +1931,70 @@ function generateUuid() {
 
                           {/* Dropdown Select */}
                           {field.type === "select" && (
-                            <select
-                              value={previewAnswers[field.id] || ""}
-                              onChange={(e) => {
-                                setPreviewAnswers(prev => ({ ...prev, [field.id]: e.target.value }));
-                                if (previewSectionErrors[field.id]) {
-                                  setPreviewSectionErrors(prev => ({ ...prev, [field.id]: undefined }));
-                                }
-                              }}
-                              required={field.required}
-                              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-600 rounded-xl text-xs font-semibold text-slate-800 outline-none"
-                            >
-                              <option value="">Select an option...</option>
-                              {(field.options || []).map((opt, i) => (
-                                <option key={i} value={opt}>{opt}</option>
-                              ))}
-                            </select>
+                            <div className="flex flex-col gap-2">
+                              <SearchableSelect
+                                value={isOtherValue(previewAnswers[field.id]) ? ((field.options || []).find(o => isOtherOption(o)) || "Other") : (previewAnswers[field.id] || "")}
+                                onChange={(val) => handlePreviewSelect(field.id, val)}
+                                options={field.options || []}
+                                placeholder="Select an option..."
+                                searchPlaceholder="Search choices..."
+                                required={field.required}
+                              />
+                              {isOtherValue(previewAnswers[field.id]) && (
+                                <div className="animate-fade-in flex items-center gap-2 p-2 bg-blue-50/50 border border-blue-200 rounded-xl">
+                                  <input
+                                    type="text"
+                                    required={field.required}
+                                    value={getOtherTextForPreview(field.id, previewAnswers[field.id])}
+                                    onChange={(e) => handlePreviewOtherText(field.id, e.target.value)}
+                                    placeholder="Please specify / Type what's other..."
+                                    className="w-full px-3 py-2 bg-white border border-blue-300 focus:border-blue-600 rounded-lg text-xs font-semibold text-slate-900 outline-none shadow-2xs placeholder:text-slate-400"
+                                    autoFocus
+                                  />
+                                </div>
+                              )}
+                            </div>
                           )}
 
                           {/* Radio Single Choice */}
                           {field.type === "radio" && (
                             <div className="flex flex-col gap-2 mt-1">
-                              {(field.options || []).map((opt, i) => (
-                                <label key={i} className="flex items-center gap-2.5 cursor-pointer">
-                                  <input
-                                    type="radio"
-                                    name={`preview_${field.id}`}
-                                    value={opt}
-                                    checked={previewAnswers[field.id] === opt}
-                                    onChange={() => {
-                                      setPreviewAnswers(prev => ({ ...prev, [field.id]: opt }));
-                                      if (previewSectionErrors[field.id]) {
-                                        setPreviewSectionErrors(prev => ({ ...prev, [field.id]: undefined }));
-                                      }
-                                    }}
-                                    required={field.required && !previewAnswers[field.id]}
-                                    className="text-blue-600 focus:ring-blue-500 h-4 w-4"
-                                  />
-                                  <span className="text-xs font-semibold text-slate-800">{opt}</span>
-                                </label>
-                              ))}
+                              {(field.options || []).map((opt, i) => {
+                                const isOtherOpt = isOtherOption(opt);
+                                const isChecked = isOtherOpt
+                                  ? isOtherValue(previewAnswers[field.id])
+                                  : previewAnswers[field.id] === opt;
+
+                                return (
+                                  <div key={i} className="flex flex-col gap-1.5">
+                                    <label className="flex items-center gap-2.5 cursor-pointer">
+                                      <input
+                                        type="radio"
+                                        name={`preview_${field.id}`}
+                                        value={opt}
+                                        checked={isChecked}
+                                        onChange={() => handlePreviewRadio(field.id, opt)}
+                                        required={field.required && !previewAnswers[field.id]}
+                                        className="text-blue-600 focus:ring-blue-500 h-4 w-4"
+                                      />
+                                      <span className="text-xs font-semibold text-slate-800">{opt}</span>
+                                    </label>
+                                    {isOtherOpt && isChecked && (
+                                      <div className="ml-6 animate-fade-in">
+                                        <input
+                                          type="text"
+                                          required={field.required}
+                                          value={getOtherTextForPreview(field.id, previewAnswers[field.id])}
+                                          onChange={(e) => handlePreviewOtherText(field.id, e.target.value)}
+                                          placeholder="Please specify / Type what's other..."
+                                          className="w-full px-3 py-1.5 bg-white border border-blue-300 focus:border-blue-600 rounded-lg text-xs font-semibold text-slate-900 outline-none shadow-2xs placeholder:text-slate-400"
+                                          autoFocus
+                                        />
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
                             </div>
                           )}
 
@@ -1843,25 +2003,37 @@ function generateUuid() {
                             <div className="flex flex-col gap-2 mt-1">
                               {(field.options || []).map((opt, i) => {
                                 const currentVals = previewAnswers[field.id] || [];
-                                const isChecked = currentVals.includes(opt);
+                                const isOtherOpt = isOtherOption(opt);
+                                const isChecked = isOtherOpt
+                                  ? currentVals.some(x => isOtherValue(x))
+                                  : currentVals.includes(opt);
+
+                                const otherItem = isOtherOpt ? currentVals.find(x => isOtherValue(x)) : null;
+
                                 return (
-                                  <label key={i} className="flex items-center gap-2.5 cursor-pointer">
-                                    <input
-                                      type="checkbox"
-                                      checked={isChecked}
-                                      onChange={(e) => {
-                                        const next = e.target.checked
-                                          ? [...currentVals, opt]
-                                          : currentVals.filter(v => v !== opt);
-                                        setPreviewAnswers(prev => ({ ...prev, [field.id]: next }));
-                                        if (previewSectionErrors[field.id]) {
-                                          setPreviewSectionErrors(prev => ({ ...prev, [field.id]: undefined }));
-                                        }
-                                      }}
-                                      className="rounded text-blue-600 focus:ring-blue-500 h-4 w-4"
-                                    />
-                                    <span className="text-xs font-semibold text-slate-800">{opt}</span>
-                                  </label>
+                                  <div key={i} className="flex flex-col gap-1.5">
+                                    <label className="flex items-center gap-2.5 cursor-pointer">
+                                      <input
+                                        type="checkbox"
+                                        checked={isChecked}
+                                        onChange={(e) => handlePreviewCheckbox(field.id, opt, e.target.checked)}
+                                        className="rounded text-blue-600 focus:ring-blue-500 h-4 w-4"
+                                      />
+                                      <span className="text-xs font-semibold text-slate-800">{opt}</span>
+                                    </label>
+                                    {isOtherOpt && isChecked && (
+                                      <div className="ml-6 animate-fade-in">
+                                        <input
+                                          type="text"
+                                          value={previewOtherTexts[`${field.id}__other`] || (otherItem && isOtherValue(otherItem) && otherItem.startsWith("Other: ") ? otherItem.slice(7) : "")}
+                                          onChange={(e) => handlePreviewCheckboxOtherText(field.id, opt, e.target.value)}
+                                          placeholder="Please specify / Type what's other..."
+                                          className="w-full px-3 py-1.5 bg-white border border-blue-300 focus:border-blue-600 rounded-lg text-xs font-semibold text-slate-900 outline-none shadow-2xs placeholder:text-slate-400"
+                                          autoFocus
+                                        />
+                                      </div>
+                                    )}
+                                  </div>
                                 );
                               })}
                             </div>

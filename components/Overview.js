@@ -85,30 +85,6 @@ export default function Overview({
     return diffDays;
   }, [startDate]);
 
-  // Live countdown timer state
-  const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, status: "upcoming" });
-  useEffect(() => {
-    const compute = () => {
-      if (!startDate) { setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0, status: "no-date" }); return; }
-      const now = Date.now();
-      const start = new Date(startDate).getTime();
-      const end = endDate ? new Date(endDate).getTime() + 86400000 : start + 86400000;
-      if (now >= start && now <= end) { setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0, status: "live" }); return; }
-      if (now > end) { setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0, status: "concluded" }); return; }
-      const diff = start - now;
-      setCountdown({
-        days: Math.floor(diff / 86400000),
-        hours: Math.floor((diff % 86400000) / 3600000),
-        minutes: Math.floor((diff % 3600000) / 60000),
-        seconds: Math.floor((diff % 60000) / 1000),
-        status: "upcoming"
-      });
-    };
-    compute();
-    const id = setInterval(compute, 1000);
-    return () => clearInterval(id);
-  }, [startDate, endDate]);
-
   // Next upcoming sessions sorted by time
   const upcomingSessions = useMemo(() => {
     return [...sessions]
@@ -224,31 +200,8 @@ export default function Overview({
           </div>
         </div>
 
-        {/* Right: Quick Action Buttons & Countdown */}
+        {/* Right: Quick Action Buttons */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full lg:w-auto shrink-0">
-          
-          {/* Live countdown timer */}
-          {startDate && (
-            <div className="flex items-center justify-center px-3.5 py-2.5 bg-white rounded-2xl border border-slate-200 text-slate-700 text-xs font-bold shadow-2xs shrink-0 select-none">
-              {countdown.status === "live" ? (
-                <div className="flex items-center gap-1.5 text-emerald-600">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>Live</span>
-                </div>
-              ) : countdown.status === "concluded" ? (
-                <span className="text-slate-400">Concluded</span>
-              ) : (
-                <span className="tabular-nums">
-                  {countdown.days > 0 ? `${countdown.days}d ` : ""}
-                  {String(countdown.hours).padStart(2, '0')}h{" "}
-                  {String(countdown.minutes).padStart(2, '0')}m{" "}
-                  {String(countdown.seconds).padStart(2, '0')}s
-                </span>
-              )}
-            </div>
-          )}
-
-
           {/* Preview Landing Page */}
           {onPreviewLandingPage && (
             <button

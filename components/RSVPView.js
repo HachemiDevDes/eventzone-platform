@@ -13,6 +13,7 @@ import {
 import { useLanguage } from "../lib/i18n";
 import QRCode from "qrcode";
 import { DIETARY_OPTIONS } from "./PublicRSVPModal";
+import SearchableSelect from "./SearchableSelect";
 
 export default function RSVPView({
   rsvps = [],
@@ -1214,15 +1215,12 @@ export default function RSVPView({
               {manualForm.status === "attending" && (
                 <div>
                   <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">Dietary Preference</label>
-                  <select
+                  <SearchableSelect
                     value={manualForm.dietaryPreference}
-                    onChange={(e) => setManualForm({ ...manualForm, dietaryPreference: e.target.value })}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:border-blue-600"
-                  >
-                    {DIETARY_OPTIONS.map(d => (
-                      <option key={d.id} value={d.id}>{d.label}</option>
-                    ))}
-                  </select>
+                    onChange={(val) => setManualForm({ ...manualForm, dietaryPreference: val })}
+                    options={DIETARY_OPTIONS.map(d => ({ value: d.id, label: d.label }))}
+                    placeholder="Select dietary preference..."
+                  />
                 </div>
               )}
 

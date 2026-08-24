@@ -164,9 +164,14 @@ CREATE TABLE IF NOT EXISTS public.team_members (
   event_id UUID REFERENCES public.events(id) ON DELETE CASCADE,
   first_name TEXT,
   last_name TEXT,
+  name TEXT,
   email TEXT,
+  phone TEXT,
+  department TEXT,
   role TEXT DEFAULT 'Member',
   avatar TEXT,
+  status TEXT DEFAULT 'Active',
+  permissions JSONB DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

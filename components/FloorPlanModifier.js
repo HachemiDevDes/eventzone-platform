@@ -18,6 +18,7 @@ import { motion, AnimatePresence, Reorder } from "framer-motion";
 const FloorPlanCanvas = dynamic(() => import("./FloorPlanCanvas"), { ssr: false });
 import ExportModal from "./ExportModal";
 import SendPlanModal from "./SendPlanModal";
+import SearchableSelect from "./SearchableSelect";
 import { supabase } from "../lib/supabase";
 import QRCode from "qrcode";
 

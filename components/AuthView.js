@@ -60,13 +60,21 @@ export default function AuthView({
     setErrorMsg("");
     setOauthLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const redirectUrl = typeof window !== "undefined" ? `${window.location.origin}/?view=events-hub` : undefined;
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: typeof window !== "undefined" ? `${window.location.origin}/?view=events-hub` : undefined,
+          redirectTo: redirectUrl,
+          queryParams: {
+            access_type: "offline",
+            prompt: "consent",
+          },
         },
       });
       if (error) throw error;
+      if (data?.url && typeof window !== "undefined") {
+        window.location.href = data.url;
+      }
     } catch (err) {
       console.error("Google OAuth error:", err);
       setErrorMsg(err.message || "Google sign-in failed. Please try email login.");

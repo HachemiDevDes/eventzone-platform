@@ -12,6 +12,10 @@ import {
 import { useLanguage } from "../lib/i18n";
 import { logCommunication, fetchCommunications } from "../lib/db";
 import A4BadgeSheet, { printA4BadgeDocument } from "./A4BadgeSheet";
+import SearchableSelect from "./SearchableSelect";
+import OpportunitiesView from "./OpportunitiesView";
+import LogisticsView from "./LogisticsView";
+import TeamView from "./TeamView";
 
 export default function GenericTableView({ 
   viewName, 
@@ -25,6 +29,23 @@ export default function GenericTableView({
   switch (viewName) {
     case "event-details":
       return <EventDetailsView state={state} onUpdateState={onUpdateState} onUploadFile={onUploadFile} />;
+    case "opportunities":
+      return <OpportunitiesView state={state} onUpdateState={onUpdateState} onOpenModal={onOpenModal} onSwitchView={onSwitchView} />;
+    case "logistics":
+      return (
+        <LogisticsView
+          logisticsData={state.logisticsData || {}}
+          onSaveLogisticsItem={state.onSaveLogisticsItem}
+          onDeleteLogisticsItem={state.onDeleteLogisticsItem}
+          onSaveFullLogistics={state.onSaveFullLogistics}
+          speakers={state.speakers || []}
+          team={state.team || []}
+          floorPlans={state.floorPlans || []}
+          eventDetails={state.eventDetails || {}}
+          onSwitchView={onSwitchView}
+          onRefreshData={state.onRefreshLogistics}
+        />
+      );
     case "attendees":
       return <AttendeesView state={state} onUpdateState={onUpdateState} onOpenModal={onOpenModal} />;
     case "pending":
@@ -42,7 +63,16 @@ export default function GenericTableView({
     case "check-in":
       return <CheckInView state={state} onUpdateState={onUpdateState} />;
     case "my-team":
-      return <MyTeamView state={state} onUpdateState={onUpdateState} onOpenModal={onOpenModal} />;
+      return (
+        <TeamView 
+          state={state} 
+          onUpdateState={onUpdateState} 
+          onOpenModal={onOpenModal} 
+          onSwitchView={onSwitchView}
+          simulatedMemberId={state.simulatedMemberId}
+          onSimulateMember={state.onSimulateMember}
+        />
+      );
     case "analytics":
       return <AnalyticsView state={state} />;
     case "communications":
@@ -50,6 +80,32 @@ export default function GenericTableView({
     default:
       return <div className="p-8 text-slate-400">View not implemented yet.</div>;
   }
+}
+
+// Helper to strictly extract Company and Function / Job Title from ticket form inputs
+function extractTicketFormCredentials(attendee) {
+  if (!attendee) return { company: "", jobTitle: "" };
+  const answers = attendee.answers || attendee.customAnswers || attendee.formAnswers || {};
+  let formCompany = attendee.company || "";
+  let formJob = attendee.jobTitle || attendee.job_title || attendee.function || attendee.profession || "";
+
+  if (typeof answers === "object") {
+    for (const [k, v] of Object.entries(answers)) {
+      if (!v || typeof v !== "string") continue;
+      const key = k.toLowerCase();
+      if (!formCompany && (key.includes("company") || key.includes("organization") || key.includes("societe") || key.includes("entreprise") || key.includes("org"))) {
+        formCompany = String(v).trim();
+      }
+      if (!formJob && (key.includes("job") || key.includes("title") || key.includes("function") || key.includes("profession") || key.includes("poste") || key.includes("role") || key.includes("fonction"))) {
+        formJob = String(v).trim();
+      }
+    }
+  }
+
+  return {
+    company: formCompany,
+    jobTitle: formJob
+  };
 }
 
 // 1. EVENT DETAILS VIEW
@@ -130,15 +186,16 @@ function EventDetailsView({ state, onUpdateState, onUploadFile }) {
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Event Type</label>
-            <select 
+            <SearchableSelect 
               value={type} 
-              onChange={(e) => setType(e.target.value)}
-              className="px-4 py-3 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-50 text-sm font-semibold"
-            >
-              <option value="Hybrid">Hybrid</option>
-              <option value="In-person">In-Person Only</option>
-              <option value="Virtual">Virtual / Online Only</option>
-            </select>
+              onChange={(val) => setType(val)}
+              options={[
+                { value: "Hybrid", label: "Hybrid" },
+                { value: "In-person", label: "In-Person Only" },
+                { value: "Virtual", label: "Virtual / Online Only" }
+              ]}
+              placeholder="Select event type..."
+            />
           </div>
         </div>
 
@@ -458,6 +515,10 @@ function renderDynamicCellData(row, col) {
   }
   
   if (val === undefined || val === null || val === "") {
+    if (col.baseLabel) val = ans[col.baseLabel];
+  }
+
+  if (val === undefined || val === null || val === "") {
     const cleanKey = col.id.replace(/^f_core_|^f_/, "");
     if (ans[cleanKey] !== undefined && ans[cleanKey] !== null && ans[cleanKey] !== "") {
       val = ans[cleanKey];
@@ -466,16 +527,54 @@ function renderDynamicCellData(row, col) {
     }
   }
 
+  // Scan all keys in ans for normalized match with column ID or column label
+  if (val === undefined || val === null || val === "") {
+    const colIdNorm = (col.id || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const colLabelNorm = (col.label || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    for (const [k, v] of Object.entries(ans)) {
+      if (v === undefined || v === null || v === "") continue;
+      const kNorm = k.toLowerCase().replace(/[^a-z0-9]/g, "");
+      if (kNorm === colIdNorm || kNorm === colLabelNorm) {
+        val = v;
+        break;
+      }
+    }
+  }
+
   if (val === undefined || val === null || val === "") {
     const norm = (col.id || "").toLowerCase().replace(/[^a-z0-9]/g, "");
     const labelNorm = (col.label || "").toLowerCase().replace(/[^a-z0-9]/g, "");
     
     if (norm.includes("phone") || labelNorm.includes("phone")) {
-      val = row.phone || ans.phone || ans.f_core_phone || ans.phoneNumber;
-    } else if (norm.includes("company") || labelNorm.includes("company")) {
-      val = row.company || ans.company || ans.f_company || ans.organization;
-    } else if (norm.includes("job") || labelNorm.includes("job") || labelNorm.includes("title")) {
-      val = row.jobTitle || row.job_title || ans.jobTitle || ans.job_title || ans.f_job_title;
+      val = ans.phone || ans.f_core_phone || ans.phoneNumber || row.phone;
+    } else if (norm.includes("company") || labelNorm.includes("company") || labelNorm.includes("organization") || labelNorm.includes("societe")) {
+      // Find company in ans first
+      let foundComp = ans.company || ans.f_company || ans.organization || ans.f_organization;
+      if (!foundComp) {
+        for (const [k, v] of Object.entries(ans)) {
+          if (!v || typeof v !== "string") continue;
+          const kLower = k.toLowerCase();
+          if (kLower.includes("company") || kLower.includes("societe") || kLower.includes("entreprise") || kLower.includes("organization")) {
+            foundComp = String(v).trim();
+            break;
+          }
+        }
+      }
+      val = foundComp || row.company;
+    } else if (norm.includes("job") || labelNorm.includes("job") || labelNorm.includes("title") || labelNorm.includes("function") || labelNorm.includes("role") || labelNorm.includes("poste") || labelNorm.includes("profession")) {
+      // Find job title/function in ans first
+      let foundJob = ans.jobTitle || ans.job_title || ans.f_job_title || ans.function || ans.role || ans.profession || ans.jobFunction;
+      if (!foundJob) {
+        for (const [k, v] of Object.entries(ans)) {
+          if (!v || typeof v !== "string") continue;
+          const kLower = k.toLowerCase();
+          if (kLower.includes("job") || kLower.includes("title") || kLower.includes("function") || kLower.includes("role") || kLower.includes("profession") || kLower.includes("poste") || kLower.includes("fonction")) {
+            foundJob = String(v).trim();
+            break;
+          }
+        }
+      }
+      val = foundJob || row.jobTitle || row.job_title;
     } else {
       val = row[col.id];
     }
@@ -726,7 +825,6 @@ function SubmissionDetailsModal({ item, type = "attendee", forms = [], tickets =
 function AttendeesView({ state, onUpdateState, onOpenModal }) {
   const { attendees = [], tickets = [], forms = [] } = state;
   const [search, setSearch] = useState("");
-  const [tabFilter, setTabFilter] = useState("active"); // "active" | "archived" | "all"
   const [selectedTicketType, setSelectedTicketType] = useState("all");
   const [selectedSubmissionModal, setSelectedSubmissionModal] = useState(null);
   const [previewImageModal, setPreviewImageModal] = useState(null);
@@ -754,7 +852,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
     return itemType === target;
   };
 
-  // Available Ticket Types for Switcher Pills (Authoritative from tickets)
+  // Available Ticket Types + Archived for Unified Switcher Pills (Authoritative from tickets)
   const ticketTypes = useMemo(() => {
     const list = [{ id: "all", label: "All Tickets" }];
     const seen = new Set();
@@ -779,8 +877,14 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
       });
     }
 
+    // Add Archived tab to top switcher pills
+    list.push({ id: "archived", label: "Archived" });
+
     return list;
   }, [tickets, attendees]);
+
+  const activeAttendees = useMemo(() => attendees.filter(a => a.status !== 'archived' && !a.isArchived), [attendees]);
+  const archivedAttendees = useMemo(() => attendees.filter(a => a.status === 'archived' || a.isArchived), [attendees]);
 
   const handleArchive = (id) => {
     if (confirm("Archive this attendee? Their registration record is preserved in archives.")) {
@@ -792,7 +896,57 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
     onUpdateState("attendees", attendees.map(a => a.id === id ? { ...a, status: 'registered', isArchived: false } : a));
   };
 
-  // Filtered Attendees by Ticket Type, Status, and Search
+  // Toggle Check-in status directly from Attendees list
+  const handleToggleCheckin = (id) => {
+    const updated = attendees.map(a => {
+      if (a.id === id) {
+        const isCheckedIn = a.status === "checked-in";
+        return {
+          ...a,
+          status: isCheckedIn ? "registered" : "checked-in",
+          checkinTime: isCheckedIn ? null : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+      }
+      return a;
+    });
+    onUpdateState("attendees", updated);
+  };
+
+  // Direct 1-Click Print Badge Handler (Directly opens system print dialog with zero extra steps)
+  const handleDirectPrintAttendeeBadge = (attendee) => {
+    const resolvedTier = getResolvedTicketName(attendee, tickets);
+    const matchedTicket = tickets.find(t => (t.name || t.tier || "").trim().toLowerCase() === (resolvedTier || "").trim().toLowerCase()) || {};
+    const eventDetails = state.eventDetails || {};
+    const templateUrl = matchedTicket.badgeUrl || eventDetails.badgeUrl || "";
+    const badgeSettings = matchedTicket.badgeSettings || eventDetails.badgeSettings || {};
+    const attendeePhoto = getAttendeeDisplayImage(attendee);
+    const attendeeName = attendee.name || "Attendee";
+    const attendeeEmail = attendee.email || "";
+    const { company: attendeeCompany, jobTitle: attendeeJobTitle } = extractTicketFormCredentials(attendee);
+    const badgeCode = attendee.badgeCode || attendee.badge_code || `EZ-${String(attendee.id || '').slice(-4).toUpperCase() || 'PASS'}`;
+    const eventTitle = eventDetails.title || "Conference Event";
+    const eventId = eventDetails.id || state.activeEventId || "";
+
+    printA4BadgeDocument({
+      templateUrl,
+      attendeeId: attendee.id || badgeCode,
+      attendeeName,
+      attendeeEmail,
+      attendeePhoto,
+      attendeeCompany,
+      attendeeJobTitle,
+      ticketType: resolvedTier || "General Pass",
+      badgeCode,
+      eventId,
+      eventTitle,
+      showFoldGuide: badgeSettings.showFoldGuide !== false,
+      showPhoto: badgeSettings.showPhoto !== false,
+      showQr: badgeSettings.showQr !== false,
+      cardTheme: badgeSettings.cardTheme || "transparent"
+    });
+  };
+
+  // Filtered Attendees by Ticket Type / Archived and Search
   const filtered = useMemo(() => {
     const seen = new Set();
     return attendees.filter(a => {
@@ -802,10 +956,12 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
       }
 
       const isArchived = a.status === 'archived' || a.isArchived;
-      if (tabFilter === "active" && isArchived) return false;
-      if (tabFilter === "archived" && !isArchived) return false;
-
-      if (selectedTicketType !== "all" && !isAttendeeInTicketTier(a, selectedTicketType)) return false;
+      if (selectedTicketType === "archived") {
+        if (!isArchived) return false;
+      } else {
+        if (isArchived) return false;
+        if (selectedTicketType !== "all" && !isAttendeeInTicketTier(a, selectedTicketType)) return false;
+      }
 
       const searchLower = search.toLowerCase();
       const nameMatch = (a.name || "").toLowerCase().includes(searchLower);
@@ -818,10 +974,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
 
       return nameMatch || emailMatch || compMatch || ansMatch;
     });
-  }, [attendees, tabFilter, selectedTicketType, search, tickets]);
-
-  const activeCount = attendees.filter(a => a.status !== 'archived' && !a.isArchived).length;
-  const archivedCount = attendees.filter(a => a.status === 'archived' || a.isArchived).length;
+  }, [attendees, selectedTicketType, search, tickets]);
 
   // Dynamic Form Columns for the selected ticket type & dataset
   const dynamicCols = useMemo(() => {
@@ -844,12 +997,17 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
         </button>
       </header>
 
-      {/* Clean Minimalist Ticket-Type Switcher Pills */}
+      {/* Clean Minimalist Ticket-Type & Archived Switcher Pills */}
       <div className="flex items-center gap-1.5 p-1 bg-slate-100/80 rounded-2xl border border-slate-200/70 w-fit max-w-full overflow-x-auto select-none shadow-inner">
         {ticketTypes.map(tt => {
-          const count = tt.id === "all" 
-            ? attendees.length 
-            : attendees.filter(a => isAttendeeInTicketTier(a, tt.id)).length;
+          let count = 0;
+          if (tt.id === "all") {
+            count = activeAttendees.length;
+          } else if (tt.id === "archived") {
+            count = archivedAttendees.length;
+          } else {
+            count = activeAttendees.filter(a => isAttendeeInTicketTier(a, tt.id)).length;
+          }
           const isSelected = selectedTicketType === tt.id;
 
           return (
@@ -874,8 +1032,8 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
       </div>
 
       <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden flex flex-col">
-        {/* Toolbar (Search + Status Filter Tabs) */}
-        <div className="p-5 border-b border-slate-150 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        {/* Toolbar (Search) */}
+        <div className="p-5 border-b border-slate-150 bg-slate-50 flex items-center justify-between gap-4">
           <div className="relative w-full max-w-md">
             <Search className="absolute left-3.5 top-3 text-slate-400" size={16} />
             <input 
@@ -885,39 +1043,6 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-slate-200 bg-white rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 shadow-sm"
             />
-          </div>
-
-          <div className="flex items-center gap-1.5 bg-slate-200/60 p-1 rounded-xl self-start sm:self-auto border border-slate-200/70 select-none">
-            <button
-              onClick={() => setTabFilter("active")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                tabFilter === "active" 
-                  ? "bg-white text-slate-800 shadow-sm" 
-                  : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
-              }`}
-            >
-              Active ({activeCount})
-            </button>
-            <button
-              onClick={() => setTabFilter("archived")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                tabFilter === "archived" 
-                  ? "bg-white text-slate-800 shadow-sm" 
-                  : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
-              }`}
-            >
-              Archived ({archivedCount})
-            </button>
-            <button
-              onClick={() => setTabFilter("all")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                tabFilter === "all" 
-                  ? "bg-white text-slate-800 shadow-sm" 
-                  : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
-              }`}
-            >
-              All ({attendees.length})
-            </button>
           </div>
         </div>
 
@@ -952,8 +1077,8 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
             <tbody className="divide-y divide-slate-100">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5 + (selectedTicketType === "all" ? 1 : 0) + dynamicCols.length} className="text-center text-slate-450 py-14">
-                    {tabFilter === "archived" 
+                  <td colSpan={5 + (selectedTicketType === "all" || selectedTicketType === "archived" ? 1 : 0) + dynamicCols.length} className="text-center text-slate-450 py-14">
+                    {selectedTicketType === "archived" 
                       ? "No archived attendees found." 
                       : selectedTicketType !== "all" 
                         ? `No attendees registered for ${selectedTicketType}.` 
@@ -963,6 +1088,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
               ) : (
                 filtered.map((a, idx) => {
                   const isArchived = a.status === 'archived' || a.isArchived;
+                  const isCheckedIn = a.status === 'checked-in';
                   const displayImg = getAttendeeDisplayImage(a);
                   return (
                     <tr key={a.id ? `${a.id}-${idx}` : `attendee-${idx}`} className={`group hover:bg-slate-50 transition-colors duration-150 ${isArchived ? 'opacity-70 bg-slate-50/50' : ''}`}>
@@ -972,34 +1098,43 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                           onClick={(e) => {
                             e.stopPropagation();
                             setPreviewImageModal({
-                              url: displayImg,
-                              name: a.name || 'Attendee',
-                              email: a.email || '',
-                              ticket: getResolvedTicketName(a, tickets)
+                              src: displayImg,
+                              title: `${a.name || "Attendee"} - ID Photo`,
+                              subtitle: `Ticket: ${a.ticketType || "Standard Pass"}`
                             });
                           }}
-                          className="relative group/avatar cursor-zoom-in shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
-                          title="Click to view full photo"
+                          className="relative group/avatar cursor-zoom-in shrink-0"
+                          title="Click to view full size photo"
                         >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img 
-                            src={displayImg} 
-                            className="w-9 h-9 rounded-full object-cover shadow-inner border border-slate-200 group-hover/avatar:ring-2 group-hover/avatar:ring-indigo-500 transition-all" 
-                            alt="" 
-                          />
-                          <div className="absolute inset-0 bg-slate-900/35 rounded-full opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center transition-opacity text-white">
-                            <Maximize2 size={12} className="drop-shadow" />
+                          <div className="w-9 h-9 rounded-full overflow-hidden border border-slate-200 bg-slate-100 flex items-center justify-center shadow-2xs group-hover/avatar:ring-2 group-hover/avatar:ring-indigo-500 transition-all">
+                            {displayImg ? (
+                              <img 
+                                src={displayImg} 
+                                alt={a.name} 
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                  if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
+                                }}
+                              />
+                            ) : null}
+                            <div 
+                              style={{ display: displayImg ? 'none' : 'flex' }}
+                              className="w-full h-full bg-slate-100 text-slate-600 font-bold text-xs items-center justify-center"
+                            >
+                              {(a.name || "Attendee").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                            </div>
                           </div>
                         </button>
-                        <div className="flex flex-col min-w-0 flex-1">
-                          <span className="text-slate-800 font-bold leading-tight whitespace-nowrap">{a.name}</span>
-                          {a.company && <span className="text-[10px] text-slate-400 font-medium truncate">{a.company}</span>}
+                        <div>
+                          <div className="text-slate-850 font-bold leading-tight">{a.name}</div>
+                          <div className="text-[10px] text-slate-400 font-medium">{a.badgeCode || a.badge_code || `EZ-${String(a.id || '').slice(-4).toUpperCase() || 'PASS'}`}</div>
                         </div>
                       </td>
-                      <td className="py-4 px-6 text-slate-500 font-medium">{a.email}</td>
+                      <td className="py-4 px-6 text-slate-500 whitespace-nowrap">{a.email}</td>
                       {selectedTicketType === "all" && (
-                        <td className="py-4 px-6 font-bold text-slate-800 whitespace-nowrap">
-                          <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 text-[10px] font-extrabold uppercase tracking-tight">
+                        <td className="py-4 px-6 whitespace-nowrap">
+                          <span className="px-2.5 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-slate-700 font-semibold text-[11px]">
                             {getResolvedTicketName(a, tickets)}
                           </span>
                         </td>
@@ -1010,62 +1145,67 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                           {renderDynamicCellData(a, col)}
                         </td>
                       ))}
-                      <td className="py-4 px-6">
+                      <td className="py-4 px-6 whitespace-nowrap">
                         <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
                           isArchived 
-                            ? 'bg-slate-100 text-slate-600 border border-slate-200' 
-                            : a.status === 'checked-in' 
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
-                              : 'bg-indigo-50 text-indigo-600 border border-indigo-100'
+                            ? 'bg-slate-100 text-slate-500 border border-slate-200' 
+                            : isCheckedIn 
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' 
+                              : 'bg-indigo-50 text-indigo-700 border border-indigo-100'
                         }`}>
-                          {isArchived ? 'ARCHIVED' : (a.status === 'checked-in' ? 'checked in' : 'registered')}
+                          {isArchived ? 'ARCHIVED' : (isCheckedIn ? 'checked in' : 'registered')}
                         </span>
                       </td>
                       <td className="py-4 px-6 text-slate-400 font-medium whitespace-nowrap">{a.registeredDate || "—"}</td>
                       <td className="py-4 px-6 text-center whitespace-nowrap sticky right-0 bg-white group-hover:bg-slate-50 z-10 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                        <div className="flex items-center justify-center gap-1.5">
-                          {/* 1. View Form Intake Responses */}
-                          <button
-                            type="button"
-                            onClick={() => setSelectedSubmissionModal(a)}
-                            className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 border border-slate-200/80 hover:border-indigo-200 rounded-lg transition-all cursor-pointer shadow-2xs flex items-center justify-center"
-                            title="View Full Form Intake Responses"
-                          >
-                            <Eye size={15} />
-                          </button>
-
+                        <div className="flex items-center justify-center gap-1">
                           {!isArchived && (
                             <>
-                              {/* 2. Print Official Badge */}
+                              {/* 2. Direct Toggle Check-In Icon */}
                               <button
                                 type="button"
-                                onClick={() => setSelectedBadgeAttendee(a)}
-                                className="p-1.5 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-all cursor-pointer shadow-2xs flex items-center justify-center"
+                                onClick={() => handleToggleCheckin(a.id)}
+                                className={`p-1.5 rounded-lg transition-all cursor-pointer flex items-center justify-center border border-transparent ${
+                                  isCheckedIn 
+                                    ? "text-emerald-600 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100" 
+                                    : "text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 hover:border-emerald-100"
+                                }`}
+                                title={isCheckedIn ? "Checked In (Click to Undo Check-in)" : "Check In Attendee"}
+                              >
+                                <CheckCircle2 size={15} className={isCheckedIn ? "fill-emerald-50 text-emerald-600" : ""} />
+                              </button>
+
+                              {/* 3. Direct 1-Click Print Official Badge */}
+                              <button
+                                type="button"
+                                onClick={() => handleDirectPrintAttendeeBadge(a)}
+                                className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 border border-transparent hover:border-blue-100 rounded-lg transition-all cursor-pointer flex items-center justify-center"
                                 title="Print Attendee Badge (A4 4-Fold)"
                               >
                                 <Printer size={15} />
                               </button>
 
-                              {/* 3. Edit Attendee */}
+                              {/* 4. Edit Attendee Icon */}
                               <button 
                                 type="button"
                                 onClick={() => onOpenModal("attendee", a)}
-                                className="px-2.5 py-1.5 text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                                className="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100 border border-transparent hover:border-slate-200 rounded-lg transition-all cursor-pointer flex items-center justify-center"
                                 title="Edit Attendee"
                               >
-                                Edit
+                                <Pencil size={15} />
                               </button>
                             </>
                           )}
+
+                          {/* 5. Archive / Restore Icon */}
                           {isArchived ? (
                             <button 
                               type="button"
                               onClick={() => handleRestore(a.id)}
-                              className="px-2 py-1 text-emerald-600 hover:bg-emerald-50 border border-transparent hover:border-emerald-100 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1"
+                              className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 border border-transparent hover:border-emerald-100 rounded-lg transition-all cursor-pointer flex items-center justify-center"
                               title="Restore Attendee"
                             >
-                              <RotateCcw size={11} />
-                              <span>Restore</span>
+                              <RotateCcw size={14} />
                             </button>
                           ) : (
                             <button 
@@ -1117,20 +1257,24 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
         const badgeSettings = matchedTicket.badgeSettings || eventDetails.badgeSettings || {};
         const attendeePhoto = getAttendeeDisplayImage(attendee);
         const attendeeName = attendee.name || "Attendee";
-        const attendeeCompany = attendee.company || attendee.organization || "";
-        const attendeeJobTitle = attendee.jobTitle || attendee.job_title || attendee.role || "";
+        const attendeeEmail = attendee.email || "";
+        const { company: attendeeCompany, jobTitle: attendeeJobTitle } = extractTicketFormCredentials(attendee);
         const badgeCode = attendee.badgeCode || attendee.badge_code || `EZ-${String(attendee.id || '').slice(-4).toUpperCase() || 'PASS'}`;
         const eventTitle = eventDetails.title || "Conference Event";
+        const eventId = eventDetails.id || state.activeEventId || "";
 
         const handlePrint = () => {
           printA4BadgeDocument({
             templateUrl,
+            attendeeId: attendee.id || badgeCode,
             attendeeName,
+            attendeeEmail,
             attendeePhoto,
             attendeeCompany,
             attendeeJobTitle,
             ticketType: resolvedTier || "General Pass",
             badgeCode,
+            eventId,
             eventTitle,
             showFoldGuide: badgeSettings.showFoldGuide !== false,
             showPhoto: badgeSettings.showPhoto !== false,
@@ -1155,19 +1299,22 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
               </div>
 
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                Official A4 4-Fold Badge Sheet for <strong className="text-slate-800">{attendeeName}</strong> ({resolvedTier}).
+                Official A4 4-Fold Badge Sheet with unique check-in QR code for <strong className="text-slate-800">{attendeeName}</strong> ({resolvedTier}).
               </p>
 
               {/* A4 4-Fold Preview */}
               <div className="w-full max-w-[340px] sm:max-w-[370px] mx-auto shadow-xl rounded-2xl overflow-hidden border border-slate-200 bg-slate-50">
                 <A4BadgeSheet
                   templateUrl={templateUrl}
+                  attendeeId={attendee.id || badgeCode}
                   attendeeName={attendeeName}
+                  attendeeEmail={attendeeEmail}
                   attendeePhoto={attendeePhoto}
                   attendeeCompany={attendeeCompany}
                   attendeeJobTitle={attendeeJobTitle}
                   ticketType={resolvedTier}
                   badgeCode={badgeCode}
+                  eventId={eventId}
                   eventTitle={eventTitle}
                   showFoldGuide={badgeSettings.showFoldGuide !== false}
                   showPhoto={badgeSettings.showPhoto !== false}
@@ -1270,6 +1417,22 @@ function PendingView({ state, onUpdateState }) {
     const nameParts = (p.name || 'Guest Attendee').trim().split(' ');
     const userImg = getAttendeeDisplayImage(p);
     const answersData = p.answers || p.customAnswers || p.formAnswers || {};
+    
+    let formJob = '';
+    let formComp = '';
+    if (typeof answersData === 'object') {
+      for (const [k, v] of Object.entries(answersData)) {
+        if (!v || typeof v !== 'string') continue;
+        const key = k.toLowerCase();
+        if (!formJob && (key.includes('job') || key.includes('title') || key.includes('function') || key.includes('profession') || key.includes('poste') || key.includes('role') || key.includes('fonction'))) {
+          formJob = String(v).trim();
+        }
+        if (!formComp && (key.includes('company') || key.includes('societe') || key.includes('entreprise') || key.includes('org'))) {
+          formComp = String(v).trim();
+        }
+      }
+    }
+
     const newAttendee = {
       id: p.id || Date.now(),
       name: p.name || 'Guest Attendee',
@@ -1278,9 +1441,9 @@ function PendingView({ state, onUpdateState }) {
       email: p.email || '',
       ticketType: p.ticketType || p.ticket_type || "Standard Admission",
       ticket_type: p.ticketType || p.ticket_type || "Standard Admission",
-      company: p.company || answersData.company || answersData.f_company || '',
-      jobTitle: p.jobTitle || p.job_title || answersData.jobTitle || answersData.job_title || answersData.f_job_title || '',
-      job_title: p.jobTitle || p.job_title || answersData.jobTitle || answersData.job_title || answersData.f_job_title || '',
+      company: formComp || p.company || answersData.company || answersData.f_company || '',
+      jobTitle: formJob || p.jobTitle || p.job_title || answersData.jobTitle || answersData.job_title || answersData.f_job_title || '',
+      job_title: formJob || p.jobTitle || p.job_title || answersData.jobTitle || answersData.job_title || answersData.f_job_title || '',
       phone: p.phone || answersData.phone || answersData.f_core_phone || answersData.phoneNumber || '',
       status: "registered",
       status_participation: "registered",
@@ -2079,17 +2242,14 @@ function SpeakersDirectoryView({ state, onUpdateState, onUploadFile }) {
             {speakerMode === "attendee" ? (
               <div className="flex flex-col gap-1 w-full">
                 <label className="text-[10px] font-bold text-slate-400 uppercase">1. Select Registered Attendee</label>
-                <select
+                <SearchableSelect
                   value={selectedAttendeeId}
-                  onChange={(e) => setSelectedAttendeeId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none bg-white"
+                  onChange={(val) => setSelectedAttendeeId(val)}
+                  options={attendees.map(a => ({ value: a.id, label: `${a.name} (${a.email})` }))}
+                  placeholder="-- Choose Attendee --"
+                  searchPlaceholder="Search attendee by name or email..."
                   required
-                >
-                  <option value="">-- Choose Attendee --</option>
-                  {attendees.map(a => (
-                    <option key={a.id} value={a.id}>{a.name} ({a.email})</option>
-                  ))}
-                </select>
+                />
               </div>
             ) : (
               <div className="flex flex-col gap-1 w-full">
@@ -2140,24 +2300,29 @@ function SpeakersDirectoryView({ state, onUpdateState, onUploadFile }) {
             <div className="flex flex-col gap-1 w-full">
               <label className="text-[10px] font-bold text-slate-400 uppercase">3. Role &amp; Session</label>
               <div className="flex gap-1.5">
-                <select
-                  value={customRole}
-                  onChange={(e) => setCustomRole(e.target.value)}
-                  className="px-2 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none bg-white w-28 shrink-0"
-                >
-                  <option value="speaker">Speaker</option>
-                  <option value="moderator">Moderator</option>
-                </select>
-                <select
-                  value={selectedSessionId}
-                  onChange={(e) => setSelectedSessionId(e.target.value)}
-                  className="flex-1 px-3 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none bg-white min-w-0"
-                >
-                  <option value="">-- None (Global) --</option>
-                  {sessions.map(s => (
-                    <option key={s.id} value={s.id}>{s.title}</option>
-                  ))}
-                </select>
+                <div className="w-28 shrink-0">
+                  <SearchableSelect
+                    value={customRole}
+                    onChange={(val) => setCustomRole(val)}
+                    options={[
+                      { value: "speaker", label: "Speaker" },
+                      { value: "moderator", label: "Moderator" }
+                    ]}
+                    placeholder="Role..."
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <SearchableSelect
+                    value={selectedSessionId}
+                    onChange={(val) => setSelectedSessionId(val)}
+                    options={[
+                      { value: "", label: "-- None (Global) --" },
+                      ...sessions.map(s => ({ value: s.id, label: s.title }))
+                    ]}
+                    placeholder="-- Select Session --"
+                    searchPlaceholder="Search session by title..."
+                  />
+                </div>
               </div>
             </div>
 
@@ -2373,11 +2538,13 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
             const badgeType = t.badgeType || "thermal_qr";
 
             return (
-              <div key={t.id} className={`bg-white border-2 rounded-3xl p-7 flex flex-col gap-5 relative shadow-sm hover:shadow-lg transition-all duration-300 ${isArchived ? 'border-slate-300 bg-slate-50/50 opacity-75' : t.isPopular ? 'border-amber-400 bg-gradient-to-b from-white to-amber-50/15 ring-2 ring-amber-400/20' : 'border-slate-200'}`}>
-                <div className="flex items-center justify-between">
+              <div key={t.id} className={`bg-white border-2 rounded-3xl p-6 sm:p-7 flex flex-col gap-4 relative shadow-xs hover:shadow-lg transition-all duration-300 ${isArchived ? 'border-slate-300 bg-slate-50/50 opacity-75' : t.isPopular ? 'border-amber-400 bg-gradient-to-b from-white to-amber-50/15 ring-2 ring-amber-400/20' : 'border-slate-200'}`}>
+                {/* Top Badge Strip */}
+                <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full border border-blue-200 bg-blue-50 text-blue-700">
                       {badgeType === "thermal_qr" && "Thermal Ticket"}
+                      {badgeType === "a6" && "A6 Lanyard"}
                       {badgeType === "a4" && "A4 Full Page"}
                     </span>
                     {isArchived && (
@@ -2393,16 +2560,24 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
                   </div>
 
                   {!isArchived && t.isPopular && (
-                    <span className="bg-amber-500 text-white text-[9px] font-extrabold uppercase py-0.5 px-2.5 rounded-full shadow-xs flex items-center gap-1">
+                    <span className="bg-amber-500 text-white text-[9px] font-extrabold uppercase py-0.5 px-2.5 rounded-full shadow-xs flex items-center gap-1 shrink-0">
                       ★ Best Seller
                     </span>
                   )}
                 </div>
                 
-                <div>
-                  <h3 className="text-lg font-bold text-slate-800">{t.name}</h3>
-                  <div className="text-3xl font-extrabold text-slate-900 mt-2">
-                    {t.price === 0 ? "Free" : `${t.price.toLocaleString()} DZD`} <span className="text-xs font-semibold text-slate-400">{t.price > 0 ? "/ ticket" : "Admission"}</span>
+                {/* Ticket Name (Bigger) & Price (Smaller) */}
+                <div className="flex flex-col gap-1">
+                  <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-tight">
+                    {t.name}
+                  </h3>
+                  <div className="flex items-baseline gap-1.5 text-sm font-bold">
+                    <span className="text-slate-850 font-black">
+                      {t.price === 0 ? "Free" : `${t.price.toLocaleString()} DZD`}
+                    </span>
+                    <span className="text-xs font-semibold text-slate-400">
+                      • {t.price > 0 ? "per attendee" : "Admission"}
+                    </span>
                   </div>
                   {t.description && (
                     <p className="text-xs text-slate-500 mt-1.5 line-clamp-2 leading-relaxed">
@@ -2411,59 +2586,65 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
                   )}
                 </div>
 
-                {/* Linked Form Tag */}
+                {/* Simplified Connected Form UI */}
                 {linkedForm && (
-                  <div className="flex items-center gap-1.5 text-[11px] font-semibold text-blue-600 bg-blue-50/70 border border-blue-150 px-2.5 py-1 rounded-xl">
-                    <FileText size={12} />
-                    <span className="truncate">Form: {linkedForm.title}</span>
+                  <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500 bg-slate-50 border border-slate-200/80 px-2.5 py-1 rounded-xl w-fit">
+                    <FileText size={12} className="text-slate-400 shrink-0" />
+                    <span>Form: <strong className="text-slate-700 font-semibold">{linkedForm.title}</strong></span>
                   </div>
                 )}
 
                 {/* Perks List */}
-                <ul className="flex flex-col gap-2 text-xs text-slate-600 font-semibold border-t border-slate-100 pt-4">
-                  {(t.features || []).slice(0, 4).map((feature, fIdx) => (
-                    <li key={fIdx} className="flex items-center gap-2">
-                      {feature}
-                    </li>
-                  ))}
-                  {(t.features || []).length > 4 && (
-                    <li className="text-[11px] text-slate-400 font-semibold pl-5">
-                      + {(t.features || []).length - 4} more inclusions
-                    </li>
-                  )}
-                </ul>
+                {(t.features || []).length > 0 && (
+                  <ul className="flex flex-col gap-2 text-xs text-slate-600 font-medium border-t border-slate-100 pt-3.5">
+                    {(t.features || []).slice(0, 4).map((feature, fIdx) => (
+                      <li key={fIdx} className="flex items-center gap-2">
+                        <Check size={13} className="text-emerald-600 shrink-0" />
+                        <span className="truncate">{feature}</span>
+                      </li>
+                    ))}
+                    {(t.features || []).length > 4 && (
+                      <li className="text-[11px] text-slate-400 font-semibold pl-5">
+                        + {(t.features || []).length - 4} more inclusions
+                      </li>
+                    )}
+                  </ul>
+                )}
 
-                <div className="mt-auto border-t border-slate-100 pt-4 flex items-center justify-between text-xs text-slate-400 font-semibold">
-                  <span>Sold: {tierSold} / {t.maxQty >= 99999 ? "∞" : t.maxQty}</span>
-                  <div className="flex items-center gap-2">
+                {/* Card Footer: Sold Count Left, Action Icon Buttons Right */}
+                <div className="mt-auto border-t border-slate-100 pt-3.5 flex items-center justify-between text-xs text-slate-400 font-semibold">
+                  <span className="font-bold text-slate-500">
+                    Sold: {tierSold} / {t.maxQty >= 99999 ? "∞" : t.maxQty}
+                  </span>
+                  
+                  <div className="flex items-center gap-1">
                     {!isArchived && (
-                      <>
-                        <button 
-                          onClick={() => onOpenModal("ticket", t)}
-                          className="text-indigo-650 hover:text-indigo-800 font-bold transition-colors cursor-pointer"
-                        >
-                          Edit & Design
-                        </button>
-                        <span className="text-slate-200">|</span>
-                      </>
+                      <button 
+                        type="button"
+                        onClick={() => onOpenModal("ticket", t)}
+                        className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 border border-transparent hover:border-indigo-100 rounded-xl transition-all cursor-pointer flex items-center justify-center"
+                        title="Edit & Design Ticket Tier"
+                      >
+                        <Pencil size={15} />
+                      </button>
                     )}
                     {isArchived ? (
                       <button 
+                        type="button"
                         onClick={() => handleRestore(t.id)}
-                        className="text-emerald-600 hover:text-emerald-700 font-bold transition-colors cursor-pointer flex items-center gap-1"
+                        className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 border border-transparent hover:border-emerald-100 rounded-xl transition-all cursor-pointer flex items-center justify-center"
                         title="Restore Ticket Tier"
                       >
-                        <RotateCcw size={12} />
-                        <span>Restore</span>
+                        <RotateCcw size={15} />
                       </button>
                     ) : (
                       <button 
+                        type="button"
                         onClick={() => handleArchive(t.id)}
-                        className="text-slate-400 hover:text-amber-600 font-bold transition-colors cursor-pointer flex items-center gap-1"
+                        className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 border border-transparent hover:border-amber-100 rounded-xl transition-all cursor-pointer flex items-center justify-center"
                         title="Archive Ticket Tier"
                       >
-                        <Archive size={12} />
-                        <span>Archive</span>
+                        <Archive size={15} />
                       </button>
                     )}
                   </div>
@@ -2479,9 +2660,13 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
 
 // 9. CHECK IN VIEW
 function CheckInView({ state, onUpdateState }) {
-  const { attendees, tickets = [] } = state;
+  const { attendees = [], tickets = [] } = state;
   const [search, setSearch] = useState("");
   const [selectedBadgeAttendee, setSelectedBadgeAttendee] = useState(null);
+  const [showScannerModal, setShowScannerModal] = useState(false);
+  const [scanInputCode, setScanInputCode] = useState("");
+  const [scanFeedback, setScanFeedback] = useState(null);
+  const [isCameraActive, setIsCameraActive] = useState(false);
 
   const handleToggle = (id) => {
     const updated = attendees.map(a => {
@@ -2498,19 +2683,156 @@ function CheckInView({ state, onUpdateState }) {
     onUpdateState("attendees", updated);
   };
 
+  // Direct 1-Click Print Badge Handler for CheckInView
+  const handleDirectPrintAttendeeBadge = (attendee) => {
+    const resolvedTier = getResolvedTicketName(attendee, tickets);
+    const matchedTicket = tickets.find(t => (t.name || t.tier || "").trim().toLowerCase() === (resolvedTier || "").trim().toLowerCase()) || {};
+    const eventDetails = state.eventDetails || {};
+    const templateUrl = matchedTicket.badgeUrl || eventDetails.badgeUrl || "";
+    const badgeSettings = matchedTicket.badgeSettings || eventDetails.badgeSettings || {};
+    const attendeePhoto = getAttendeeDisplayImage(attendee);
+    const attendeeName = attendee.name || "Attendee";
+    const attendeeEmail = attendee.email || "";
+    const { company: attendeeCompany, jobTitle: attendeeJobTitle } = extractTicketFormCredentials(attendee);
+    const badgeCode = attendee.badgeCode || attendee.badge_code || `EZ-${String(attendee.id || '').slice(-4).toUpperCase() || 'PASS'}`;
+    const eventTitle = eventDetails.title || "Conference Event";
+    const eventId = eventDetails.id || state.activeEventId || "";
+
+    printA4BadgeDocument({
+      templateUrl,
+      attendeeId: attendee.id || badgeCode,
+      attendeeName,
+      attendeeEmail,
+      attendeePhoto,
+      attendeeCompany,
+      attendeeJobTitle,
+      ticketType: resolvedTier || "General Pass",
+      badgeCode,
+      eventId,
+      eventTitle,
+      showFoldGuide: badgeSettings.showFoldGuide !== false,
+      showPhoto: badgeSettings.showPhoto !== false,
+      showQr: badgeSettings.showQr !== false,
+      cardTheme: badgeSettings.cardTheme || "transparent"
+    });
+  };
+
+  // Live QR Check-in Scan Processor
+  const handleScanPass = (rawCode) => {
+    if (!rawCode || !rawCode.trim()) return;
+    const clean = rawCode.trim();
+    let targetId = clean;
+    let targetCode = clean;
+    let targetEmail = clean;
+
+    // Parse JSON if the scanned payload is our structured badge QR
+    try {
+      if (clean.startsWith("{") && clean.endsWith("}")) {
+        const parsed = JSON.parse(clean);
+        if (parsed.attendeeId) targetId = String(parsed.attendeeId);
+        if (parsed.badgeCode) targetCode = String(parsed.badgeCode);
+        if (parsed.email) targetEmail = String(parsed.email);
+      }
+    } catch (e) {
+      console.warn("Raw scan parse:", e);
+    }
+
+    const matched = attendees.find(a => 
+      String(a.id || '').toLowerCase() === targetId.toLowerCase() ||
+      String(a.id || '').toLowerCase() === targetCode.toLowerCase() ||
+      (a.badgeCode && String(a.badgeCode).toLowerCase() === targetCode.toLowerCase()) ||
+      (a.badge_code && String(a.badge_code).toLowerCase() === targetCode.toLowerCase()) ||
+      (a.email && a.email.toLowerCase() === targetEmail.toLowerCase()) ||
+      (a.name && a.name.toLowerCase() === clean.toLowerCase())
+    );
+
+    if (!matched) {
+      setScanFeedback({
+        type: "error",
+        message: `No attendee found for scanned pass: "${clean.slice(0, 30)}..."`
+      });
+      return;
+    }
+
+    if (matched.status === "checked-in") {
+      setScanFeedback({
+        type: "warning",
+        title: "Already Checked In",
+        attendee: matched,
+        message: `${matched.name} (${matched.ticketType || 'Standard'}) was already checked in at ${matched.checkinTime || 'earlier'}.`
+      });
+      return;
+    }
+
+    const checkinTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const updated = attendees.map(a => 
+      a.id === matched.id ? { ...a, status: "checked-in", checkinTime } : a
+    );
+    onUpdateState("attendees", updated);
+
+    setScanFeedback({
+      type: "success",
+      title: "Check-in Successful!",
+      attendee: matched,
+      checkinTime,
+      message: `Verified entrance for ${matched.name} (${matched.ticketType || 'General Pass'}).`
+    });
+
+    setScanInputCode("");
+  };
+
   const filtered = attendees.filter(a =>
-    a.name.toLowerCase().includes(search.toLowerCase()) ||
-    a.email.toLowerCase().includes(search.toLowerCase())
+    (a.name || "").toLowerCase().includes(search.toLowerCase()) ||
+    (a.email || "").toLowerCase().includes(search.toLowerCase()) ||
+    (a.badgeCode || a.badge_code || "").toLowerCase().includes(search.toLowerCase())
   );
 
   return (
-    <div className="flex flex-col gap-6 w-full">
-      <header className="flex justify-between items-center select-none">
+    <div className="flex flex-col gap-6 w-full font-sans">
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 select-none">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Check-in Management</h2>
-          <p className="text-sm text-slate-500">Scan QR passes or toggle attendee attendance status at the door.</p>
+          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Check-in Management</h2>
+          <p className="text-xs sm:text-sm text-slate-500">Scan QR passes or toggle attendee attendance status at the door.</p>
         </div>
+
+        <button
+          onClick={() => {
+            setScanFeedback(null);
+            setShowScannerModal(true);
+          }}
+          className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-xs font-bold shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-102 shrink-0"
+        >
+          <Camera size={16} />
+          <span>Scan Attendee QR</span>
+        </button>
       </header>
+
+      {/* Live Scan Notification Alert */}
+      {scanFeedback && (
+        <div className={`p-4 rounded-2xl border flex items-center justify-between gap-3 shadow-xs animate-fade-in ${
+          scanFeedback.type === "success"
+            ? "bg-emerald-50 border-emerald-200 text-emerald-900"
+            : scanFeedback.type === "warning"
+            ? "bg-amber-50 border-amber-200 text-amber-900"
+            : "bg-rose-50 border-rose-200 text-rose-900"
+        }`}>
+          <div className="flex items-center gap-3">
+            {scanFeedback.type === "success" && <CheckCircle2 className="text-emerald-600 shrink-0" size={22} />}
+            {scanFeedback.type === "warning" && <Info className="text-amber-600 shrink-0" size={22} />}
+            {scanFeedback.type === "error" && <XCircle className="text-rose-600 shrink-0" size={22} />}
+            <div>
+              <div className="text-xs font-black">{scanFeedback.title || (scanFeedback.type === "error" ? "Scan Error" : "Notice")}</div>
+              <p className="text-xs font-medium opacity-90">{scanFeedback.message}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setScanFeedback(null)}
+            className="p-1 hover:bg-black/5 rounded-lg text-slate-500 cursor-pointer font-bold"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
@@ -2533,25 +2855,49 @@ function CheckInView({ state, onUpdateState }) {
         <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
           <div>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Rapid Door Status</span>
-            <div className="text-2xl font-extrabold text-slate-800 mt-2">Ready</div>
+            <div className="text-2xl font-extrabold text-slate-800 mt-2">Ready for Scans</div>
           </div>
           <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1 mt-4">
-            Peak hour check-in active
+            <Check size={12} /> Scannable unique QR codes active
           </span>
         </div>
       </div>
 
       <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden flex flex-col">
-        <div className="p-5 border-b border-slate-150 bg-slate-50">
+        <div className="p-5 border-b border-slate-150 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="relative w-full max-w-sm">
             <input 
               type="text" 
-              placeholder="Search attendees by name to check them in..." 
+              placeholder="Search attendees by name or email..." 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-4 pr-4 py-2 border border-slate-200 bg-white rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-650"
             />
           </div>
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (scanInputCode) handleScanPass(scanInputCode);
+            }}
+            className="flex items-center gap-2"
+          >
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Scan / Type QR Badge Code..."
+                value={scanInputCode}
+                onChange={(e) => setScanInputCode(e.target.value)}
+                className="w-48 sm:w-56 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600"
+              />
+            </div>
+            <button
+              type="submit"
+              className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold cursor-pointer transition-colors"
+            >
+              Check In
+            </button>
+          </form>
         </div>
 
         <div className="overflow-x-auto w-full">
@@ -2588,11 +2934,11 @@ function CheckInView({ state, onUpdateState }) {
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-1.5">
                           <button
-                            onClick={() => setSelectedBadgeAttendee(a)}
-                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 border border-slate-200 rounded-xl transition-all cursor-pointer shadow-2xs"
+                            onClick={() => handleDirectPrintAttendeeBadge(a)}
+                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 border border-transparent hover:border-blue-100 rounded-lg transition-all cursor-pointer flex items-center justify-center"
                             title="Print Attendee Badge (A4 4-Fold)"
                           >
-                            <Printer size={14} />
+                            <Printer size={15} />
                           </button>
                           <button 
                             onClick={() => handleToggle(a.id)}
@@ -2611,6 +2957,68 @@ function CheckInView({ state, onUpdateState }) {
         </div>
       </div>
 
+      {/* QR CAMERA / SCANNER MODAL */}
+      {showScannerModal && (
+        <div className="fixed inset-0 z-[210] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs animate-fade-in font-sans">
+          <div className="bg-white border border-slate-200 w-full max-w-md rounded-3xl shadow-2xl p-6 sm:p-7 text-center space-y-4 animate-scale-up relative text-slate-900">
+            <button
+              onClick={() => {
+                setShowScannerModal(false);
+                setIsCameraActive(false);
+              }}
+              className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 cursor-pointer font-bold"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="flex items-center justify-center gap-2">
+              <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                <QrCode size={22} />
+              </div>
+              <h3 className="text-lg font-black text-slate-900">Door QR Pass Scanner</h3>
+            </div>
+
+            <p className="text-xs text-slate-500 max-w-xs mx-auto">
+              Scan attendee badge QR code to instantly verify registration and complete check-in.
+            </p>
+
+            {/* Quick manual scan input for Barcode Scanner Guns */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (scanInputCode) {
+                  handleScanPass(scanInputCode);
+                  setShowScannerModal(false);
+                }
+              }}
+              className="flex gap-2 pt-1"
+            >
+              <input
+                autoFocus
+                type="text"
+                placeholder="Scan pass with barcode reader or paste QR..."
+                value={scanInputCode}
+                onChange={(e) => setScanInputCode(e.target.value)}
+                className="flex-1 px-3.5 py-2.5 border border-slate-200 bg-slate-50 rounded-xl text-xs font-mono font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:bg-white"
+              />
+              <button
+                type="submit"
+                className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/20 cursor-pointer"
+              >
+                Verify
+              </button>
+            </form>
+
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+              <span className="font-semibold">Attendees checked in:</span>
+              <span className="font-black text-slate-900">
+                {attendees.filter(a => a.status === "checked-in").length} / {attendees.length}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Attendee Badge Preview & Print Modal for Check-In */}
       {selectedBadgeAttendee && (() => {
         const attendee = selectedBadgeAttendee;
@@ -2621,20 +3029,24 @@ function CheckInView({ state, onUpdateState }) {
         const badgeSettings = matchedTicket.badgeSettings || eventDetails.badgeSettings || {};
         const attendeePhoto = getAttendeeDisplayImage(attendee);
         const attendeeName = attendee.name || "Attendee";
-        const attendeeCompany = attendee.company || attendee.organization || "";
-        const attendeeJobTitle = attendee.jobTitle || attendee.job_title || attendee.role || "";
+        const attendeeEmail = attendee.email || "";
+        const { company: attendeeCompany, jobTitle: attendeeJobTitle } = extractTicketFormCredentials(attendee);
         const badgeCode = attendee.badgeCode || attendee.badge_code || `EZ-${String(attendee.id || '').slice(-4).toUpperCase() || 'PASS'}`;
         const eventTitle = eventDetails.title || "Conference Event";
+        const eventId = eventDetails.id || state.activeEventId || "";
 
         const handlePrint = () => {
           printA4BadgeDocument({
             templateUrl,
+            attendeeId: attendee.id || badgeCode,
             attendeeName,
+            attendeeEmail,
             attendeePhoto,
             attendeeCompany,
             attendeeJobTitle,
             ticketType: resolvedTier || "General Pass",
             badgeCode,
+            eventId,
             eventTitle,
             showFoldGuide: badgeSettings.showFoldGuide !== false,
             showPhoto: badgeSettings.showPhoto !== false,
@@ -2659,19 +3071,22 @@ function CheckInView({ state, onUpdateState }) {
               </div>
 
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                Official A4 4-Fold Badge Sheet for <strong className="text-slate-800">{attendeeName}</strong> ({resolvedTier}).
+                Official A4 4-Fold Badge Sheet with unique check-in QR code for <strong className="text-slate-800">{attendeeName}</strong> ({resolvedTier}).
               </p>
 
               {/* A4 4-Fold Preview */}
               <div className="w-full max-w-[340px] sm:max-w-[370px] mx-auto shadow-xl rounded-2xl overflow-hidden border border-slate-200 bg-slate-50">
                 <A4BadgeSheet
                   templateUrl={templateUrl}
+                  attendeeId={attendee.id || badgeCode}
                   attendeeName={attendeeName}
+                  attendeeEmail={attendeeEmail}
                   attendeePhoto={attendeePhoto}
                   attendeeCompany={attendeeCompany}
                   attendeeJobTitle={attendeeJobTitle}
                   ticketType={resolvedTier}
                   badgeCode={badgeCode}
+                  eventId={eventId}
                   eventTitle={eventTitle}
                   showFoldGuide={badgeSettings.showFoldGuide !== false}
                   showPhoto={badgeSettings.showPhoto !== false}
@@ -2700,101 +3115,6 @@ function CheckInView({ state, onUpdateState }) {
           </div>
         );
       })()}
-    </div>
-  );
-}
-
-// 10. MY TEAM VIEW
-function MyTeamView({ state, onUpdateState, onOpenModal }) {
-  const { team } = state;
-
-  const handleArchive = (id) => {
-    if (confirm("Archive this staff member? (Record preserved in archives)")) {
-      onUpdateState("team", team.map(t => t.id === id ? { ...t, status: 'Archived', isArchived: true } : t));
-    }
-  };
-
-  const handleRestore = (id) => {
-    onUpdateState("team", team.map(t => t.id === id ? { ...t, status: 'Active', isArchived: false } : t));
-  };
-
-  return (
-    <div className="flex flex-col gap-6 w-full">
-      <header className="flex justify-between items-center select-none">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900">My Event Team</h2>
-          <p className="text-sm text-slate-500">Invite and manage collaboration permissions for event staff.</p>
-        </div>
-        <button 
-          onClick={() => onOpenModal("team")}
-          className="bg-indigo-650 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-xl text-sm transition-all hover:shadow duration-200 cursor-pointer"
-        >
-          Add Member
-        </button>
-      </header>
-
-      <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
-        <div className="overflow-x-auto w-full">
-          <table className="w-full border-collapse text-left text-xs font-semibold text-slate-700">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-150 text-[10px] text-slate-400 font-bold uppercase tracking-wider select-none">
-                <th className="py-4 px-6">Name</th>
-                <th className="py-4 px-6">Role</th>
-                <th className="py-4 px-6">Email</th>
-                <th className="py-4 px-6">Status</th>
-                <th className="py-4 px-6 w-16">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {team.map(t => {
-                const isArchived = t.status === 'Archived' || t.isArchived;
-                return (
-                  <tr key={t.id} className={`hover:bg-slate-50/50 transition-colors duration-150 ${isArchived ? 'opacity-70 bg-slate-50/30' : ''}`}>
-                    <td className="py-4 px-6 font-bold text-slate-800">{t.name}</td>
-                    <td className="py-4 px-6 font-bold text-indigo-650">{t.role}</td>
-                    <td className="py-4 px-6 text-slate-500">{t.email}</td>
-                    <td className="py-4 px-6">
-                      <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${isArchived ? 'bg-slate-200 text-slate-600' : t.status === 'Active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-                        {isArchived ? 'ARCHIVED' : t.status}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6 text-center flex items-center justify-center gap-1">
-                      {!isArchived && (
-                        <button 
-                          onClick={() => onOpenModal("team", t)}
-                          className="px-2 py-1 hover:text-indigo-650 text-slate-450 hover:bg-indigo-50 border border-transparent hover:border-indigo-100 rounded-lg text-[11px] font-bold transition-all cursor-pointer"
-                          title="Edit Member"
-                        >
-                          Edit
-                        </button>
-                      )}
-                      {isArchived ? (
-                        <button 
-                          onClick={() => handleRestore(t.id)}
-                          className="px-2 py-1 text-emerald-600 hover:bg-emerald-50 border border-transparent hover:border-emerald-100 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1"
-                          title="Restore Member"
-                        >
-                          <RotateCcw size={11} />
-                          <span>Restore</span>
-                        </button>
-                      ) : (
-                        <button 
-                          onClick={() => handleArchive(t.id)}
-                          className="px-2 py-1 text-slate-400 hover:text-amber-600 hover:bg-amber-50 border border-transparent hover:border-amber-100 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1"
-                          title="Archive Member"
-                        >
-                          <Archive size={11} />
-                          <span>Archive</span>
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
     </div>
   );
 }
@@ -3033,16 +3353,17 @@ function CommunicationsView({ state, onUpdateState }) {
           <form onSubmit={handleSend} className="flex flex-col gap-5">
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-bold text-slate-450 uppercase tracking-wider">Recipient Group</label>
-              <select
+              <SearchableSelect
                 value={recipientGroup}
-                onChange={(e) => setRecipientGroup(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-slate-200 focus:border-indigo-400 focus:outline-none rounded-xl text-xs font-semibold bg-white"
-              >
-                <option value="all">Everyone (All Attendees, Exhibitors & Team Members)</option>
-                <option value="attendees">All Registered Attendees Only ({attendees.length})</option>
-                <option value="exhibitors">All Registered Exhibitors Only ({exhibitors.length})</option>
-                <option value="team">My Organizer Team & Staff Only ({team.length})</option>
-              </select>
+                onChange={(val) => setRecipientGroup(val)}
+                options={[
+                  { value: "all", label: "Everyone (All Attendees, Exhibitors & Team Members)" },
+                  { value: "attendees", label: `All Registered Attendees Only (${attendees.length})` },
+                  { value: "exhibitors", label: `All Registered Exhibitors Only (${exhibitors.length})` },
+                  { value: "team", label: `My Organizer Team & Staff Only (${team.length})` }
+                ]}
+                placeholder="Select recipient group..."
+              />
             </div>
 
             <div className="flex flex-col gap-1.5">
