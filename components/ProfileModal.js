@@ -7,6 +7,7 @@ import {
   Check, Loader2, Plus, Trash2, Camera, ShieldCheck, 
   Smartphone, Share2, Award, Tag, Info, ArrowUpRight
 } from "lucide-react";
+import CountryPhoneInput from "./CountryPhoneInput";
 
 // Social Brand SVG Icons
 const LinkedinIcon = ({ size = 14, className = "" }) => (
@@ -403,12 +404,12 @@ export default function ProfileModal({
                 {/* Phone Number */}
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-700">Phone / WhatsApp (Optional)</label>
-                  <input
-                    type="tel"
-                    placeholder="e.g. +213 555 123 456"
+                  <CountryPhoneInput
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 font-medium placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all"
+                    onChange={setPhone}
+                    placeholder="555 123 456"
+                    defaultCountry="DZ"
+                    className="w-full"
                   />
                 </div>
 

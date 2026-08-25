@@ -120,12 +120,12 @@ export default function TeamView({
   // Color generator for avatar initials
   const getAvatarGradient = (name = "") => {
     const gradients = [
-      "from-indigo-500 to-purple-600",
+      "from-blue-600 to-indigo-600",
       "from-blue-500 to-cyan-600",
       "from-emerald-500 to-teal-600",
       "from-amber-500 to-orange-600",
       "from-rose-500 to-pink-600",
-      "from-fuchsia-500 to-indigo-600"
+      "from-blue-500 to-cyan-600"
     ];
     let sum = 0;
     for (let i = 0; i < name.length; i++) sum += name.charCodeAt(i);
@@ -174,7 +174,7 @@ export default function TeamView({
         <div>
           <div className="flex items-center gap-2.5">
             <h2 className="text-2xl font-black text-slate-900 tracking-tight">My Event Team</h2>
-            <span className="px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-xs font-black border border-indigo-100">
+            <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-black border border-blue-100">
               {team.length} Members
             </span>
           </div>
@@ -188,13 +188,13 @@ export default function TeamView({
           {team.length > 0 && (
             <div className="hidden lg:flex items-center gap-2 bg-slate-100 p-1 rounded-2xl border border-slate-200/80">
               <span className="text-[11px] font-bold text-slate-500 pl-2 flex items-center gap-1">
-                <Play size={12} className="text-indigo-600" />
+                <Play size={12} className="text-blue-600" />
                 <span>Simulate View:</span>
               </span>
               <select
                 value={simulatedMemberId || ""}
                 onChange={(e) => onSimulateMember(e.target.value ? e.target.value : null)}
-                className="bg-white border border-slate-200 rounded-xl text-xs font-bold py-1.5 px-3 text-slate-700 focus:outline-none focus:border-indigo-600 cursor-pointer shadow-xs"
+                className="bg-white border border-slate-200 rounded-xl text-xs font-bold py-1.5 px-3 text-slate-700 focus:outline-none focus:border-blue-600 cursor-pointer shadow-xs"
               >
                 <option value="">Full Admin (Default)</option>
                 {team.filter(m => !m.isArchived).map(m => (
@@ -208,7 +208,7 @@ export default function TeamView({
 
           <button 
             onClick={() => onOpenModal("team")}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold py-2.5 px-4 rounded-xl text-xs transition-all hover:shadow-md hover:-translate-y-0.5 flex items-center gap-2 cursor-pointer shadow-xs shadow-indigo-100"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-4 rounded-xl text-xs transition-all hover:shadow-md hover:-translate-y-0.5 flex items-center gap-2 cursor-pointer shadow-xs shadow-blue-100"
           >
             <Plus size={16} />
             <span>Add Member</span>
@@ -219,7 +219,7 @@ export default function TeamView({
       {/* KPI Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-3.5">
-          <div className="w-11 h-11 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold shrink-0">
+          <div className="w-11 h-11 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0">
             <Users size={20} />
           </div>
           <div>
@@ -308,7 +308,7 @@ export default function TeamView({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search member, email..."
-              className="w-full pl-8.5 pr-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-600 bg-slate-50/50"
+              className="w-full pl-8.5 pr-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 bg-slate-50/50"
             />
           </div>
 
@@ -358,7 +358,7 @@ export default function TeamView({
                 <tr>
                   <td colSpan={6} className="py-16 text-center">
                     <div className="flex flex-col items-center justify-center gap-3">
-                      <div className="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                      <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
                         <Users size={26} />
                       </div>
                       <p className="text-sm font-bold text-slate-800">No team members found</p>
@@ -369,7 +369,7 @@ export default function TeamView({
                       </p>
                       <button
                         onClick={() => onOpenModal("team")}
-                        className="mt-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+                        className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
                       >
                         + Add Member
                       </button>
@@ -480,7 +480,7 @@ export default function TeamView({
                             {assignedModuleKeys.length > 3 && (
                               <button
                                 onClick={() => setMatrixMember(member)}
-                                className="px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 text-[10px] font-bold transition-colors cursor-pointer"
+                                className="px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 hover:bg-blue-50 hover:text-blue-600 text-[10px] font-bold transition-colors cursor-pointer"
                               >
                                 +{assignedModuleKeys.length - 3} more
                               </button>
@@ -488,7 +488,7 @@ export default function TeamView({
 
                             <button
                               onClick={() => setMatrixMember(member)}
-                              className="ml-1 text-[10px] text-indigo-600 hover:underline font-bold cursor-pointer"
+                              className="ml-1 text-[10px] text-blue-600 hover:underline font-bold cursor-pointer"
                             >
                               Matrix
                             </button>
@@ -519,7 +519,7 @@ export default function TeamView({
                             <>
                               <button 
                                 onClick={() => onOpenModal("team", member)}
-                                className="px-2.5 py-1 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                                className="px-2.5 py-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
                                 title="Edit Member Permissions"
                               >
                                 Edit
@@ -527,7 +527,7 @@ export default function TeamView({
 
                               <button
                                 onClick={() => handleCopyInvite(member)}
-                                className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all cursor-pointer"
+                                className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all cursor-pointer"
                                 title="Copy Magic Invite Link"
                               >
                                 {copiedInviteId === member.id ? (
@@ -654,7 +654,7 @@ export default function TeamView({
                   setMatrixMember(null);
                   onOpenModal("team", target);
                 }}
-                className="px-4 py-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                className="px-4 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl text-xs font-bold transition-colors cursor-pointer"
               >
                 Modify Permissions
               </button>

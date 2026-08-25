@@ -1,21 +1,28 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { 
   Users, Ticket, Building2, 
   Award, Briefcase, Mic, Search, Trash2, Check, X,
   Calendar, Upload, Plus, BarChart4, Pencil, Mail, FileText,
   Printer, QrCode, Layers, Archive, RotateCcw,
   Eye, Phone, Clock, CheckCircle2, XCircle, Sparkles, Filter, Info, ShieldCheck, ArrowUpRight,
-  Maximize2, User, Download, Camera, Loader2
+  Maximize2, User, Download, Camera, Loader2, MoreVertical, MoreHorizontal
 } from "lucide-react";
 import { useLanguage } from "../lib/i18n";
 import { logCommunication, fetchCommunications } from "../lib/db";
-import A4BadgeSheet, { printA4BadgeDocument } from "./A4BadgeSheet";
+import { motion, AnimatePresence } from "framer-motion";
+import A4BadgeSheet, { printA4BadgeDocument, printBulkA4BadgeDocuments } from "./A4BadgeSheet";
 import SearchableSelect from "./SearchableSelect";
+import AttendeeEmailDrawer from "./AttendeeEmailDrawer";
+import TablePagination from "./TablePagination";
 import OpportunitiesView from "./OpportunitiesView";
+import InfluencersView from "./InfluencersView";
 import LogisticsView from "./LogisticsView";
 import TeamView from "./TeamView";
+import DocumentsView from "./DocumentsView";
+import AnalyticsView from "./AnalyticsView";
 
 export default function GenericTableView({ 
   viewName, 
@@ -31,7 +38,23 @@ export default function GenericTableView({
       return <EventDetailsView state={state} onUpdateState={onUpdateState} onUploadFile={onUploadFile} />;
     case "opportunities":
       return <OpportunitiesView state={state} onUpdateState={onUpdateState} onOpenModal={onOpenModal} onSwitchView={onSwitchView} />;
+    case "influencers":
+      return <InfluencersView state={state} onUpdateState={onUpdateState} onOpenModal={onOpenModal} onSwitchView={onSwitchView} onUploadFile={onUploadFile} />;
+    case "documents":
+      return (
+        <DocumentsView
+          documents={state.documents || []}
+          onSaveDocument={state.onSaveDocument}
+          onDeleteDocument={state.onDeleteDocument}
+          onTogglePin={state.onTogglePinDocument}
+          onUploadFile={onUploadFile}
+          activeEventId={state.activeEventId || state.eventDetails?.id}
+          eventDetails={state.eventDetails || {}}
+          onRefreshData={state.onRefreshDocuments}
+        />
+      );
     case "logistics":
+
       return (
         <LogisticsView
           logisticsData={state.logisticsData || {}}
@@ -74,7 +97,7 @@ export default function GenericTableView({
         />
       );
     case "analytics":
-      return <AnalyticsView state={state} />;
+      return <AnalyticsView state={state} onSwitchView={onSwitchView} onOpenModal={onOpenModal} />;
     case "communications":
       return <CommunicationsView state={state} onUpdateState={onUpdateState} />;
     default:
@@ -319,6 +342,12 @@ export function getAttendeeDisplayImage(item) {
 // Fullscreen Photo Lightbox Inspector Modal
 function ImageLightboxModal({ preview, onClose }) {
   if (!preview) return null;
+
+  const imageUrl = preview.url || preview.src || preview.image || "";
+  const title = preview.name || preview.title || "Attendee Picture";
+  const subtitle = preview.subtitle || preview.email || (preview.ticket ? `Ticket: ${preview.ticket}` : "");
+  const ticketTag = preview.ticket || (preview.subtitle && preview.subtitle.startsWith("Ticket:") ? preview.subtitle.replace("Ticket:", "").trim() : "Attendee Pass Photo");
+
   return (
     <div 
       className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150"
@@ -328,20 +357,18 @@ function ImageLightboxModal({ preview, onClose }) {
         className="bg-white border border-slate-200/80 rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden flex flex-col animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
+        {/* Header (Clean title without top icon) */}
         <div className="p-4 px-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-650 shrink-0 font-bold text-sm">
-              <User size={16} />
-            </div>
-            <div className="min-w-0">
-              <h4 className="text-sm font-bold text-slate-900 truncate">{preview.name || "Attendee Picture"}</h4>
-              <p className="text-xs text-slate-500 truncate">{preview.email || preview.ticket}</p>
-            </div>
+          <div className="min-w-0">
+            <h4 className="text-sm font-bold text-slate-900 truncate">{title}</h4>
+            {subtitle && (
+              <p className="text-xs text-slate-500 truncate">{subtitle}</p>
+            )}
           </div>
           <button
             onClick={onClose}
             className="w-8 h-8 rounded-full bg-slate-200/80 hover:bg-slate-300 text-slate-600 flex items-center justify-center transition-colors cursor-pointer shrink-0"
+            title="Close"
           >
             <X size={16} />
           </button>
@@ -349,32 +376,46 @@ function ImageLightboxModal({ preview, onClose }) {
 
         {/* Photo Body */}
         <div className="p-6 flex flex-col items-center justify-center bg-slate-900/5 min-h-[300px]">
-          <div className="relative max-w-sm w-full rounded-2xl overflow-hidden shadow-xl border border-slate-200 bg-white flex items-center justify-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img 
-              src={preview.url} 
-              alt={preview.name} 
-              className="w-full max-h-[55vh] object-contain"
-            />
+          <div className="relative max-w-sm w-full rounded-2xl overflow-hidden shadow-xl border border-slate-200 bg-white flex items-center justify-center min-h-[220px]">
+            {imageUrl ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img 
+                src={imageUrl} 
+                alt={title} 
+                className="w-full max-h-[58vh] object-contain block"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
+                }}
+              />
+            ) : null}
+            <div 
+              style={{ display: imageUrl ? 'none' : 'flex' }}
+              className="w-full h-48 bg-slate-100 text-slate-500 font-bold text-xs items-center justify-center flex-col gap-2 p-4 text-center"
+            >
+              <span>No image provided</span>
+            </div>
           </div>
         </div>
 
         {/* Footer */}
         <div className="p-4 px-6 border-t border-slate-100 bg-white flex items-center justify-between">
           <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 font-bold text-xs">
-            {preview.ticket || "Attendee Pass Photo"}
+            {ticketTag}
           </span>
           <div className="flex items-center gap-2">
-            <a 
-              href={preview.url} 
-              download={`${preview.name || 'attendee'}-photo`} 
-              target="_blank" 
-              rel="noreferrer"
-              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-            >
-              <Download size={13} />
-              <span>Download</span>
-            </a>
+            {imageUrl && (
+              <a 
+                href={imageUrl} 
+                download={`${title || 'attendee'}-photo`} 
+                target="_blank" 
+                rel="noreferrer"
+                className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <Download size={13} />
+                <span>Download</span>
+              </a>
+            )}
             <button
               onClick={onClose}
               className="px-4 py-2 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm"
@@ -829,6 +870,55 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
   const [selectedSubmissionModal, setSelectedSubmissionModal] = useState(null);
   const [previewImageModal, setPreviewImageModal] = useState(null);
   const [selectedBadgeAttendee, setSelectedBadgeAttendee] = useState(null);
+  const [emailAttendees, setEmailAttendees] = useState(null);
+  const [activeActionsMenu, setActiveActionsMenu] = useState(null);
+
+  const handleOpenActionsMenu = (e, attendee, attendeeKey) => {
+    e.stopPropagation();
+    if (activeActionsMenu?.key === attendeeKey) {
+      setActiveActionsMenu(null);
+      return;
+    }
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const openUpwards = spaceBelow < 240;
+
+    setActiveActionsMenu({
+      key: attendeeKey,
+      attendee,
+      top: openUpwards ? undefined : rect.bottom + 6,
+      bottom: openUpwards ? (window.innerHeight - rect.top + 6) : undefined,
+      right: Math.max(12, window.innerWidth - rect.right),
+      openUpwards
+    });
+  };
+
+  // Close actions menu on scroll, window resize, click outside or Escape key
+  useEffect(() => {
+    if (!activeActionsMenu) return;
+    const handleClose = (e) => {
+      if (e?.target && e.target.closest && e.target.closest('.portaled-actions-menu')) {
+        return;
+      }
+      setActiveActionsMenu(null);
+    };
+    const handleKey = (e) => {
+      if (e.key === 'Escape') setActiveActionsMenu(null);
+    };
+
+    window.addEventListener('scroll', handleClose, true);
+    window.addEventListener('resize', handleClose);
+    document.addEventListener('click', handleClose);
+    document.addEventListener('keydown', handleKey);
+
+    return () => {
+      window.removeEventListener('scroll', handleClose, true);
+      window.removeEventListener('resize', handleClose);
+      document.removeEventListener('click', handleClose);
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [activeActionsMenu]);
 
   // Helper to match an attendee to a ticket tier (handles exact match, ID match, or name aliases)
   const isAttendeeInTicketTier = (item, targetTicketName) => {
@@ -886,6 +976,84 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
   const activeAttendees = useMemo(() => attendees.filter(a => a.status !== 'archived' && !a.isArchived), [attendees]);
   const archivedAttendees = useMemo(() => attendees.filter(a => a.status === 'archived' || a.isArchived), [attendees]);
 
+  // Filtered Attendees by Ticket Type / Archived and Search
+  const filtered = useMemo(() => {
+    const seen = new Set();
+    return attendees.filter(a => {
+      if (a.id) {
+        if (seen.has(a.id)) return false;
+        seen.add(a.id);
+      }
+
+      const isArchived = a.status === 'archived' || a.isArchived;
+      if (selectedTicketType === "archived") {
+        if (!isArchived) return false;
+      } else {
+        if (isArchived) return false;
+        if (selectedTicketType !== "all" && !isAttendeeInTicketTier(a, selectedTicketType)) return false;
+      }
+
+      const searchLower = search.toLowerCase();
+      const nameMatch = (a.name || "").toLowerCase().includes(searchLower);
+      const emailMatch = (a.email || "").toLowerCase().includes(searchLower);
+      const compMatch = (a.company || "").toLowerCase().includes(searchLower);
+      const phoneMatch = (a.phone || a.answers?.phone || a.answers?.f_core_phone || a.answers?.phoneNumber || a.customAnswers?.phone || a.customAnswers?.f_core_phone || a.customAnswers?.phoneNumber || "").toLowerCase().includes(searchLower);
+      
+      // Also search through answer values
+      const ansValues = Object.values(a.answers || a.customAnswers || {}).join(" ").toLowerCase();
+      const ansMatch = ansValues.includes(searchLower);
+
+      return nameMatch || emailMatch || compMatch || phoneMatch || ansMatch;
+    });
+  }, [attendees, selectedTicketType, search, tickets]);
+
+  // Dynamic Form Columns for the selected ticket type & dataset
+  const dynamicCols = useMemo(() => {
+    return getDynamicFormColumns(selectedTicketType, tickets, forms, filtered);
+  }, [selectedTicketType, tickets, forms, filtered]);
+
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Reset page and clear selection on ticket filter tab switch or search
+  useEffect(() => {
+    setSelectedIds(new Set());
+    setCurrentPage(1);
+  }, [selectedTicketType, search]);
+
+  // Paginated dataset
+  const paginated = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, currentPage, pageSize]);
+
+  const handleToggleSelectAll = () => {
+    const pageKeys = paginated.map((a, idx) => a.id || `att-${(currentPage - 1) * pageSize + idx}`);
+    const isAllPageSelected = pageKeys.length > 0 && pageKeys.every(k => selectedIds.has(k));
+    const next = new Set(selectedIds);
+    if (isAllPageSelected) {
+      pageKeys.forEach(k => next.delete(k));
+    } else {
+      pageKeys.forEach(k => next.add(k));
+    }
+    setSelectedIds(next);
+  };
+
+  const handleToggleSelectRow = (key) => {
+    const next = new Set(selectedIds);
+    if (next.has(key)) {
+      next.delete(key);
+    } else {
+      next.add(key);
+    }
+    setSelectedIds(next);
+  };
+
+  const selectedAttendees = useMemo(() => {
+    return filtered.filter((a, idx) => selectedIds.has(a.id || `att-${idx}`));
+  }, [filtered, selectedIds]);
+
   const handleArchive = (id) => {
     if (confirm("Archive this attendee? Their registration record is preserved in archives.")) {
       onUpdateState("attendees", attendees.map(a => a.id === id ? { ...a, status: 'archived', isArchived: true } : a));
@@ -893,7 +1061,13 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
   };
 
   const handleRestore = (id) => {
-    onUpdateState("attendees", attendees.map(a => a.id === id ? { ...a, status: 'registered', isArchived: false } : a));
+    onUpdateState("attendees", attendees.map(a => (a.id === id || (a.email && a.email === id)) ? { ...a, status: 'registered', isArchived: false } : a));
+  };
+
+  const handleDeleteAttendee = (id) => {
+    if (confirm("Permanently delete this archived attendee? This action cannot be undone.")) {
+      onUpdateState("attendees", attendees.filter(a => a.id !== id && (!a.email || a.email !== id)));
+    }
   };
 
   // Toggle Check-in status directly from Attendees list
@@ -910,6 +1084,101 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
       return a;
     });
     onUpdateState("attendees", updated);
+  };
+
+  const handleBulkCheckin = (checkin = true) => {
+    const selectedKeys = new Set(selectedIds);
+    const updated = attendees.map((a, idx) => {
+      const key = a.id || `att-${idx}`;
+      if (selectedKeys.has(key)) {
+        return {
+          ...a,
+          status: checkin ? "checked-in" : "registered",
+          checkinTime: checkin ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null
+        };
+      }
+      return a;
+    });
+    onUpdateState("attendees", updated);
+    setSelectedIds(new Set());
+  };
+
+  const handleBulkPrintBadges = async () => {
+    if (!selectedAttendees.length) return;
+    const badgeList = selectedAttendees.map(a => {
+      const resolvedTier = getResolvedTicketName(a, tickets);
+      const matchedTicket = tickets.find(t => (t.name || t.tier || "").trim().toLowerCase() === (resolvedTier || "").trim().toLowerCase()) || {};
+      const eventDetails = state.eventDetails || {};
+      const templateUrl = matchedTicket.badgeUrl || eventDetails.badgeUrl || "";
+      const badgeSettings = matchedTicket.badgeSettings || eventDetails.badgeSettings || {};
+      const attendeePhoto = getAttendeeDisplayImage(a);
+      const attendeeName = a.name || "Attendee";
+      const attendeeEmail = a.email || "";
+      const { company: attendeeCompany, jobTitle: attendeeJobTitle } = extractTicketFormCredentials(a);
+      const badgeCode = a.badgeCode || a.badge_code || `EZ-${String(a.id || '').slice(-4).toUpperCase() || 'PASS'}`;
+      const eventTitle = eventDetails.title || "Conference Event";
+      const eventId = eventDetails.id || state.activeEventId || "";
+
+      return {
+        templateUrl,
+        attendeeId: a.id || badgeCode,
+        attendeeName,
+        attendeeEmail,
+        attendeePhoto,
+        attendeeCompany,
+        attendeeJobTitle,
+        ticketType: resolvedTier,
+        badgeCode,
+        eventId,
+        eventTitle,
+        showFoldGuide: badgeSettings.showFoldGuide !== false,
+        showPhoto: badgeSettings.showPhoto !== false,
+        showQr: badgeSettings.showQr !== false,
+        cardTheme: badgeSettings.cardTheme || "white",
+      };
+    });
+
+    await printBulkA4BadgeDocuments(badgeList);
+  };
+
+  const handleBulkArchive = () => {
+    if (confirm(`Archive ${selectedIds.size} selected attendee(s)? Their registration records will be preserved in archives.`)) {
+      const selectedKeys = new Set(selectedIds);
+      const updated = attendees.map((a, idx) => {
+        const key = a.id || `att-${idx}`;
+        if (selectedKeys.has(key)) {
+          return { ...a, status: 'archived', isArchived: true };
+        }
+        return a;
+      });
+      onUpdateState("attendees", updated);
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleBulkRestore = () => {
+    const selectedKeys = new Set(selectedIds);
+    const updated = attendees.map((a, idx) => {
+      const key = a.id || `att-${idx}`;
+      if (selectedKeys.has(key)) {
+        return { ...a, status: 'registered', isArchived: false };
+      }
+      return a;
+    });
+    onUpdateState("attendees", updated);
+    setSelectedIds(new Set());
+  };
+
+  const handleBulkDelete = () => {
+    if (confirm(`Permanently delete ${selectedIds.size} selected attendee(s)? This action cannot be undone.`)) {
+      const selectedKeys = new Set(selectedIds);
+      const updated = attendees.filter((a, idx) => {
+        const key = a.id || `att-${idx}`;
+        return !selectedKeys.has(key);
+      });
+      onUpdateState("attendees", updated);
+      setSelectedIds(new Set());
+    }
   };
 
   // Direct 1-Click Print Badge Handler (Directly opens system print dialog with zero extra steps)
@@ -945,41 +1214,6 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
       cardTheme: badgeSettings.cardTheme || "transparent"
     });
   };
-
-  // Filtered Attendees by Ticket Type / Archived and Search
-  const filtered = useMemo(() => {
-    const seen = new Set();
-    return attendees.filter(a => {
-      if (a.id) {
-        if (seen.has(a.id)) return false;
-        seen.add(a.id);
-      }
-
-      const isArchived = a.status === 'archived' || a.isArchived;
-      if (selectedTicketType === "archived") {
-        if (!isArchived) return false;
-      } else {
-        if (isArchived) return false;
-        if (selectedTicketType !== "all" && !isAttendeeInTicketTier(a, selectedTicketType)) return false;
-      }
-
-      const searchLower = search.toLowerCase();
-      const nameMatch = (a.name || "").toLowerCase().includes(searchLower);
-      const emailMatch = (a.email || "").toLowerCase().includes(searchLower);
-      const compMatch = (a.company || "").toLowerCase().includes(searchLower);
-      
-      // Also search through answer values
-      const ansValues = Object.values(a.answers || a.customAnswers || {}).join(" ").toLowerCase();
-      const ansMatch = ansValues.includes(searchLower);
-
-      return nameMatch || emailMatch || compMatch || ansMatch;
-    });
-  }, [attendees, selectedTicketType, search, tickets]);
-
-  // Dynamic Form Columns for the selected ticket type & dataset
-  const dynamicCols = useMemo(() => {
-    return getDynamicFormColumns(selectedTicketType, tickets, forms, filtered);
-  }, [selectedTicketType, tickets, forms, filtered]);
 
   return (
     <div className="flex flex-col gap-6 w-full">
@@ -1051,7 +1285,25 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
           <table className="w-full border-collapse text-left text-xs font-medium text-slate-700">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-150 text-[10px] text-slate-400 font-bold uppercase tracking-wider select-none">
-                <th className="py-4 px-6 sticky left-0 bg-slate-50 z-10 min-w-[240px] sm:min-w-[280px] whitespace-nowrap shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">Attendee</th>
+                <th className="py-4 pl-5 pr-2 w-10 sticky left-0 bg-slate-50 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
+                  <div className="flex items-center justify-center">
+                    <input
+                      type="checkbox"
+                      checked={paginated.length > 0 && paginated.every((a, idx) => selectedIds.has(a.id || `att-${(currentPage - 1) * pageSize + idx}`))}
+                      ref={(el) => {
+                        if (el) {
+                          const isAllChecked = paginated.length > 0 && paginated.every((a, idx) => selectedIds.has(a.id || `att-${(currentPage - 1) * pageSize + idx}`));
+                          const hasSomeChecked = paginated.some((a, idx) => selectedIds.has(a.id || `att-${(currentPage - 1) * pageSize + idx}`));
+                          el.indeterminate = hasSomeChecked && !isAllChecked;
+                        }
+                      }}
+                      onChange={handleToggleSelectAll}
+                      className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer transition-colors"
+                      title="Select / Deselect all on this page"
+                    />
+                  </div>
+                </th>
+                <th className="py-4 px-4 sticky left-10 bg-slate-50 z-10 min-w-[220px] sm:min-w-[260px] whitespace-nowrap shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">Attendee</th>
                 <th className="py-4 px-6 whitespace-nowrap">Email</th>
                 {selectedTicketType === "all" && <th className="py-4 px-6 whitespace-nowrap">Ticket Tier</th>}
                 {/* Dynamic Form Columns */}
@@ -1071,13 +1323,13 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                 ))}
                 <th className="py-4 px-6 whitespace-nowrap">Status</th>
                 <th className="py-4 px-6 whitespace-nowrap">Registered</th>
-                <th className="py-4 px-6 text-center min-w-[150px] whitespace-nowrap sticky right-0 bg-slate-50 z-10 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]">Actions</th>
+                <th className="py-4 px-6 text-center w-20 whitespace-nowrap sticky right-0 bg-slate-50 z-10 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filtered.length === 0 ? (
+              {paginated.length === 0 ? (
                 <tr>
-                  <td colSpan={5 + (selectedTicketType === "all" || selectedTicketType === "archived" ? 1 : 0) + dynamicCols.length} className="text-center text-slate-450 py-14">
+                  <td colSpan={6 + (selectedTicketType === "all" || selectedTicketType === "archived" ? 1 : 0) + dynamicCols.length} className="text-center text-slate-450 py-14">
                     {selectedTicketType === "archived" 
                       ? "No archived attendees found." 
                       : selectedTicketType !== "all" 
@@ -1086,21 +1338,44 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                   </td>
                 </tr>
               ) : (
-                filtered.map((a, idx) => {
+                paginated.map((a, idx) => {
+                  const globalIdx = (currentPage - 1) * pageSize + idx;
                   const isArchived = a.status === 'archived' || a.isArchived;
                   const isCheckedIn = a.status === 'checked-in';
                   const displayImg = getAttendeeDisplayImage(a);
+                  const attendeeKey = a.id || `att-${globalIdx}`;
+                  const isMenuActive = activeActionsMenu === attendeeKey;
+                  const isSelected = selectedIds.has(attendeeKey);
+
                   return (
-                    <tr key={a.id ? `${a.id}-${idx}` : `attendee-${idx}`} className={`group hover:bg-slate-50 transition-colors duration-150 ${isArchived ? 'opacity-70 bg-slate-50/50' : ''}`}>
-                      <td className="py-4 px-6 font-semibold flex items-center gap-3 sticky left-0 bg-white group-hover:bg-slate-50 z-10 min-w-[240px] sm:min-w-[280px] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
+                    <tr 
+                      key={a.id ? `${a.id}-${globalIdx}` : `attendee-${globalIdx}`} 
+                      className={`group hover:bg-slate-50 transition-colors duration-150 ${isSelected ? 'bg-indigo-50/50 hover:bg-indigo-50/70' : isArchived ? 'bg-slate-50/60 text-slate-600' : ''} ${isMenuActive ? 'relative z-40' : 'relative z-0'}`}
+                    >
+                      <td className="py-4 pl-5 pr-2 w-10 sticky left-0 bg-white group-hover:bg-slate-50 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
+                        <div className="flex items-center justify-center">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => handleToggleSelectRow(attendeeKey)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer transition-colors"
+                          />
+                        </div>
+                      </td>
+                      <td className="py-4 px-4 font-semibold flex items-center gap-3 sticky left-10 bg-white group-hover:bg-slate-50 z-10 min-w-[220px] sm:min-w-[260px] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
                         <button 
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             setPreviewImageModal({
+                              url: displayImg,
                               src: displayImg,
-                              title: `${a.name || "Attendee"} - ID Photo`,
-                              subtitle: `Ticket: ${a.ticketType || "Standard Pass"}`
+                              name: a.name || "Attendee",
+                              title: a.name || "Attendee",
+                              email: a.email || "",
+                              ticket: getResolvedTicketName(a, tickets) || a.ticketType || "Standard Pass",
+                              subtitle: `Ticket: ${getResolvedTicketName(a, tickets) || a.ticketType || "Standard Pass"}`
                             });
                           }}
                           className="relative group/avatar cursor-zoom-in shrink-0"
@@ -1128,7 +1403,9 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                         </button>
                         <div>
                           <div className="text-slate-850 font-bold leading-tight">{a.name}</div>
-                          <div className="text-[10px] text-slate-400 font-medium">{a.badgeCode || a.badge_code || `EZ-${String(a.id || '').slice(-4).toUpperCase() || 'PASS'}`}</div>
+                          <div className="text-[10px] text-slate-400 font-medium">
+                            {a.phone || a.answers?.phone || a.answers?.f_core_phone || a.answers?.phoneNumber || a.customAnswers?.phone || a.customAnswers?.f_core_phone || a.customAnswers?.phoneNumber || "—"}
+                          </div>
                         </div>
                       </td>
                       <td className="py-4 px-6 text-slate-500 whitespace-nowrap">{a.email}</td>
@@ -1157,66 +1434,21 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                         </span>
                       </td>
                       <td className="py-4 px-6 text-slate-400 font-medium whitespace-nowrap">{a.registeredDate || "—"}</td>
-                      <td className="py-4 px-6 text-center whitespace-nowrap sticky right-0 bg-white group-hover:bg-slate-50 z-10 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                        <div className="flex items-center justify-center gap-1">
-                          {!isArchived && (
-                            <>
-                              {/* 2. Direct Toggle Check-In Icon */}
-                              <button
-                                type="button"
-                                onClick={() => handleToggleCheckin(a.id)}
-                                className={`p-1.5 rounded-lg transition-all cursor-pointer flex items-center justify-center border border-transparent ${
-                                  isCheckedIn 
-                                    ? "text-emerald-600 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100" 
-                                    : "text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 hover:border-emerald-100"
-                                }`}
-                                title={isCheckedIn ? "Checked In (Click to Undo Check-in)" : "Check In Attendee"}
-                              >
-                                <CheckCircle2 size={15} className={isCheckedIn ? "fill-emerald-50 text-emerald-600" : ""} />
-                              </button>
-
-                              {/* 3. Direct 1-Click Print Official Badge */}
-                              <button
-                                type="button"
-                                onClick={() => handleDirectPrintAttendeeBadge(a)}
-                                className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 border border-transparent hover:border-blue-100 rounded-lg transition-all cursor-pointer flex items-center justify-center"
-                                title="Print Attendee Badge (A4 4-Fold)"
-                              >
-                                <Printer size={15} />
-                              </button>
-
-                              {/* 4. Edit Attendee Icon */}
-                              <button 
-                                type="button"
-                                onClick={() => onOpenModal("attendee", a)}
-                                className="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100 border border-transparent hover:border-slate-200 rounded-lg transition-all cursor-pointer flex items-center justify-center"
-                                title="Edit Attendee"
-                              >
-                                <Pencil size={15} />
-                              </button>
-                            </>
-                          )}
-
-                          {/* 5. Archive / Restore Icon */}
-                          {isArchived ? (
-                            <button 
-                              type="button"
-                              onClick={() => handleRestore(a.id)}
-                              className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 border border-transparent hover:border-emerald-100 rounded-lg transition-all cursor-pointer flex items-center justify-center"
-                              title="Restore Attendee"
-                            >
-                              <RotateCcw size={14} />
-                            </button>
-                          ) : (
-                            <button 
-                              type="button"
-                              onClick={() => handleArchive(a.id)}
-                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-100 rounded-lg transition-all cursor-pointer flex items-center justify-center"
-                              title="Archive Attendee"
-                            >
-                              <Archive size={14} />
-                            </button>
-                          )}
+                      <td className="py-4 px-6 text-center whitespace-nowrap sticky right-0 bg-white group-hover:bg-slate-50 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)] z-10">
+                        <div className="relative inline-flex items-center justify-center">
+                          {/* 3 Points Action Trigger Button */}
+                          <button
+                            type="button"
+                            onClick={(e) => handleOpenActionsMenu(e, a, attendeeKey)}
+                            className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+                              isMenuActive
+                                ? "bg-blue-50 text-blue-600 border border-blue-200 shadow-xs"
+                                : "text-slate-400 hover:text-slate-800 hover:bg-slate-100 border border-transparent hover:border-slate-200"
+                            }`}
+                            title="Actions"
+                          >
+                            <MoreVertical size={16} />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -1226,6 +1458,16 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
             </tbody>
           </table>
         </div>
+
+        {/* Table Pagination */}
+        <TablePagination
+          currentPage={currentPage}
+          totalItems={filtered.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          itemName={selectedTicketType === "archived" ? "archived attendees" : "attendees"}
+        />
       </div>
 
       {/* Full Submission Modal */}
@@ -1343,6 +1585,301 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
           </div>
         );
       })()}
+
+      {/* Floating Bulk Action Bar (Light Mode) */}
+      <AnimatePresence>
+        {selectedIds.size > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 40, scale: 0.95 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-white/95 backdrop-blur-md text-slate-800 px-3.5 py-2 rounded-2xl shadow-2xl shadow-slate-900/15 border border-slate-200/90 flex items-center gap-2.5 text-xs font-semibold select-none max-w-[95vw] overflow-x-auto"
+          >
+            {/* Selection Counter & Clear */}
+            <div className="flex items-center gap-2 pr-3 border-r border-slate-200 shrink-0">
+              <span className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[11px] font-bold shadow-xs">
+                {selectedIds.size}
+              </span>
+              <span className="text-slate-850 font-bold whitespace-nowrap">
+                {selectedIds.size} selected
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedIds(new Set())}
+                className="ml-0.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-colors cursor-pointer p-0.5"
+                title="Deselect all"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            {/* Actions: Active Attendees */}
+            {selectedTicketType !== "archived" ? (
+              <div className="flex items-center gap-1.5 shrink-0">
+                {/* 1. Bulk Check-In */}
+                <button
+                  type="button"
+                  onClick={() => handleBulkCheckin(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white transition-colors cursor-pointer shadow-2xs font-semibold"
+                  title="Mark selected as checked-in"
+                >
+                  <CheckCircle2 size={14} />
+                  <span>Check In</span>
+                </button>
+
+                {/* 2. Bulk Undo Check-In */}
+                <button
+                  type="button"
+                  onClick={() => handleBulkCheckin(false)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer border border-slate-200/80 font-semibold"
+                  title="Undo check-in for selected attendees"
+                >
+                  <RotateCcw size={14} className="text-slate-500" />
+                  <span>Undo Check-In</span>
+                </button>
+
+                {/* 3. Bulk Print Badges */}
+                <button
+                  type="button"
+                  onClick={handleBulkPrintBadges}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer border border-slate-200/80 font-semibold"
+                  title="Print A4 badges for selected attendees"
+                >
+                  <Printer size={14} className="text-slate-500" />
+                  <span>Print Badges</span>
+                </button>
+
+                {/* 4. Bulk Send Email */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selectedAttendees.length > 0) {
+                      setEmailAttendees(selectedAttendees);
+                    }
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer border border-slate-200/80 font-semibold"
+                  title="Send email to selected"
+                >
+                  <Mail size={14} className="text-slate-500" />
+                  <span>Send Email</span>
+                </button>
+
+                {/* 5. Bulk Archive */}
+                <button
+                  type="button"
+                  onClick={handleBulkArchive}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors cursor-pointer border border-rose-200 font-semibold"
+                  title="Archive selected attendees"
+                >
+                  <Archive size={14} className="text-rose-500" />
+                  <span>Archive</span>
+                </button>
+              </div>
+            ) : (
+              /* Actions: Archived Attendees */
+              <div className="flex items-center gap-1.5 shrink-0">
+                {/* 1. Bulk Restore */}
+                <button
+                  type="button"
+                  onClick={handleBulkRestore}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer border border-slate-200/80 font-semibold"
+                  title="Restore selected attendees"
+                >
+                  <RotateCcw size={14} className="text-slate-500" />
+                  <span>Restore</span>
+                </button>
+
+                {/* 2. Bulk Delete */}
+                <button
+                  type="button"
+                  onClick={handleBulkDelete}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white transition-colors cursor-pointer shadow-2xs font-semibold"
+                  title="Permanently delete selected attendees"
+                >
+                  <Trash2 size={14} />
+                  <span>Delete Permanently</span>
+                </button>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Slide-in Attendee Email Drawer */}
+      {emailAttendees && (
+        <AttendeeEmailDrawer
+          isOpen={Boolean(emailAttendees)}
+          onClose={() => setEmailAttendees(null)}
+          attendees={emailAttendees}
+          attendee={emailAttendees[0]}
+          eventDetails={state.eventDetails || {}}
+          tickets={tickets}
+          forms={forms}
+          activeEventId={state.activeEventId}
+        />
+      )}
+
+      {/* Floating Action Menu Popover (Portaled to document.body so it NEVER gets clipped by table overflow or container boundaries) */}
+      {activeActionsMenu && typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          <motion.div
+            key={activeActionsMenu.key}
+            initial={{ opacity: 0, scale: 0.9, y: activeActionsMenu.openUpwards ? 8 : -8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: activeActionsMenu.openUpwards ? 6 : -6 }}
+            transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
+            style={{
+              position: 'fixed',
+              top: activeActionsMenu.top,
+              bottom: activeActionsMenu.bottom,
+              right: activeActionsMenu.right,
+              zIndex: 99999
+            }}
+            className="portaled-actions-menu w-48 bg-white border border-slate-200/90 rounded-2xl shadow-2xl shadow-slate-900/20 p-1.5 flex flex-col gap-0.5 text-left select-none animate-in fade-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {(() => {
+              const a = activeActionsMenu.attendee;
+              const isArchived = a.status === 'archived' || a.isArchived;
+              const isCheckedIn = a.status === 'checked-in';
+
+              return !isArchived ? (
+                <>
+                  {/* 1. Toggle Check-In */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveActionsMenu(null);
+                      handleToggleCheckin(a.id);
+                    }}
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer text-left group"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <CheckCircle2
+                        size={15}
+                        className={isCheckedIn ? "text-slate-600 fill-slate-100" : "text-slate-400 group-hover:text-slate-600 transition-colors"}
+                      />
+                      <span>{isCheckedIn ? "Undo Check-In" : "Check In"}</span>
+                    </div>
+                    {isCheckedIn && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-700 uppercase tracking-wider">
+                        Active
+                      </span>
+                    )}
+                  </button>
+
+                  {/* 2. Print badge */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveActionsMenu(null);
+                      handleDirectPrintAttendeeBadge(a);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer text-left group"
+                  >
+                    <Printer size={15} className="text-slate-400 group-hover:text-slate-600 transition-colors" />
+                    <span>Print badge</span>
+                  </button>
+
+                  {/* 3. Send Email */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveActionsMenu(null);
+                      setEmailAttendees([a]);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer text-left group"
+                  >
+                    <Mail size={15} className="text-slate-400 group-hover:text-slate-600 transition-colors" />
+                    <span>Send Email</span>
+                  </button>
+
+                  {/* 4. Edit */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveActionsMenu(null);
+                      onOpenModal("attendee", a);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer text-left group"
+                  >
+                    <Pencil size={15} className="text-slate-400 group-hover:text-slate-600 transition-colors" />
+                    <span>Edit</span>
+                  </button>
+
+                  <div className="my-1 border-t border-slate-100" />
+
+                  {/* 5. Archive */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveActionsMenu(null);
+                      handleArchive(a.id);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer text-left group"
+                  >
+                    <Archive size={15} className="text-rose-500 group-hover:scale-105 transition-transform" />
+                    <span>Archive</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  {/* Restore */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveActionsMenu(null);
+                      handleRestore(a.id);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer text-left group"
+                  >
+                    <RotateCcw size={15} className="text-slate-400 group-hover:text-slate-600 transition-colors" />
+                    <span>Restore</span>
+                  </button>
+
+                  {/* Edit */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveActionsMenu(null);
+                      onOpenModal("attendee", a);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer text-left group"
+                  >
+                    <Pencil size={15} className="text-slate-400 group-hover:text-slate-600 transition-colors" />
+                    <span>Edit</span>
+                  </button>
+
+                  <div className="my-1 border-t border-slate-100" />
+
+                  {/* Delete Permanently */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveActionsMenu(null);
+                      handleDeleteAttendee(a.id);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer text-left group"
+                  >
+                    <Trash2 size={15} className="text-rose-500 group-hover:scale-105 transition-transform" />
+                    <span>Delete</span>
+                  </button>
+                </>
+              );
+            })()}
+          </motion.div>
+        </AnimatePresence>,
+        document.body
+      )}
     </div>
   );
 }
@@ -1354,6 +1891,8 @@ function PendingView({ state, onUpdateState }) {
   const [selectedTicketType, setSelectedTicketType] = useState("all");
   const [selectedSubmissionModal, setSelectedSubmissionModal] = useState(null);
   const [previewImageModal, setPreviewImageModal] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // Helper to match a pending applicant to a ticket tier (handles exact match, ID match, or name aliases)
   const isPendingInTicketTier = (item, targetTicketName) => {
@@ -1461,6 +2000,35 @@ function PendingView({ state, onUpdateState }) {
     if (selectedSubmissionModal?.id === p.id) {
       setSelectedSubmissionModal(null);
     }
+
+    // Automatically dispatch official approval email with badge PDF & fast-track QR code
+    if (p.email && typeof p.email === "string" && p.email.includes("@")) {
+      const eventDetails = state?.eventDetails || {};
+      const targetDate = eventDetails.startDate 
+        ? `${eventDetails.startDate}${eventDetails.endDate ? ` - ${eventDetails.endDate}` : ''}`
+        : newAttendee.registeredDate || "";
+
+      fetch("/api/email/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "approval_confirmation",
+          to: p.email,
+          attendeeName: newAttendee.name || "Attendee",
+          ticketTier: newAttendee.ticketType || "Standard Admission",
+          eventTitle: eventDetails.title || "Eventzone Summit",
+          eventDate: targetDate,
+          eventLocation: eventDetails.location || "Event Venue",
+          company: newAttendee.company || "",
+          jobTitle: newAttendee.jobTitle || "",
+          badgeCode: newAttendee.badgeCode || (p.badgeCode || `EZ-${String(newAttendee.id || '').slice(-4).toUpperCase()}`),
+          passId: newAttendee.id,
+          requiresApproval: false,
+          isApproval: true,
+          organizerName: eventDetails.organizerName || state?.currentUser?.fullName || "Eventzone Platform",
+        }),
+      }).catch(err => console.warn("Could not dispatch attendee approval email:", err));
+    }
   };
 
   // Filtered Pending Items by Ticket Type and Search
@@ -1487,6 +2055,17 @@ function PendingView({ state, onUpdateState }) {
       return nameMatch || emailMatch || compMatch || noteMatch || ansMatch;
     });
   }, [pending, selectedTicketType, search, tickets]);
+
+  // Reset page on filter or search
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedTicketType, search]);
+
+  // Paginated dataset
+  const paginated = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, currentPage, pageSize]);
 
   // Dynamic Form Columns
   const dynamicCols = useMemo(() => {
@@ -1580,7 +2159,7 @@ function PendingView({ state, onUpdateState }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filtered.length === 0 ? (
+              {paginated.length === 0 ? (
                 <tr>
                   <td colSpan={5 + (selectedTicketType === "all" ? 1 : 0) + dynamicCols.length} className="text-center text-slate-400 py-16 font-medium">
                     {selectedTicketType !== "all" 
@@ -1589,10 +2168,11 @@ function PendingView({ state, onUpdateState }) {
                   </td>
                 </tr>
               ) : (
-                filtered.map((p, idx) => {
+                paginated.map((p, idx) => {
+                  const globalIdx = (currentPage - 1) * pageSize + idx;
                   const displayImg = getAttendeeDisplayImage(p);
                   return (
-                    <tr key={p.id ? `${p.id}-${idx}` : `pending-${idx}`} className="group hover:bg-slate-50 transition-all duration-150">
+                    <tr key={p.id ? `${p.id}-${globalIdx}` : `pending-${globalIdx}`} className="group hover:bg-slate-50 transition-all duration-150">
                       <td className="py-4 px-6 font-bold text-slate-800 sticky left-0 bg-white group-hover:bg-slate-50 z-10 min-w-[240px] sm:min-w-[280px] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
                         <div className="flex items-center gap-3">
                           <button 
@@ -1674,6 +2254,16 @@ function PendingView({ state, onUpdateState }) {
             </tbody>
           </table>
         </div>
+
+        {/* Table Pagination */}
+        <TablePagination
+          currentPage={currentPage}
+          totalItems={filtered.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          itemName="pending registrations"
+        />
       </div>
 
       {/* Full Submission Modal */}
@@ -2667,6 +3257,12 @@ function CheckInView({ state, onUpdateState }) {
   const [scanInputCode, setScanInputCode] = useState("");
   const [scanFeedback, setScanFeedback] = useState(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
 
   const handleToggle = (id) => {
     const updated = attendees.map(a => {
@@ -2781,11 +3377,19 @@ function CheckInView({ state, onUpdateState }) {
     setScanInputCode("");
   };
 
-  const filtered = attendees.filter(a =>
-    (a.name || "").toLowerCase().includes(search.toLowerCase()) ||
-    (a.email || "").toLowerCase().includes(search.toLowerCase()) ||
-    (a.badgeCode || a.badge_code || "").toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = useMemo(() => {
+    const searchLower = search.toLowerCase();
+    return attendees.filter(a =>
+      (a.name || "").toLowerCase().includes(searchLower) ||
+      (a.email || "").toLowerCase().includes(searchLower) ||
+      (a.badgeCode || a.badge_code || "").toLowerCase().includes(searchLower)
+    );
+  }, [attendees, search]);
+
+  const paginated = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, currentPage, pageSize]);
 
   return (
     <div className="flex flex-col gap-6 w-full font-sans">
@@ -2912,12 +3516,12 @@ function CheckInView({ state, onUpdateState }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filtered.length === 0 ? (
+              {paginated.length === 0 ? (
                 <tr>
                   <td colSpan="5" className="text-center text-slate-400 py-12">No attendees registered yet.</td>
                 </tr>
               ) : (
-                filtered.map(a => {
+                paginated.map(a => {
                   const isCheckedIn = a.status === "checked-in";
                   return (
                     <tr key={a.id} className="hover:bg-slate-50/50 transition-colors duration-150">
@@ -2955,6 +3559,16 @@ function CheckInView({ state, onUpdateState }) {
             </tbody>
           </table>
         </div>
+
+        {/* Table Pagination */}
+        <TablePagination
+          currentPage={currentPage}
+          totalItems={filtered.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          itemName="attendees"
+        />
       </div>
 
       {/* QR CAMERA / SCANNER MODAL */}
@@ -3119,152 +3733,6 @@ function CheckInView({ state, onUpdateState }) {
   );
 }
 
-// 11. ANALYTICS VIEW
-function AnalyticsView({ state }) {
-  const { attendees = [], tickets = [], eventDetails = {} } = state;
-
-  const totalAttendees = attendees.length;
-  const capacity = eventDetails.capacity || 0;
-  const capacityPct = capacity > 0 ? Math.min(100, (totalAttendees / capacity) * 100) : 0;
-
-  const checkedInCount = attendees.filter(a => a.status === 'checked-in').length;
-  const checkinPct = totalAttendees > 0 ? (checkedInCount / totalAttendees) * 100 : 0;
-
-  // Real Average Ticket Price & Total Revenue
-  const avgTicketPrice = tickets.length > 0
-    ? tickets.reduce((acc, t) => acc + (parseFloat(t.price) || 0), 0) / tickets.length
-    : 0;
-
-  const totalEstimatedRevenue = attendees.reduce((acc, att) => {
-    const matchedTicket = tickets.find(t => t.name === att.ticketType || t.tier === att.ticketType || t.id === att.ticketType);
-    return acc + (matchedTicket ? (parseFloat(matchedTicket.price) || 0) : 0);
-  }, 0);
-
-  // Dynamic Ticket Splits from real configured tickets or real attendee ticket types
-  const ticketTiersList = tickets.length > 0 ? tickets : [
-    ...new Set(attendees.map(a => a.ticketType).filter(Boolean))
-  ].map(name => ({ name, price: 0 }));
-
-  const ticketSplits = ticketTiersList.map((t, idx) => {
-    const tierName = t.name || t.tier || "General";
-    const count = attendees.filter(a => a.ticketType === tierName || a.ticketType === t.name || a.ticketType === t.tier).length;
-    const pct = totalAttendees > 0 ? (count / totalAttendees) * 100 : 0;
-    const colors = ["bg-indigo-600", "bg-blue-600", "bg-emerald-600", "bg-amber-500", "bg-rose-500", "bg-purple-600"];
-    return {
-      name: tierName,
-      count,
-      pct,
-      color: colors[idx % colors.length]
-    };
-  });
-
-  return (
-    <div className="flex flex-col gap-8 w-full">
-      <header className="select-none text-left">
-        <h2 className="text-2xl font-bold text-slate-900">Event Analytics</h2>
-        <p className="text-sm text-slate-500">Monitor live registration velocity, ticket splits, and attendance engagement.</p>
-      </header>
-
-      {/* Analytics split columns */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Registration Velocity Chart */}
-        <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm flex flex-col gap-6 text-left">
-          <h3 className="text-md font-bold text-slate-800">Daily Registration Velocity</h3>
-          <div className="relative w-full h-[180px] mt-2">
-            {totalAttendees === 0 ? (
-              <div className="w-full h-full flex flex-col items-center justify-center bg-slate-50/80 rounded-2xl border border-dashed border-slate-200 text-center p-4">
-                <span className="text-xs font-bold text-slate-700">No registration activity recorded yet</span>
-                <span className="text-[11px] text-slate-400 mt-1">Velocity curve will populate in real-time as attendees claim passes</span>
-              </div>
-            ) : (
-              <svg viewBox="0 0 500 200" className="w-full h-full overflow-visible">
-                <defs>
-                  <linearGradient id="an-chart-grad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#2563eb" stopOpacity="0.25"></stop>
-                    <stop offset="100%" stopColor="#2563eb" stopOpacity="0.00"></stop>
-                  </linearGradient>
-                </defs>
-                <polyline fill="url(#an-chart-grad)" stroke="none" points="0,200 80,160 160,140 240,110 320,80 400,50 500,20 500,200 0,200"></polyline>
-                <polyline fill="none" stroke="#2563eb" strokeWidth="3" points="0,200 80,160 160,140 240,110 320,80 400,50 500,20"></polyline>
-                <circle cx="80" cy="160" r="4" fill="#2563eb" stroke="#ffffff" strokeWidth="1.5"></circle>
-                <circle cx="160" cy="140" r="4" fill="#2563eb" stroke="#ffffff" strokeWidth="1.5"></circle>
-                <circle cx="240" cy="110" r="4" fill="#2563eb" stroke="#ffffff" strokeWidth="1.5"></circle>
-                <circle cx="320" cy="80" r="4" fill="#2563eb" stroke="#ffffff" strokeWidth="1.5"></circle>
-                <circle cx="400" cy="50" r="4" fill="#2563eb" stroke="#ffffff" strokeWidth="1.5"></circle>
-                <circle cx="500" cy="20" r="5" fill="#2563eb" stroke="#ffffff" strokeWidth="2"></circle>
-              </svg>
-            )}
-          </div>
-          <div className="flex justify-between text-xs font-semibold text-slate-400 px-1 border-t border-slate-100 pt-3">
-            <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
-          </div>
-        </div>
-
-        {/* Ticket Split */}
-        <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm flex flex-col gap-6 text-left">
-          <h3 className="text-md font-bold text-slate-800">Registration Split by Ticket Type</h3>
-          <div className="flex flex-col gap-4 justify-center flex-1">
-            {ticketSplits.length === 0 ? (
-              <div className="text-center py-8 text-slate-400 text-xs font-semibold">
-                No ticket tiers configured for this event yet.
-              </div>
-            ) : (
-              ticketSplits.map((split, idx) => (
-                <div key={idx} className="flex flex-col gap-1.5">
-                  <div className="flex items-center justify-between text-xs font-semibold">
-                    <span className="text-slate-700">{split.name} ({split.pct.toFixed(1)}%)</span>
-                    <span className="text-slate-400 font-medium">{split.count} delegates</span>
-                  </div>
-                  <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div className={`h-full ${split.color} rounded-full transition-all duration-500`} style={{ width: `${Math.max(split.pct, split.count > 0 ? 3 : 0)}%` }}></div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Real Stats Metrics Bottom */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
-          <div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Capacity Fill Rate</span>
-            <div className="text-2xl font-extrabold text-slate-800 mt-2">
-              {capacity > 0 ? `${capacityPct.toFixed(1)}%` : `${totalAttendees} Reg.`}
-            </div>
-          </div>
-          <span className="text-xs text-slate-500 font-medium mt-4">
-            {capacity > 0 ? `${totalAttendees} of ${capacity} capacity target` : `${totalAttendees} total registered delegates`}
-          </span>
-        </div>
-
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
-          <div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Average Ticket Price</span>
-            <div className="text-2xl font-extrabold text-slate-800 mt-2">
-              ${avgTicketPrice.toFixed(0)}
-            </div>
-          </div>
-          <span className="text-xs text-slate-500 font-medium mt-4">
-            {tickets.length > 0 ? `Across ${tickets.length} tier${tickets.length > 1 ? 's' : ''} ($${totalEstimatedRevenue.toLocaleString()} est. sales)` : "Free / standard admission"}
-          </span>
-        </div>
-
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
-          <div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Live Check-in Rate</span>
-            <div className="text-2xl font-extrabold text-slate-800 mt-2">{checkinPct.toFixed(1)}%</div>
-          </div>
-          <span className="text-xs text-slate-500 font-medium mt-4">
-            {checkedInCount} of {totalAttendees} delegates checked in
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // 12. COMMUNICATIONS VIEW
 function CommunicationsView({ state, onUpdateState }) {
   const { attendees, exhibitors, team } = state;
@@ -3315,6 +3783,20 @@ function CommunicationsView({ state, onUpdateState }) {
 
     setIsSending(true);
     try {
+      // Send real broadcast emails via Hostinger SMTP
+      const broadcastRes = await fetch("/api/email/broadcast", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipients: emails,
+          subject: subject.trim(),
+          body: body.trim(),
+          eventTitle: "Eventzone Summit",
+          organizerName: "Eventzone Team",
+        }),
+      });
+      const broadcastData = await broadcastRes.json().catch(() => ({}));
+
       // Log the communication in the Supabase db
       const newComm = await logCommunication({
         subject: subject.trim(),
@@ -3327,10 +3809,11 @@ function CommunicationsView({ state, onUpdateState }) {
 
       setSubject("");
       setBody("");
-      alert(`Successfully simulated sending event announcement to ${emails.length} recipients!`);
+      const sentCount = broadcastData?.sent !== undefined ? broadcastData.sent : emails.length;
+      alert(`Broadcast announcement successfully sent to ${sentCount} recipient(s)!`);
     } catch (err) {
-      console.error("Failed to send message:", err);
-      alert("Failed to record communication in the database.");
+      console.error("Failed to send broadcast announcement:", err);
+      alert("Failed to send broadcast announcement. Please verify connection and try again.");
     } finally {
       setIsSending(false);
     }

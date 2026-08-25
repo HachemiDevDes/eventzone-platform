@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { sendRSVPConfirmationEmail } from "@/lib/mailer";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://awkreadldqmidcrrqukm.supabase.co";
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "sb_publishable_MluMrwkWs5-YedITa6ggNw_imK2nv8z";
@@ -442,6 +443,18 @@ export async function POST(request, context) {
         ...rsvpPayload,
         created_at: now
       };
+    }
+
+    // Dispatch RSVP confirmation email via Hostinger SMTP
+    if (cleanEmail) {
+      sendRSVPConfirmationEmail({
+        to: cleanEmail,
+        attendeeName: cleanName,
+        eventTitle: "Eventzone Summit",
+        status: assignedStatus,
+        dietaryPreference: dietaryPreference || 'None',
+        notes: notes.trim(),
+      }).catch(e => console.warn("RSVP email dispatch warning:", e));
     }
 
     return NextResponse.json({

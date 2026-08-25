@@ -177,7 +177,7 @@ export default function SearchableSelect({
   return (
     <div
       ref={containerRef}
-      className={`relative w-full text-left font-sans select-none ${className}`}
+      className={`relative w-full text-left font-sans select-none ${isOpen ? "z-50" : ""} ${className}`}
       onKeyDown={handleKeyDown}
     >
       {/* Hidden input for HTML form validation if required */}
@@ -246,7 +246,7 @@ export default function SearchableSelect({
 
       {/* Searchable Dropdown Popup */}
       {isOpen && (
-        <div className="absolute z-50 left-0 right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden animate-scale-up min-w-[220px]">
+        <div className="absolute z-[999] left-0 right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden animate-scale-up min-w-[220px]">
           
           {/* Top Search Input */}
           {showSearch && normalizedOptions.length > 1 && (

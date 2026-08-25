@@ -33,6 +33,7 @@ import { useLanguage } from '../lib/i18n';
 import { COUNTRY_CITIES_MAP } from '../lib/formPresets';
 import FormImageUploader from './FormImageUploader';
 import SearchableSelect from './SearchableSelect';
+import CountryPhoneInput from './CountryPhoneInput';
 import A4BadgeSheet, { printA4BadgeDocument } from './A4BadgeSheet';
 
 export default function AttendeeDrawer({
@@ -486,31 +487,26 @@ export default function AttendeeDrawer({
       <div className="relative w-full max-w-2xl lg:max-w-3xl bg-white h-full shadow-2xl z-10 flex flex-col border-l border-slate-200 overflow-hidden animate-slide-in-right">
         
         <header className="px-8 py-5 border-b border-slate-200 flex items-center justify-between bg-white select-none">
-          <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shadow-xs shrink-0">
-              <User size={20} />
+          <div>
+            <div className="flex items-center gap-2.5">
+              <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
+                {attendee ? 'Edit Attendee' : 'Add New Attendee'}
+              </h2>
+              <span className={`text-[10px] font-extrabold tracking-wider uppercase px-2.5 py-0.5 rounded-full ${
+                status === 'checked-in'
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  : status === 'archived'
+                    ? 'bg-slate-100 text-slate-600 border border-slate-200'
+                    : 'bg-blue-50 text-blue-700 border border-blue-200'
+              }`}>
+                {status === 'checked-in' ? 'Checked In' : status === 'archived' ? 'Archived' : 'Registered'}
+              </span>
             </div>
-            <div>
-              <div className="flex items-center gap-2.5">
-                <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
-                  {attendee ? 'Edit Attendee' : 'Add New Attendee'}
-                </h2>
-                <span className={`text-[10px] font-extrabold tracking-wider uppercase px-2.5 py-0.5 rounded-full ${
-                  status === 'checked-in'
-                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                    : status === 'archived'
-                      ? 'bg-slate-100 text-slate-600 border border-slate-200'
-                      : 'bg-blue-50 text-blue-700 border border-blue-200'
-                }`}>
-                  {status === 'checked-in' ? 'Checked In' : status === 'archived' ? 'Archived' : 'Registered'}
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">
-                {attendee 
-                  ? `Editing registration record and form answers for ${name || 'attendee'}.`
-                  : 'Manually register an attendee and complete their ticket-specific intake form.'}
-              </p>
-            </div>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">
+              {attendee 
+                ? `Editing registration record and form answers for ${name || 'attendee'}.`
+                : 'Manually register an attendee and complete their ticket-specific intake form.'}
+            </p>
           </div>
 
           <button
@@ -847,9 +843,21 @@ export default function AttendeeDrawer({
                             fieldError ? 'border-rose-400 ring-2 ring-rose-100' : 'border-slate-300'
                           }`}
                         />
+                      ) : (fieldType === 'phone' || field.id === 'f_core_phone' || (field.id && field.id.toLowerCase().includes('phone')) || (field.label && field.label.toLowerCase().includes('phone'))) ? (
+                        <CountryPhoneInput
+                          value={fieldVal || ''}
+                          onChange={(val) => {
+                            handleAnswerChange(field.id, val);
+                            setPhone(val);
+                          }}
+                          placeholder={field.placeholder || '550 12 34 56'}
+                          defaultCountry="DZ"
+                          className="w-full"
+                          inputClassName={fieldError ? 'border-rose-400' : ''}
+                        />
                       ) : (
                         <input
-                          type={fieldType === 'email' ? 'email' : fieldType === 'phone' ? 'tel' : 'text'}
+                          type={fieldType === 'email' ? 'email' : 'text'}
                           value={fieldVal || ''}
                           onChange={(e) => handleAnswerChange(field.id, e.target.value)}
                           placeholder={field.placeholder || `Enter ${(field.label || 'value').toLowerCase()}...`}

@@ -414,3 +414,189 @@ export async function printA4BadgeDocument({
   printWindow.document.write(printHtml);
   printWindow.document.close();
 }
+
+/**
+ * Bulk A4 Badge Print Helper
+ * Generates multi-page printable sheets with page breaks for all selected attendees
+ */
+export async function printBulkA4BadgeDocuments(badgeList = []) {
+  if (typeof window === "undefined" || !badgeList.length) return;
+
+  const resolvedBadges = await Promise.all(
+    badgeList.map(async (b) => {
+      let resolvedQr = b.qrCodeUrl;
+      if (!resolvedQr && b.showQr !== false) {
+        try {
+          const checkinPayload = JSON.stringify({
+            action: "checkin",
+            attendeeId: b.attendeeId || b.badgeCode || "",
+            badgeCode: b.badgeCode || "EZ-PASS",
+            name: b.attendeeName || "",
+            email: b.attendeeEmail || "",
+            tier: b.ticketType || "",
+            eventId: b.eventId || "",
+            event: b.eventTitle || ""
+          });
+          resolvedQr = await QRCode.toDataURL(checkinPayload, {
+            width: 360,
+            margin: 0,
+            color: { dark: "#0f172a", light: "#00000000" },
+            errorCorrectionLevel: 'M'
+          });
+        } catch (e) {
+          console.warn("QR code generation failed for bulk:", e);
+        }
+      }
+      return { ...b, resolvedQr };
+    })
+  );
+
+  const printWindow = window.open("", "_blank", "width=850,height=1100");
+  if (!printWindow) {
+    alert("Please allow popups to print the A4 badge sheets.");
+    return;
+  }
+
+  const sheetsHtml = resolvedBadges.map((b) => {
+    const cardBgStyle = b.cardTheme === "white"
+      ? "background: rgba(255, 255, 255, 0.92); border: 1px solid #e2e8f0; border-radius: 12px; padding: 4.5mm 3.5mm; box-shadow: 0 2px 6px rgba(0,0,0,0.05);"
+      : b.cardTheme === "glass" 
+      ? "background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.7); border-radius: 12px; padding: 4.5mm 3.5mm; box-shadow: 0 4px 12px rgba(0,0,0,0.06);" 
+      : "background: transparent; border: none; box-shadow: none; padding: 0;";
+
+    const cardHtml = `
+      <div style="${cardBgStyle} display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; box-sizing: border-box; font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+        ${b.showPhoto !== false ? `
+          <div style="width: 68px; height: 68px; border-radius: 50%; overflow: hidden; border: 2px solid rgba(15, 23, 42, 0.15); margin-bottom: 5px; background: #ffffff; display: flex; align-items: center; justify-content: center;">
+            ${b.attendeePhoto 
+              ? `<img src="${b.attendeePhoto}" style="width: 100%; height: 100%; object-fit: cover;" />` 
+              : `<div style="width: 100%; height: 100%; background: #2563eb; color: #fff; font-weight: 900; font-size: 20px; display: flex; align-items: center; justify-content: center;">${(b.attendeeName || "A").slice(0, 2).toUpperCase()}</div>`
+            }
+          </div>
+        ` : ''}
+        <div style="padding: 1px 0; display: flex; flex-direction: column; align-items: center; text-align: center; width: 100%;">
+          <div style="font-size: 14.5px; font-weight: 900; color: #0f172a; line-height: 1.15; margin-bottom: 2px;">
+            ${b.attendeeName || "Attendee Name"}
+          </div>
+          ${b.attendeeCompany ? `
+            <div style="font-size: 10.5px; font-weight: 800; color: #2563eb; margin-top: 1.8mm;">
+              ${b.attendeeCompany}
+            </div>
+          ` : ''}
+        </div>
+        ${b.showQr !== false && b.resolvedQr ? `
+          <div style="margin-top: 5mm; display: flex; align-items: center; justify-content: center;">
+            <img src="${b.resolvedQr}" style="width: 17mm; height: 17mm; object-fit: contain;" />
+          </div>
+        ` : ''}
+      </div>
+    `;
+
+    return `
+      <div class="a4-sheet">
+        ${b.templateUrl ? `<img src="${b.templateUrl}" style="position: absolute; top: 0; left: 0; width: 210mm; height: 297mm; object-fit: cover; z-index: 1;" />` : ''}
+        <div class="quadrants-grid">
+          <div class="quadrant">${cardHtml}</div>
+          <div class="quadrant">${cardHtml}</div>
+          <div class="quadrant"></div>
+          <div class="quadrant"></div>
+        </div>
+        ${b.showFoldGuide !== false ? `
+          <div class="fold-line-v"></div>
+          <div class="fold-line-h"></div>
+        ` : ''}
+      </div>
+    `;
+  }).join("\n");
+
+  const printHtml = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Bulk A4 Badge Sheets (${badgeList.length} Attendees)</title>
+        <meta charset="utf-8" />
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+        <style>
+          @page {
+            size: A4 portrait;
+            margin: 0;
+          }
+          * {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          html, body {
+            margin: 0;
+            padding: 0;
+            background: #ffffff;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          }
+          .a4-sheet {
+            page-break-after: always;
+            break-after: page;
+            position: relative;
+            width: 210mm;
+            height: 297mm;
+            background: #ffffff;
+            overflow: hidden;
+          }
+          .a4-sheet:last-child {
+            page-break-after: auto;
+            break-after: auto;
+          }
+          .quadrants-grid {
+            display: grid;
+            grid-template-columns: 105mm 105mm;
+            grid-template-rows: 148.5mm 148.5mm;
+            width: 210mm;
+            height: 297mm;
+            position: relative;
+            z-index: 10;
+          }
+          .quadrant {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10mm;
+            box-sizing: border-box;
+          }
+          .fold-line-v {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 105mm;
+            width: 0;
+            border-right: 1px dashed rgba(100, 116, 139, 0.45);
+            z-index: 20;
+          }
+          .fold-line-h {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 148.5mm;
+            height: 0;
+            border-bottom: 1px dashed rgba(100, 116, 139, 0.45);
+            z-index: 20;
+          }
+        </style>
+      </head>
+      <body>
+        ${sheetsHtml}
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 400);
+          };
+        </script>
+      </body>
+    </html>
+  `;
+
+  printWindow.document.open();
+  printWindow.document.write(printHtml);
+  printWindow.document.close();
+}

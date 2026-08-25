@@ -40,6 +40,7 @@ import {
 import { useLanguage } from '../lib/i18n';
 import { EVENT_MODULES, ROLE_PRESETS, MODULE_CATEGORIES, getPermissionSummary } from '../lib/permissions';
 import SearchableSelect from './SearchableSelect';
+import CountryPhoneInput from './CountryPhoneInput';
 
 // Map icon strings to Lucide components
 const ICON_COMPONENTS = {
@@ -250,14 +251,6 @@ export default function TeamMemberDrawer({
     }
   };
 
-  // Generate initials for avatar preview
-  const initials = useMemo(() => {
-    if (!name) return "TM";
-    const parts = name.trim().split(" ");
-    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-  }, [name]);
-
   if (!isOpen) return null;
 
   return (
@@ -268,23 +261,18 @@ export default function TeamMemberDrawer({
         className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-300"
       />
 
-      <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-        <div className="w-screen max-w-2xl bg-white shadow-2xl flex flex-col border-l border-slate-100 transform transition-transform ease-in-out duration-300">
+      <div className="fixed inset-y-0 right-0 max-w-full flex pl-6 sm:pl-10">
+        <div className="w-screen max-w-3xl md:max-w-4xl lg:max-w-4xl xl:max-w-5xl bg-white shadow-2xl flex flex-col border-l border-slate-100 transform transition-transform ease-in-out duration-300">
           
           {/* Header */}
           <header className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-indigo-100 shrink-0">
-                {initials}
-              </div>
-              <div>
-                <h3 className="text-base font-extrabold text-slate-900 leading-tight">
-                  {member ? `Edit ${member.name || 'Team Member'}` : "Invite New Team Member"}
-                </h3>
-                <p className="text-xs text-slate-500 font-medium">
-                  {member ? "Manage roles and granular module permissions" : `Assign access permissions for ${eventTitle}`}
-                </p>
-              </div>
+            <div>
+              <h3 className="text-base font-extrabold text-slate-900 leading-tight">
+                {member ? `Edit ${member.name || 'Team Member'}` : "Invite New Team Member"}
+              </h3>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">
+                {member ? "Manage roles and granular module permissions" : `Assign access permissions for ${eventTitle}`}
+              </p>
             </div>
 
             <button 
@@ -303,13 +291,13 @@ export default function TeamMemberDrawer({
                 onClick={() => setActiveTab("permissions")}
                 className={`py-3 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 cursor-pointer ${
                   activeTab === "permissions"
-                    ? "border-indigo-600 text-indigo-600 font-extrabold"
+                    ? "border-blue-600 text-blue-600 font-extrabold"
                     : "border-transparent text-slate-500 hover:text-slate-800"
                 }`}
               >
                 <ShieldCheck size={14} />
                 <span>Module Permissions</span>
-                <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-extrabold">
+                <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-extrabold">
                   {summary.totalAssigned}
                 </span>
               </button>
@@ -319,7 +307,7 @@ export default function TeamMemberDrawer({
                 onClick={() => setActiveTab("profile")}
                 className={`py-3 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 cursor-pointer ${
                   activeTab === "profile"
-                    ? "border-indigo-600 text-indigo-600 font-extrabold"
+                    ? "border-blue-600 text-blue-600 font-extrabold"
                     : "border-transparent text-slate-500 hover:text-slate-800"
                 }`}
               >
@@ -332,7 +320,7 @@ export default function TeamMemberDrawer({
                 onClick={() => setActiveTab("invite")}
                 className={`py-3 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 cursor-pointer ${
                   activeTab === "invite"
-                    ? "border-indigo-600 text-indigo-600 font-extrabold"
+                    ? "border-blue-600 text-blue-600 font-extrabold"
                     : "border-transparent text-slate-500 hover:text-slate-800"
                 }`}
               >
@@ -372,7 +360,7 @@ export default function TeamMemberDrawer({
                 <div className="flex flex-col gap-2.5">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                      <Sparkles size={13} className="text-indigo-600" />
+                      <Sparkles size={13} className="text-blue-600" />
                       <span>Role Preset Quick-Select</span>
                     </label>
                     <span className="text-[11px] text-slate-400 font-medium">Click to auto-configure module permissions</span>
@@ -388,15 +376,15 @@ export default function TeamMemberDrawer({
                           onClick={() => handleSelectPreset(preset.id)}
                           className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1.5 ${
                             isSelected 
-                              ? "border-indigo-600 bg-indigo-50/60 ring-2 ring-indigo-600/20 shadow-xs" 
+                              ? "border-blue-600 bg-blue-50/60 ring-2 ring-blue-600/20 shadow-xs" 
                               : "border-slate-200 hover:border-slate-300 hover:bg-slate-50/70"
                           }`}
                         >
                           <div className="flex items-center justify-between w-full">
-                            <span className={`text-[11px] font-extrabold leading-snug ${isSelected ? 'text-indigo-900' : 'text-slate-800'}`}>
+                            <span className={`text-[11px] font-extrabold leading-snug ${isSelected ? 'text-blue-900' : 'text-slate-800'}`}>
                               {preset.title}
                             </span>
-                            {isSelected && <CheckCircle2 size={13} className="text-indigo-600 shrink-0" />}
+                            {isSelected && <CheckCircle2 size={13} className="text-blue-600 shrink-0" />}
                           </div>
                           <p className="text-[10px] text-slate-500 line-clamp-2 leading-relaxed font-normal">
                             {preset.description}
@@ -442,13 +430,13 @@ export default function TeamMemberDrawer({
                       value={moduleSearch}
                       onChange={(e) => setModuleSearch(e.target.value)}
                       placeholder="Search modules..."
-                      className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-600"
+                      className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600"
                     />
                   </div>
                 </div>
 
-                {/* 3. Category Filter Tabs */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                {/* 3. Category Filter Tabs (Wrap naturally without clipping) */}
+                <div className="flex flex-wrap items-center gap-2">
                   {MODULE_CATEGORIES.map((cat) => (
                     <button
                       key={cat.id}
@@ -456,7 +444,7 @@ export default function TeamMemberDrawer({
                       onClick={() => setCategoryFilter(cat.id === "all" ? "all" : cat.id)}
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer ${
                         (categoryFilter === "all" && cat.id === "all") || categoryFilter === cat.id
-                          ? "bg-indigo-600 text-white shadow-xs"
+                          ? "bg-blue-600 text-white shadow-xs"
                           : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                       }`}
                     >
@@ -575,7 +563,7 @@ export default function TeamMemberDrawer({
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="e.g. Sarah Connor"
-                        className="w-full pl-9 pr-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-600"
+                        className="w-full pl-9 pr-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600"
                       />
                     </div>
                   </div>
@@ -592,7 +580,7 @@ export default function TeamMemberDrawer({
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="sarah@eventzone.io"
-                        className="w-full pl-9 pr-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-600"
+                        className="w-full pl-9 pr-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600"
                       />
                     </div>
                   </div>
@@ -604,16 +592,13 @@ export default function TeamMemberDrawer({
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                       Phone Number (Optional)
                     </label>
-                    <div className="relative">
-                      <Phone size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                      <input
-                        type="tel"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="+213 555 123 456"
-                        className="w-full pl-9 pr-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-600"
-                      />
-                    </div>
+                    <CountryPhoneInput
+                      value={phone}
+                      onChange={setPhone}
+                      placeholder="555 123 456"
+                      defaultCountry="DZ"
+                      className="w-full"
+                    />
                   </div>
 
                   <div className="flex flex-col gap-1.5">
@@ -641,7 +626,7 @@ export default function TeamMemberDrawer({
                       value={role}
                       onChange={(e) => setRole(e.target.value)}
                       placeholder="e.g. Stage Manager, Desk Supervisor"
-                      className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-600"
+                      className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600"
                     />
                   </div>
 
@@ -676,7 +661,7 @@ export default function TeamMemberDrawer({
                     type="checkbox"
                     checked={sendInviteEmail}
                     onChange={(e) => setSendInviteEmail(e.target.checked)}
-                    className="mt-0.5 w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
+                    className="mt-0.5 w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
                   />
                   <div className="flex flex-col">
                     <span className="text-xs font-bold text-slate-800">
@@ -698,18 +683,18 @@ export default function TeamMemberDrawer({
                     value={inviteNote}
                     onChange={(e) => setInviteNote(e.target.value)}
                     placeholder="e.g. Welcome to the team! You have been assigned to coordinate registration and attendee check-in at Gate 2. Please review the attendee list before Monday."
-                    className="w-full p-3 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-600 resize-none"
+                    className="w-full p-3 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 resize-none"
                   />
                 </div>
 
                 {/* Permission Summary Card */}
-                <div className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-2xl flex flex-col gap-2">
-                  <span className="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
-                    <Info size={14} className="text-indigo-600" />
+                <div className="p-4 bg-blue-50/50 border border-blue-100 rounded-2xl flex flex-col gap-2">
+                  <span className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
+                    <Info size={14} className="text-blue-600" />
                     <span>Summary of Granted Permissions</span>
                   </span>
                   <div className="grid grid-cols-3 gap-2 text-center mt-1">
-                    <div className="p-2 bg-white rounded-xl border border-indigo-100/60">
+                    <div className="p-2 bg-white rounded-xl border border-blue-100/60">
                       <div className="text-base font-extrabold text-slate-800">{summary.totalAssigned}</div>
                       <div className="text-[10px] font-bold text-slate-400 uppercase">Assigned Modules</div>
                     </div>
@@ -740,7 +725,7 @@ export default function TeamMemberDrawer({
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-100 hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-100 hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {isSubmitting ? (
                   <>

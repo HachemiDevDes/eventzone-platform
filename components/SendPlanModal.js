@@ -122,11 +122,31 @@ export default function SendPlanModal({ isOpen, onClose, exhibitors = [], planNa
       setSendingProgress("Generating high-resolution vector PDF floor plan layout...");
       await new Promise(r => setTimeout(r, 1200));
 
-      // 3. Simulate sending emails
+      // 3. Send real emails via Hostinger SMTP
       for (let i = 0; i < targetExhibitors.length; i++) {
         const ex = targetExhibitors[i];
-        setSendingProgress(`Sending PDF layout and booth details to ${ex.name} (${exhibitorEmails[ex.id]})...`);
-        await new Promise(r => setTimeout(r, 800));
+        const email = exhibitorEmails[ex.id];
+        setSendingProgress(`Sending booth layout & instructions to ${ex.name} (${email})...`);
+        if (email && email.includes("@")) {
+          try {
+            await fetch("/api/email/send", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                type: "exhibitor_packet",
+                to: email,
+                exhibitorName: ex.name,
+                boothNumber: ex.booth || "Main Floor",
+                eventTitle: "Eventzone Summit",
+                eventDate: "March 2026",
+                venueAddress: "Summit Exhibition Center",
+                message: message,
+              }),
+            });
+          } catch (e) {
+            console.warn("Exhibitor email dispatch error:", e);
+          }
+        }
       }
 
       // 4. Log communication broadcast in Supabase

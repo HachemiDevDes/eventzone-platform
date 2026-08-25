@@ -209,7 +209,7 @@ export default function CustomDatePicker({
   const grid = getDaysGrid();
 
   return (
-    <div ref={containerRef} className={`relative select-none ${className}`}>
+    <div ref={containerRef} className={`relative select-none ${isOpen ? "z-50" : ""} ${className}`}>
       {/* Input Trigger Field */}
       <button
         type="button"
@@ -229,7 +229,7 @@ export default function CustomDatePicker({
 
       {/* Floating Popup Calendar */}
       {isOpen && (
-        <div className={`absolute top-full ${popupAlign === "right" ? "right-0" : "left-0"} mt-2 z-50 bg-white border border-slate-200 rounded-3xl shadow-xl p-4 w-[270px] max-w-[calc(100vw-32px)] animate-fade-in`}>
+        <div className={`absolute top-full ${popupAlign === "right" ? "right-0" : "left-0"} mt-2 z-[999] bg-white border border-slate-200 rounded-3xl shadow-2xl p-4 w-[270px] max-w-[calc(100vw-32px)] animate-fade-in`}>
           {/* Calendar Header: Month & Year + Nav */}
           <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
             <div className="flex items-center gap-1.5">

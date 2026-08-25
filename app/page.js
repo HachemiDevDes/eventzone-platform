@@ -9,7 +9,7 @@ import {
   ChevronDown, LayoutDashboard, Calendar, Clock,
   Users2, UserCheck, BarChart3, X, Globe, Map, Sparkles, Upload, Mail,
   Building2, Plus, ArrowLeft, ArrowRight, Layers, LogOut, Compass, ExternalLink, ChevronRight, Home as HomeIcon, User,
-  FileText, ClipboardList, QrCode, Store, Mic2, Check, TrendingUp, Boxes, Truck, Package
+  FileText, ClipboardList, QrCode, Store, Mic2, Check, TrendingUp, Share2, Boxes, Truck, Package, Files
 } from "lucide-react";
 
 import MainHomePage from "../components/MainHomePage";
@@ -30,6 +30,7 @@ import MyTicketsPage from "../components/MyTicketsPage";
 import FormsView from "../components/FormsView";
 import RSVPView from "../components/RSVPView";
 import LogisticsView from "../components/LogisticsView";
+import DocumentsView from "../components/DocumentsView";
 import PublicRSVPModal from "../components/PublicRSVPModal";
 import TicketDrawer from "../components/TicketDrawer";
 import AttendeeDrawer from "../components/AttendeeDrawer";
@@ -47,6 +48,7 @@ import {
   fetchSponsors, upsertSponsor, deleteSponsor,
   fetchExhibitors, upsertExhibitor, deleteExhibitor,
   fetchOpportunities, upsertOpportunity, deleteOpportunity, archiveOpportunity,
+  fetchInfluencers, upsertInfluencer, deleteInfluencer, archiveInfluencer, recordInfluencerClick,
   fetchTickets, upsertTicket, deleteTicket, archiveTicket,
   fetchTeam, upsertTeamMember, deleteTeamMember, archiveTeamMember,
   fetchFloorPlans, upsertFloorPlan, deleteFloorPlan, archiveFloorPlan, generateUuid,
@@ -54,6 +56,7 @@ import {
   fetchFormSubmissions, submitFormResponse, deleteFormSubmission,
   fetchRSVPs, fetchRSVPSettings, upsertRSVPSettings, submitGuestRSVP, updateRSVPStatus, deleteRSVP, archiveRSVP,
   fetchLogistics, upsertLogisticsItem, deleteLogisticsItem, archiveLogisticsItem, upsertFullLogistics,
+  fetchDocuments, upsertDocument, deleteDocument, archiveDocument, togglePinDocument, STARTER_DOCUMENTS,
   uploadFileToBucket,
   fetchUserEvents, fetchPublicEvents, createEvent, deleteEvent, archiveEvent, unarchiveEvent,
   fetchVisitorRegistrations, registerVisitorForEvent, upsertUserProfile,
@@ -145,7 +148,7 @@ export function HomeContent() {
       const validViews = [
         "home", "auth", "profile", "my-tickets", "events-hub", "create-event", "event-landing", "register", "visitor-portal", "overview", "page-builder", "calendar", "event-details", 
         "attendees", "pending", "organizations", "sponsors", 
-        "exhibitors", "speakers", "tickets", "forms", "rsvp", "logistics", "check-in", 
+        "exhibitors", "speakers", "opportunities", "influencers", "tickets", "forms", "rsvp", "logistics", "documents", "check-in", 
         "my-team", "analytics", "communications", "floor-plan"
       ];
       if (viewParam && validViews.includes(viewParam)) {
@@ -191,6 +194,7 @@ export function HomeContent() {
   const [sponsors, setSponsors] = useState([]);
   const [exhibitors, setExhibitors] = useState([]);
   const [opportunities, setOpportunities] = useState([]);
+  const [influencers, setInfluencers] = useState([]);
   const [tickets, setTickets] = useState([]);
   const [team, setTeam] = useState([]);
   const [floorPlans, setFloorPlans] = useState([]);
@@ -199,6 +203,19 @@ export function HomeContent() {
   const [rsvps, setRsvps] = useState([]);
   const [rsvpSettings, setRsvpSettings] = useState(null);
   const [logisticsData, setLogisticsData] = useState({});
+  const [documents, setDocuments] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const urlId = new URLSearchParams(window.location.search).get("eventId") || DEFAULT_EVENT_ID;
+        const cached = localStorage.getItem(`eventzone_documents_${urlId}`);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch (e) {}
+    }
+    return STARTER_DOCUMENTS || [];
+  });
   const [showGlobalPublicRsvp, setShowGlobalPublicRsvp] = useState(false);
   const [simulatedMemberId, setSimulatedMemberId] = useState(null);
 
@@ -485,6 +502,7 @@ export function HomeContent() {
           fetchSponsors(activeEventId),
           fetchExhibitors(activeEventId),
           fetchOpportunities(activeEventId),
+          fetchInfluencers(activeEventId),
           fetchTickets(activeEventId),
           fetchTeam(activeEventId),
           fetchFloorPlans(activeEventId),
@@ -493,17 +511,20 @@ export function HomeContent() {
           fetchRSVPs(activeEventId),
           fetchRSVPSettings(activeEventId),
           fetchLogistics(activeEventId),
+          fetchDocuments(activeEventId),
         ]);
 
         const [
           eventResult, sessionsResult, attendeesResult, pendingResult,
-          orgsResult, sponsorsResult, exhibitorsResult, oppsResult, ticketsResult,
+          orgsResult, sponsorsResult, exhibitorsResult, oppsResult, infsResult, ticketsResult,
           teamResult, floorPlansResult, formsResult, formSubsResult,
-          rsvpsResult, rsvpSettingsResult, logisticsResult
+          rsvpsResult, rsvpSettingsResult, logisticsResult, documentsResult
         ] = results;
 
         const loadedTickets = ticketsResult.status === "fulfilled" ? (ticketsResult.value || []) : [];
         if (ticketsResult.status === "fulfilled") setTickets(loadedTickets);
+
+        if (infsResult.status === "fulfilled") setInfluencers(infsResult.value || []);
 
         if (eventResult.status === "fulfilled") {
           setEventDetails(eventResult.value);
@@ -588,6 +609,7 @@ export function HomeContent() {
         if (rsvpsResult.status === "fulfilled") setRsvps(rsvpsResult.value);
         if (rsvpSettingsResult.status === "fulfilled") setRsvpSettings(rsvpSettingsResult.value);
         if (logisticsResult && logisticsResult.status === "fulfilled") setLogisticsData(logisticsResult.value || {});
+        if (documentsResult && documentsResult.status === "fulfilled") setDocuments(documentsResult.value || []);
 
       } catch (err) {
         console.error("Unexpected error loading data for event:", err);
@@ -654,6 +676,13 @@ export function HomeContent() {
         setPending(prev => prev.filter(p => p.id !== payload.id));
       } else if (type === "logistics_update" && payload?.data) {
         setLogisticsData(payload.data);
+      } else if (type === "DOCUMENT_SAVED" && payload) {
+        setDocuments(prev => {
+          const exists = prev.some(d => d.id === payload.id);
+          return exists ? prev.map(d => d.id === payload.id ? payload : d) : [payload, ...prev];
+        });
+      } else if (type === "DOCUMENT_DELETED" && payload?.id) {
+        setDocuments(prev => prev.filter(d => d.id !== payload.id));
       }
     });
 
@@ -709,6 +738,10 @@ export function HomeContent() {
         .on('postgres_changes', { event: '*', schema: 'public', table: 'event_logistics', filter: `event_id=eq.${activeEventId}` }, async () => {
           const updatedLogistics = await fetchLogistics(activeEventId);
           if (updatedLogistics) setLogisticsData(updatedLogistics);
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'documents', filter: `event_id=eq.${activeEventId}` }, async () => {
+          const updatedDocs = await fetchDocuments(activeEventId);
+          if (updatedDocs) setDocuments(updatedDocs);
         })
         .subscribe();
     } catch (e) {
@@ -783,7 +816,7 @@ export function HomeContent() {
           const validViews = [
             "home", "auth", "profile", "my-tickets", "events-hub", "create-event", "event-landing", "register", "visitor-portal", "overview", "page-builder", "calendar", "event-details", 
             "attendees", "pending", "organizations", "sponsors", 
-            "exhibitors", "speakers", "tickets", "forms", "rsvp", "check-in", 
+            "exhibitors", "speakers", "opportunities", "influencers", "tickets", "forms", "rsvp", "logistics", "documents", "check-in", 
             "my-team", "analytics", "communications", "floor-plan"
           ];
           if (validViews.includes(viewParam)) {
@@ -999,6 +1032,10 @@ export function HomeContent() {
           ticket_type: visitorData.ticketType || visitorData.ticket_type || "Standard Admission",
           note: `Applied for ${visitorData.ticketType || visitorData.ticket_type || "Standard Admission"} (Pending Approval)`,
           date: new Date().toISOString().split('T')[0],
+          referralCode: visitorData.referralCode || visitorData.referral_code || "",
+          referral_code: visitorData.referralCode || visitorData.referral_code || "",
+          influencerId: visitorData.influencerId || visitorData.influencer_id || null,
+          discountApplied: visitorData.discountApplied || visitorData.discount_applied || 0,
           answers: visitorData.customAnswers || visitorData.answers || {},
           formAnswers: visitorData.customAnswers || visitorData.answers || {}
         };
@@ -1023,6 +1060,10 @@ export function HomeContent() {
           status_participation: 'registered',
           registeredDate: new Date().toISOString().split('T')[0],
           registered_at: new Date().toISOString(),
+          referralCode: visitorData.referralCode || visitorData.referral_code || "",
+          referral_code: visitorData.referralCode || visitorData.referral_code || "",
+          influencerId: visitorData.influencerId || visitorData.influencer_id || null,
+          discountApplied: visitorData.discountApplied || visitorData.discount_applied || 0,
           answers: visitorData.customAnswers || visitorData.answers || {},
           formAnswers: visitorData.customAnswers || visitorData.answers || {}
         };
@@ -1220,6 +1261,10 @@ export function HomeContent() {
       case "opportunities":
         syncArrayToDb(opportunities, val, upsertOpportunity, deleteOpportunity);
         setOpportunities(val);
+        break;
+      case "influencers":
+        syncArrayToDb(influencers, val, upsertInfluencer, deleteInfluencer);
+        setInfluencers(val);
         break;
       case "tickets":
         (val || []).forEach(newT => {
@@ -1545,6 +1590,40 @@ export function HomeContent() {
     }
   };
 
+  const handleSaveDocument = async (doc) => {
+    try {
+      const saved = await upsertDocument(doc, activeEventId);
+      setDocuments(prev => {
+        const exists = prev.some(d => d.id === saved.id);
+        return exists ? prev.map(d => d.id === saved.id ? saved : d) : [saved, ...prev];
+      });
+      return saved;
+    } catch (err) {
+      console.error("Failed to save document:", err);
+      throw err;
+    }
+  };
+
+  const handleDeleteDocument = async (docId) => {
+    try {
+      await deleteDocument(docId, activeEventId);
+      setDocuments(prev => prev.filter(d => d.id !== docId));
+    } catch (err) {
+      console.error("Failed to delete document:", err);
+    }
+  };
+
+  const handleTogglePinDocument = async (docId) => {
+    try {
+      const updated = await togglePinDocument(docId, activeEventId);
+      if (updated) {
+        setDocuments(prev => prev.map(d => d.id === docId ? updated : d));
+      }
+    } catch (err) {
+      console.error("Failed to toggle pin on document:", err);
+    }
+  };
+
   const closeModal = () => {
     setActiveModalType(null);
     setEditingItem(null);
@@ -1809,6 +1888,7 @@ export function HomeContent() {
         })}
         attendees={attendees}
         tickets={tickets}
+        influencers={influencers}
         forms={forms}
         formSubmissions={formSubmissions}
         rsvps={rsvps}
@@ -2124,6 +2204,18 @@ export function HomeContent() {
               <span className={`text-[9px] font-extrabold py-0.5 px-2 rounded-full ${currentView === "opportunities" ? "bg-white/25 text-white" : "bg-slate-100 text-slate-500"}`}>{opportunities.filter(o => !o.isArchived).length}</span>
             </button>
 
+            {/* Standalone Influencers Tab */}
+            <button 
+              onClick={() => setCurrentView("influencers")}
+              className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-left group ${currentView === "influencers" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+            >
+              <div className="flex items-center gap-2">
+                <Share2 size={14} className={`shrink-0 ${currentView === "influencers" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
+                <span>{t("dash.influencers", "Influencers")}</span>
+              </div>
+              <span className={`text-[9px] font-extrabold py-0.5 px-2 rounded-full ${currentView === "influencers" ? "bg-white/25 text-white" : "bg-slate-100 text-slate-500"}`}>{influencers.filter(i => !i.isArchived).length}</span>
+            </button>
+
             {/* 1. Expandable Companies Submenu */}
             <div className="flex flex-col">
               <button 
@@ -2277,6 +2369,19 @@ export function HomeContent() {
               </div>
               <span className={`text-[9px] font-extrabold py-0.5 px-2 rounded-full ${currentView === "logistics" ? "bg-white/25 text-white" : "bg-slate-100 text-slate-500"}`}>
                 {(logisticsData.inventory?.length || 0) + (logisticsData.vendors?.length || 0)}
+              </span>
+            </button>
+
+            <button 
+              onClick={() => setCurrentView("documents")}
+              className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-left group ${currentView === "documents" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+            >
+              <div className="flex items-center gap-2">
+                <Files size={14} className={`shrink-0 ${currentView === "documents" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
+                <span>{t("dash.documents", "Documents")}</span>
+              </div>
+              <span className={`text-[9px] font-extrabold py-0.5 px-2 rounded-full ${currentView === "documents" ? "bg-white/25 text-white" : "bg-slate-100 text-slate-500"}`}>
+                {documents.filter(d => !d.isArchived).length}
               </span>
             </button>
 
@@ -2499,6 +2604,7 @@ export function HomeContent() {
               pending={pending}
               sessions={sessions}
               tickets={tickets}
+              influencers={influencers}
               sponsors={sponsors}
               exhibitors={exhibitors}
               floorPlans={floorPlans}
@@ -2687,7 +2793,23 @@ export function HomeContent() {
             />
           )}
 
-          {!["overview", "calendar", "page-builder", "event-details", "forms", "rsvp", "logistics"].includes(currentView) && currentView !== "floor-plan" && (
+          {currentView === "documents" && (
+            <DocumentsView
+              documents={documents}
+              onSaveDocument={handleSaveDocument}
+              onDeleteDocument={handleDeleteDocument}
+              onTogglePin={handleTogglePinDocument}
+              onUploadFile={uploadFileToBucket}
+              activeEventId={activeEventId}
+              eventDetails={eventDetails}
+              onRefreshData={async () => {
+                const fresh = await fetchDocuments(activeEventId);
+                if (fresh) setDocuments(fresh);
+              }}
+            />
+          )}
+
+          {!["overview", "calendar", "page-builder", "event-details", "forms", "rsvp", "logistics", "documents"].includes(currentView) && currentView !== "floor-plan" && (
             <GenericTableView 
               viewName={currentView}
               state={{
@@ -2698,12 +2820,15 @@ export function HomeContent() {
                 sponsors,
                 exhibitors,
                 opportunities,
+                influencers,
                 tickets,
                 team,
                 sessions,
+                floorPlans,
                 forms,
                 rsvps,
                 logisticsData,
+                documents,
                 currentUser,
                 simulatedMemberId,
                 onSimulateMember: setSimulatedMemberId,
@@ -2711,6 +2836,13 @@ export function HomeContent() {
                 onSaveLogisticsItem: handleSaveLogisticsItem,
                 onDeleteLogisticsItem: handleDeleteLogisticsItem,
                 onSaveFullLogistics: handleSaveFullLogistics,
+                onSaveDocument: handleSaveDocument,
+                onDeleteDocument: handleDeleteDocument,
+                onTogglePinDocument: handleTogglePinDocument,
+                onRefreshDocuments: async () => {
+                  const fresh = await fetchDocuments(activeEventId);
+                  if (fresh) setDocuments(fresh);
+                },
                 onRefreshLogistics: async () => {
                   const fresh = await fetchLogistics(activeEventId);
                   if (fresh) setLogisticsData(fresh);

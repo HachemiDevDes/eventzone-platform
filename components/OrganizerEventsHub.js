@@ -108,7 +108,7 @@ export default function OrganizerEventsHub({
             <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex items-center justify-between">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Est. Revenue</span>
-                <h3 className="text-2xl font-black text-slate-900 mt-1">${totalRevenue.toLocaleString()}</h3>
+                <h3 className="text-2xl font-black text-slate-900 mt-1">{totalRevenue.toLocaleString()} <span className="text-sm font-bold text-slate-400">DZD</span></h3>
                 <span className="text-[11px] font-semibold text-slate-500 mt-0.5 inline-block">
                   {events.length === 0 ? "No active sales" : "VIP & Standard"}
                 </span>

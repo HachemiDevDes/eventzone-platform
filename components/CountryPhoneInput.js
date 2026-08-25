@@ -186,7 +186,7 @@ export const COUNTRIES = [
   { code: "ZW", name: "Zimbabwe", dial: "+263", sample: "71 234 5678" }
 ];
 
-export function parsePhoneNumber(fullStr = "", defaultCountryCode = "US") {
+export function parsePhoneNumber(fullStr = "", defaultCountryCode = "DZ") {
   const str = (fullStr || "").trim();
   if (!str) {
     const fallback = COUNTRIES.find(c => c.code === defaultCountryCode) || COUNTRIES[0];
@@ -218,7 +218,7 @@ export default function CountryPhoneInput({
   name,
   className = "",
   inputClassName = "",
-  defaultCountry = "US"
+  defaultCountry = "DZ"
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");

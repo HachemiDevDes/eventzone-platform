@@ -22,6 +22,7 @@ import { getFormSections } from "../lib/formPresets";
 import { smoothScrollTo } from "../lib/smoothScroll";
 import { getYouTubeEmbedUrl } from "./EventDetailsView";
 import { printA4BadgeDocument } from "./A4BadgeSheet";
+import { recordInfluencerClick } from "../lib/db";
 
 export default function EventPublicLandingPage({
   eventId,
@@ -31,6 +32,7 @@ export default function EventPublicLandingPage({
   exhibitors = [],
   attendees = [],
   tickets = [],
+  influencers = [],
   forms = [],
   formSubmissions = [],
   rsvps = [],
@@ -530,6 +532,102 @@ export default function EventPublicLandingPage({
     return "";
   }, [rsvpJobTitle, customAnswers, activeTicketForm]);
 
+  // Referral & Influencer Tracking State
+  const [referralCode, setReferralCode] = useState("");
+  const [promoCodeInput, setPromoCodeInput] = useState("");
+  const [promoCodeApplied, setPromoCodeApplied] = useState(false);
+  const [promoMessage, setPromoMessage] = useState(null); // { type: "success" | "error", text: string }
+
+  // Matched Influencer Campaign from referral or entered promo code
+  const matchedInfluencer = React.useMemo(() => {
+    const activeCode = (promoCodeApplied ? promoCodeInput : referralCode || "").trim().toUpperCase();
+    if (!activeCode) return null;
+    return (influencers || []).find(inf => 
+      !inf.isArchived && 
+      inf.status !== "archived" && 
+      (inf.code || "").trim().toUpperCase() === activeCode
+    );
+  }, [influencers, promoCodeApplied, promoCodeInput, referralCode]);
+
+  // Discount calculation for active ticket tier
+  const referralDiscount = React.useMemo(() => {
+    if (!matchedInfluencer || !selectedTicket) {
+      return { 
+        discountAmount: 0, 
+        discountPercent: 0, 
+        finalPrice: parseFloat(selectedTicket?.price) || 0, 
+        isEligible: false 
+      };
+    }
+
+    const infTier = (matchedInfluencer.ticketTier || "all").trim().toLowerCase();
+    const currentTicketName = (selectedTicket.name || selectedTicket.tier || "").trim().toLowerCase();
+    const isEligible = infTier === "all" || infTier === currentTicketName || matchedInfluencer.ticketId === selectedTicket.id;
+
+    if (!isEligible) {
+      return { 
+        discountAmount: 0, 
+        discountPercent: 0, 
+        finalPrice: parseFloat(selectedTicket?.price) || 0, 
+        isEligible: false,
+        reason: "Promo code is not applicable to this ticket tier."
+      };
+    }
+
+    const basePrice = parseFloat(selectedTicket.price) || 0;
+    let discountAmount = 0;
+    let discountPercent = 0;
+
+    if (matchedInfluencer.discountPercent && Number(matchedInfluencer.discountPercent) > 0) {
+      discountPercent = Number(matchedInfluencer.discountPercent);
+      discountAmount = (basePrice * discountPercent) / 100;
+    } else if (matchedInfluencer.discountAmount && Number(matchedInfluencer.discountAmount) > 0) {
+      discountAmount = Math.min(basePrice, Number(matchedInfluencer.discountAmount));
+    }
+
+    const finalPrice = Math.max(0, basePrice - discountAmount);
+    return {
+      discountAmount,
+      discountPercent,
+      finalPrice,
+      isEligible: true,
+      influencerName: matchedInfluencer.name,
+      code: matchedInfluencer.code
+    };
+  }, [matchedInfluencer, selectedTicket]);
+
+  const handleApplyPromoCode = () => {
+    const clean = promoCodeInput.trim().toUpperCase();
+    if (!clean) {
+      setPromoCodeApplied(false);
+      setPromoMessage({ type: "error", text: t("inf.enterCode", "Please enter a promo or referral code.") });
+      return;
+    }
+    const found = (influencers || []).find(i => !i.isArchived && i.status !== "archived" && (i.code || "").trim().toUpperCase() === clean);
+    if (found) {
+      setPromoCodeApplied(true);
+      setReferralCode(clean);
+      setPromoMessage({ 
+        type: "success", 
+        text: `Promo code "${clean}" applied! (${found.name})` 
+      });
+      recordInfluencerClick(eventId || eventDetails?.id, clean).catch(console.warn);
+    } else {
+      setPromoCodeApplied(false);
+      setPromoMessage({ 
+        type: "error", 
+        text: `Promo code "${clean}" is invalid or expired.` 
+      });
+    }
+  };
+
+  const handleClearPromoCode = () => {
+    setPromoCodeInput("");
+    setReferralCode("");
+    setPromoCodeApplied(false);
+    setPromoMessage(null);
+  };
+
   // Lock body scroll when registration is open to eliminate background double-scroll
   useEffect(() => {
     if (typeof document !== "undefined") {
@@ -555,6 +653,15 @@ export default function EventPublicLandingPage({
       const view = searchParams.get("view");
       const registerParam = searchParams.get("register");
       const ticketParam = searchParams.get("ticket");
+      const refParam = searchParams.get("ref") || searchParams.get("influencer") || searchParams.get("referral");
+
+      if (refParam) {
+        const cleanRef = refParam.trim().toUpperCase();
+        setReferralCode(cleanRef);
+        setPromoCodeInput(cleanRef);
+        setPromoCodeApplied(true);
+        recordInfluencerClick(eventId || eventDetails?.id, cleanRef).catch(console.warn);
+      }
 
       if (view === "rsvp") {
         setShowPublicRsvpModal(true);
@@ -576,7 +683,7 @@ export default function EventPublicLandingPage({
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [eventTickets]);
+  }, [eventTickets, eventId, eventDetails]);
 
   const openRSVP = () => {
     setShowPublicRsvpModal(true);
@@ -702,6 +809,15 @@ export default function EventPublicLandingPage({
 
     try {
       if (onRegisterForEvent) {
+        const activeRefCode = (promoCodeApplied ? promoCodeInput : referralCode || "").trim().toUpperCase();
+        const discountVal = referralDiscount?.isEligible ? (referralDiscount.discountAmount || 0) : 0;
+        
+        const payloadCustomAnswers = {
+          ...customAnswers,
+          ...(activeRefCode ? { _referral_code: activeRefCode } : {}),
+          ...(matchedInfluencer?.id ? { _influencer_id: matchedInfluencer.id } : {})
+        };
+
         const pass = await onRegisterForEvent(eventId || eventDetails?.id, {
           name: rsvpName || currentUser?.fullName || "Attendee",
           email: rsvpEmail || currentUser?.email || "visitor@eventzone.io",
@@ -711,9 +827,14 @@ export default function EventPublicLandingPage({
           avatar: badgePhotoUrl || currentUser?.avatar || "",
           photo: badgePhotoUrl || "",
           ticketType: selectedTier,
+          ticketId: selectedTicket?.id || null,
           requiresApproval: Boolean(selectedTicket?.requiresApproval || selectedTicket?.requires_approval),
-          customAnswers: customAnswers,
-          answers: customAnswers,
+          referralCode: activeRefCode,
+          referral_code: activeRefCode,
+          influencerId: matchedInfluencer?.id || null,
+          discountApplied: discountVal,
+          customAnswers: payloadCustomAnswers,
+          answers: payloadCustomAnswers,
           eventTitle: title,
           location: location,
           startDate: startDate,
@@ -744,6 +865,31 @@ export default function EventPublicLandingPage({
           setQrCodeUrl(url);
           setRsvpSuccess(pass);
           setRsvpError(null);
+
+          // Automatically send confirmation email with ticket pass to attendee
+          const targetEmail = rsvpEmail || currentUser?.email;
+          if (targetEmail) {
+            fetch("/api/email/send", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                type: "ticket_confirmation",
+                to: targetEmail,
+                attendeeName: rsvpName || currentUser?.fullName || "Attendee",
+                ticketTier: selectedTier || "General Admission",
+                eventTitle: title || eventDetails?.title || "Eventzone Summit",
+                eventDate: formattedDateRange || startDate || "",
+                eventLocation: location || eventDetails?.location || "Event Venue",
+                company: resolvedCompany || "",
+                jobTitle: resolvedJobTitle || "",
+                badgeCode: pass.badgeCode || pass.id?.slice(0, 8),
+                qrDataUrl: url,
+                passId: pass.id,
+                requiresApproval: Boolean(selectedTicket?.requiresApproval || selectedTicket?.requires_approval),
+                organizerName: eventDetails?.organizerName || "Eventzone Platform",
+              }),
+            }).catch((emailErr) => console.warn("Failed to dispatch confirmation email:", emailErr));
+          }
         }
       }
     } catch (err) {
@@ -1131,7 +1277,7 @@ export default function EventPublicLandingPage({
                           <div>
                             <span className="block font-bold text-slate-900">{t.name || t.tier}</span>
                             <span className="text-[11px] text-blue-600 font-semibold">
-                              {t.price && Number(t.price) > 0 ? `$${t.price}` : (lang === "fr" ? "Gratuit" : "Free")}
+                              {t.price && Number(t.price) > 0 ? `${Number(t.price).toLocaleString()} DZD` : (lang === "fr" ? "Gratuit" : "Free")}
                             </span>
                           </div>
                           {(selectedTicket?.name === t.name || selectedTicket?.id === t.id) && (
@@ -1995,6 +2141,32 @@ export default function EventPublicLandingPage({
                   <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-xs text-left">
                     <form onSubmit={isCheckoutLast ? handleRsvpSubmit : handleCheckoutNext} className="space-y-5">
                       
+                      {/* Influencer Referral Welcome Banner */}
+                      {matchedInfluencer && (
+                        <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border border-blue-200/90 rounded-2xl p-3.5 flex items-center justify-between gap-3 animate-fade-in shadow-2xs">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+                              <Sparkles size={14} />
+                            </div>
+                            <div className="min-w-0">
+                              <span className="text-xs font-extrabold text-blue-900 block truncate">
+                                Special invite via {matchedInfluencer.name}
+                              </span>
+                              <span className="text-[10px] text-blue-700 font-semibold block">
+                                {matchedInfluencer.discountPercent > 0 
+                                  ? `Promo code ${matchedInfluencer.code} saves you ${matchedInfluencer.discountPercent}% on registration!`
+                                  : matchedInfluencer.discountAmount > 0 
+                                    ? `Promo code ${matchedInfluencer.code} saves you ${matchedInfluencer.discountAmount.toLocaleString()} DZD!`
+                                    : `Referral attribution code ${matchedInfluencer.code} attached.`}
+                              </span>
+                            </div>
+                          </div>
+                          <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-white text-blue-800 border border-blue-200 shrink-0 font-mono shadow-2xs">
+                            {matchedInfluencer.code}
+                          </span>
+                        </div>
+                      )}
+
                       {/* DUPLICATE / CONFLICT ERROR ALERT */}
                       {rsvpError && (
                         <div className="bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl p-4 flex items-start gap-3 animate-in fade-in zoom-in-95 duration-200">
@@ -2095,6 +2267,83 @@ export default function EventPublicLandingPage({
                                     </div>
                                   );
                                 })}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* PROMO / REFERRAL CODE & DISCOUNT APPLIED BOX */}
+                          <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-2.5">
+                            <div className="flex items-center justify-between">
+                              <label className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
+                                <Tag size={13} className="text-blue-600" />
+                                <span>{t("inf.promoCode", "Promo or Referral Code")}</span>
+                              </label>
+
+                              {promoCodeApplied && (
+                                <button
+                                  type="button"
+                                  onClick={handleClearPromoCode}
+                                  className="text-[10px] font-bold text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                                >
+                                  {t("inf.removeCode", "Remove code")}
+                                </button>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <div className="relative flex-1">
+                                <input
+                                  type="text"
+                                  value={promoCodeInput}
+                                  onChange={(e) => {
+                                    setPromoCodeInput(e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ""));
+                                    setPromoMessage(null);
+                                  }}
+                                  placeholder="e.g. SUMMER2026"
+                                  className="w-full pl-3 pr-8 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 uppercase"
+                                />
+                                {promoCodeApplied && (
+                                  <div className="absolute right-2.5 top-1/2 -translate-y-1/2 text-emerald-600">
+                                    <CheckCircle2 size={14} />
+                                  </div>
+                                )}
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={handleApplyPromoCode}
+                                className="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl transition-all cursor-pointer shrink-0"
+                              >
+                                {t("inf.apply", "Apply")}
+                              </button>
+                            </div>
+
+                            {promoMessage && (
+                              <div className={`text-[11px] font-semibold flex items-center gap-1.5 ${promoMessage.type === "success" ? "text-emerald-600" : "text-rose-500"}`}>
+                                {promoMessage.type === "success" ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
+                                <span>{promoMessage.text}</span>
+                              </div>
+                            )}
+
+                            {/* Applied Discount Breakdown */}
+                            {referralDiscount && referralDiscount.isEligible && referralDiscount.discountAmount > 0 && (
+                              <div className="mt-2 pt-2 border-t border-slate-200/80 flex items-center justify-between text-xs font-semibold animate-fade-in">
+                                <span className="text-emerald-700 flex items-center gap-1">
+                                  <Sparkles size={12} />
+                                  <span>
+                                    {referralDiscount.discountPercent > 0 
+                                      ? `${referralDiscount.discountPercent}% Discount Applied` 
+                                      : `${referralDiscount.discountAmount.toLocaleString()} DZD Off`}
+                                  </span>
+                                </span>
+                                <div className="text-right">
+                                  <span className="text-slate-400 line-through text-[11px] mr-1.5">
+                                    {(parseFloat(selectedTicket?.price) || 0).toLocaleString()} DZD
+                                  </span>
+                                  <span className="font-extrabold text-emerald-700">
+                                    {referralDiscount.finalPrice === 0 ? "Free" : `${referralDiscount.finalPrice.toLocaleString()} DZD`}
+                                  </span>
+                                </div>
                               </div>
                             )}
                           </div>

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { uploadProfileAvatar } from "../lib/db";
 import UniversalTopBar from "./UniversalTopBar";
+import CountryPhoneInput from "./CountryPhoneInput";
 
 // Curated list of popular summit networking & matchmaking interests
 const CURATED_INTERESTS = [
@@ -914,12 +915,12 @@ export default function ProfileView({
 
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-slate-700">Phone / WhatsApp Number</label>
-                <input
-                  type="tel"
-                  placeholder="e.g. +213 781 457 611"
+                <CountryPhoneInput
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 font-medium placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+                  onChange={setPhone}
+                  placeholder="781 457 611"
+                  defaultCountry="DZ"
+                  className="w-full"
                 />
               </div>
 
