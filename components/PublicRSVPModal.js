@@ -1,27 +1,16 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { 
   CheckCircle2, X, AlertCircle, Calendar, Clock, MapPin, 
-  Users, UserPlus, Utensils, Sparkles, Download, Check, 
-  Send, HelpCircle, ShieldCheck, QrCode, ArrowRight, UserCheck, AlertTriangle
+  Users, UserPlus, Download, Check, 
+  Send, HelpCircle, ShieldCheck, QrCode, ArrowRight, UserCheck, AlertTriangle, XCircle
 } from "lucide-react";
 import { useLanguage } from "../lib/i18n";
 import QRCode from "qrcode";
 import CountryPhoneInput from "./CountryPhoneInput";
-
-export const DIETARY_OPTIONS = [
-  { id: "None", label: "Standard / No Restrictions", icon: "🍽️" },
-  { id: "Halal", label: "Halal", icon: "🌙" },
-  { id: "Vegetarian", label: "Vegetarian", icon: "🥗" },
-  { id: "Vegan", label: "Vegan", icon: "🌱" },
-  { id: "Gluten-Free", label: "Gluten-Free", icon: "🌾" },
-  { id: "Dairy-Free", label: "Dairy-Free", icon: "🥛" },
-  { id: "Kosher", label: "Kosher", icon: "✡️" },
-  { id: "Nut Allergy", label: "Nut Allergy", icon: "🥜" },
-  { id: "Other", label: "Other / Custom", icon: "✏️" },
-];
 
 export default function PublicRSVPModal({
   isOpen,
@@ -33,6 +22,11 @@ export default function PublicRSVPModal({
   currentUser = null
 }) {
   const { t, isRTL } = useLanguage();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Form State
   const [status, setStatus] = useState("attending"); // "attending" | "declined" | "tentative"
@@ -43,8 +37,6 @@ export default function PublicRSVPModal({
   const [jobTitle, setJobTitle] = useState("");
   const [plusOnes, setPlusOnes] = useState(0);
   const [plusOnesNames, setPlusOnesNames] = useState([""]);
-  const [dietaryPreference, setDietaryPreference] = useState("None");
-  const [dietaryNotes, setDietaryNotes] = useState("");
   const [notes, setNotes] = useState("");
 
   // UI Flow State
@@ -86,6 +78,25 @@ export default function PublicRSVPModal({
   const isFull = existingHeadcount >= capacityLimit;
   const willBeWaitlisted = isFull && allowWaitlist && status === "attending";
 
+  // Formatted date string
+  const formattedDate = useMemo(() => {
+    if (!event?.startDate) return "";
+    try {
+      const d = new Date(event.startDate);
+      if (isNaN(d.getTime())) return event.startDate;
+      const opts = { month: 'short', day: 'numeric', year: 'numeric' };
+      if (event.endDate && event.endDate !== event.startDate) {
+        const endD = new Date(event.endDate);
+        if (!isNaN(endD.getTime())) {
+          return `${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} - ${endD.toLocaleDateString(undefined, opts)}`;
+        }
+      }
+      return d.toLocaleDateString(undefined, opts);
+    } catch {
+      return event.startDate;
+    }
+  }, [event?.startDate, event?.endDate]);
+
   // Plus ones names handler
   const handlePlusOnesChange = (count) => {
     const num = Math.max(0, Math.min(count, maxPlusOnes));
@@ -111,43 +122,52 @@ export default function PublicRSVPModal({
         headcount: 1 + (submitResult.rsvp.plusOnes || 0),
         status: submitResult.rsvp.status,
       });
-      QRCode.toDataURL(codePayload, { width: 180, margin: 1, color: { dark: '#0b5cdb', light: '#ffffff' } })
+      QRCode.toDataURL(codePayload, { width: 220, margin: 1, color: { dark: '#0b5cdb', light: '#ffffff' } })
         .then(url => setQrCodeDataUrl(url))
         .catch(err => console.error("QR Code error:", err));
     }
   }, [isSubmitted, submitResult, event]);
 
-  // Download .ics calendar event
-  const handleDownloadIcs = () => {
-    const title = event?.title || event?.name || "Eventzone Summit";
-    const desc = event?.description || "Confirmed Eventzone Attendance";
-    const loc = event?.location || "Algiers";
-    const sDate = event?.startDate ? event.startDate.replace(/-/g, '') : "20261012";
-    const eDate = event?.endDate ? event.endDate.replace(/-/g, '') : sDate;
+  // Open Google Calendar with pre-populated event details
+  const handleAddToGoogleCalendar = () => {
+    try {
+      const title = event?.title || event?.name || "Eventzone Summit";
+      const desc = event?.description || `Confirmed RSVP for ${fullName || "Guest"}. Attendance registered on Eventzone.`;
+      const loc = event?.location || "Algiers";
 
-    const icsContent = [
-      "BEGIN:VCALENDAR",
-      "VERSION:2.0",
-      "PRODID:-//Eventzone//RSVP Module//EN",
-      "BEGIN:VEVENT",
-      `SUMMARY:${title}`,
-      `DESCRIPTION:${desc}`,
-      `LOCATION:${loc}`,
-      `DTSTART:${sDate}T090000Z`,
-      `DTEND:${eDate}T180000Z`,
-      "STATUS:CONFIRMED",
-      "END:VEVENT",
-      "END:VCALENDAR"
-    ].join("\r\n");
+      const cleanTitle = encodeURIComponent(title);
+      const cleanDetails = encodeURIComponent(desc);
+      const cleanLocation = encodeURIComponent(loc);
 
-    const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${title.replace(/\s+/g, '_')}_RSVP.ics`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      const sDateStr = event?.startDate || event?.start_date || event?.date || "2026-10-12";
+      const eDateStr = event?.endDate || event?.end_date || sDateStr;
+
+      const formatGCalDate = (dStr, isEnd = false) => {
+        if (!dStr) return "";
+        try {
+          const parsed = new Date(dStr);
+          if (!isNaN(parsed.getTime())) {
+            if (isEnd) {
+              parsed.setUTCDate(parsed.getUTCDate() + 1);
+            }
+            const yyyy = parsed.getUTCFullYear();
+            const mm = String(parsed.getUTCMonth() + 1).padStart(2, "0");
+            const dd = String(parsed.getUTCDate()).padStart(2, "0");
+            return `${yyyy}${mm}${dd}`;
+          }
+        } catch {}
+        return String(dStr).replace(/[^0-9]/g, "");
+      };
+
+      const startG = formatGCalDate(sDateStr);
+      const endG = formatGCalDate(eDateStr, true);
+      const datesParam = startG && endG ? `&dates=${startG}/${endG}` : "";
+
+      const gcalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${cleanTitle}&details=${cleanDetails}&location=${cleanLocation}${datesParam}`;
+      window.open(gcalUrl, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      window.open("https://calendar.google.com", "_blank", "noopener,noreferrer");
+    }
   };
 
   // Form Submit
@@ -192,8 +212,6 @@ export default function PublicRSVPModal({
         status,
         plusOnes: status === "attending" ? plusOnes : 0,
         plusOnesNames: status === "attending" ? plusOnesNames.filter(n => n.trim()) : [],
-        dietaryPreference: status === "attending" ? dietaryPreference : "None",
-        dietaryNotes: status === "attending" ? dietaryNotes.trim() : "",
         notes: notes.trim(),
         userId: currentUser?.id || null
       };
@@ -225,68 +243,83 @@ export default function PublicRSVPModal({
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-slate-950/45 backdrop-blur-md animate-fade-in overflow-y-auto font-sans">
       <div 
-        className="relative w-full max-w-xl bg-white border border-slate-200/80 rounded-3xl shadow-2xl overflow-hidden my-8 animate-scale-up"
+        className="relative w-full max-w-xl bg-white border border-slate-200/90 rounded-3xl shadow-2xl overflow-hidden my-auto animate-scale-up text-slate-900 flex flex-col max-h-[90vh]"
         dir={isRTL ? "rtl" : "ltr"}
       >
-        {/* Header Ribbon / Banner */}
-        <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 p-6 text-white relative">
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center text-white transition-all cursor-pointer"
-            aria-label="Close"
-          >
-            <X size={18} />
-          </button>
+        {/* ─────────────────────────────────────────────
+            1. HEADER SECTION (FIXED AT TOP)
+        ───────────────────────────────────────────── */}
+        <div className="p-5 sm:px-6 sm:py-5 border-b border-slate-150 bg-gradient-to-b from-slate-50/90 to-white shrink-0">
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1.5 flex-1 min-w-0">
+              {willBeWaitlisted && (
+                <div className="mb-1.5">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200/60">
+                    <Clock size={11} />
+                    <span>Waitlist Priority</span>
+                  </span>
+                </div>
+              )}
+              
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-tight truncate">
+                {event?.title || event?.name || "Eventzone Summit"}
+              </h2>
 
-          <div className="flex items-center gap-2 text-xs font-semibold text-blue-100 uppercase tracking-wider mb-1">
-            <Sparkles size={14} className="text-amber-300" />
-            <span>{t("rsvp.title", "Event Attendance RSVP")}</span>
-          </div>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-500 font-medium">
+                {formattedDate && (
+                  <div className="flex items-center gap-1.5">
+                    <Calendar size={13.5} className="text-slate-400 shrink-0" />
+                    <span>{formattedDate}</span>
+                  </div>
+                )}
+                {event?.location && (
+                  <div className="flex items-center gap-1.5">
+                    <MapPin size={13.5} className="text-slate-400 shrink-0" />
+                    <span className="truncate max-w-[280px]">{event.location}</span>
+                  </div>
+                )}
+              </div>
+            </div>
 
-          <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white line-clamp-1">
-            {event?.title || event?.name || "Algeria Hydrogen Law Conference 2026"}
-          </h2>
-
-          <div className="flex flex-wrap items-center gap-3 mt-3 text-xs text-blue-100 font-medium">
-            {event?.startDate && (
-              <span className="flex items-center gap-1">
-                <Calendar size={13} className="text-blue-200" />
-                <span>{event.startDate}</span>
-              </span>
-            )}
-            {event?.location && (
-              <span className="flex items-center gap-1">
-                <MapPin size={13} className="text-blue-200" />
-                <span className="truncate max-w-[200px]">{event.location}</span>
-              </span>
-            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-8 h-8 rounded-full border border-slate-200 bg-white hover:bg-slate-100 text-slate-400 hover:text-slate-700 flex items-center justify-center transition-colors cursor-pointer shrink-0 shadow-2xs mt-0.5"
+              aria-label="Close modal"
+            >
+              <X size={15} />
+            </button>
           </div>
         </div>
 
-        {/* Modal Body */}
-        <div className="p-6 max-h-[75vh] overflow-y-auto space-y-6">
-
-          {/* Success Screen */}
-          {isSubmitted ? (
-            <div className="flex flex-col items-center text-center py-4 space-y-5 animate-scale-up">
-              <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
+        {/* ─────────────────────────────────────────────
+            2. MODAL BODY (SCROLLABLE OR SUCCESS)
+        ───────────────────────────────────────────── */}
+        {isSubmitted ? (
+          <div className="p-6 sm:p-7 flex-1 overflow-y-auto space-y-6 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-slate-200 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
+            <div className="flex flex-col items-center text-center py-2 space-y-5 animate-scale-up">
+              <div className={`w-16 h-16 rounded-3xl flex items-center justify-center shadow-md ${
                 submitResult?.assignedStatus === 'waitlisted' || submitResult?.isWaitlisted
-                  ? 'bg-amber-100 text-amber-600'
-                  : 'bg-emerald-100 text-emerald-600'
+                  ? 'bg-amber-500 text-white shadow-amber-500/25'
+                  : status === 'declined'
+                  ? 'bg-slate-700 text-white shadow-slate-700/25'
+                  : 'bg-emerald-500 text-white shadow-emerald-500/25'
               }`}>
                 {submitResult?.assignedStatus === 'waitlisted' || submitResult?.isWaitlisted ? (
                   <Clock size={32} />
+                ) : status === 'declined' ? (
+                  <Check size={32} />
                 ) : (
                   <CheckCircle2 size={32} />
                 )}
               </div>
 
-              <div>
+              <div className="space-y-1.5 max-w-md">
                 <h3 className="text-xl font-black text-slate-900">
                   {submitResult?.assignedStatus === 'waitlisted' || submitResult?.isWaitlisted
                     ? t("rsvp.waitlistSuccess", "Added to Priority Waitlist!")
@@ -294,71 +327,69 @@ export default function PublicRSVPModal({
                     ? "Response Recorded"
                     : t("rsvp.submitSuccess", "RSVP Confirmed!")}
                 </h3>
-                <p className="text-xs text-slate-600 mt-1.5 max-w-md mx-auto leading-relaxed">
+                <p className="text-xs text-slate-500 leading-relaxed">
                   {submitResult?.assignedStatus === 'waitlisted' || submitResult?.isWaitlisted
-                    ? t("rsvp.waitlistSuccessDesc", "The event is currently at capacity. You've been placed on the priority waitlist and we will notify you if a spot opens up.")
+                    ? t("rsvp.waitlistSuccessDesc", "The event is currently at full capacity. We've reserved your priority waitlist place and will notify you as soon as a spot opens.")
                     : status === "declined"
-                    ? "Thank you for letting us know. We're sorry you won't be able to join us."
-                    : t("rsvp.submitSuccessDesc", "Your response has been saved. We look forward to seeing you at the event.")}
+                    ? "Thank you for letting us know. We hope to see you at future events."
+                    : t("rsvp.submitSuccessDesc", "Your attendance has been registered. A digital confirmation pass has been created for your entry.")}
                 </p>
               </div>
 
-              {/* Summary Card */}
+              {/* Digital Pass Card */}
               {status !== "declined" && (
-                <div className="w-full bg-slate-50 border border-slate-200/80 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-left">
-                  <div className="space-y-1.5 flex-1">
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">RSVP Summary</div>
-                    <div className="text-sm font-bold text-slate-900">{fullName}</div>
-                    <div className="text-xs text-slate-600">{email}</div>
+                <div className="w-full bg-slate-50 border border-slate-200/90 rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-5 text-left shadow-2xs">
+                  <div className="space-y-2 flex-1 min-w-0">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Digital Guest Pass</span>
+                    <div className="text-sm font-bold text-slate-900 truncate">{fullName}</div>
+                    <div className="text-xs text-slate-500 truncate">{email}</div>
+                    
                     <div className="flex flex-wrap items-center gap-2 pt-1">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200/60">
                         {1 + plusOnes} {1 + plusOnes === 1 ? "Guest" : "Guests (You + " + plusOnes + ")"}
                       </span>
-                      {dietaryPreference !== "None" && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700">
-                          {dietaryPreference}
-                        </span>
-                      )}
                     </div>
                   </div>
 
                   {qrCodeDataUrl && (
-                    <div className="flex flex-col items-center shrink-0 bg-white p-2 rounded-xl border border-slate-200 shadow-xs">
+                    <div className="flex flex-col items-center shrink-0 bg-white p-2.5 rounded-2xl border border-slate-200 shadow-xs">
                       <img src={qrCodeDataUrl} alt="RSVP QR Code" className="w-24 h-24 object-contain" />
-                      <span className="text-[9px] font-mono font-bold text-slate-500 mt-1">RSVP PASS</span>
+                      <span className="text-[9px] font-mono font-bold text-slate-400 mt-1 uppercase tracking-wider">Pass QR</span>
                     </div>
                   )}
                 </div>
               )}
 
-              {/* Action Buttons */}
+              {/* Success Action Buttons */}
               <div className="flex flex-col sm:flex-row items-center gap-3 w-full pt-2">
                 {status === "attending" && (
                   <button
                     type="button"
-                    onClick={handleDownloadIcs}
-                    className="w-full sm:flex-1 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-xs"
+                    onClick={handleAddToGoogleCalendar}
+                    className="w-full sm:flex-1 py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-xs"
                   >
-                    <Download size={14} />
-                    <span>{t("rsvp.addToCalendar", "Add to Calendar (.ics)")}</span>
+                    <Calendar size={14} />
+                    <span>{t("rsvp.addToCalendar", "Add to Calendar")}</span>
                   </button>
                 )}
                 <button
                   type="button"
                   onClick={onClose}
-                  className="w-full sm:flex-1 py-3 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+                  className="w-full sm:flex-1 py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
                 >
-                  {t("common.cancel", "Close")}
+                  {t("common.done", "Done")}
                 </button>
               </div>
             </div>
-          ) : (
-            /* Submission Form */
-            <form onSubmit={handleSubmit} className="space-y-5">
+          </div>
+        ) : (
+          /* SUBMISSION FORM WITH FIXED FOOTER */
+          <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-slate-200 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
 
               {/* Notice Banners */}
               {isDeadlinePassed && (
-                <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-3 text-rose-800 text-xs">
+                <div className="p-3.5 bg-rose-50/80 border border-rose-200/80 rounded-2xl flex items-start gap-3 text-rose-800 text-xs">
                   <AlertCircle size={16} className="shrink-0 text-rose-600 mt-0.5" />
                   <div>
                     <span className="font-bold">RSVP Deadline Passed:</span> Submissions for this event ended on {new Date(deadline).toLocaleDateString()}.
@@ -367,10 +398,10 @@ export default function PublicRSVPModal({
               )}
 
               {!isDeadlinePassed && willBeWaitlisted && (
-                <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3 text-amber-900 text-xs">
+                <div className="p-3.5 bg-amber-50/80 border border-amber-200/80 rounded-2xl flex items-start gap-3 text-amber-900 text-xs">
                   <Clock size={16} className="shrink-0 text-amber-600 mt-0.5" />
                   <div>
-                    <span className="font-bold">Capacity Notice:</span> Confirmed spots are currently filled ({existingHeadcount}/{capacityLimit}). New attendees will be placed on the <span className="font-bold">Priority Waitlist</span>.
+                    <span className="font-bold">Capacity Notice:</span> Confirmed capacity is reached ({existingHeadcount}/{capacityLimit}). New submissions are routed to the <span className="font-bold">Priority Waitlist</span>.
                   </div>
                 </div>
               )}
@@ -382,60 +413,72 @@ export default function PublicRSVPModal({
                 </div>
               )}
 
-              {/* 1. Attendance Status Choice */}
+              {/* 1. ATTENDANCE STATUS SELECTOR */}
               <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
-                  <span>{t("rsvp.willYouAttend", "Will you be attending?")}</span>
+                <label className="text-xs font-bold text-slate-800 flex items-center justify-between">
+                  <span>Will you be attending?</span>
                   <span className="text-[10px] text-blue-600 font-semibold">* Required</span>
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-2.5">
+                  {/* Attending */}
                   <button
                     type="button"
                     onClick={() => setStatus("attending")}
-                    className={`py-3 px-2 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1 ${
+                    className={`py-3 px-2 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1.5 ${
                       status === "attending"
-                        ? "bg-blue-50/80 border-blue-600 text-blue-800 shadow-xs ring-2 ring-blue-600/20"
+                        ? "bg-blue-50/80 border-blue-600 text-slate-900 shadow-xs ring-2 ring-blue-500/20"
                         : "bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50"
                     }`}
                   >
-                    <span className="text-base">🎉</span>
-                    <span className="text-xs font-extrabold">{t("rsvp.attending", "Attending")}</span>
+                    <CheckCircle2 size={18} className={status === "attending" ? "text-blue-600" : "text-slate-400"} />
+                    <div className="leading-tight">
+                      <span className="text-xs font-bold block">{t("rsvp.attending", "Attending")}</span>
+                      <span className="text-[10px] text-slate-400 font-medium">I will be there</span>
+                    </div>
                   </button>
 
+                  {/* Tentative */}
                   <button
                     type="button"
                     onClick={() => setStatus("tentative")}
-                    className={`py-3 px-2 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1 ${
+                    className={`py-3 px-2 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1.5 ${
                       status === "tentative"
-                        ? "bg-amber-50 border-amber-500 text-amber-800 shadow-xs ring-2 ring-amber-500/20"
+                        ? "bg-amber-50/80 border-amber-500 text-slate-900 shadow-xs ring-2 ring-amber-500/20"
                         : "bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50"
                     }`}
                   >
-                    <span className="text-base">🤔</span>
-                    <span className="text-xs font-extrabold">{t("rsvp.tentative", "Tentative")}</span>
+                    <HelpCircle size={18} className={status === "tentative" ? "text-amber-500" : "text-slate-400"} />
+                    <div className="leading-tight">
+                      <span className="text-xs font-bold block">{t("rsvp.tentative", "Tentative")}</span>
+                      <span className="text-[10px] text-slate-400 font-medium">Maybe / Undecided</span>
+                    </div>
                   </button>
 
+                  {/* Declined */}
                   <button
                     type="button"
                     onClick={() => setStatus("declined")}
-                    className={`py-3 px-2 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1 ${
+                    className={`py-3 px-2 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1.5 ${
                       status === "declined"
-                        ? "bg-rose-50 border-rose-500 text-rose-800 shadow-xs ring-2 ring-rose-500/20"
+                        ? "bg-rose-50/80 border-rose-500 text-slate-900 shadow-xs ring-2 ring-rose-500/20"
                         : "bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50"
                     }`}
                   >
-                    <span className="text-base">😢</span>
-                    <span className="text-xs font-extrabold">{t("rsvp.declined", "Declined")}</span>
+                    <XCircle size={18} className={status === "declined" ? "text-rose-500" : "text-slate-400"} />
+                    <div className="leading-tight">
+                      <span className="text-xs font-bold block">{t("rsvp.declined", "Declined")}</span>
+                      <span className="text-[10px] text-slate-400 font-medium">Cannot attend</span>
+                    </div>
                   </button>
                 </div>
               </div>
 
-              {/* 2. Contact Information */}
-              <div className="space-y-3 pt-2">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* 2. CONTACT INFORMATION */}
+              <div className="space-y-3.5 pt-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div>
-                    <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
-                      {t("rsvp.guestName", "Full Name")} *
+                    <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                      {t("rsvp.guestName", "Full Name")} <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -443,13 +486,13 @@ export default function PublicRSVPModal({
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       placeholder="e.g. Dr. Elena Rostova"
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white transition-colors"
+                      className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all shadow-2xs"
                     />
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
-                      {t("rsvp.email", "Email Address")} *
+                    <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                      {t("rsvp.email", "Email Address")} <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="email"
@@ -457,14 +500,14 @@ export default function PublicRSVPModal({
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="e.g. elena@domain.com"
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white transition-colors"
+                      className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all shadow-2xs"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div>
-                    <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
+                    <label className="text-xs font-bold text-slate-700 block mb-1.5">
                       {t("rsvp.phone", "Phone Number")}
                     </label>
                     <CountryPhoneInput
@@ -475,7 +518,7 @@ export default function PublicRSVPModal({
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
+                    <label className="text-xs font-bold text-slate-700 block mb-1.5">
                       {t("rsvp.company", "Company / Organization")}
                     </label>
                     <input
@@ -483,15 +526,15 @@ export default function PublicRSVPModal({
                       value={company}
                       onChange={(e) => setCompany(e.target.value)}
                       placeholder="e.g. Energy Transition Corp"
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white transition-colors"
+                      className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all shadow-2xs"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* 3. Plus-Ones Section (If Attending & Allowed) */}
+              {/* 3. COMPANIONS (+1s) */}
               {status === "attending" && allowPlusOnes && maxPlusOnes > 0 && (
-                <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-3">
+                <div className="p-4 bg-slate-50/90 border border-slate-200/90 rounded-2xl space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="text-xs font-bold text-slate-800">{t("rsvp.bringingGuests", "Bringing Companion Guests (+1s)?")}</div>
@@ -503,7 +546,7 @@ export default function PublicRSVPModal({
                           key={n}
                           type="button"
                           onClick={() => handlePlusOnesChange(n)}
-                          className={`w-7 h-7 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
+                          className={`w-7 h-7 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                             plusOnes === n
                               ? "bg-blue-600 text-white shadow-xs"
                               : "text-slate-600 hover:bg-slate-100"
@@ -516,7 +559,7 @@ export default function PublicRSVPModal({
                   </div>
 
                   {plusOnes > 0 && (
-                    <div className="space-y-2 pt-2 border-t border-slate-200/60">
+                    <div className="space-y-2 pt-2.5 border-t border-slate-200/60">
                       <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">
                         {t("rsvp.companionNames", "Companion Full Names")}
                       </label>
@@ -530,7 +573,7 @@ export default function PublicRSVPModal({
                             value={name}
                             onChange={(e) => handleCompanionNameChange(idx, e.target.value)}
                             placeholder={`Companion #${idx + 1} Full Name`}
-                            className="flex-1 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:outline-none focus:border-blue-600"
+                            className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all shadow-2xs"
                           />
                         </div>
                       ))}
@@ -539,66 +582,47 @@ export default function PublicRSVPModal({
                 </div>
               )}
 
-              {/* 4. Dietary Preferences (If Attending) */}
-              {status === "attending" && (
-                <div className="space-y-2.5 pt-1">
-                  <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
-                    <span className="flex items-center gap-1.5">
-                      <Utensils size={14} className="text-emerald-600" />
-                      <span>{t("rsvp.dietaryPreference", "Dietary Preferences & Allergens")}</span>
-                    </span>
-                  </label>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {DIETARY_OPTIONS.map((diet) => (
-                      <button
-                        key={diet.id}
-                        type="button"
-                        onClick={() => setDietaryPreference(diet.id)}
-                        className={`p-2 rounded-xl border text-left flex items-center gap-2 transition-all cursor-pointer text-xs ${
-                          dietaryPreference === diet.id
-                            ? "bg-emerald-50 border-emerald-500 text-emerald-900 font-bold shadow-2xs"
-                            : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-                        }`}
-                      >
-                        <span className="text-sm">{diet.icon}</span>
-                        <span className="truncate">{diet.label}</span>
-                      </button>
-                    ))}
-                  </div>
-
-                  {(dietaryPreference !== "None" || dietaryNotes) && (
-                    <input
-                      type="text"
-                      value={dietaryNotes}
-                      onChange={(e) => setDietaryNotes(e.target.value)}
-                      placeholder="Additional dietary notes or allergy specifics..."
-                      className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white transition-colors"
-                    />
-                  )}
-                </div>
-              )}
-
-              {/* 5. Special Notes */}
+              {/* 4. SPECIAL REQUESTS */}
               <div className="space-y-1.5 pt-1">
-                <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">
-                  {t("rsvp.specialRequests", "Special Requests or Message for Organizer")}
+                <label className="text-xs font-bold text-slate-700 block">
+                  {t("rsvp.specialRequests", "Special Requests or Notes")} <span className="text-slate-400 font-normal text-[11px]">(Optional)</span>
                 </label>
                 <textarea
                   rows={2}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Accessibility needs, question for speakers, arrival notes..."
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white transition-colors resize-none"
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all shadow-2xs resize-none"
                 />
               </div>
 
-              {/* Submit Buttons */}
-              <div className="pt-3 border-t border-slate-150 flex items-center justify-end gap-3">
+            </div>
+
+            {/* 6. PINNED BOTTOM ACTION BAR */}
+            <div className="p-4 sm:px-6 border-t border-slate-150 bg-slate-50/80 shrink-0 flex items-center justify-between gap-3">
+              <div className="text-[11px] font-semibold text-slate-500">
+                {status === "attending" && (
+                  <span className="text-emerald-700 flex items-center gap-1">
+                    <CheckCircle2 size={13} /> {1 + plusOnes} Attendee{1 + plusOnes > 1 ? "s" : ""}
+                  </span>
+                )}
+                {status === "tentative" && (
+                  <span className="text-amber-700 flex items-center gap-1">
+                    <HelpCircle size={13} /> Tentative Response
+                  </span>
+                )}
+                {status === "declined" && (
+                  <span className="text-slate-500 flex items-center gap-1">
+                    <XCircle size={13} /> Not Attending
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2.5">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+                  className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
                 >
                   {t("common.cancel", "Cancel")}
                 </button>
@@ -606,10 +630,10 @@ export default function PublicRSVPModal({
                 <button
                   type="submit"
                   disabled={isSubmitting || isDeadlinePassed}
-                  className={`px-6 py-2.5 rounded-xl text-xs font-bold text-white flex items-center gap-2 transition-all cursor-pointer shadow-xs ${
+                  className={`px-5 py-2 rounded-xl text-xs font-bold text-white flex items-center gap-2 transition-all cursor-pointer shadow-xs ${
                     status === 'declined'
                       ? 'bg-slate-700 hover:bg-slate-800'
-                      : 'bg-blue-600 hover:bg-blue-700'
+                      : 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/25'
                   } ${isSubmitting || isDeadlinePassed ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   {isSubmitting ? (
@@ -624,19 +648,20 @@ export default function PublicRSVPModal({
                         {status === "declined"
                           ? "Submit Decline"
                           : willBeWaitlisted
-                          ? "Join Priority Waitlist"
-                          : t("rsvp.publicRsvpNow", "Submit RSVP")}
+                          ? "Join Waitlist"
+                          : t("rsvp.publicRsvpNow", "Confirm RSVP")}
                       </span>
                     </>
                   )}
                 </button>
               </div>
+            </div>
 
-            </form>
-          )}
+          </form>
+        )}
 
-        </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -9,10 +9,12 @@ import {
 } from "lucide-react";
 import { useLanguage } from "../lib/i18n";
 import UniversalTopBar from "./UniversalTopBar";
+import { EventsHubSkeleton } from "./SkeletonLoaders";
 
 export default function OrganizerEventsHub({ 
   events = [], 
   registrations = [],
+  isLoading = false,
   onSelectEvent, 
   onCreateEventClick, 
   onDeleteEvent,
@@ -25,9 +27,12 @@ export default function OrganizerEventsHub({
   onSignOut,
   user
 }) {
-  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all"); // "all" | "published" | "draft" | "archived"
+
+  if (isLoading) {
+    return <EventsHubSkeleton />;
+  }
 
   const filteredEvents = events.filter(ev => {
     const matchesSearch = (ev.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||

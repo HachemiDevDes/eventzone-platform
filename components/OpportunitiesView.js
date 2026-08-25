@@ -543,9 +543,25 @@ export default function OpportunitiesView({
 
   // Archive / Delete Opportunity
   const handleArchiveOpp = (id) => {
-    if (confirm("Archive this prospect from the pipeline?")) {
+    if (confirm("Archive this prospect from the pipeline? (Record preserved in archives)")) {
       onUpdateState("opportunities", opportunities.map(o => o.id === id ? { ...o, isArchived: true, status: "archived" } : o));
       showToast("Prospect archived.");
+    }
+  };
+
+  const handleRestoreOpp = (id) => {
+    onUpdateState("opportunities", opportunities.map(o => o.id === id ? { ...o, isArchived: false, status: "lead" } : o));
+    showToast("Prospect restored.");
+  };
+
+  const handleDeletePermanentOpp = (id) => {
+    if (confirm("Permanently delete this prospect? This action cannot be undone.")) {
+      onUpdateState("opportunities", opportunities.filter(o => o.id !== id));
+      if (editingOpp?.id === id) {
+        setShowDrawer(false);
+        setEditingOpp(null);
+      }
+      showToast("Prospect deleted permanently.");
     }
   };
 
@@ -814,6 +830,8 @@ export default function OpportunitiesView({
                         onShift={handleShiftStage}
                         onMoveStage={handleMoveStage}
                         onArchive={handleArchiveOpp}
+                        onRestore={handleRestoreOpp}
+                        onPermanentDelete={handleDeletePermanentOpp}
                         onReopen={handleReopen}
                         onDragStart={() => setDraggedOppId(opp.id)}
                         formatCurrency={formatCurrency}
@@ -1008,6 +1026,8 @@ export default function OpportunitiesView({
           }}
           onReopen={handleReopen}
           onArchive={handleArchiveOpp}
+          onRestore={handleRestoreOpp}
+          onPermanentDelete={handleDeletePermanentOpp}
           t={t}
         />
       )}
@@ -1227,6 +1247,8 @@ function OpportunityCard({
   onShift,
   onMoveStage,
   onArchive,
+  onRestore,
+  onPermanentDelete,
   onReopen,
   onDragStart,
   formatCurrency,
@@ -1236,6 +1258,7 @@ function OpportunityCard({
   const isWonSponsor = opp.stage === "won_sponsor";
   const isWonExhibitor = opp.stage === "won_exhibitor";
   const isLost = opp.stage === "lost";
+  const isArchived = opp.isArchived || opp.status === "archived";
 
   return (
     <div
@@ -1354,16 +1377,54 @@ function OpportunityCard({
 
               <hr className="my-1 border-slate-100" />
 
-              <button
-                onClick={() => {
-                  setShowMenu(false);
-                  onArchive(opp.id);
-                }}
-                className="px-3 py-1.5 text-left hover:bg-rose-50 text-slate-400 hover:text-rose-600 flex items-center gap-2 cursor-pointer"
-              >
-                <Trash2 size={12} />
-                <span>Archive</span>
-              </button>
+              {isArchived ? (
+                <>
+                  <button
+                    onClick={() => {
+                      setShowMenu(false);
+                      if (onRestore) onRestore(opp.id);
+                    }}
+                    className="px-3 py-1.5 text-left hover:bg-emerald-50 text-emerald-600 flex items-center gap-2 cursor-pointer"
+                  >
+                    <RotateCcw size={12} />
+                    <span>Restore</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowMenu(false);
+                      if (onPermanentDelete) onPermanentDelete(opp.id);
+                      else if (onArchive) onArchive(opp.id);
+                    }}
+                    className="px-3 py-1.5 text-left hover:bg-rose-50 text-rose-600 flex items-center gap-2 cursor-pointer"
+                  >
+                    <Trash2 size={12} />
+                    <span>Delete Permanently</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => {
+                      setShowMenu(false);
+                      onArchive(opp.id);
+                    }}
+                    className="px-3 py-1.5 text-left hover:bg-amber-50 text-slate-500 hover:text-amber-600 flex items-center gap-2 cursor-pointer"
+                  >
+                    <Archive size={12} />
+                    <span>Archive</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowMenu(false);
+                      if (onPermanentDelete) onPermanentDelete(opp.id);
+                    }}
+                    className="px-3 py-1.5 text-left hover:bg-rose-50 text-slate-400 hover:text-rose-600 flex items-center gap-2 cursor-pointer"
+                  >
+                    <Trash2 size={12} />
+                    <span>Delete Permanently</span>
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>

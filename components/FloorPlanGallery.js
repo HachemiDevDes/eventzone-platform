@@ -3,8 +3,9 @@
 import React, { useState } from "react";
 import {
   Map, Plus, Edit3, Copy, Archive, RotateCcw, Grid, LayoutGrid,
-  Clock, Layers
+  Clock, Layers, Trash2
 } from "lucide-react";
+import { FloorPlanSkeleton } from "./SkeletonLoaders";
 
 // Thumbnail preview: mini SVG representation of element counts
 function PlanThumbnail({ plan }) {
@@ -28,77 +29,50 @@ function PlanThumbnail({ plan }) {
 
       {/* Center badge */}
       <div className="relative z-10 flex flex-col items-center gap-1">
-        <div className="w-9 h-9 rounded-xl bg-white/80 backdrop-blur-xs flex items-center justify-center shadow-xs border border-white/60">
-          <Map size={18} className="text-indigo-600" />
+        <div className="w-10 h-10 rounded-xl bg-white/90 shadow-sm border border-slate-200/80 flex items-center justify-center text-indigo-650">
+          <Map size={20} />
         </div>
-        <span className="text-[10px] font-bold text-slate-500 bg-white/70 backdrop-blur-xs px-2 py-0.5 rounded-full border border-white/60">
-          {count} {count === 1 ? "element" : "elements"}
+        <span className="text-[11px] font-bold text-slate-600 bg-white/80 px-2 py-0.5 rounded-full border border-slate-200/60 backdrop-blur-xs">
+          {count} elements
         </span>
       </div>
     </div>
   );
 }
 
-// Inline editable plan name
-function EditableName({ name, onRename }) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [value, setValue] = useState(name);
-
-  const handleSubmit = () => {
-    setIsEditing(false);
-    const trimmed = value.trim();
-    if (trimmed && trimmed !== name) {
-      onRename(trimmed);
-    } else {
-      setValue(name);
-    }
-  };
-
-  if (isEditing) {
-    return (
-      <input
-        type="text"
-        autoFocus
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onBlur={handleSubmit}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") handleSubmit();
-          if (e.key === "Escape") { setValue(name); setIsEditing(false); }
-        }}
-        className="text-sm font-bold text-slate-800 border-b-2 border-indigo-500 outline-none bg-transparent w-full py-0.5"
-      />
-    );
+function formatDate(iso) {
+  if (!iso) return "Just now";
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  } catch {
+    return "Just now";
   }
-
-  return (
-    <h3
-      className="text-sm font-bold text-slate-800 hover:text-indigo-650 cursor-pointer truncate transition-colors flex-1"
-      onDoubleClick={() => setIsEditing(true)}
-      title="Double-click to rename"
-    >
-      {name}
-    </h3>
-  );
-}
-
-// Format date nicely
-function formatDate(isoString) {
-  if (!isoString) return "Recently";
-  const d = new Date(isoString);
-  return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
 // Single floor plan card
-function PlanCard({ plan, onEdit, onDuplicate, onDelete, onArchive, onRestore, onRename }) {
+function PlanCard({ plan, onEdit, onDuplicate, onDelete, onPermanentDelete, onArchive, onRestore, onRename }) {
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [nameVal, setNameVal] = useState(plan.name);
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const isArchived = plan.isArchived || plan.status === "archived";
 
+  const handleNameSubmit = () => {
+    setIsEditingName(false);
+    const trimmed = nameVal.trim();
+    if (trimmed && trimmed !== plan.name && onRename) {
+      onRename(plan.id, trimmed);
+    } else {
+      setNameVal(plan.name);
+    }
+  };
+
   return (
-    <div className={`group bg-white border ${isArchived ? "border-slate-300 opacity-75" : "border-slate-200"} rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:border-indigo-200 transition-all duration-200 flex flex-col`}>
+    <div className={`group relative bg-white rounded-2xl border ${isArchived ? 'border-slate-200 opacity-80' : 'border-slate-200/90'} hover:border-indigo-200 hover:shadow-lg transition-all duration-200 flex flex-col overflow-hidden`}>
       {/* Thumbnail */}
       <div
-        className="cursor-pointer"
+        className="p-3 pb-0 cursor-pointer"
         onClick={() => onEdit(plan.id)}
       >
         <PlanThumbnail plan={plan} />
@@ -106,16 +80,40 @@ function PlanCard({ plan, onEdit, onDuplicate, onDelete, onArchive, onRestore, o
 
       {/* Card body */}
       <div className="p-4 flex flex-col gap-3 flex-1">
-        <div className="flex items-start justify-between gap-2">
-          <EditableName name={plan.name} onRename={(n) => onRename(plan.id, n)} />
-          {isArchived && (
-            <span className="text-[9px] uppercase font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
-              Archived
-            </span>
+        {/* Name (editable inline) */}
+        <div>
+          {isEditingName ? (
+            <input
+              type="text"
+              value={nameVal}
+              onChange={(e) => setNameVal(e.target.value)}
+              onBlur={handleNameSubmit}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleNameSubmit();
+                if (e.key === "Escape") { setNameVal(plan.name); setIsEditingName(false); }
+              }}
+              autoFocus
+              className="w-full text-sm font-bold text-slate-800 border border-indigo-400 rounded-lg px-2 py-1 outline-none bg-indigo-50/40"
+            />
+          ) : (
+            <div className="flex items-center justify-between gap-2">
+              <h3
+                onDoubleClick={() => !isArchived && setIsEditingName(true)}
+                className="text-sm font-bold text-slate-800 group-hover:text-indigo-650 transition-colors truncate cursor-pointer"
+                title={isArchived ? plan.name : "Double-click to rename"}
+              >
+                {plan.name}
+              </h3>
+              {isArchived && (
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md shrink-0">
+                  Archived
+                </span>
+              )}
+            </div>
           )}
         </div>
 
-        <div className="flex items-center gap-3 text-[10px] font-semibold text-slate-400">
+        <div className="flex items-center gap-4 text-[11px] font-medium text-slate-400">
           <span className="flex items-center gap-1">
             <Clock size={10} />
             {formatDate(plan.createdAt)}
@@ -147,13 +145,45 @@ function PlanCard({ plan, onEdit, onDuplicate, onDelete, onArchive, onRestore, o
           )}
 
           {isArchived ? (
-            <button
-              onClick={() => onRestore && onRestore(plan.id)}
-              className="p-2 border border-emerald-200 hover:bg-emerald-50 text-emerald-600 rounded-xl transition-all duration-200 cursor-pointer flex items-center gap-1 text-xs font-bold"
-              title="Restore floor plan"
-            >
-              <RotateCcw size={14} />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => onRestore && onRestore(plan.id)}
+                className="p-2 border border-emerald-200 hover:bg-emerald-50 text-emerald-600 rounded-xl transition-all duration-200 cursor-pointer flex items-center gap-1 text-xs font-bold"
+                title="Restore floor plan"
+              >
+                <RotateCcw size={14} />
+              </button>
+
+              {showDeleteConfirm ? (
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => {
+                      if (onPermanentDelete) onPermanentDelete(plan.id);
+                      else if (onDelete) onDelete(plan.id);
+                      setShowDeleteConfirm(false);
+                    }}
+                    className="p-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl transition-colors cursor-pointer"
+                    title="Confirm permanent deletion"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                  <button
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="p-2 border border-slate-200 hover:border-slate-300 text-slate-400 rounded-xl transition-colors cursor-pointer text-[10px] font-bold"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="p-2 border border-slate-200 hover:border-rose-200 hover:bg-rose-50 text-rose-500 rounded-xl transition-all duration-200 cursor-pointer"
+                  title="Delete permanently"
+                >
+                  <Trash2 size={14} />
+                </button>
+              )}
+            </div>
           ) : showArchiveConfirm ? (
             <div className="flex items-center gap-1">
               <button
@@ -191,15 +221,21 @@ function PlanCard({ plan, onEdit, onDuplicate, onDelete, onArchive, onRestore, o
 
 export default function FloorPlanGallery({
   floorPlans = [],
+  isLoading = false,
   onEdit,
   onCreateNew,
   onDuplicate,
   onDelete,
+  onPermanentDelete,
   onArchive,
   onRestore,
   onRename,
 }) {
   const [filter, setFilter] = useState("active"); // "active" | "archived" | "all"
+
+  if (isLoading) {
+    return <FloorPlanSkeleton />;
+  }
 
   const activePlans = floorPlans.filter(p => !p.isArchived && p.status !== "archived");
   const archivedPlans = floorPlans.filter(p => p.isArchived || p.status === "archived");
@@ -286,6 +322,7 @@ export default function FloorPlanGallery({
               onEdit={onEdit}
               onDuplicate={onDuplicate}
               onDelete={onDelete}
+              onPermanentDelete={onPermanentDelete || onDelete}
               onArchive={onArchive || onDelete}
               onRestore={onRestore}
               onRename={onRename}

@@ -9,10 +9,11 @@ import {
   Paperclip, FileSpreadsheet, Presentation, LayoutGrid, 
   List, ChevronDown, ArrowUpDown, FileCode, Archive, 
   Info, ExternalLink, HardDrive, Share2, Pencil, Layers, CheckSquare,
-  Package, CheckCircle2, AlertTriangle, Printer, Files
+  Package, CheckCircle2, AlertTriangle, Printer, Files, RotateCcw
 } from "lucide-react";
 import { useLanguage } from "../lib/i18n";
 import SearchableSelect from "./SearchableSelect";
+import { DocumentsSkeleton } from "./SkeletonLoaders";
 
 // ─────────────────────────────────────────────
 //  CONSTANTS & CONFIGURATIONS
@@ -82,6 +83,7 @@ export function detectFileType(fileName = "", mimeType = "") {
 
 export default function DocumentsView({
   documents = [],
+  isLoading = false,
   onSaveDocument,
   onDeleteDocument,
   onTogglePin,
@@ -121,13 +123,18 @@ export default function DocumentsView({
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
-  // Active documents (excluding archived)
+  // Active & Archived documents
   const activeDocs = useMemo(() => {
     return documents.filter(d => !d.isArchived);
   }, [documents]);
 
+  const archivedDocs = useMemo(() => {
+    return documents.filter(d => d.isArchived);
+  }, [documents]);
+
   // Tab categorization filter mapping
   const getTabCategoryMatches = (doc, tab) => {
+    if (tab === "archived") return true;
     const cat = doc.category || "General";
     if (tab === "all") return true;
     if (tab === "contracts") return cat === "Contracts & Legal" || cat === "Permits & Licenses";
@@ -147,12 +154,14 @@ export default function DocumentsView({
       presentations: activeDocs.filter(d => getTabCategoryMatches(d, "presentations")).length,
       technical: activeDocs.filter(d => getTabCategoryMatches(d, "technical")).length,
       policies: activeDocs.filter(d => getTabCategoryMatches(d, "policies")).length,
+      archived: archivedDocs.length,
     };
-  }, [activeDocs]);
+  }, [activeDocs, archivedDocs]);
 
   // Filtered & Sorted Documents
   const filteredDocs = useMemo(() => {
-    return activeDocs.filter(doc => {
+    const sourceDocs = activeTab === "archived" ? archivedDocs : activeDocs;
+    return sourceDocs.filter(doc => {
       // 1. Sub-Tab filter
       if (!getTabCategoryMatches(doc, activeTab)) {
         return false;
@@ -448,6 +457,10 @@ export default function DocumentsView({
     return "General";
   };
 
+  if (isLoading) {
+    return <DocumentsSkeleton />;
+  }
+
   return (
     <div className="space-y-6 animate-fade-in text-slate-800 pb-16">
       
@@ -699,6 +712,24 @@ export default function DocumentsView({
             <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-blue-600" />
           )}
         </button>
+
+        <button
+          onClick={() => { setActiveTab("archived"); setAudienceFilter("all"); }}
+          className={`relative flex items-center gap-2 px-4 py-3 font-bold text-xs transition-all cursor-pointer !rounded-none ${
+            activeTab === "archived"
+              ? "text-amber-600 font-black bg-amber-50/50"
+              : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+          }`}
+        >
+          <Archive size={15} />
+          <span>Archived</span>
+          <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${activeTab === "archived" ? "bg-amber-600 text-white" : "bg-slate-100 text-slate-600"}`}>
+            {tabCounts.archived}
+          </span>
+          {activeTab === "archived" && (
+            <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-amber-600" />
+          )}
+        </button>
       </div>
 
       {/* ─────────────────────────────────────────────
@@ -890,17 +921,49 @@ export default function DocumentsView({
                       >
                         <Download size={14} />
                       </button>
-                      <button
-                        onClick={() => handleOpenEdit(doc)}
-                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        title="Edit metadata"
-                      >
-                        <Pencil size={14} />
-                      </button>
+                      {!doc.isArchived && (
+                        <button
+                          onClick={() => handleOpenEdit(doc)}
+                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                          title="Edit metadata"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                      )}
+
+                      {doc.isArchived ? (
+                        <button
+                          onClick={async () => {
+                            if (onSaveDocument) {
+                              await onSaveDocument({ ...doc, isArchived: false, status: 'published' });
+                            }
+                          }}
+                          className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer flex items-center gap-1 font-bold text-[10px]"
+                          title="Restore document"
+                        >
+                          <RotateCcw size={14} />
+                          <span>Restore</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={async () => {
+                            if (confirm(`Archive document "${doc.name}"? (Preserved safely in archives)`)) {
+                              if (onSaveDocument) {
+                                await onSaveDocument({ ...doc, isArchived: true, status: 'archived' });
+                              }
+                            }
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
+                          title="Archive Document"
+                        >
+                          <Archive size={14} />
+                        </button>
+                      )}
+
                       <button
                         onClick={() => setDeletingDoc(doc)}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                        title="Delete"
+                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                        title={doc.isArchived ? "Delete permanently" : "Delete document"}
                       >
                         <Trash2 size={14} />
                       </button>

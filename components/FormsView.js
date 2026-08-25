@@ -21,6 +21,7 @@ import SearchableSelect from "./SearchableSelect";
 import FormImageUploader from "./FormImageUploader";
 import FormFileUploader, { formatFileSize } from "./FormFileUploader";
 import { PRESET_SMART_FIELDS, getFormSections } from "../lib/formPresets";
+import { FormsSkeleton } from "./SkeletonLoaders";
 
 // Available field types in the toolbox
 const FIELD_TYPES = [
@@ -113,8 +114,10 @@ export default function FormsView({
   forms = [],
   submissions = [],
   tickets = [],
+  isLoading = false,
   onSaveForm,
   onDeleteForm,
+  onPermanentDeleteForm,
   onArchiveForm,
   onRestoreForm,
   onSubmitResponse,
@@ -710,6 +713,10 @@ function generateUuid() {
       });
     }
   };
+
+  if (isLoading) {
+    return <FormsSkeleton />;
+  }
 
   // =========================================================================
   // VIEW MODE: BUILDER (Visual Drag & Drop, Settings, Preview, Analytics)
@@ -2681,17 +2688,32 @@ function generateUuid() {
                   )}
 
                   {isArchived ? (
-                    <button
-                      onClick={() => {
-                        if (onSaveForm) onSaveForm({ ...form, status: "active", isArchived: false });
-                        else if (onRestoreForm) onRestoreForm(form.id);
-                      }}
-                      className="p-2 rounded-xl text-emerald-600 hover:bg-emerald-50 transition-colors cursor-pointer flex items-center justify-center"
-                      title="Restore Form"
-                      aria-label="Restore Form"
-                    >
-                      <RotateCcw size={15} />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => {
+                          if (onSaveForm) onSaveForm({ ...form, status: "active", isArchived: false });
+                          else if (onRestoreForm) onRestoreForm(form.id);
+                        }}
+                        className="p-2 rounded-xl text-emerald-600 hover:bg-emerald-50 transition-colors cursor-pointer flex items-center justify-center"
+                        title="Restore Form"
+                        aria-label="Restore Form"
+                      >
+                        <RotateCcw size={15} />
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm(`Permanently delete form "${form.title}" and all associated responses? This action cannot be undone.`)) {
+                            if (onPermanentDeleteForm) onPermanentDeleteForm(form.id);
+                            else if (onDeleteForm) onDeleteForm(form.id);
+                          }
+                        }}
+                        className="p-2 rounded-xl text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition-colors cursor-pointer flex items-center justify-center"
+                        title="Delete Form Permanently"
+                        aria-label="Delete Form Permanently"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
                   ) : (
                     <button
                       onClick={() => {

@@ -3515,7 +3515,7 @@ export default function FloorPlanModifier({
                                   </div>
                                   {attendee && (
                                     <span className="text-[10px] font-semibold text-slate-400 truncate max-w-[45%]">
-                                      {attendee.company || "VIP"}
+                                      {attendee.company || attendee.email || ""}
                                     </span>
                                   )}
                                 </div>

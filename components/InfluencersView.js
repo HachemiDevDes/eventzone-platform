@@ -8,7 +8,7 @@ import {
   MoreVertical, Calendar, Phone, Mail, FileText, ChevronRight,
   RotateCcw, Award, Trash2, Edit3, MessageSquare, 
   PieChart, BarChart2, Check, Download, AlertCircle, Clock,
-  ExternalLink, Copy, QrCode, Tag, Megaphone, Eye, Percent,
+  ExternalLink, Copy, QrCode, Megaphone, Eye, Percent, Play, Pause,
   Globe, ArrowUpRight, ShieldCheck, HelpCircle, CheckSquare, RefreshCw, Layers
 } from "lucide-react";
 import QRCode from "qrcode";
@@ -64,7 +64,7 @@ export default function InfluencersView({
   };
 
   // View & Filter States
-  const [viewMode, setViewMode] = useState("grid"); // "grid" | "table"
+  const [viewMode, setViewMode] = useState("table"); // "grid" | "table"
   const [searchQuery, setSearchQuery] = useState("");
   const [platformFilter, setPlatformFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("active"); // "all" | "active" | "paused" | "archived"
@@ -267,7 +267,7 @@ export default function InfluencersView({
     if (typeof window === "undefined") return "";
     const origin = window.location.origin;
     const targetEventId = activeEventId || eventDetails?.id || "";
-    return `${origin}/?eventId=${targetEventId}&ref=${encodeURIComponent(code)}`;
+    return `${origin}/?view=event-landing&eventId=${targetEventId}&ref=${encodeURIComponent(code)}`;
   };
 
   // 1-Click Copy Link
@@ -328,12 +328,11 @@ export default function InfluencersView({
     if (!shareKitInfluencer) return;
     const eventTitle = eventDetails?.title || "Our Upcoming Summit";
     const eventDates = eventDetails?.startDate ? `${eventDetails.startDate}${eventDetails.endDate ? ` - ${eventDetails.endDate}` : ""}` : "";
-    const referralUrl = getReferralUrl(shareKitInfluencer.code);
     let discountText = "";
     if (shareKitInfluencer.discountPercent > 0) {
-      discountText = `Use promo code *${shareKitInfluencer.code}* to get ${shareKitInfluencer.discountPercent}% OFF! `;
+      discountText = `Get an exclusive ${shareKitInfluencer.discountPercent}% OFF using my link! `;
     } else if (shareKitInfluencer.discountAmount > 0) {
-      discountText = `Use promo code *${shareKitInfluencer.code}* to save ${formatPrice(shareKitInfluencer.discountAmount)}! `;
+      discountText = `Get an exclusive ${formatPrice(shareKitInfluencer.discountAmount)} discount using my link! `;
     }
 
     const pitchText = `🎟️ Join me at *${eventTitle}*${eventDates ? ` on ${eventDates}` : ""}!\n\n${discountText}Get your official passes here:\n👉 ${referralUrl}\n\nCan't wait to see you there! ✨`;
@@ -442,18 +441,12 @@ export default function InfluencersView({
     e.preventDefault();
     const errors = {};
     if (!formData.name.trim()) errors.name = "Influencer name is required";
-    if (!formData.code.trim()) errors.code = "Referral code is required";
 
-    const cleanCode = formData.code.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "");
-    if (!cleanCode) errors.code = "Code must contain valid alphanumeric characters";
-
-    // Duplicate code check
-    const duplicate = (influencers || []).find(i => 
-      (i.code || "").trim().toUpperCase() === cleanCode && 
-      (!editingInfluencer || i.id !== editingInfluencer.id) &&
-      !i.isArchived
-    );
-    if (duplicate) errors.code = "This referral code is already used by another influencer campaign.";
+    let cleanCode = (formData.code || "").trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "");
+    if (!cleanCode) {
+      const slug = formData.name.trim().toUpperCase().replace(/[^A-Z0-9]/g, "").substring(0, 8) || "REF";
+      cleanCode = `${slug}${Math.floor(100 + Math.random() * 900)}`;
+    }
 
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
@@ -461,7 +454,7 @@ export default function InfluencersView({
     }
 
     const payload = {
-      id: editingInfluencer ? editingInfluencer.id : (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `inf-${Date.now()}`),
+      id: editingInfluencer ? editingInfluencer.id : (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); })),
       name: formData.name.trim(),
       platform: formData.platform || "Instagram",
       handle: formData.handle.trim(),
@@ -593,22 +586,12 @@ export default function InfluencersView({
       {/* 1. HEADER & ACTIONS */}
       <header className="flex flex-wrap justify-between items-center gap-4 select-none">
         <div>
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shadow-xs">
-              <Share2 size={20} />
-            </div>
-            <div>
-              <h2 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                <span>{t("inf.title", "Influencers & Affiliates")}</span>
-                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                  {summaryKpis.totalInf} {t("dash.activeEvents", "Campaigns")}
-                </span>
-              </h2>
-              <p className="text-xs font-semibold text-slate-500 mt-0.5">
-                {t("inf.subtitle", "Create custom referral ticket links for influencers, track traffic clicks, and monitor registrations & revenue attribution in real time.")}
-              </p>
-            </div>
-          </div>
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight">
+            {t("inf.title", "Influencers & Affiliates")}
+          </h2>
+          <p className="text-xs font-semibold text-slate-500 mt-0.5">
+            {t("inf.subtitle", "Create custom referral ticket links for influencers, track traffic clicks, and monitor registrations & revenue attribution in real time.")}
+          </p>
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
@@ -741,28 +724,30 @@ export default function InfluencersView({
       {/* 3. FILTER, SEARCH & VIEW TOOLBAR */}
       <div className="bg-white border border-slate-200 rounded-2xl p-3 shadow-xs flex flex-wrap items-center justify-between gap-3">
         
-        {/* Search & Platform Filter */}
-        <div className="flex items-center gap-2.5 flex-1 min-w-[280px]">
-          <div className="relative flex-1">
+        {/* Left: Search Bar, Platform Filter, & Status Tabs */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Compact Search Bar */}
+          <div className="relative w-60 sm:w-64">
             <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t("inf.searchPlaceholder", "Search influencers by name, code, handle...")}
-              className="w-full pl-9 pr-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+              placeholder={t("inf.searchPlaceholder", "Search influencers...")}
+              className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
             />
             {searchQuery && (
               <button 
                 onClick={() => setSearchQuery("")} 
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
               >
                 <XCircle size={13} />
               </button>
             )}
           </div>
 
-          <div className="w-44 shrink-0">
+          {/* Platform Filter */}
+          <div className="w-38 sm:w-40 shrink-0">
             <SearchableSelect
               value={platformFilter}
               onChange={setPlatformFilter}
@@ -773,10 +758,8 @@ export default function InfluencersView({
               buttonClassName="py-2 text-xs font-semibold bg-slate-50 border-slate-200"
             />
           </div>
-        </div>
 
-        {/* Status Tabs & View Switcher */}
-        <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Status Tabs */}
           <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200">
             {[
               { id: "active", label: "Active" },
@@ -792,9 +775,12 @@ export default function InfluencersView({
               </button>
             ))}
           </div>
+        </div>
 
+        {/* Right: Sort Selector & View Switcher */}
+        <div className="flex items-center gap-2.5 flex-wrap">
           {/* Sort Selector */}
-          <div className="w-40 shrink-0">
+          <div className="w-44 shrink-0">
             <SearchableSelect
               value={sortBy}
               onChange={setSortBy}
@@ -812,21 +798,21 @@ export default function InfluencersView({
             />
           </div>
 
-          {/* View Mode Toggle */}
+          {/* View Mode Toggle (Table / Grid) */}
           <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200">
-            <button
-              onClick={() => setViewMode("grid")}
-              className={`p-1.5 rounded-lg transition-all cursor-pointer ${viewMode === "grid" ? "bg-white text-blue-600 shadow-xs" : "text-slate-400 hover:text-slate-600"}`}
-              title={t("inf.viewGrid", "Grid View")}
-            >
-              <BarChart2 size={15} />
-            </button>
             <button
               onClick={() => setViewMode("table")}
               className={`p-1.5 rounded-lg transition-all cursor-pointer ${viewMode === "table" ? "bg-white text-blue-600 shadow-xs" : "text-slate-400 hover:text-slate-600"}`}
               title={t("inf.viewTable", "Table View")}
             >
               <FileText size={15} />
+            </button>
+            <button
+              onClick={() => setViewMode("grid")}
+              className={`p-1.5 rounded-lg transition-all cursor-pointer ${viewMode === "grid" ? "bg-white text-blue-600 shadow-xs" : "text-slate-400 hover:text-slate-600"}`}
+              title={t("inf.viewGrid", "Grid View")}
+            >
+              <BarChart2 size={15} />
             </button>
           </div>
 
@@ -848,7 +834,7 @@ export default function InfluencersView({
           <p className="text-xs text-slate-500 max-w-md mb-6">
             {searchQuery || platformFilter !== "all" || statusFilter !== "active"
               ? "Try adjusting your search terms or filter settings to view your campaigns."
-              : "Launch tracking referral links and promo codes to partner with influencers, bloggers, and promoters."}
+              : "Launch tracking referral links to partner with influencers, bloggers, and promoters."}
           </p>
           <button
             onClick={handleOpenAdd}
@@ -875,27 +861,20 @@ export default function InfluencersView({
                   
                   {/* Card Header */}
                   <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <img
-                        src={inf.avatar || inf.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(inf.name)}&background=3b82f6&color=fff`}
-                        alt={inf.name}
-                        className="w-12 h-12 rounded-2xl object-cover border border-slate-200 shrink-0 shadow-xs"
-                      />
-                      <div className="min-w-0">
-                        <h4 className="text-sm font-extrabold text-slate-900 truncate leading-tight group-hover:text-blue-600 transition-colors">
-                          {inf.name}
-                        </h4>
-                        
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md border ${platMeta.badgeColor}`}>
-                            {inf.platform}
+                    <div className="min-w-0">
+                      <h4 className="text-sm font-extrabold text-slate-900 truncate leading-tight group-hover:text-blue-600 transition-colors">
+                        {inf.name}
+                      </h4>
+                      
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md border ${platMeta.badgeColor}`}>
+                          {inf.platform}
+                        </span>
+                        {inf.handle && (
+                          <span className="text-[10px] font-semibold text-slate-500 truncate" title={inf.handle}>
+                            {inf.handle}
                           </span>
-                          {inf.handle && (
-                            <span className="text-[10px] font-semibold text-slate-500 truncate" title={inf.handle}>
-                              {inf.handle}
-                            </span>
-                          )}
-                        </div>
+                        )}
                       </div>
                     </div>
 
@@ -904,67 +883,42 @@ export default function InfluencersView({
                     </span>
                   </div>
 
-                  {/* Promo Code & Link Box */}
-                  <div className="mt-4 p-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl flex flex-col gap-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5">
-                        <Tag size={12} className="text-blue-600 shrink-0" />
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Promo Code:</span>
-                        <code className="text-xs font-black text-blue-700 bg-blue-100/60 px-1.5 py-0.5 rounded-md">
-                          {inf.code}
-                        </code>
+                  {/* Referral Link Box */}
+                  <div className="mt-4 p-3 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
+                        Referral Link
                       </div>
+                      <div className="text-[11px] text-slate-700 font-semibold truncate" title={getReferralUrl(inf.code)}>
+                        {getReferralUrl(inf.code)}
+                      </div>
+                    </div>
 
+                    <div className="flex items-center gap-1 shrink-0">
                       <button
-                        onClick={(e) => handleCopyPromo(inf, e)}
-                        className="text-[10px] font-bold text-slate-600 hover:text-blue-600 flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-slate-200 hover:border-blue-300 transition-all cursor-pointer"
-                        title="Copy promo code"
+                        onClick={(e) => handleCopyLink(inf, e)}
+                        className="text-[11px] font-extrabold text-blue-600 bg-white hover:bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-200 shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
                       >
-                        {copiedPromoMap[inf.id] ? (
+                        {copiedLinkMap[inf.id] ? (
                           <>
-                            <Check size={11} className="text-emerald-600" />
-                            <span className="text-emerald-600 font-bold">{t("inf.promoCopied", "Copied!")}</span>
+                            <Check size={12} className="text-emerald-600" />
+                            <span className="text-emerald-600 font-bold">{t("inf.linkCopied", "Copied!")}</span>
                           </>
                         ) : (
                           <>
-                            <Copy size={11} />
-                            <span>{t("inf.copyPromo", "Copy Code")}</span>
+                            <Copy size={12} />
+                            <span>{t("inf.copyLink", "Copy Link")}</span>
                           </>
                         )}
                       </button>
-                    </div>
 
-                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-200/60">
-                      <div className="text-[10px] text-slate-500 font-medium truncate flex-1" title={getReferralUrl(inf.code)}>
-                        <span className="text-slate-400">URL: </span>?ref={inf.code}
-                      </div>
-
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button
-                          onClick={(e) => handleCopyLink(inf, e)}
-                          className="text-[10px] font-extrabold text-blue-600 hover:bg-blue-50 px-2 py-1 rounded-lg border border-blue-200 transition-all flex items-center gap-1 cursor-pointer"
-                        >
-                          {copiedLinkMap[inf.id] ? (
-                            <>
-                              <Check size={11} className="text-emerald-600" />
-                              <span className="text-emerald-600">{t("inf.linkCopied", "Copied!")}</span>
-                            </>
-                          ) : (
-                            <>
-                              <Copy size={11} />
-                              <span>{t("inf.copyLink", "Copy Link")}</span>
-                            </>
-                          )}
-                        </button>
-
-                        <button
-                          onClick={(e) => handleOpenShareKit(inf, e)}
-                          className="p-1 text-slate-500 hover:text-slate-800 bg-white hover:bg-slate-100 rounded-lg border border-slate-200 transition-all cursor-pointer"
-                          title={t("inf.shareKit", "Share Kit & QR Code")}
-                        >
-                          <QrCode size={13} />
-                        </button>
-                      </div>
+                      <button
+                        onClick={(e) => handleOpenShareKit(inf, e)}
+                        className="p-1.5 text-slate-500 hover:text-slate-800 bg-white hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors cursor-pointer"
+                        title={t("inf.shareKit", "Share Kit & QR Code")}
+                      >
+                        <QrCode size={14} />
+                      </button>
                     </div>
                   </div>
 
@@ -1089,7 +1043,8 @@ export default function InfluencersView({
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px] tracking-wider">
                 <tr>
                   <th className="py-3 px-4">Influencer</th>
-                  <th className="py-3 px-3">Platform & Code</th>
+                  <th className="py-3 px-3">Platform</th>
+                  <th className="py-3 px-3">Status</th>
                   <th className="py-3 px-3">Buyer Discount</th>
                   <th className="py-3 px-3 text-center">Clicks</th>
                   <th className="py-3 px-3 text-center">Passes Sold</th>
@@ -1102,20 +1057,15 @@ export default function InfluencersView({
               <tbody className="divide-y divide-slate-100">
                 {filteredInfluencers.map(inf => {
                   const platMeta = getPlatformMeta(inf.platform);
+                  const isPaused = inf.status === "paused";
+                  const isArchived = inf.status === "archived" || inf.isArchived;
 
                   return (
                     <tr key={inf.id} className="hover:bg-slate-50/70 transition-colors">
                       <td className="py-3 px-4">
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={inf.avatar || inf.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(inf.name)}&background=3b82f6&color=fff`}
-                            alt={inf.name}
-                            className="w-9 h-9 rounded-xl object-cover border border-slate-200 shrink-0"
-                          />
-                          <div className="min-w-0">
-                            <div className="font-extrabold text-slate-900 truncate">{inf.name}</div>
-                            <div className="text-[10px] text-slate-400 font-medium truncate">{inf.email || inf.phone || "No contact"}</div>
-                          </div>
+                        <div className="min-w-0">
+                          <div className="font-extrabold text-slate-900 truncate">{inf.name}</div>
+                          <div className="text-[10px] text-slate-400 font-medium truncate">{inf.email || inf.phone || "No contact"}</div>
                         </div>
                       </td>
 
@@ -1124,19 +1074,24 @@ export default function InfluencersView({
                           <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded border ${platMeta.badgeColor}`}>
                             {inf.platform} {inf.handle ? `• ${inf.handle}` : ""}
                           </span>
-                          <div className="flex items-center gap-1">
-                            <code className="text-[10px] font-black text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
-                              {inf.code}
-                            </code>
-                            <button
-                              onClick={(e) => handleCopyLink(inf, e)}
-                              className="text-[10px] text-slate-400 hover:text-blue-600 transition-colors"
-                              title="Copy link"
-                            >
-                              <Copy size={11} />
-                            </button>
-                          </div>
                         </div>
+                      </td>
+
+                      <td className="py-3 px-3">
+                        <button
+                          onClick={(e) => handleToggleStatus(inf, e)}
+                          className={`inline-flex items-center gap-1.5 text-[10px] font-extrabold px-2.5 py-1 rounded-full border transition-all cursor-pointer ${
+                            isPaused 
+                              ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100" 
+                              : isArchived 
+                                ? "bg-slate-100 text-slate-600 border-slate-200" 
+                                : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                          }`}
+                          title={isPaused ? "Click to Resume Campaign" : "Click to Pause Campaign"}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${isPaused ? "bg-amber-500" : isArchived ? "bg-slate-400" : "bg-emerald-500 animate-pulse"}`} />
+                          {isPaused ? "Paused" : isArchived ? "Archived" : "Active"}
+                        </button>
                       </td>
 
                       <td className="py-3 px-3 font-semibold text-slate-700">
@@ -1156,11 +1111,13 @@ export default function InfluencersView({
                       <td className="py-3 px-3 text-center">
                         <button
                           onClick={() => setInspectingInfluencer(inf)}
-                          className="font-extrabold text-blue-600 hover:underline cursor-pointer"
+                          className="inline-flex items-center gap-1 font-extrabold text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2 py-1 rounded-lg border border-transparent hover:border-blue-200 transition-all cursor-pointer"
+                          title="View Converted Attendees"
                         >
-                          {inf.registrationsCount}
+                          <Users size={12} className="text-blue-500 shrink-0" />
+                          <span>{inf.registrationsCount}</span>
+                          <span className="text-[9px] text-slate-400 font-normal">/ {inf.targetGoal || 50}</span>
                         </button>
-                        <span className="text-[9px] text-slate-400 block">/ {inf.targetGoal || 50}</span>
                       </td>
 
                       <td className="py-3 px-3 text-right font-extrabold text-slate-900">
@@ -1184,25 +1141,61 @@ export default function InfluencersView({
                       </td>
 
                       <td className="py-3 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
+                        <div className="flex items-center justify-end gap-1">
+                          {/* View Attributed Attendees */}
+                          <button
+                            onClick={() => setInspectingInfluencer(inf)}
+                            className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                            title={`${inf.registrationsCount} Attributed Attendees`}
+                          >
+                            <Users size={13} />
+                          </button>
+
+                          {/* Copy Link */}
+                          <button
+                            onClick={(e) => handleCopyLink(inf, e)}
+                            className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                            title={copiedLinkMap[inf.id] ? t("inf.linkCopied", "Copied!") : t("inf.copyLink", "Copy Tracking Link")}
+                          >
+                            {copiedLinkMap[inf.id] ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+                          </button>
+
+                          {/* Share Kit & QR Code */}
                           <button
                             onClick={(e) => handleOpenShareKit(inf, e)}
                             className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-                            title="Share Kit & QR Code"
+                            title={t("inf.shareKit", "Share Kit & QR Code")}
                           >
                             <QrCode size={13} />
                           </button>
+
+                          {/* Pause / Resume Button */}
+                          <button
+                            onClick={(e) => handleToggleStatus(inf, e)}
+                            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                              isPaused
+                                ? "text-emerald-600 hover:bg-emerald-50"
+                                : "text-amber-600 hover:bg-amber-50"
+                            }`}
+                            title={isPaused ? "Resume Campaign" : "Pause Campaign"}
+                          >
+                            {isPaused ? <Play size={13} /> : <Pause size={13} />}
+                          </button>
+
+                          {/* Edit */}
                           <button
                             onClick={(e) => handleOpenEdit(inf, e)}
                             className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
-                            title="Edit"
+                            title={t("inf.edit", "Edit Influencer")}
                           >
                             <Edit3 size={13} />
                           </button>
+
+                          {/* Archive / Delete */}
                           <button
                             onClick={(e) => handleArchiveInfluencer(inf.id, e)}
                             className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                            title="Archive"
+                            title={t("inf.archive", "Archive")}
                           >
                             <Trash2 size={13} />
                           </button>
@@ -1316,24 +1309,7 @@ export default function InfluencersView({
                 </div>
               </div>
 
-              <div className="p-3.5 bg-blue-50/50 border border-blue-100 rounded-2xl">
-                <label className="block text-xs font-extrabold text-blue-900 mb-1">
-                  {t("inf.code", "Unique Tracking Code / Slug")} <span className="text-rose-500">*</span>
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={formData.code}
-                    onChange={(e) => setFormData(prev => ({ ...prev, code: e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, "") }))}
-                    placeholder="SARAH2026"
-                    className={`w-full px-3.5 py-2 bg-white border font-mono font-black text-blue-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 ${formErrors.code ? "border-rose-400 bg-rose-50/30" : "border-blue-200"}`}
-                  />
-                </div>
-                <p className="text-[10px] text-blue-700 font-medium mt-1.5">
-                  {t("inf.codeHelp", "Used in tracking URL (?ref=CODE) and also serves as attendee promo code at checkout.")}
-                </p>
-                {formErrors.code && <span className="text-[10px] text-rose-500 font-semibold mt-1 block">{formErrors.code}</span>}
-              </div>
+
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
@@ -1545,23 +1521,13 @@ export default function InfluencersView({
 
           <div className="relative w-full max-w-2xl bg-white h-full shadow-2xl flex flex-col z-10 animate-slide-left border-l border-slate-200">
             <div className="px-6 py-5 border-b border-slate-200 flex items-center justify-between bg-slate-50/70 select-none">
-              <div className="flex items-center gap-3">
-                <img
-                  src={inspectingInfluencer.avatar || inspectingInfluencer.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(inspectingInfluencer.name)}&background=3b82f6&color=fff`}
-                  alt={inspectingInfluencer.name}
-                  className="w-11 h-11 rounded-2xl object-cover border border-slate-200 shrink-0"
-                />
-                <div>
-                  <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
-                    <span>{inspectingInfluencer.name}</span>
-                    <span className="text-[10px] font-black text-blue-700 bg-blue-100/70 px-2 py-0.5 rounded-md">
-                      {inspectingInfluencer.code}
-                    </span>
-                  </h3>
-                  <p className="text-xs font-semibold text-slate-500">
-                    {inspectingInfluencer.attributedAttendees.length} Attributed Registrations • {formatPrice(inspectingInfluencer.grossRevenue)} Total Revenue
-                  </p>
-                </div>
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900">
+                  {inspectingInfluencer.name}
+                </h3>
+                <p className="text-xs font-semibold text-slate-500 mt-0.5">
+                  {inspectingInfluencer.attributedAttendees.length} Attributed Registrations • {formatPrice(inspectingInfluencer.grossRevenue)} Total Revenue
+                </p>
               </div>
 
               <button
@@ -1648,7 +1614,7 @@ export default function InfluencersView({
                 </div>
                 <div>
                   <h3 className="text-sm font-extrabold text-slate-900">{t("inf.shareKitTitle", "Influencer Promotional Kit")}</h3>
-                  <span className="text-[10px] font-semibold text-slate-400">{shareKitInfluencer.name} ({shareKitInfluencer.code})</span>
+                  <span className="text-[10px] font-semibold text-slate-400">{shareKitInfluencer.name}</span>
                 </div>
               </div>
 
@@ -1676,7 +1642,7 @@ export default function InfluencersView({
             </div>
 
             <p className="text-[11px] text-slate-500 mt-1 mb-4">
-              Scans directly route to your event with referral code <strong className="text-blue-600">{shareKitInfluencer.code}</strong> auto-applied.
+              Scans directly route to your event with your referral link automatically tracked.
             </p>
 
             <div className="space-y-2 text-xs">

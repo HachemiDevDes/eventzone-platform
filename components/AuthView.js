@@ -7,7 +7,7 @@ import {
   CheckCircle2, Lock, Mail, User, ShieldCheck, 
   KeyRound, AlertCircle, ArrowLeft, Zap, Eye, EyeOff, Globe, ChevronDown, Check
 } from "lucide-react";
-import { supabase, safeLocalStorageSet, sanitizeUserForStorage } from "../lib/supabase";
+import { supabase, safeLocalStorageSet, sanitizeUserForStorage, cleanupLocalStorageQuota } from "../lib/supabase";
 import { useLanguage } from "../lib/i18n";
 
 export default function AuthView({ 
@@ -60,7 +60,11 @@ export default function AuthView({
     setErrorMsg("");
     setOauthLoading(true);
     try {
-      const redirectUrl = typeof window !== "undefined" ? `${window.location.origin}/?view=events-hub` : undefined;
+      cleanupLocalStorageQuota();
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("eventzone_auth_return_view", "events-hub");
+      }
+      const redirectUrl = typeof window !== "undefined" ? window.location.origin : undefined;
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {

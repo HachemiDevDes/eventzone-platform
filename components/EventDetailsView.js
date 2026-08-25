@@ -18,6 +18,7 @@ import CustomSchedulePicker from "./CustomSchedulePicker";
 import { CountrySelect, CitySelect } from "./LocationInputs";
 import CountryPhoneInput from "./CountryPhoneInput";
 import SearchableSelect from "./SearchableSelect";
+import { EventDetailsSkeleton } from "./SkeletonLoaders";
 
 const INDUSTRIES = [
   "Technology, AI & Software",
@@ -465,6 +466,7 @@ function RichTextEditor({
 
 export default function EventDetailsView({ 
   eventDetails, 
+  isLoading = false,
   onUpdateEventDetails, 
   onPreviewLandingPage,
   onUploadFile 
@@ -992,6 +994,10 @@ export default function EventDetailsView({
       if (organizerLogoFileInputRef.current) organizerLogoFileInputRef.current.value = "";
     }
   };
+
+  if (isLoading) {
+    return <EventDetailsSkeleton />;
+  }
 
   return (
     <div className="space-y-6 w-full text-left pb-12 animate-fade-in font-sans">

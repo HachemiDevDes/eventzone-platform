@@ -23,16 +23,32 @@ import LogisticsView from "./LogisticsView";
 import TeamView from "./TeamView";
 import DocumentsView from "./DocumentsView";
 import AnalyticsView from "./AnalyticsView";
+import DevelopersView from "./DevelopersView";
+import {
+  TableViewSkeleton,
+  LogisticsSkeleton,
+  DocumentsSkeleton,
+  AnalyticsSkeleton,
+  DevelopersSkeleton
+} from "./SkeletonLoaders";
 
 export default function GenericTableView({ 
   viewName, 
-  state, 
+  state = {}, 
   onUpdateState, 
   onOpenModal,
   onUploadFile,
   onSwitchView
 }) {
   const { t, lang, isRTL } = useLanguage();
+
+  if (state?.isLoading) {
+    if (viewName === "analytics") return <AnalyticsSkeleton />;
+    if (viewName === "logistics") return <LogisticsSkeleton />;
+    if (viewName === "documents") return <DocumentsSkeleton />;
+    return <TableViewSkeleton />;
+  }
+
   switch (viewName) {
     case "event-details":
       return <EventDetailsView state={state} onUpdateState={onUpdateState} onUploadFile={onUploadFile} />;
@@ -100,8 +116,10 @@ export default function GenericTableView({
       return <AnalyticsView state={state} onSwitchView={onSwitchView} onOpenModal={onOpenModal} />;
     case "communications":
       return <CommunicationsView state={state} onUpdateState={onUpdateState} />;
+    case "developers":
+      return <DevelopersView state={state} onSwitchView={onSwitchView} onOpenModal={onOpenModal} />;
     default:
-      return <div className="p-8 text-slate-400">View not implemented yet.</div>;
+      return <TableViewSkeleton />;
   }
 }
 
@@ -2304,6 +2322,12 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
     onUpdateState("organizations", organizations.map(o => o.id === id ? { ...o, isArchived: false, status: 'active' } : o));
   };
 
+  const handleDeletePermanent = (id) => {
+    if (confirm("Permanently delete this organization? This action cannot be undone.")) {
+      onUpdateState("organizations", organizations.filter(o => o.id !== id));
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6 w-full">
       <header className="flex justify-between items-center select-none">
@@ -2347,14 +2371,24 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
                       </button>
                     )}
                     {isArchived ? (
-                      <button 
-                        onClick={() => handleRestore(o.id)}
-                        className="px-2 py-1 text-emerald-600 hover:bg-emerald-50 border border-transparent hover:border-emerald-100 rounded-lg text-[11px] font-bold transition-all duration-200 cursor-pointer flex items-center gap-1"
-                        title="Restore Organization"
-                      >
-                        <RotateCcw size={11} />
-                        <span>Restore</span>
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button 
+                          onClick={() => handleRestore(o.id)}
+                          className="px-2 py-1 text-emerald-600 hover:bg-emerald-50 border border-transparent hover:border-emerald-100 rounded-lg text-[11px] font-bold transition-all duration-200 cursor-pointer flex items-center gap-1"
+                          title="Restore Organization"
+                        >
+                          <RotateCcw size={11} />
+                          <span>Restore</span>
+                        </button>
+                        <button 
+                          onClick={() => handleDeletePermanent(o.id)}
+                          className="px-2 py-1 text-rose-500 hover:bg-rose-50 border border-transparent hover:border-rose-100 rounded-lg text-[11px] font-bold transition-all duration-200 cursor-pointer flex items-center gap-1"
+                          title="Delete Organization Permanently"
+                        >
+                          <Trash2 size={11} />
+                          <span>Delete</span>
+                        </button>
+                      </div>
                     ) : (
                       <button 
                         onClick={() => handleArchive(o.id)}
@@ -2403,6 +2437,12 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
     onUpdateState("sponsors", sponsors.map(s => s.id === id ? { ...s, isArchived: false, status: 'active' } : s));
   };
 
+  const handleDeletePermanent = (id) => {
+    if (confirm("Permanently delete this sponsor? This action cannot be undone.")) {
+      onUpdateState("sponsors", sponsors.filter(s => s.id !== id));
+    }
+  };
+
   const getSponsorsByTier = (tier) => sponsors.filter(s => s.tier === tier);
 
   const renderSponsorTierList = (tierName, tierKey, colorClass) => {
@@ -2432,13 +2472,22 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
                       </button>
                     )}
                     {isArchived ? (
-                      <button 
-                        onClick={() => handleRestore(s.id)}
-                        className="text-emerald-600 hover:bg-emerald-50 px-1.5 py-0.5 rounded-md font-bold text-xs leading-none cursor-pointer flex items-center justify-center border border-transparent hover:border-emerald-100"
-                        title="Restore Sponsor"
-                      >
-                        <RotateCcw size={11} />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button 
+                          onClick={() => handleRestore(s.id)}
+                          className="text-emerald-600 hover:bg-emerald-50 px-1.5 py-0.5 rounded-md font-bold text-xs leading-none cursor-pointer flex items-center justify-center border border-transparent hover:border-emerald-100"
+                          title="Restore Sponsor"
+                        >
+                          <RotateCcw size={11} />
+                        </button>
+                        <button 
+                          onClick={() => handleDeletePermanent(s.id)}
+                          className="text-rose-500 hover:bg-rose-50 px-1.5 py-0.5 rounded-md font-bold text-xs leading-none cursor-pointer flex items-center justify-center border border-transparent hover:border-rose-100"
+                          title="Delete Sponsor Permanently"
+                        >
+                          <Trash2 size={11} />
+                        </button>
+                      </div>
                     ) : (
                       <button 
                         onClick={() => handleArchive(s.id)}
@@ -3006,6 +3055,12 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
     onUpdateState("tickets", tickets.map(t => t.id === id ? { ...t, status: 'Active', isArchived: false } : t));
   };
 
+  const handleDeletePermanent = (id) => {
+    if (confirm("Permanently delete this ticket tier? This action cannot be undone.")) {
+      onUpdateState("tickets", tickets.filter(t => t.id !== id));
+    }
+  };
+
   const filteredTickets = tickets.filter(t => {
     const isArchived = t.isArchived || t.status === 'Archived';
     if (ticketFilter === "active") return !isArchived;
@@ -3219,14 +3274,24 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
                       </button>
                     )}
                     {isArchived ? (
-                      <button 
-                        type="button"
-                        onClick={() => handleRestore(t.id)}
-                        className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 border border-transparent hover:border-emerald-100 rounded-xl transition-all cursor-pointer flex items-center justify-center"
-                        title="Restore Ticket Tier"
-                      >
-                        <RotateCcw size={15} />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button 
+                          type="button"
+                          onClick={() => handleRestore(t.id)}
+                          className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 border border-transparent hover:border-emerald-100 rounded-xl transition-all cursor-pointer flex items-center justify-center"
+                          title="Restore Ticket Tier"
+                        >
+                          <RotateCcw size={15} />
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={() => handleDeletePermanent(t.id)}
+                          className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-100 rounded-xl transition-all cursor-pointer flex items-center justify-center"
+                          title="Delete Ticket Tier Permanently"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
                     ) : (
                       <button 
                         type="button"

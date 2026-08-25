@@ -35,7 +35,7 @@ export default function VisitorPortal({
   const [selectedEventToRsvp, setSelectedEventToRsvp] = useState(null);
   const [rsvpName, setRsvpName] = useState(user?.fullName || "");
   const [rsvpEmail, setRsvpEmail] = useState(user?.email || "");
-  const [rsvpTicketType, setRsvpTicketType] = useState("VIP Access Pass");
+  const [rsvpTicketType, setRsvpTicketType] = useState("General Admission");
   const [rsvpSubmitting, setRsvpSubmitting] = useState(false);
   const [rsvpSuccessPass, setRsvpSuccessPass] = useState(null);
 
@@ -619,8 +619,8 @@ export default function VisitorPortal({
                       value={rsvpTicketType}
                       onChange={(val) => setRsvpTicketType(val)}
                       options={[
-                        { value: "VIP Access Pass", label: "VIP Access Pass (Full floor plan + networking)" },
-                        { value: "Standard Admission", label: "Standard Admission (Keynotes + Expo Hall)" },
+                        { value: "General Admission", label: "General Admission (Keynotes + Expo Hall)" },
+                        { value: "All-Access Pass", label: "All-Access Pass (Full floor plan + networking)" },
                         { value: "Online Only", label: "Online Stream Pass" }
                       ]}
                       placeholder="Select access tier..."

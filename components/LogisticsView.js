@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useLanguage } from "../lib/i18n";
 import SearchableSelect from "./SearchableSelect";
+import { LogisticsSkeleton } from "./SkeletonLoaders";
 
 // ─────────────────────────────────────────────
 //  CONSTANTS & SELECTOR OPTIONS
@@ -131,6 +132,7 @@ export const INCIDENT_STATUSES = [
 
 export default function LogisticsView({
   logisticsData = {},
+  isLoading = false,
   onSaveLogisticsItem,
   onDeleteLogisticsItem,
   onSaveFullLogistics,
@@ -681,6 +683,10 @@ export default function LogisticsView({
       return matchQuery && matchCat && matchStatus;
     });
   }, [runOfShow, searchQuery, categoryFilter, statusFilter]);
+
+  if (isLoading) {
+    return <LogisticsSkeleton />;
+  }
 
   return (
     <div className="space-y-6 animate-fade-in text-slate-800 pb-16">

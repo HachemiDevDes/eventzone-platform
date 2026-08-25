@@ -274,99 +274,88 @@ export default function MyTicketsPage({
               const isVip = (reg.ticketType || "").toLowerCase().includes("vip");
               const isPending = reg.status === "pending" || Boolean(reg.requiresApproval);
               const qrUrl = qrCodeUrls[reg.id];
+              const attendeeName = reg.attendeeName || currentUser?.fullName || "Attendee";
+              const attendeeEmail = reg.email || currentUser?.email || "Registered Attendee";
 
               return (
                 <div 
                   key={reg.id}
-                  className={`bg-white border rounded-3xl shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col justify-between group ${
-                    isPending ? "border-amber-200/90" : "border-slate-200/90"
+                  className={`bg-white border rounded-3xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col justify-between group ${
+                    isPending ? "border-amber-200/90" : "border-slate-200 hover:border-indigo-200"
                   }`}
                 >
-                  {/* Top Header Strip with Tier Ribbon */}
+                  {/* Top Header Strip with Tier & Status */}
                   <div className={`px-6 py-3.5 flex items-center justify-between border-b ${
                     isPending
-                      ? "bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent border-amber-200/60"
+                      ? "bg-amber-50/60 border-amber-100"
                       : isVip 
-                      ? "bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border-amber-200/60" 
-                      : "bg-gradient-to-r from-blue-600/10 via-blue-600/5 to-transparent border-slate-100"
+                      ? "bg-amber-50/40 border-amber-100/80" 
+                      : "bg-slate-50/80 border-slate-100"
                   }`}>
                     <div className="flex items-center gap-2">
-                      <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border shadow-2xs ${
+                      <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border shadow-2xs ${
                         isVip 
                           ? "bg-amber-500 text-white border-amber-600" 
-                          : "bg-blue-600 text-white border-blue-700"
+                          : "bg-indigo-650 text-white border-indigo-700"
                       }`}>
-                        {reg.ticketType || "General Admission"}
+                        {reg.ticketType || "Standard Admission"}
                       </span>
+
                       {isPending ? (
-                        <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/80 flex items-center gap-1">
+                        <span className="text-[10px] font-bold text-amber-700 bg-amber-100/80 px-2.5 py-1 rounded-lg border border-amber-200/80 flex items-center gap-1.5">
                           <Clock size={11} className="stroke-[2.5]" />
                           <span>Pending Review</span>
                         </span>
                       ) : (
-                        <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/80 flex items-center gap-1">
-                          <CheckCircle2 size={11} className="stroke-[2.5]" />
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200/80 flex items-center gap-1.5">
+                          <CheckCircle2 size={11} className="stroke-[2.5] text-emerald-600" />
                           <span>Confirmed</span>
                         </span>
                       )}
                     </div>
 
-                    {/* Badge ID with Copy (Only if confirmed) */}
-                    {isPending ? (
-                      <span className="text-[11px] font-mono font-bold text-amber-700 bg-amber-50/80 px-2 py-1 rounded-lg border border-amber-200/60">
+                    {isPending && (
+                      <span className="text-[11px] font-semibold text-amber-700">
                         Awaiting Approval
                       </span>
-                    ) : (
-                      <button
-                        onClick={() => handleCopyCode(reg.badgeCode || reg.id, reg.id)}
-                        className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-100/80 hover:bg-slate-200/80 text-slate-700 text-[11px] font-mono font-bold transition-all cursor-pointer"
-                        title="Click to copy badge code"
-                      >
-                        <span>{reg.badgeCode || `#${String(reg.id).slice(0, 8)}`}</span>
-                        {copiedId === reg.id ? (
-                          <Check size={12} className="text-emerald-600" />
-                        ) : (
-                          <Copy size={12} className="text-slate-400" />
-                        )}
-                      </button>
                     )}
                   </div>
 
                   {/* Main Ticket Body */}
                   <div className="p-6 flex flex-col sm:flex-row items-center sm:items-start justify-between gap-6">
                     {/* Left: Event Details & Attendee */}
-                    <div className="space-y-3.5 flex-1 text-left">
+                    <div className="space-y-4 flex-1 text-left min-w-0">
                       <div>
-                        <h3 className="text-lg font-black text-slate-900 leading-snug group-hover:text-blue-600 transition-colors">
+                        <h3 className="text-lg font-black text-slate-900 leading-snug group-hover:text-indigo-650 transition-colors truncate">
                           {reg.eventTitle}
                         </h3>
-                        <div className="flex flex-wrap items-center gap-y-1 gap-x-3 mt-1.5 text-xs text-slate-500 font-medium">
+                        <div className="flex flex-wrap items-center gap-y-1 gap-x-3.5 mt-2 text-xs text-slate-500 font-medium">
                           {reg.startDate && (
-                            <span className="flex items-center gap-1">
-                              <Calendar size={13} className="text-slate-400" />
+                            <span className="flex items-center gap-1.5">
+                              <Calendar size={13} className="text-slate-400 shrink-0" />
                               <span>{reg.startDate}</span>
                             </span>
                           )}
                           {reg.location && (
-                            <span className="flex items-center gap-1">
-                              <MapPin size={13} className="text-slate-400" />
-                              <span className="truncate max-w-[200px]">{reg.location}</span>
+                            <span className="flex items-center gap-1.5">
+                              <MapPin size={13} className="text-slate-400 shrink-0" />
+                              <span className="truncate max-w-[220px]">{reg.location}</span>
                             </span>
                           )}
                         </div>
                       </div>
 
                       {/* Attendee Info Box */}
-                      <div className="p-3 bg-slate-50/80 rounded-2xl border border-slate-150 flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs shrink-0">
-                          <User size={15} />
+                      <div className="p-3 bg-slate-50 rounded-2xl border border-slate-150 flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-black text-xs shrink-0">
+                          {attendeeName.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
                           <span className="text-xs font-bold text-slate-800 block truncate">
-                            {reg.attendeeName || currentUser?.fullName || "Attendee"}
+                            {attendeeName}
                           </span>
-                          <span className="text-[10px] text-slate-400 truncate block">
-                            {reg.email || currentUser?.email || "Registered Attendee"}
+                          <span className="text-[11px] text-slate-400 truncate block">
+                            {attendeeEmail}
                           </span>
                         </div>
                       </div>
@@ -376,7 +365,7 @@ export default function MyTicketsPage({
                     {isPending ? (
                       <div className="flex flex-col items-center shrink-0">
                         <div 
-                          className="p-2.5 bg-amber-50/80 border border-amber-200/90 rounded-2xl shadow-2xs w-24 h-24 sm:w-28 sm:h-28 flex flex-col items-center justify-center text-amber-700 select-none text-center"
+                          className="p-3 bg-amber-50 border border-amber-200 rounded-2xl shadow-2xs w-24 h-24 sm:w-28 sm:h-28 flex flex-col items-center justify-center text-amber-700 select-none text-center"
                           title="Door QR pass will be unlocked upon organizer approval"
                         >
                           <Lock size={22} className="stroke-[2.3] mb-1 text-amber-600" />
@@ -391,17 +380,17 @@ export default function MyTicketsPage({
                       <div className="flex flex-col items-center shrink-0">
                         <div 
                           onClick={() => setSelectedQrPass(reg)}
-                          className="p-2.5 bg-white border border-slate-200 rounded-2xl shadow-xs hover:shadow-md hover:border-blue-500 transition-all cursor-pointer group/qr relative"
+                          className="p-2 bg-slate-50/80 border border-slate-200 rounded-2xl shadow-2xs hover:shadow-md hover:border-indigo-500 transition-all cursor-pointer group/qr relative"
                           title="Click to enlarge QR Code"
                         >
                           {qrUrl ? (
                             <img 
                               src={qrUrl} 
                               alt="QR Pass" 
-                              className="w-24 h-24 sm:w-28 sm:h-28 object-contain rounded-lg"
+                              className="w-24 h-24 sm:w-28 sm:h-28 object-contain rounded-xl bg-white p-1"
                             />
                           ) : (
-                            <div className="w-24 h-24 sm:w-28 sm:h-28 bg-slate-100 rounded-lg flex items-center justify-center">
+                            <div className="w-24 h-24 sm:w-28 sm:h-28 bg-slate-100 rounded-xl flex items-center justify-center">
                               <QrCode size={32} className="text-slate-300 animate-pulse" />
                             </div>
                           )}
@@ -417,14 +406,14 @@ export default function MyTicketsPage({
                     )}
                   </div>
 
-                  {/* Bottom Action Footer with Perforated Edge Style */}
-                  <div className="px-6 py-3 bg-slate-50/70 border-t border-slate-150 flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5">
+                  {/* Bottom Action Footer */}
+                  <div className="px-6 py-3.5 bg-slate-50/60 border-t border-slate-150 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
                       {/* Printable A6 Badge Action or Locked State */}
                       {isPending ? (
                         <button
                           disabled
-                          className="px-3 py-1.5 bg-slate-100 text-slate-400 border border-slate-200/80 rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-not-allowed opacity-75"
+                          className="px-3.5 py-2 bg-slate-100 text-slate-400 border border-slate-200/80 rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-not-allowed opacity-75"
                           title="Printable badge is locked while application is under review"
                         >
                           <Lock size={12} className="text-amber-600" />
@@ -433,10 +422,10 @@ export default function MyTicketsPage({
                       ) : (
                         <button
                           onClick={() => setSelectedBadgePass(reg)}
-                          className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                          className="px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs hover:border-slate-300"
                           title="Print Official A6 Conference Badge"
                         >
-                          <Printer size={13} className="text-blue-600" />
+                          <Printer size={13} className="text-indigo-650" />
                           <span>{t("passes.printBadge", "Print Badge")}</span>
                         </button>
                       )}
@@ -445,39 +434,30 @@ export default function MyTicketsPage({
                       {!isPending && (
                         <button
                           onClick={() => handleDownloadQR(reg)}
-                          className="p-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs"
+                          className="p-2 bg-white hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs hover:border-slate-300"
                           title={t("passes.downloadQR", "Save QR Code")}
                         >
-                          <Download size={13} />
+                          <Download size={14} />
                         </button>
                       )}
 
                       {/* Add to Calendar */}
                       <button
                         onClick={() => handleAddToCalendar(reg)}
-                        className="p-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs"
+                        className="p-2 bg-white hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs hover:border-slate-300"
                         title="Add to Google Calendar"
                       >
-                        <Calendar size={13} />
+                        <Calendar size={14} />
                       </button>
                     </div>
 
-                    <div className="flex items-center gap-1.5">
-                      {/* View Floor Plan */}
-                      <button
-                        onClick={() => onViewFloorPlan && onViewFloorPlan(reg.eventId)}
-                        className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
-                      >
-                        <Layers size={13} className="text-slate-500" />
-                        <span>{t("event.floorPlan", "Floor Plan")}</span>
-                      </button>
-
+                    <div className="flex items-center gap-2">
                       {/* View Event Details */}
                       <button
                         onClick={() => onViewLivePage && onViewLivePage(reg.eventId)}
-                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shadow-xs shadow-blue-600/20"
+                        className="px-4 py-2 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-xs hover:shadow"
                       >
-                        <span>{t("event.about", "Event")}</span>
+                        <span>{t("event.about", "About")}</span>
                         <ExternalLink size={12} />
                       </button>
                     </div>
@@ -502,12 +482,12 @@ export default function MyTicketsPage({
               <X size={18} />
             </button>
 
-            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto border border-blue-100">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-650 flex items-center justify-center mx-auto border border-indigo-100">
               <QrCode size={24} />
             </div>
 
             <div>
-              <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100 inline-block mb-1">
+              <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100 inline-block mb-1">
                 {selectedQrPass.ticketType}
               </span>
               <h3 className="text-base font-black text-slate-900 leading-tight">
@@ -522,15 +502,10 @@ export default function MyTicketsPage({
               {qrCodeUrls[selectedQrPass.id] && (
                 <img 
                   src={qrCodeUrls[selectedQrPass.id]} 
-                  alt="Enlarged QR Pass"
-                  className="w-56 h-56 object-contain rounded-xl shadow-xs"
+                  alt="Enlarged QR Pass" 
+                  className="w-56 h-56 object-contain rounded-xl shadow-xs bg-white p-1"
                 />
               )}
-            </div>
-
-            <div className="flex items-center justify-between text-xs px-2 font-mono text-slate-600 bg-slate-100 py-1.5 rounded-xl">
-              <span>Badge Code:</span>
-              <span className="font-bold text-blue-700">{selectedQrPass.badgeCode}</span>
             </div>
 
             <div className="flex gap-2 pt-1">
@@ -547,7 +522,7 @@ export default function MyTicketsPage({
                   setSelectedQrPass(null);
                   setSelectedBadgePass(pass);
                 }}
-                className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md shadow-blue-600/20 flex items-center justify-center gap-1.5"
+                className="flex-1 py-2.5 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md shadow-indigo-650/20 flex items-center justify-center gap-1.5"
               >
                 <Printer size={14} />
                 <span>Print Badge</span>
@@ -581,6 +556,8 @@ export default function MyTicketsPage({
           }
         }
 
+        const attendeeName = selectedBadgePass.attendeeName || selectedBadgePass.name || currentUser?.fullName || "Attendee";
+        const attendeePhoto = selectedBadgePass.attendeePhoto || selectedBadgePass.photo || selectedBadgePass.avatar || currentUser?.avatar || "";
         const ticketType = selectedBadgePass.ticketType || "General Admission";
         const badgeCode = selectedBadgePass.badgeCode || "EZ-PASS";
         const eventTitle = selectedBadgePass.eventTitle || "Conference Event";
@@ -615,7 +592,7 @@ export default function MyTicketsPage({
               </button>
 
               <div className="flex items-center justify-center gap-2">
-                <Printer size={20} className="text-blue-600" />
+                <Printer size={20} className="text-indigo-650" />
                 <h3 className="text-lg font-black text-slate-900">Official A4 4-Fold Badge Sheet</h3>
               </div>
 
@@ -652,7 +629,7 @@ export default function MyTicketsPage({
                 </button>
                 <button
                   onClick={handlePrint}
-                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-600/20 transition-all cursor-pointer flex items-center justify-center gap-2"
+                  className="flex-1 py-2.5 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-650/20 transition-all cursor-pointer flex items-center justify-center gap-2"
                 >
                   <Printer size={15} />
                   <span>Print Document</span>

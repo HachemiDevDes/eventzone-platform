@@ -21,8 +21,8 @@ import FormFileUploader from "./FormFileUploader";
 import { getFormSections } from "../lib/formPresets";
 import { smoothScrollTo } from "../lib/smoothScroll";
 import { getYouTubeEmbedUrl } from "./EventDetailsView";
-import { printA4BadgeDocument } from "./A4BadgeSheet";
-import { recordInfluencerClick } from "../lib/db";
+import { recordInfluencerClick, fetchEventDetails, fetchTickets } from "../lib/db";
+import { LandingPageSkeleton } from "./SkeletonLoaders";
 
 export default function EventPublicLandingPage({
   eventId,
@@ -37,6 +37,7 @@ export default function EventPublicLandingPage({
   formSubmissions = [],
   rsvps = [],
   rsvpSettings = {},
+  isLoading = false,
   onSubmitRSVP,
   onSubmitFormResponse,
   currentUser,
@@ -46,13 +47,22 @@ export default function EventPublicLandingPage({
   onOpenAuth
 }) {
   const { t, lang, setLang, isRTL, languages } = useLanguage();
+
   const [langMenuOpen, setLangMenuOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState("All");
   const [bookmarkedSessions, setBookmarkedSessions] = useState(new Set());
   const [copiedUrl, setCopiedUrl] = useState(false);
 
-  // Dedicated RSVP Modal State
-  const [showPublicRsvpModal, setShowPublicRsvpModal] = useState(false);
+  // Dedicated RSVP Modal State: initialized synchronously from URL query param to eliminate delay
+  const [showPublicRsvpModal, setShowPublicRsvpModal] = useState(() => {
+    if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search);
+      const view = searchParams.get("view");
+      const rsvp = searchParams.get("rsvp");
+      return view === "rsvp" || view === "public-rsvp" || rsvp === "true";
+    }
+    return false;
+  });
 
   // Custom Form Registration State
   const [customAnswers, setCustomAnswers] = useState({});
@@ -158,7 +168,12 @@ export default function EventPublicLandingPage({
 
   // RSVP / Full-Page Registration State
   const [showRsvpModal, setShowRsvpModal] = useState(false);
-  const [selectedTier, setSelectedTier] = useState("Standard Admission");
+  const [selectedTier, setSelectedTier] = useState(() => {
+    if (tickets && tickets.length > 0) {
+      return tickets[0].name || tickets[0].tier || "Standard Admission";
+    }
+    return "";
+  });
   const [tierDropdownOpen, setTierDropdownOpen] = useState(false);
   const [rsvpName, setRsvpName] = useState(currentUser?.fullName || "");
   const [rsvpEmail, setRsvpEmail] = useState(currentUser?.email || "");
@@ -170,27 +185,92 @@ export default function EventPublicLandingPage({
   const [rsvpError, setRsvpError] = useState(null);
   const [qrCodeUrl, setQrCodeUrl] = useState(null);
 
-  // Get cached event details if prop is loading/syncing to eliminate flash of pictures on refresh
-  const cachedDetails = typeof window !== "undefined" ? (() => {
+  const [internalEventDetails, setInternalEventDetails] = useState(null);
+  const [isInternalLoading, setIsInternalLoading] = useState(false);
+
+  const currentEventId = eventId || (typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("eventId") : null);
+
+  // Get cached event details if prop is loading/syncing for THIS specific eventId
+  const cachedDetails = typeof window !== "undefined" && currentEventId ? (() => {
     try {
-      const eid = eventId || new URLSearchParams(window.location.search).get("eventId") || "cf12bb94-0cfb-4e0c-a96c-482a5c4e9021";
-      const item = localStorage.getItem(`eventzone_cached_event_${eid}`);
+      const item = localStorage.getItem(`eventzone_cached_event_${currentEventId}`) || localStorage.getItem(`eventzone_cache_event_${currentEventId}`);
       return item ? JSON.parse(item) : null;
     } catch { return null; }
   })() : null;
 
-  const effectiveDetails = (eventDetails && (eventDetails.title || eventDetails.youtubeUrl || eventDetails.youtube_url || eventDetails.banner))
-    ? { ...(cachedDetails || {}), ...eventDetails }
-    : (cachedDetails || eventDetails || {});
+  // Instant local cache hydration for tickets
+  const cachedTickets = typeof window !== "undefined" && currentEventId ? (() => {
+    try {
+      const item = localStorage.getItem(`eventzone_cache_tickets_${currentEventId}`);
+      return item ? JSON.parse(item) : null;
+    } catch { return null; }
+  })() : null;
 
-  // Fallback data if event doesn't have custom sessions/exhibitors/sponsors yet
-  const title = effectiveDetails?.title || "International Summit 2026";
-  const tagline = effectiveDetails?.tagline || effectiveDetails?.description || "Bringing together visionary leaders, executives, and pioneers to shape the future of the industry.";
-  const location = effectiveDetails?.venueName || effectiveDetails?.venue_name || effectiveDetails?.location || "Main Venue";
-  const startDate = effectiveDetails?.startDate || "2026-11-05";
-  const endDate = effectiveDetails?.endDate || "2026-11-08";
-  const category = effectiveDetails?.category || "Technology & Software";
-  const type = effectiveDetails?.type || "Hybrid";
+  const [internalTickets, setInternalTickets] = useState(cachedTickets || []);
+
+  const isMatchingEvent = !currentEventId || !eventDetails?.id || String(eventDetails.id) === String(currentEventId) || currentEventId === "default-summit-2025";
+  const validPropDetails = isMatchingEvent ? eventDetails : (eventDetails || null);
+  const effectiveDetails = (validPropDetails && (validPropDetails.title || validPropDetails.youtubeUrl || validPropDetails.youtube_url || validPropDetails.banner))
+    ? { ...(cachedDetails || {}), ...validPropDetails }
+    : (cachedDetails || validPropDetails || internalEventDetails || {
+        id: currentEventId || "default-summit-2025",
+        title: "Eventzone Summit",
+        tagline: "Premier International Technology & Innovation Summit",
+        description: "Join industry leaders, founders, and innovators for groundbreaking keynotes, panels, and networking.",
+        location: "Algiers Exhibition Center",
+        venueName: "Algiers Exhibition Center",
+        type: "Hybrid",
+        startDate: "2026-10-12",
+        endDate: "2026-10-14",
+        banner: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1600&auto=format&fit=crop&q=80"
+      });
+
+  // Direct fetch fallback if no matching event details or tickets provided yet
+  useEffect(() => {
+    if (!currentEventId) return;
+
+    let isMounted = true;
+
+    if (!tickets || tickets.length === 0) {
+      fetchTickets(currentEventId).then((data) => {
+        if (isMounted && data && Array.isArray(data)) {
+          setInternalTickets(data);
+          if (typeof window !== "undefined") {
+            try {
+              localStorage.setItem(`eventzone_cache_tickets_${currentEventId}`, JSON.stringify(data));
+            } catch (e) {}
+          }
+        }
+      }).catch(console.warn);
+    }
+
+    if (!effectiveDetails || String(effectiveDetails.id) !== String(currentEventId) || !effectiveDetails.title) {
+      setIsInternalLoading(true);
+      fetchEventDetails(currentEventId).then((data) => {
+        if (isMounted && data) {
+          setInternalEventDetails(data);
+          if (typeof window !== "undefined") {
+            try {
+              localStorage.setItem(`eventzone_cached_event_${currentEventId}`, JSON.stringify(data));
+            } catch (e) {}
+          }
+        }
+      }).catch(console.warn).finally(() => {
+        if (isMounted) setIsInternalLoading(false);
+      });
+    }
+
+    return () => { isMounted = false; };
+  }, [currentEventId, tickets]);
+
+  // Real event properties (no dummy fallback event)
+  const title = effectiveDetails?.title || "";
+  const tagline = effectiveDetails?.tagline || effectiveDetails?.description || "";
+  const location = effectiveDetails?.venueName || effectiveDetails?.venue_name || effectiveDetails?.location || "";
+  const startDate = effectiveDetails?.startDate || "";
+  const endDate = effectiveDetails?.endDate || "";
+  const category = effectiveDetails?.category || "";
+  const type = effectiveDetails?.type || "In-Person";
   const banner = effectiveDetails?.banner || effectiveDetails?.cover_url || "";
   const organizerName = effectiveDetails?.organizerName || effectiveDetails?.organizer_name || effectiveDetails?.organization || "Eventzone";
   const organization = organizerName;
@@ -443,7 +523,11 @@ export default function EventPublicLandingPage({
   // Real Database Exhibitors, Sponsors & Tickets
   const eventExhibitors = exhibitors || [];
   const eventSponsors = sponsors || [];
-  const eventTickets = tickets || [];
+  const eventTickets = (tickets && tickets.length > 0) 
+    ? tickets 
+    : (internalTickets && internalTickets.length > 0 
+      ? internalTickets 
+      : (cachedTickets || []));
 
   const handleShare = () => {
     if (typeof window !== "undefined") {
@@ -532,22 +616,19 @@ export default function EventPublicLandingPage({
     return "";
   }, [rsvpJobTitle, customAnswers, activeTicketForm]);
 
-  // Referral & Influencer Tracking State
+  // Referral & Influencer Tracking State (Automatic from referral link)
   const [referralCode, setReferralCode] = useState("");
-  const [promoCodeInput, setPromoCodeInput] = useState("");
-  const [promoCodeApplied, setPromoCodeApplied] = useState(false);
-  const [promoMessage, setPromoMessage] = useState(null); // { type: "success" | "error", text: string }
 
-  // Matched Influencer Campaign from referral or entered promo code
+  // Matched Influencer Campaign from referral link
   const matchedInfluencer = React.useMemo(() => {
-    const activeCode = (promoCodeApplied ? promoCodeInput : referralCode || "").trim().toUpperCase();
+    const activeCode = (referralCode || "").trim().toUpperCase();
     if (!activeCode) return null;
     return (influencers || []).find(inf => 
       !inf.isArchived && 
       inf.status !== "archived" && 
       (inf.code || "").trim().toUpperCase() === activeCode
     );
-  }, [influencers, promoCodeApplied, promoCodeInput, referralCode]);
+  }, [influencers, referralCode]);
 
   // Discount calculation for active ticket tier
   const referralDiscount = React.useMemo(() => {
@@ -569,8 +650,7 @@ export default function EventPublicLandingPage({
         discountAmount: 0, 
         discountPercent: 0, 
         finalPrice: parseFloat(selectedTicket?.price) || 0, 
-        isEligible: false,
-        reason: "Promo code is not applicable to this ticket tier."
+        isEligible: false
       };
     }
 
@@ -596,38 +676,6 @@ export default function EventPublicLandingPage({
     };
   }, [matchedInfluencer, selectedTicket]);
 
-  const handleApplyPromoCode = () => {
-    const clean = promoCodeInput.trim().toUpperCase();
-    if (!clean) {
-      setPromoCodeApplied(false);
-      setPromoMessage({ type: "error", text: t("inf.enterCode", "Please enter a promo or referral code.") });
-      return;
-    }
-    const found = (influencers || []).find(i => !i.isArchived && i.status !== "archived" && (i.code || "").trim().toUpperCase() === clean);
-    if (found) {
-      setPromoCodeApplied(true);
-      setReferralCode(clean);
-      setPromoMessage({ 
-        type: "success", 
-        text: `Promo code "${clean}" applied! (${found.name})` 
-      });
-      recordInfluencerClick(eventId || eventDetails?.id, clean).catch(console.warn);
-    } else {
-      setPromoCodeApplied(false);
-      setPromoMessage({ 
-        type: "error", 
-        text: `Promo code "${clean}" is invalid or expired.` 
-      });
-    }
-  };
-
-  const handleClearPromoCode = () => {
-    setPromoCodeInput("");
-    setReferralCode("");
-    setPromoCodeApplied(false);
-    setPromoMessage(null);
-  };
-
   // Lock body scroll when registration is open to eliminate background double-scroll
   useEffect(() => {
     if (typeof document !== "undefined") {
@@ -644,7 +692,30 @@ export default function EventPublicLandingPage({
     };
   }, [showRsvpModal]);
 
-  // Synchronize URL parameters on initial load, direct link navigation & browser Back/Forward (popstate)
+  // One-time referral link visit / click tracking per browser session
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const searchParams = new URLSearchParams(window.location.search);
+      const refParam = searchParams.get("ref") || searchParams.get("influencer") || searchParams.get("referral");
+      if (!refParam) return;
+
+      const cleanRef = refParam.trim().toUpperCase();
+      setReferralCode(cleanRef);
+
+      const targetEid = eventId || eventDetails?.id || searchParams.get("eventId");
+      const sessionKey = `eventzone_ref_click_${targetEid || "global"}_${cleanRef}`;
+      
+      if (!sessionStorage.getItem(sessionKey)) {
+        sessionStorage.setItem(sessionKey, "1");
+        recordInfluencerClick(targetEid, cleanRef).catch(console.warn);
+      }
+    } catch (e) {
+      console.warn("Referral tracking notice:", e);
+    }
+  }, []);
+
+  // Synchronize URL parameters on direct link navigation & browser Back/Forward (popstate)
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -655,15 +726,13 @@ export default function EventPublicLandingPage({
       const ticketParam = searchParams.get("ticket");
       const refParam = searchParams.get("ref") || searchParams.get("influencer") || searchParams.get("referral");
 
+      const rsvpParam = searchParams.get("rsvp");
+
       if (refParam) {
-        const cleanRef = refParam.trim().toUpperCase();
-        setReferralCode(cleanRef);
-        setPromoCodeInput(cleanRef);
-        setPromoCodeApplied(true);
-        recordInfluencerClick(eventId || eventDetails?.id, cleanRef).catch(console.warn);
+        setReferralCode(refParam.trim().toUpperCase());
       }
 
-      if (view === "rsvp") {
+      if (view === "rsvp" || view === "public-rsvp" || rsvpParam === "true") {
         setShowPublicRsvpModal(true);
       } else if (view === "register" || registerParam === "true") {
         setShowRsvpModal(true);
@@ -683,14 +752,16 @@ export default function EventPublicLandingPage({
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [eventTickets, eventId, eventDetails]);
+  }, []);
 
   const openRSVP = () => {
     setShowPublicRsvpModal(true);
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
-      params.set("view", "rsvp");
+      params.set("view", "event-landing");
+      params.set("rsvp", "true");
       if (eventId) params.set("eventId", eventId);
+      if (referralCode) params.set("ref", referralCode);
       const newUrl = `/?${params.toString()}`;
       window.history.pushState({}, "", newUrl);
     }
@@ -700,15 +771,17 @@ export default function EventPublicLandingPage({
     setShowPublicRsvpModal(false);
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
+      params.delete("rsvp");
       params.set("view", "event-landing");
       if (eventId) params.set("eventId", eventId);
+      if (referralCode) params.set("ref", referralCode);
       const newUrl = `/?${params.toString()}`;
       window.history.pushState({}, "", newUrl);
     }
   };
 
   const openRegistration = (tierName) => {
-    const chosenTier = tierName || selectedTier || (eventTickets[0]?.name || eventTickets[0]?.tier || "Standard Admission");
+    const chosenTier = tierName || selectedTier || (eventTickets[0]?.name || eventTickets[0]?.tier || "General Admission");
     setSelectedTier(chosenTier);
     setCheckoutSectionIdx(0);
     setCheckoutSectionErrors({});
@@ -720,6 +793,7 @@ export default function EventPublicLandingPage({
       const params = new URLSearchParams(window.location.search);
       params.set("view", "register");
       if (eventId) params.set("eventId", eventId);
+      if (referralCode) params.set("ref", referralCode);
       params.set("ticket", chosenTier);
       const newUrl = `/?${params.toString()}`;
       window.history.pushState({}, "", newUrl);
@@ -737,6 +811,7 @@ export default function EventPublicLandingPage({
       const params = new URLSearchParams(window.location.search);
       params.set("view", "event-landing");
       if (eventId) params.set("eventId", eventId);
+      if (referralCode) params.set("ref", referralCode);
       params.delete("ticket");
       params.delete("register");
       const newUrl = `/?${params.toString()}`;
@@ -751,6 +826,7 @@ export default function EventPublicLandingPage({
       const params = new URLSearchParams(window.location.search);
       params.set("view", "register");
       if (eventId) params.set("eventId", eventId);
+      if (referralCode) params.set("ref", referralCode);
       params.set("ticket", tierName);
       const newUrl = `/?${params.toString()}`;
       window.history.replaceState({}, "", newUrl);
@@ -809,7 +885,7 @@ export default function EventPublicLandingPage({
 
     try {
       if (onRegisterForEvent) {
-        const activeRefCode = (promoCodeApplied ? promoCodeInput : referralCode || "").trim().toUpperCase();
+        const activeRefCode = (referralCode || "").trim().toUpperCase();
         const discountVal = referralDiscount?.isEligible ? (referralDiscount.discountAmount || 0) : 0;
         
         const payloadCustomAnswers = {
@@ -971,6 +1047,10 @@ export default function EventPublicLandingPage({
       return "https://calendar.google.com";
     }
   };
+
+  if (isLoading || (!effectiveDetails && !title)) {
+    return <LandingPageSkeleton />;
+  }
 
   return (
     <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-blue-600 selection:text-white flex flex-col">
@@ -1228,71 +1308,75 @@ export default function EventPublicLandingPage({
             <div className="lg:col-span-5 xl:col-span-4 w-full">
               <div className="sticky top-20 bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-lg shadow-slate-100/70 space-y-3.5 text-left">
                 
-                {/* Ticket Tier Selector Card */}
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (eventTickets.length > 1) {
-                        setTierDropdownOpen((prev) => !prev);
-                      } else {
-                        openRegistration(selectedTicket?.name || "Standard Admission");
-                      }
-                    }}
-                    className="w-full border border-slate-200/90 hover:border-blue-400 bg-white hover:bg-slate-50/50 rounded-xl p-3.5 flex items-center justify-between text-left transition-all cursor-pointer group shadow-2xs"
-                  >
-                    <div className="space-y-0.5">
-                      <h4 className="text-sm sm:text-base font-bold text-slate-900 leading-tight">
-                        {selectedTicket?.name || selectedTicket?.tier || "VIP"}
-                      </h4>
-                      <p className="text-xs sm:text-sm font-semibold text-blue-600">
-                        {selectedTicket?.price && Number(selectedTicket.price) > 0 
-                          ? `$${selectedTicket.price}` 
-                          : (lang === "fr" ? "Gratuit" : (lang === "ar" ? "مجاني" : "Free"))}
-                      </p>
-                    </div>
+                {/* Ticket Tier Selector Card (only rendered if event has tickets configured) */}
+                {eventTickets.length > 0 && (
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (eventTickets.length > 1) {
+                          setTierDropdownOpen((prev) => !prev);
+                        } else {
+                          openRegistration(selectedTicket?.name || selectedTicket?.tier || eventTickets[0]?.name || "General Admission");
+                        }
+                      }}
+                      className="w-full border border-slate-200/90 hover:border-blue-400 bg-white hover:bg-slate-50/50 rounded-xl p-3.5 flex items-center justify-between text-left transition-all cursor-pointer group shadow-2xs"
+                    >
+                      <div className="space-y-0.5">
+                        <h4 className="text-sm sm:text-base font-bold text-slate-900 leading-tight">
+                          {selectedTicket?.name || selectedTicket?.tier || eventTickets[0]?.name || eventTickets[0]?.tier || "General Admission"}
+                        </h4>
+                        <p className="text-xs sm:text-sm font-semibold text-blue-600">
+                          {selectedTicket?.price && Number(selectedTicket.price) > 0 
+                            ? `${Number(selectedTicket.price).toLocaleString()} DZD` 
+                            : (lang === "fr" ? "Gratuit" : (lang === "ar" ? "مجاني" : "Free"))}
+                        </p>
+                      </div>
 
-                    <div className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 group-hover:text-blue-600 transition-colors">
-                      <ChevronRight size={18} className="transition-transform group-hover:translate-x-0.5" />
-                    </div>
-                  </button>
+                      {eventTickets.length > 1 && (
+                        <div className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 group-hover:text-blue-600 transition-colors">
+                          <ChevronRight size={18} className="transition-transform group-hover:translate-x-0.5" />
+                        </div>
+                      )}
+                    </button>
 
-                  {/* Multiple Tiers Dropdown Menu */}
-                  {tierDropdownOpen && eventTickets.length > 1 && (
-                    <div className="absolute top-full left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl p-1.5 z-40 space-y-1 animate-scale-up">
-                      {eventTickets.map((t, idx) => (
-                        <button
-                          key={t.id || idx}
-                          type="button"
-                          onClick={() => {
-                            setSelectedTier(t.name || t.tier);
-                            setTierDropdownOpen(false);
-                          }}
-                          className={`w-full text-left px-3 py-2.5 rounded-lg text-xs flex items-center justify-between transition-colors cursor-pointer ${
-                            (selectedTicket?.name === t.name || selectedTicket?.id === t.id)
-                              ? "bg-blue-50 text-blue-700 font-bold border border-blue-200/60"
-                              : "hover:bg-slate-50 text-slate-700 font-medium"
-                          }`}
-                        >
-                          <div>
-                            <span className="block font-bold text-slate-900">{t.name || t.tier}</span>
-                            <span className="text-[11px] text-blue-600 font-semibold">
-                              {t.price && Number(t.price) > 0 ? `${Number(t.price).toLocaleString()} DZD` : (lang === "fr" ? "Gratuit" : "Free")}
-                            </span>
-                          </div>
-                          {(selectedTicket?.name === t.name || selectedTicket?.id === t.id) && (
-                            <Check size={14} className="text-blue-600 shrink-0" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                    {/* Multiple Tiers Dropdown Menu */}
+                    {tierDropdownOpen && eventTickets.length > 1 && (
+                      <div className="absolute top-full left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl p-1.5 z-40 space-y-1 animate-scale-up">
+                        {eventTickets.map((t, idx) => (
+                          <button
+                            key={t.id || idx}
+                            type="button"
+                            onClick={() => {
+                              setSelectedTier(t.name || t.tier);
+                              setTierDropdownOpen(false);
+                            }}
+                            className={`w-full text-left px-3 py-2.5 rounded-lg text-xs flex items-center justify-between transition-colors cursor-pointer ${
+                              (selectedTicket?.name === t.name || selectedTicket?.id === t.id)
+                                ? "bg-blue-50 text-blue-700 font-bold border border-blue-200/60"
+                                : "hover:bg-slate-50 text-slate-700 font-medium"
+                            }`}
+                          >
+                            <div>
+                              <span className="block font-bold text-slate-900">{t.name || t.tier}</span>
+                              <span className="text-[11px] text-blue-600 font-semibold">
+                                {t.price && Number(t.price) > 0 ? `${Number(t.price).toLocaleString()} DZD` : (lang === "fr" ? "Gratuit" : "Free")}
+                              </span>
+                            </div>
+                            {(selectedTicket?.name === t.name || selectedTicket?.id === t.id) && (
+                              <Check size={14} className="text-blue-600 shrink-0" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Primary Action Button ("Get Tickets") */}
                 <button
                   type="button"
-                  onClick={() => openRegistration(selectedTicket?.name || "Standard Admission")}
+                  onClick={() => openRegistration(selectedTicket?.name || selectedTicket?.tier || eventTickets[0]?.name || "General Admission")}
                   className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-sm shadow-md shadow-blue-600/25 hover:shadow-lg hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer flex items-center justify-center text-center"
                 >
                   <span>
@@ -1854,10 +1938,10 @@ export default function EventPublicLandingPage({
             <div className="lg:col-span-6 bg-slate-900/80 rounded-2xl border border-slate-800 p-5 flex items-center justify-between gap-4">
               <div>
                 <div className="text-xs font-bold text-white">Need Customized Delegation Passes?</div>
-                <div className="text-[11px] text-slate-400 mt-0.5">Corporate bundles and VIP passes with dedicated registration desks.</div>
+                <div className="text-[11px] text-slate-400 mt-0.5">Corporate bundles and attendee passes with dedicated registration.</div>
               </div>
               <button
-                onClick={() => openRegistration("VIP Access Pass")}
+                onClick={() => openRegistration(eventTickets[0]?.name || "General Admission")}
                 className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shrink-0 transition-colors cursor-pointer"
               >
                 Inquire
@@ -1884,8 +1968,8 @@ export default function EventPublicLandingPage({
                 <li><a href="#exhibitors" onClick={handleScrollTo("#exhibitors")} className="hover:text-white transition-colors cursor-pointer">Exhibitor Directory</a></li>
                 <li><a href="#exhibitors" onClick={handleScrollTo("#exhibitors")} className="hover:text-white transition-colors cursor-pointer">Booth Locations</a></li>
                 <li><a href="#sponsors" onClick={handleScrollTo("#sponsors")} className="hover:text-white transition-colors cursor-pointer">Diamond &amp; Gold Sponsors</a></li>
-                <li><button onClick={() => openRegistration("VIP Access Pass")} className="hover:text-white transition-colors text-left cursor-pointer">Become a Sponsor</button></li>
-                <li><button onClick={() => openRegistration("Standard Admission")} className="hover:text-white transition-colors text-left cursor-pointer">Exhibitor Inquiries</button></li>
+                <li><button onClick={() => openRegistration(eventTickets[0]?.name || "General Admission")} className="hover:text-white transition-colors text-left cursor-pointer">Become a Sponsor</button></li>
+                <li><button onClick={() => openRegistration(eventTickets[0]?.name || "General Admission")} className="hover:text-white transition-colors text-left cursor-pointer">Exhibitor Inquiries</button></li>
               </ul>
             </div>
 
@@ -2141,31 +2225,7 @@ export default function EventPublicLandingPage({
                   <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-xs text-left">
                     <form onSubmit={isCheckoutLast ? handleRsvpSubmit : handleCheckoutNext} className="space-y-5">
                       
-                      {/* Influencer Referral Welcome Banner */}
-                      {matchedInfluencer && (
-                        <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border border-blue-200/90 rounded-2xl p-3.5 flex items-center justify-between gap-3 animate-fade-in shadow-2xs">
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
-                              <Sparkles size={14} />
-                            </div>
-                            <div className="min-w-0">
-                              <span className="text-xs font-extrabold text-blue-900 block truncate">
-                                Special invite via {matchedInfluencer.name}
-                              </span>
-                              <span className="text-[10px] text-blue-700 font-semibold block">
-                                {matchedInfluencer.discountPercent > 0 
-                                  ? `Promo code ${matchedInfluencer.code} saves you ${matchedInfluencer.discountPercent}% on registration!`
-                                  : matchedInfluencer.discountAmount > 0 
-                                    ? `Promo code ${matchedInfluencer.code} saves you ${matchedInfluencer.discountAmount.toLocaleString()} DZD!`
-                                    : `Referral attribution code ${matchedInfluencer.code} attached.`}
-                              </span>
-                            </div>
-                          </div>
-                          <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-white text-blue-800 border border-blue-200 shrink-0 font-mono shadow-2xs">
-                            {matchedInfluencer.code}
-                          </span>
-                        </div>
-                      )}
+
 
                       {/* DUPLICATE / CONFLICT ERROR ALERT */}
                       {rsvpError && (
@@ -2205,153 +2265,13 @@ export default function EventPublicLandingPage({
                         </div>
                       )}
 
-                      {/* SECTION 1 / PAGE 1: PASS TIER + CORE ATTENDEE CREDENTIALS + SECTION 1 QUESTIONS */}
+                      {/* SECTION 1 / PAGE 1: CORE ATTENDEE CREDENTIALS + SECTION 1 QUESTIONS */}
                       {(!hasMultiSections || safeCheckoutIdx === 0) && (
                         <>
-                          {/* 1. TICKET PASS TIER SELECTION */}
-                          <div>
-                            <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-2.5">
-                              {t("reg.selectPassTier", "1. Select Your Pass Tier")}
-                            </label>
-
-                            {eventTickets.length > 0 ? (
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                {eventTickets.map((t, idx) => {
-                                  const tierName = t.name || t.tier || "General Admission";
-                                  const isSelected = selectedTier === tierName || selectedTier === t.id;
-                                  const price = parseFloat(t.price) || 0;
-                                  return (
-                                    <div
-                                      key={idx}
-                                      onClick={() => switchTicketTier(tierName)}
-                                      className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all ${
-                                        isSelected
-                                          ? "border-blue-600 bg-blue-50/50 ring-4 ring-blue-100 shadow-2xs"
-                                          : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
-                                      }`}
-                                    >
-                                      <div className="flex items-center justify-between">
-                                        <span className="text-xs font-extrabold text-slate-900">{tierName}</span>
-                                        <span className="text-xs font-black text-blue-600">
-                                          {price === 0 ? "Free" : `${price.toLocaleString()} DZD`}
-                                        </span>
-                                      </div>
-                                      <p className="text-[11px] text-slate-500 mt-1 line-clamp-1">
-                                        {t.description || "Full access to keynotes, sessions & networking hall"}
-                                      </p>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            ) : (
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                {["Standard Admission", "VIP Access Pass"].map((tierName) => {
-                                  const isSelected = selectedTier === tierName;
-                                  return (
-                                    <div
-                                      key={tierName}
-                                      onClick={() => switchTicketTier(tierName)}
-                                      className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all ${
-                                        isSelected
-                                          ? "border-blue-600 bg-blue-50/50 ring-4 ring-blue-100 shadow-2xs"
-                                          : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
-                                      }`}
-                                    >
-                                      <div className="flex items-center justify-between">
-                                        <span className="text-xs font-extrabold text-slate-900">{tierName}</span>
-                                        <span className="text-xs font-black text-blue-600">Free</span>
-                                      </div>
-                                      <p className="text-[11px] text-slate-500 mt-1">
-                                        {tierName.includes("VIP") ? "Includes executive lounge & priority front seating" : "Standard delegate floor badge"}
-                                      </p>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* PROMO / REFERRAL CODE & DISCOUNT APPLIED BOX */}
-                          <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-2.5">
-                            <div className="flex items-center justify-between">
-                              <label className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
-                                <Tag size={13} className="text-blue-600" />
-                                <span>{t("inf.promoCode", "Promo or Referral Code")}</span>
-                              </label>
-
-                              {promoCodeApplied && (
-                                <button
-                                  type="button"
-                                  onClick={handleClearPromoCode}
-                                  className="text-[10px] font-bold text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
-                                >
-                                  {t("inf.removeCode", "Remove code")}
-                                </button>
-                              )}
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                              <div className="relative flex-1">
-                                <input
-                                  type="text"
-                                  value={promoCodeInput}
-                                  onChange={(e) => {
-                                    setPromoCodeInput(e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ""));
-                                    setPromoMessage(null);
-                                  }}
-                                  placeholder="e.g. SUMMER2026"
-                                  className="w-full pl-3 pr-8 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 uppercase"
-                                />
-                                {promoCodeApplied && (
-                                  <div className="absolute right-2.5 top-1/2 -translate-y-1/2 text-emerald-600">
-                                    <CheckCircle2 size={14} />
-                                  </div>
-                                )}
-                              </div>
-
-                              <button
-                                type="button"
-                                onClick={handleApplyPromoCode}
-                                className="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl transition-all cursor-pointer shrink-0"
-                              >
-                                {t("inf.apply", "Apply")}
-                              </button>
-                            </div>
-
-                            {promoMessage && (
-                              <div className={`text-[11px] font-semibold flex items-center gap-1.5 ${promoMessage.type === "success" ? "text-emerald-600" : "text-rose-500"}`}>
-                                {promoMessage.type === "success" ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
-                                <span>{promoMessage.text}</span>
-                              </div>
-                            )}
-
-                            {/* Applied Discount Breakdown */}
-                            {referralDiscount && referralDiscount.isEligible && referralDiscount.discountAmount > 0 && (
-                              <div className="mt-2 pt-2 border-t border-slate-200/80 flex items-center justify-between text-xs font-semibold animate-fade-in">
-                                <span className="text-emerald-700 flex items-center gap-1">
-                                  <Sparkles size={12} />
-                                  <span>
-                                    {referralDiscount.discountPercent > 0 
-                                      ? `${referralDiscount.discountPercent}% Discount Applied` 
-                                      : `${referralDiscount.discountAmount.toLocaleString()} DZD Off`}
-                                  </span>
-                                </span>
-                                <div className="text-right">
-                                  <span className="text-slate-400 line-through text-[11px] mr-1.5">
-                                    {(parseFloat(selectedTicket?.price) || 0).toLocaleString()} DZD
-                                  </span>
-                                  <span className="font-extrabold text-emerald-700">
-                                    {referralDiscount.finalPrice === 0 ? "Free" : `${referralDiscount.finalPrice.toLocaleString()} DZD`}
-                                  </span>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* 2. ATTENDEE CREDENTIALS */}
-                          <div className="space-y-4 pt-2 border-t border-slate-100">
+                          {/* ATTENDEE CREDENTIALS */}
+                          <div className="space-y-4 pt-1">
                             <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">
-                              {t("reg.badgeCredentials", "2. Attendee Badge Credentials")}
+                              {t("reg.badgeCredentials", "Attendee Badge Credentials")}
                             </label>
 
                             <div>

@@ -9,16 +9,40 @@ import {
   ChevronDown, LayoutDashboard, Calendar, Clock,
   Users2, UserCheck, BarChart3, X, Globe, Map, Sparkles, Upload, Mail,
   Building2, Plus, ArrowLeft, ArrowRight, Layers, LogOut, Compass, ExternalLink, ChevronRight, Home as HomeIcon, User,
-  FileText, ClipboardList, QrCode, Store, Mic2, Check, TrendingUp, Share2, Boxes, Truck, Package, Files
+  FileText, ClipboardList, QrCode, Store, Mic2, Check, TrendingUp, Share2, Boxes, Truck, Package, Files, Code2
 } from "lucide-react";
 
 import MainHomePage from "../components/MainHomePage";
 import Overview from "../components/Overview";
 import CalendarView from "../components/CalendarView";
-const FloorPlanModifier = dynamic(() => import("../components/FloorPlanModifier"), { ssr: false });
+import {
+  OverviewSkeleton,
+  TableViewSkeleton,
+  CalendarSkeleton,
+  AnalyticsSkeleton,
+  LogisticsSkeleton,
+  DocumentsSkeleton,
+  FormsSkeleton,
+  RSVPSkeleton,
+  EventDetailsSkeleton,
+  FloorPlanSkeleton,
+  EventsHubSkeleton,
+  LandingPageSkeleton,
+  HomePageSkeleton,
+  ProfileSkeleton,
+  DevelopersSkeleton
+} from "../components/SkeletonLoaders";
+
+const FloorPlanModifier = dynamic(() => import("../components/FloorPlanModifier"), { 
+  ssr: false,
+  loading: () => <FloorPlanSkeleton />
+});
 import FloorPlanGallery from "../components/FloorPlanGallery";
 import GenericTableView from "../components/GenericTableView";
-const LivePageBuilder = dynamic(() => import("../components/LivePageBuilder"), { ssr: false });
+const LivePageBuilder = dynamic(() => import("../components/LivePageBuilder"), { 
+  ssr: false,
+  loading: () => <EventDetailsSkeleton />
+});
 import EventDetailsView from "../components/EventDetailsView";
 import AuthView from "../components/AuthView";
 import OrganizerEventsHub from "../components/OrganizerEventsHub";
@@ -31,6 +55,7 @@ import FormsView from "../components/FormsView";
 import RSVPView from "../components/RSVPView";
 import LogisticsView from "../components/LogisticsView";
 import DocumentsView from "../components/DocumentsView";
+import DevelopersView from "../components/DevelopersView";
 import PublicRSVPModal from "../components/PublicRSVPModal";
 import TicketDrawer from "../components/TicketDrawer";
 import AttendeeDrawer from "../components/AttendeeDrawer";
@@ -69,7 +94,8 @@ import {
   safeLocalStorageSet, 
   safeLocalStorageGet, 
   safeLocalStorageRemove, 
-  sanitizeUserForStorage 
+  sanitizeUserForStorage,
+  cleanupLocalStorageQuota
 } from "../lib/supabase";
 
 const INDUSTRIES = [
@@ -119,6 +145,14 @@ export function HomeContent() {
     return null;
   });
   const [authInitialized, setAuthInitialized] = useState(false);
+  const [isAuthProcessing, setIsAuthProcessing] = useState(() => {
+    if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search);
+      const hash = window.location.hash || "";
+      return searchParams.has("code") || searchParams.has("error") || hash.includes("access_token") || hash.includes("error");
+    }
+    return false;
+  });
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalInitialMode, setAuthModalInitialMode] = useState("signin");
 
@@ -128,7 +162,7 @@ export function HomeContent() {
   const [activeEventId, setActiveEventStateId] = useState(() => {
     if (typeof window !== "undefined") {
       const searchParams = new URLSearchParams(window.location.search);
-      return searchParams.get("eventId") || DEFAULT_EVENT_ID;
+      return searchParams.get("eventId") || searchParams.get("event") || DEFAULT_EVENT_ID;
     }
     return DEFAULT_EVENT_ID;
   });
@@ -145,18 +179,28 @@ export function HomeContent() {
     if (typeof window !== "undefined") {
       const searchParams = new URLSearchParams(window.location.search);
       const viewParam = searchParams.get("view");
+      const rsvpParam = searchParams.get("rsvp");
+
+      if (rsvpParam === "true" || viewParam === "public-rsvp" || (viewParam === "rsvp" && searchParams.get("public") === "true")) {
+        return "event-landing";
+      }
+
       const validViews = [
         "home", "auth", "profile", "my-tickets", "events-hub", "create-event", "event-landing", "register", "visitor-portal", "overview", "page-builder", "calendar", "event-details", 
         "attendees", "pending", "organizations", "sponsors", 
         "exhibitors", "speakers", "opportunities", "influencers", "tickets", "forms", "rsvp", "logistics", "documents", "check-in", 
-        "my-team", "analytics", "communications", "floor-plan"
+        "my-team", "developers", "analytics", "communications", "floor-plan"
       ];
       if (viewParam && validViews.includes(viewParam)) {
         return viewParam;
       }
+      if (searchParams.get("ref") || searchParams.get("influencer") || searchParams.get("referral")) {
+        return "event-landing";
+      }
     }
     return "home";
-  }); 
+  });
+ 
   const [participantsOpen, setParticipantsOpen] = useState(false);
   const [companiesOpen, setCompaniesOpen] = useState(false);
   const [activeFloorPlanId, setActiveFloorPlanId] = useState(() => {
@@ -175,39 +219,53 @@ export function HomeContent() {
   });
   const [saveStatus, setSaveStatus] = useState("saved");
 
-  // Single-event data
+  // Single-event data with instant localStorage cache hydration
+  const getInitialEventData = (key, fallback) => {
+    if (typeof window !== "undefined") {
+      try {
+        const urlId = new URLSearchParams(window.location.search).get("eventId") || DEFAULT_EVENT_ID;
+        const cached = localStorage.getItem(`eventzone_cache_${key}_${urlId}`);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed !== undefined && parsed !== null) return parsed;
+        }
+      } catch (e) {}
+    }
+    return fallback;
+  };
+
   const [eventDetails, setEventDetails] = useState(() => {
     if (typeof window !== "undefined") {
       try {
         const urlId = new URLSearchParams(window.location.search).get("eventId") || DEFAULT_EVENT_ID;
-        const cached = localStorage.getItem(`eventzone_cached_event_${urlId}`);
+        const cached = localStorage.getItem(`eventzone_cached_event_${urlId}`) || localStorage.getItem(`eventzone_cache_event_${urlId}`);
         if (cached) return JSON.parse(cached);
       } catch (e) {}
     }
     return null;
   });
 
-  const [sessions, setSessions] = useState([]);
-  const [attendees, setAttendees] = useState([]);
-  const [pending, setPending] = useState([]);
-  const [organizations, setOrganizations] = useState([]);
-  const [sponsors, setSponsors] = useState([]);
-  const [exhibitors, setExhibitors] = useState([]);
-  const [opportunities, setOpportunities] = useState([]);
-  const [influencers, setInfluencers] = useState([]);
-  const [tickets, setTickets] = useState([]);
-  const [team, setTeam] = useState([]);
-  const [floorPlans, setFloorPlans] = useState([]);
-  const [forms, setForms] = useState([]);
-  const [formSubmissions, setFormSubmissions] = useState([]);
-  const [rsvps, setRsvps] = useState([]);
-  const [rsvpSettings, setRsvpSettings] = useState(null);
-  const [logisticsData, setLogisticsData] = useState({});
+  const [sessions, setSessions] = useState(() => getInitialEventData("sessions", []));
+  const [attendees, setAttendees] = useState(() => getInitialEventData("attendees", []));
+  const [pending, setPending] = useState(() => getInitialEventData("pending", []));
+  const [organizations, setOrganizations] = useState(() => getInitialEventData("organizations", []));
+  const [sponsors, setSponsors] = useState(() => getInitialEventData("sponsors", []));
+  const [exhibitors, setExhibitors] = useState(() => getInitialEventData("exhibitors", []));
+  const [opportunities, setOpportunities] = useState(() => getInitialEventData("opportunities", []));
+  const [influencers, setInfluencers] = useState(() => getInitialEventData("influencers", []));
+  const [tickets, setTickets] = useState(() => getInitialEventData("tickets", []));
+  const [team, setTeam] = useState(() => getInitialEventData("team", []));
+  const [floorPlans, setFloorPlans] = useState(() => getInitialEventData("floorPlans", []));
+  const [forms, setForms] = useState(() => getInitialEventData("forms", []));
+  const [formSubmissions, setFormSubmissions] = useState(() => getInitialEventData("formSubmissions", []));
+  const [rsvps, setRsvps] = useState(() => getInitialEventData("rsvps", []));
+  const [rsvpSettings, setRsvpSettings] = useState(() => getInitialEventData("rsvpSettings", null));
+  const [logisticsData, setLogisticsData] = useState(() => getInitialEventData("logisticsData", {}));
   const [documents, setDocuments] = useState(() => {
     if (typeof window !== "undefined") {
       try {
         const urlId = new URLSearchParams(window.location.search).get("eventId") || DEFAULT_EVENT_ID;
-        const cached = localStorage.getItem(`eventzone_documents_${urlId}`);
+        const cached = localStorage.getItem(`eventzone_documents_${urlId}`) || localStorage.getItem(`eventzone_cache_documents_${urlId}`);
         if (cached) {
           const parsed = JSON.parse(cached);
           if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -260,12 +318,16 @@ export function HomeContent() {
   // Check Local Auth Session and Supabase Auth State on mount
   useEffect(() => {
     let isMounted = true;
+    let profileChannel = null;
+
+    // Run proactive localStorage quota cleanup to guarantee space for auth tokens
+    cleanupLocalStorageQuota();
 
     // 1. Initial check from LocalStorage for instant rendering
     if (typeof window !== "undefined") {
       try {
         const stored = safeLocalStorageGet("eventzone_user");
-        if (stored) {
+        if (stored && stored.id) {
           setCurrentUser(stored);
         }
       } catch (e) {
@@ -273,160 +335,139 @@ export function HomeContent() {
       }
     }
 
-    // 2. Validate with live Supabase session & real-time sync
-    let profileChannel = null;
-
-    const syncSupabaseSession = async (explicitSession = null) => {
+    // Helper to sync user profile from Supabase
+    const syncUserProfile = async (session) => {
+      if (!session?.user || !isMounted) return null;
       try {
-        let session = explicitSession;
+        const userId = session.user.id;
+        const userMeta = session.user.user_metadata || {};
 
-        if (!session) {
-          const { data } = await supabase.auth.getSession();
-          session = data?.session;
-        }
+        let { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle();
 
-        // If no active session yet, check for OAuth code in URL search params
-        if (!session && typeof window !== "undefined") {
-          const searchParams = new URLSearchParams(window.location.search);
-          const authCode = searchParams.get("code");
-          if (authCode) {
-            try {
-              const { data: exchanged, error: exchangeError } = await supabase.auth.exchangeCodeForSession(authCode);
-              if (!exchangeError && exchanged?.session) {
-                session = exchanged.session;
-              } else if (exchangeError) {
-                console.warn("PKCE code exchange note:", exchangeError.message);
-              }
-            } catch (pkceErr) {
-              console.warn("PKCE exchange note:", pkceErr);
-            }
+        const retrievedName = profile?.full_name 
+          || userMeta.full_name 
+          || userMeta.name 
+          || session.user.email?.split('@')[0] 
+          || "Eventzone User";
+        const retrievedRole = profile?.role 
+          || userMeta.role 
+          || "organizer";
+        const retrievedAvatar = profile?.avatar_url 
+          || userMeta.avatar_url 
+          || userMeta.picture 
+          || `https://ui-avatars.com/api/?name=${encodeURIComponent(retrievedName)}&background=0b5cdb&color=fff`;
+
+        if (!profile) {
+          const dbRole = (retrievedRole === 'attendee' || retrievedRole === 'visitor') ? 'attendee' : 'organizer';
+          try {
+            const { data: createdProf } = await supabase.from('profiles').upsert({
+              id: userId,
+              full_name: retrievedName,
+              email: session.user.email,
+              avatar_url: retrievedAvatar,
+              role: dbRole,
+              onboarding_completed: true,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            }, { onConflict: "id" }).select().maybeSingle();
+            if (createdProf) profile = createdProf;
+          } catch (upsertErr) {
+            console.warn("Profile creation warning:", upsertErr);
           }
         }
 
-        if (session?.user && isMounted) {
-          const userId = session.user.id;
-          const userMeta = session.user.user_metadata || {};
+        const syncedUser = {
+          id: userId,
+          email: session.user.email,
+          fullName: profile?.full_name || retrievedName,
+          role: (profile?.role === 'attendee' || profile?.role === 'visitor' || retrievedRole === 'attendee' || retrievedRole === 'visitor') ? 'visitor' : 'organizer',
+          companyName: profile?.company_name || userMeta.company_name || "",
+          jobTitle: profile?.job_title || userMeta.job_title || "",
+          phone: profile?.phone || "",
+          bio: profile?.bio || "",
+          location: profile?.location || "",
+          interests: Array.isArray(profile?.interests) ? profile.interests : [],
+          socialLinks: Array.isArray(profile?.social_links) ? profile.social_links : (typeof profile?.social_links === 'object' && profile?.social_links !== null ? Object.entries(profile.social_links).map(([platform, url]) => ({ platform, url })) : []),
+          metadata: profile?.metadata || {},
+          what_im_looking_for: profile?.what_im_looking_for || "",
+          whatImLookingFor: profile?.what_im_looking_for || "",
+          avatar: profile?.avatar_url || retrievedAvatar,
+          isAdmin: !!profile?.is_admin,
+        };
 
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', userId)
-            .maybeSingle();
-
-          const retrievedName = profile?.full_name 
-            || userMeta.full_name 
-            || userMeta.name 
-            || session.user.email?.split('@')[0] 
-            || "Eventzone User";
-          const retrievedRole = profile?.role 
-            || userMeta.role 
-            || "organizer";
-          const retrievedAvatar = profile?.avatar_url 
-            || userMeta.avatar_url 
-            || userMeta.picture 
-            || `https://ui-avatars.com/api/?name=${encodeURIComponent(retrievedName)}&background=0b5cdb&color=fff`;
-
-          if (!profile) {
-            const dbRole = (retrievedRole === 'attendee' || retrievedRole === 'visitor') ? 'attendee' : 'organizer';
-            try {
-              await supabase.from('profiles').upsert({
-                id: userId,
-                full_name: retrievedName,
-                email: session.user.email,
-                avatar_url: retrievedAvatar,
-                role: dbRole,
-                onboarding_completed: true,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              }, { onConflict: "id" });
-            } catch (upsertErr) {
-              console.warn("Profile creation warning:", upsertErr);
-            }
-          }
-
-          const syncedUser = {
-            id: userId,
-            email: session.user.email,
-            fullName: retrievedName,
-            role: (retrievedRole === 'attendee' || retrievedRole === 'visitor') ? 'visitor' : 'organizer',
-            companyName: profile?.company_name || userMeta.company_name || "",
-            jobTitle: profile?.job_title || userMeta.job_title || "",
-            phone: profile?.phone || "",
-            bio: profile?.bio || "",
-            location: profile?.location || "",
-            interests: Array.isArray(profile?.interests) ? profile.interests : [],
-            socialLinks: profile?.social_links || [],
-            metadata: profile?.metadata || {},
-            what_im_looking_for: profile?.what_im_looking_for || "",
-            whatImLookingFor: profile?.what_im_looking_for || "",
-            avatar: retrievedAvatar,
-            isAdmin: !!profile?.is_admin,
-          };
-
+        if (isMounted) {
           setCurrentUser(syncedUser);
           safeLocalStorageSet("eventzone_user", sanitizeUserForStorage(syncedUser));
+          setIsAuthProcessing(false);
+          setAuthInitialized(true);
+        }
 
-          // Clean up URL query parameters so code is not reused
-          if (typeof window !== "undefined") {
-            const cleanUrl = new URL(window.location.href);
-            if (cleanUrl.searchParams.has("code") || cleanUrl.searchParams.has("state")) {
-              cleanUrl.searchParams.delete("code");
-              cleanUrl.searchParams.delete("state");
-              window.history.replaceState({}, document.title, cleanUrl.toString());
-            }
-          }
-
-          // Cross-device / App <-> Web Real-time Database Subscription
-          if (!profileChannel) {
-            profileChannel = supabase
-              .channel(`public-profiles-sync-${userId}`)
-              .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` },
-                (payload) => {
-                  if (payload.new && isMounted) {
-                    const updated = payload.new;
-                    const updatedName = updated.full_name || "Eventzone User";
-                    const updatedRole = updated.role || "organizer";
-                    const updatedAvatar = updated.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(updatedName)}&background=0b5cdb&color=fff`;
-
-                    const updatedUser = {
-                      id: userId,
-                      email: updated.email || session.user.email,
-                      fullName: updatedName,
-                      role: (updatedRole === 'attendee' || updatedRole === 'visitor') ? 'visitor' : 'organizer',
-                      companyName: updated.company_name || "",
-                      jobTitle: updated.job_title || "",
-                      phone: updated.phone || "",
-                      bio: updated.bio || "",
-                      location: updated.location || "",
-                      interests: Array.isArray(updated.interests) ? updated.interests : [],
-                      socialLinks: updated.social_links || [],
-                      metadata: updated.metadata || {},
-                      what_im_looking_for: updated.what_im_looking_for || "",
-                      whatImLookingFor: updated.what_im_looking_for || "",
-                      avatar: updatedAvatar,
-                      isAdmin: !!updated.is_admin,
-                    };
-
-                    setCurrentUser(updatedUser);
-                    safeLocalStorageSet("eventzone_user", sanitizeUserForStorage(updatedUser));
-                  }
-                }
-              )
-              .subscribe();
+        // Clean up URL query parameters & hash so code is not reused
+        if (typeof window !== "undefined") {
+          const cleanUrl = new URL(window.location.href);
+          if (cleanUrl.searchParams.has("code") || cleanUrl.searchParams.has("state") || cleanUrl.hash.includes("access_token") || cleanUrl.hash.includes("error")) {
+            cleanUrl.searchParams.delete("code");
+            cleanUrl.searchParams.delete("state");
+            cleanUrl.searchParams.delete("error");
+            cleanUrl.searchParams.delete("error_description");
+            cleanUrl.hash = "";
+            window.history.replaceState({}, document.title, cleanUrl.toString());
           }
         }
+
+        // Setup real-time profile channel
+        if (!profileChannel && isMounted) {
+          profileChannel = supabase
+            .channel(`public-profiles-sync-${userId}`)
+            .on(
+              'postgres_changes',
+              { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` },
+              (payload) => {
+                if (payload.new && isMounted) {
+                  const updated = payload.new;
+                  const updatedName = updated.full_name || "Eventzone User";
+                  const updatedRole = updated.role || "organizer";
+                  const updatedAvatar = updated.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(updatedName)}&background=0b5cdb&color=fff`;
+
+                  const updatedUser = {
+                    id: userId,
+                    email: updated.email || session.user.email,
+                    fullName: updatedName,
+                    role: (updatedRole === 'attendee' || updatedRole === 'visitor') ? 'visitor' : 'organizer',
+                    companyName: updated.company_name || "",
+                    jobTitle: updated.job_title || "",
+                    phone: updated.phone || "",
+                    bio: updated.bio || "",
+                    location: updated.location || "",
+                    interests: Array.isArray(updated.interests) ? updated.interests : [],
+                    socialLinks: Array.isArray(updated.social_links) ? updated.social_links : [],
+                    metadata: updated.metadata || {},
+                    what_im_looking_for: updated.what_im_looking_for || "",
+                    whatImLookingFor: updated.what_im_looking_for || "",
+                    avatar: updatedAvatar,
+                    isAdmin: !!updated.is_admin,
+                  };
+
+                  setCurrentUser(updatedUser);
+                  safeLocalStorageSet("eventzone_user", sanitizeUserForStorage(updatedUser));
+                }
+              }
+            )
+            .subscribe();
+        }
+
+        return syncedUser;
       } catch (err) {
-        console.warn("Supabase live session sync:", err);
-      } finally {
-        if (isMounted) setAuthInitialized(true);
+        console.warn("Supabase profile sync error:", err);
+        return null;
       }
     };
 
-    syncSupabaseSession();
-
-    // 3. Listen to all auth state changes (login, session init, token refresh, logout, OAuth callback)
+    // 2. Listen to all auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_OUT" && isMounted) {
         safeLocalStorageRemove("eventzone_user");
@@ -434,28 +475,89 @@ export function HomeContent() {
         setUserEvents([]);
         setVisitorRegistrations([]);
         setAuthInitialized(true);
-      } else if (session?.user && isMounted) {
-        await syncSupabaseSession(session);
-        setCurrentView(prev => {
-          if (prev === "auth" || prev === "home") {
-            if (typeof window !== "undefined") {
-              const urlParams = new URLSearchParams(window.location.search);
-              const requestedView = urlParams.get("view");
-              if (requestedView) return requestedView;
-            }
-            return "events-hub";
+        setIsAuthProcessing(false);
+      } else if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") && session?.user && isMounted) {
+        await syncUserProfile(session);
+        
+        // Handle post-login navigation if returning from OAuth / sign in
+        if (typeof window !== "undefined") {
+          const returnView = sessionStorage.getItem("eventzone_auth_return_view");
+          if (returnView) {
+            sessionStorage.removeItem("eventzone_auth_return_view");
+            setCurrentView(returnView);
+          } else {
+            setCurrentView(prev => {
+              if (prev === "auth" || prev === "home") {
+                const urlParams = new URLSearchParams(window.location.search);
+                const requestedView = urlParams.get("view");
+                return requestedView || "events-hub";
+              }
+              return prev;
+            });
           }
-          return prev;
-        });
-        setAuthInitialized(true);
-      } else if (event === "INITIAL_SESSION" && !session?.user && isMounted) {
-        const stored = safeLocalStorageGet("eventzone_user");
-        if (!stored) {
-          setCurrentUser(null);
         }
-        setAuthInitialized(true);
+      } else if (event === "INITIAL_SESSION" && isMounted) {
+        if (session?.user) {
+          await syncUserProfile(session);
+        } else {
+          // Check if there is an OAuth code or token in URL that is currently processing
+          const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+          const hasAuthParams = searchParams?.has("code") || (typeof window !== "undefined" && window.location.hash.includes("access_token"));
+          
+          if (!hasAuthParams) {
+            const stored = safeLocalStorageGet("eventzone_user");
+            if (!stored) {
+              setCurrentUser(null);
+            }
+            setAuthInitialized(true);
+            setIsAuthProcessing(false);
+          }
+        }
       }
     });
+
+    // 3. Initial session check and guarded callback handler
+    const checkInitialSession = async () => {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData?.session?.user && isMounted) {
+          await syncUserProfile(sessionData.session);
+        } else {
+          // If code is in URL and after 1s still not signed in, do a retry check
+          if (typeof window !== "undefined") {
+            const searchParams = new URLSearchParams(window.location.search);
+            const authCode = searchParams.get("code");
+            if (authCode) {
+              setTimeout(async () => {
+                if (isMounted) {
+                  const { data: retrySession } = await supabase.auth.getSession();
+                  if (retrySession?.session?.user) {
+                    await syncUserProfile(retrySession.session);
+                  } else {
+                    setAuthInitialized(true);
+                    setIsAuthProcessing(false);
+                  }
+                }
+              }, 1200);
+            } else {
+              setAuthInitialized(true);
+              setIsAuthProcessing(false);
+            }
+          } else {
+            setAuthInitialized(true);
+            setIsAuthProcessing(false);
+          }
+        }
+      } catch (e) {
+        console.warn("Initial session check note:", e);
+        if (isMounted) {
+          setAuthInitialized(true);
+          setIsAuthProcessing(false);
+        }
+      }
+    };
+
+    checkInitialSession();
 
     return () => {
       isMounted = false;
@@ -489,127 +591,156 @@ export function HomeContent() {
   useEffect(() => {
     if (!activeEventId) return;
 
-    const loadEventData = async () => {
-      setIsLoading(true);
-      setActiveEventId(activeEventId);
+    // 1. Immediately hydrate state from localStorage cache for activeEventId
+    if (typeof window !== "undefined") {
       try {
-        const results = await Promise.allSettled([
-          fetchEventDetails(activeEventId),
-          fetchSessions(activeEventId),
-          fetchAttendees(activeEventId),
-          fetchPending(activeEventId),
-          fetchOrganizations(),
-          fetchSponsors(activeEventId),
-          fetchExhibitors(activeEventId),
-          fetchOpportunities(activeEventId),
-          fetchInfluencers(activeEventId),
-          fetchTickets(activeEventId),
-          fetchTeam(activeEventId),
-          fetchFloorPlans(activeEventId),
-          fetchForms(activeEventId),
-          fetchFormSubmissions(activeEventId),
-          fetchRSVPs(activeEventId),
-          fetchRSVPSettings(activeEventId),
-          fetchLogistics(activeEventId),
-          fetchDocuments(activeEventId),
+        const getCache = (k) => {
+          const raw = localStorage.getItem(`eventzone_cache_${k}_${activeEventId}`);
+          return raw ? JSON.parse(raw) : null;
+        };
+        const cEvent = getCache("event") || (localStorage.getItem(`eventzone_cached_event_${activeEventId}`) ? JSON.parse(localStorage.getItem(`eventzone_cached_event_${activeEventId}`)) : null);
+        if (cEvent) setEventDetails(cEvent);
+        const cAtts = getCache("attendees");
+        if (cAtts) setAttendees(cAtts);
+        const cPending = getCache("pending");
+        if (cPending) setPending(cPending);
+        const cInfs = getCache("influencers");
+        if (cInfs) setInfluencers(cInfs);
+        const cOpps = getCache("opportunities");
+        if (cOpps) setOpportunities(cOpps);
+        const cOrgs = getCache("organizations");
+        if (cOrgs) setOrganizations(cOrgs);
+        const cSpons = getCache("sponsors");
+        if (cSpons) setSponsors(cSpons);
+        const cExhib = getCache("exhibitors");
+        if (cExhib) setExhibitors(cExhib);
+        const cTickets = getCache("tickets");
+        if (cTickets) setTickets(cTickets);
+        const cTeam = getCache("team");
+        if (cTeam) setTeam(cTeam);
+        const cForms = getCache("forms");
+        if (cForms) setForms(cForms);
+        const cSubs = getCache("formSubmissions");
+        if (cSubs) setFormSubmissions(cSubs);
+        const cPlans = getCache("floorPlans");
+        if (cPlans) setFloorPlans(cPlans);
+        const cRsvps = getCache("rsvps");
+        if (cRsvps) setRsvps(cRsvps);
+        const cRsvpSet = getCache("rsvpSettings");
+        if (cRsvpSet) setRsvpSettings(cRsvpSet);
+        const cLog = getCache("logisticsData");
+        if (cLog) setLogisticsData(cLog);
+        const cDocs = getCache("documents") || (localStorage.getItem(`eventzone_documents_${activeEventId}`) ? JSON.parse(localStorage.getItem(`eventzone_documents_${activeEventId}`)) : null);
+        if (cDocs) setDocuments(cDocs);
+      } catch (e) {
+        console.warn("Cache hydration error:", e);
+      }
+    }
+
+    const loadEventData = async () => {
+      setActiveEventId(activeEventId);
+
+      const fetchAndSet = (promise, setter, cacheKey) => {
+        return promise.then((data) => {
+          if (data !== undefined && data !== null) {
+            setter(data);
+            if (cacheKey) {
+              safeLocalStorageSet(`eventzone_cache_${cacheKey}_${activeEventId}`, data);
+            }
+          }
+          return data;
+        }).catch((err) => {
+          console.warn(`Error loading ${cacheKey}:`, err);
+          return null;
+        });
+      };
+
+      try {
+        // Fast individual non-blocking parallel fetches — UI updates as each arrives!
+        fetchAndSet(fetchEventDetails(activeEventId), (val) => {
+          setEventDetails(val);
+          safeLocalStorageSet(`eventzone_cached_event_${activeEventId}`, val);
+        }, "event");
+
+        fetchAndSet(fetchTickets(activeEventId), setTickets, "tickets");
+        fetchAndSet(fetchInfluencers(activeEventId), setInfluencers, "influencers");
+        fetchAndSet(fetchOpportunities(activeEventId), setOpportunities, "opportunities");
+        fetchAndSet(fetchOrganizations(), setOrganizations, "organizations");
+        fetchAndSet(fetchSponsors(activeEventId), setSponsors, "sponsors");
+        fetchAndSet(fetchExhibitors(activeEventId), setExhibitors, "exhibitors");
+        fetchAndSet(fetchSessions(activeEventId), setSessions, "sessions");
+        fetchAndSet(fetchTeam(activeEventId), setTeam, "team");
+        fetchAndSet(fetchFloorPlans(activeEventId), setFloorPlans, "floorPlans");
+        fetchAndSet(fetchForms(activeEventId), setForms, "forms");
+        fetchAndSet(fetchRSVPs(activeEventId), setRsvps, "rsvps");
+        fetchAndSet(fetchRSVPSettings(activeEventId), setRsvpSettings, "rsvpSettings");
+        fetchAndSet(fetchLogistics(activeEventId), setLogisticsData, "logisticsData");
+        fetchAndSet(fetchDocuments(activeEventId), setDocuments, "documents");
+
+        // Tickets, Form Submissions & Attendees (with joint merging)
+        const [loadedTickets, loadedSubmissions, rawAttendees, rawPending] = await Promise.all([
+          fetchTickets(activeEventId).catch(() => []),
+          fetchFormSubmissions(activeEventId).catch(() => []),
+          fetchAttendees(activeEventId).catch(() => []),
+          fetchPending(activeEventId).catch(() => [])
         ]);
 
-        const [
-          eventResult, sessionsResult, attendeesResult, pendingResult,
-          orgsResult, sponsorsResult, exhibitorsResult, oppsResult, infsResult, ticketsResult,
-          teamResult, floorPlansResult, formsResult, formSubsResult,
-          rsvpsResult, rsvpSettingsResult, logisticsResult, documentsResult
-        ] = results;
-
-        const loadedTickets = ticketsResult.status === "fulfilled" ? (ticketsResult.value || []) : [];
-        if (ticketsResult.status === "fulfilled") setTickets(loadedTickets);
-
-        if (infsResult.status === "fulfilled") setInfluencers(infsResult.value || []);
-
-        if (eventResult.status === "fulfilled") {
-          setEventDetails(eventResult.value);
-          if (eventResult.value) {
-            safeLocalStorageSet(`eventzone_cached_event_${activeEventId}`, eventResult.value);
-          }
+        if (loadedTickets) {
+          setTickets(loadedTickets);
+          safeLocalStorageSet(`eventzone_cache_tickets_${activeEventId}`, loadedTickets);
         }
-        if (sessionsResult.status === "fulfilled") setSessions(sessionsResult.value);
-        const loadedSubmissions = formSubsResult.status === "fulfilled" ? (formSubsResult.value || []) : [];
-        if (formSubsResult.status === "fulfilled") setFormSubmissions(loadedSubmissions);
-
-        if (attendeesResult.status === "fulfilled") {
-          let atts = attendeesResult.value || [];
-          if (loadedTickets.length === 1) {
-            const singleName = loadedTickets[0].name || loadedTickets[0].tier;
-            atts = atts.map(a => ({
-              ...a,
-              ticketType: singleName,
-              ticket_type: singleName
-            }));
-          }
-          if (loadedSubmissions.length > 0) {
-            atts = atts.map(a => {
-              const sub = loadedSubmissions.find(s => 
-                s.id === a.id || 
-                (s.respondentEmail && a.email && s.respondentEmail.toLowerCase() === a.email.toLowerCase())
-              );
-              if (sub && sub.answers && typeof sub.answers === 'object') {
-                const mergedAnswers = { ...sub.answers, ...(a.answers || {}) };
-
-                let formComp = sub.answers.company || sub.answers.f_company || sub.answers.organization || sub.answers.f_organization || a.company || '';
-                let formJob = sub.answers.jobTitle || sub.answers.job_title || sub.answers.f_job_title || sub.answers.function || sub.answers.profession || a.jobTitle || '';
-
-                if (!formComp || !formJob) {
-                  for (const [k, v] of Object.entries(sub.answers)) {
-                    if (!v || typeof v !== 'string') continue;
-                    const key = k.toLowerCase();
-                    if (!formComp && (key.includes('company') || key.includes('societe') || key.includes('entreprise') || key.includes('org'))) {
-                      formComp = String(v).trim();
-                    }
-                    if (!formJob && (key.includes('job') || key.includes('title') || key.includes('function') || key.includes('profession') || key.includes('poste') || key.includes('role') || key.includes('fonction'))) {
-                      formJob = String(v).trim();
-                    }
-                  }
-                }
-
-                return {
-                  ...a,
-                  answers: mergedAnswers,
-                  customAnswers: mergedAnswers,
-                  formAnswers: mergedAnswers,
-                  company: formComp,
-                  jobTitle: formJob,
-                  phone: a.phone || sub.answers.phone || sub.answers.f_core_phone || sub.answers.phoneNumber || ''
-                };
-              }
-              return a;
-            });
-          }
-          setAttendees(atts);
+        if (loadedSubmissions) {
+          setFormSubmissions(loadedSubmissions);
+          safeLocalStorageSet(`eventzone_cache_formSubmissions_${activeEventId}`, loadedSubmissions);
         }
-        if (pendingResult.status === "fulfilled") {
-          let pends = pendingResult.value || [];
-          if (loadedTickets.length === 1) {
-            const singleName = loadedTickets[0].name || loadedTickets[0].tier;
-            pends = pends.map(p => ({
-              ...p,
-              ticketType: singleName,
-              ticket_type: singleName
-            }));
-          }
-          setPending(pends);
+
+        // Process attendees with ticket names and submission answers
+        let processedAtts = rawAttendees || [];
+        if (loadedTickets && loadedTickets.length === 1) {
+          const singleName = loadedTickets[0].name || loadedTickets[0].tier;
+          processedAtts = processedAtts.map(a => ({
+            ...a,
+            ticketType: singleName,
+            ticket_type: singleName
+          }));
         }
-        if (orgsResult.status === "fulfilled") setOrganizations(orgsResult.value);
-        if (sponsorsResult.status === "fulfilled") setSponsors(sponsorsResult.value);
-        if (exhibitorsResult.status === "fulfilled") setExhibitors(exhibitorsResult.value);
-        if (oppsResult.status === "fulfilled") setOpportunities(oppsResult.value || []);
-        if (ticketsResult.status === "fulfilled") setTickets(loadedTickets);
-        if (teamResult.status === "fulfilled") setTeam(teamResult.value);
-        if (floorPlansResult.status === "fulfilled") setFloorPlans(floorPlansResult.value);
-        if (formsResult.status === "fulfilled") setForms(formsResult.value);
-        if (rsvpsResult.status === "fulfilled") setRsvps(rsvpsResult.value);
-        if (rsvpSettingsResult.status === "fulfilled") setRsvpSettings(rsvpSettingsResult.value);
-        if (logisticsResult && logisticsResult.status === "fulfilled") setLogisticsData(logisticsResult.value || {});
-        if (documentsResult && documentsResult.status === "fulfilled") setDocuments(documentsResult.value || []);
+        if (loadedSubmissions && loadedSubmissions.length > 0) {
+          processedAtts = processedAtts.map(a => {
+            const sub = loadedSubmissions.find(s => 
+              s.id === a.id || 
+              (s.respondentEmail && a.email && s.respondentEmail.toLowerCase() === a.email.toLowerCase())
+            );
+            if (sub && sub.answers && typeof sub.answers === 'object') {
+              const mergedAnswers = { ...sub.answers, ...(a.answers || {}) };
+              let formComp = sub.answers.company || sub.answers.f_company || sub.answers.organization || sub.answers.f_organization || a.company || '';
+              let formJob = sub.answers.jobTitle || sub.answers.job_title || sub.answers.f_job_title || sub.answers.function || sub.answers.profession || a.jobTitle || '';
+              return {
+                ...a,
+                answers: mergedAnswers,
+                customAnswers: mergedAnswers,
+                formAnswers: mergedAnswers,
+                company: formComp,
+                jobTitle: formJob,
+                phone: a.phone || sub.answers.phone || sub.answers.f_core_phone || sub.answers.phoneNumber || ''
+              };
+            }
+            return a;
+          });
+        }
+        setAttendees(processedAtts);
+        safeLocalStorageSet(`eventzone_cache_attendees_${activeEventId}`, processedAtts);
+
+        let processedPending = rawPending || [];
+        if (loadedTickets && loadedTickets.length === 1) {
+          const singleName = loadedTickets[0].name || loadedTickets[0].tier;
+          processedPending = processedPending.map(p => ({
+            ...p,
+            ticketType: singleName,
+            ticket_type: singleName
+          }));
+        }
+        setPending(processedPending);
+        safeLocalStorageSet(`eventzone_cache_pending_${activeEventId}`, processedPending);
 
       } catch (err) {
         console.error("Unexpected error loading data for event:", err);
@@ -739,6 +870,20 @@ export function HomeContent() {
           const updatedLogistics = await fetchLogistics(activeEventId);
           if (updatedLogistics) setLogisticsData(updatedLogistics);
         })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'influencers', filter: `event_id=eq.${activeEventId}` }, async () => {
+          const updatedInfs = await fetchInfluencers(activeEventId);
+          if (updatedInfs) {
+            setInfluencers(updatedInfs);
+            safeLocalStorageSet(`eventzone_cache_influencers_${activeEventId}`, updatedInfs);
+          }
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'opportunities', filter: `event_id=eq.${activeEventId}` }, async () => {
+          const updatedOpps = await fetchOpportunities(activeEventId);
+          if (updatedOpps) {
+            setOpportunities(updatedOpps);
+            safeLocalStorageSet(`eventzone_cache_opportunities_${activeEventId}`, updatedOpps);
+          }
+        })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'documents', filter: `event_id=eq.${activeEventId}` }, async () => {
           const updatedDocs = await fetchDocuments(activeEventId);
           if (updatedDocs) setDocuments(updatedDocs);
@@ -762,8 +907,10 @@ export function HomeContent() {
     if (currentView !== "home") {
       params.set("view", currentView);
     }
-    if (activeEventId && activeEventId !== DEFAULT_EVENT_ID) {
-      params.set("eventId", activeEventId);
+    if (activeEventId) {
+      if (activeEventId !== DEFAULT_EVENT_ID || currentView === "event-landing" || currentView === "register" || currentView === "rsvp") {
+        params.set("eventId", activeEventId);
+      }
     }
     if (currentView === "floor-plan" && activeFloorPlanId) {
       params.set("planId", activeFloorPlanId);
@@ -777,6 +924,15 @@ export function HomeContent() {
       const ticketVal = currentSearchParams.get("ticket");
       if (ticketVal) {
         params.set("ticket", ticketVal);
+      }
+    }
+
+    // Preserve referral tracking parameter in URL so it never gets stripped
+    if (typeof window !== "undefined") {
+      const currentSearchParams = new URLSearchParams(window.location.search);
+      const refVal = currentSearchParams.get("ref") || currentSearchParams.get("referral") || currentSearchParams.get("influencer");
+      if (refVal) {
+        params.set("ref", refVal);
       }
     }
 
@@ -795,15 +951,18 @@ export function HomeContent() {
     const syncStateFromUrl = () => {
       const searchParams = new URLSearchParams(window.location.search);
       const viewParam = searchParams.get("view");
-      const eventIdParam = searchParams.get("eventId");
+      const eventIdParam = searchParams.get("eventId") || searchParams.get("event");
       const planIdParam = searchParams.get("planId");
       const previewParam = searchParams.get("preview");
+      const rsvpParam = searchParams.get("rsvp");
 
       if (eventIdParam && eventIdParam !== activeEventId) {
         setActiveEventStateId(eventIdParam);
       }
       
-      if (viewParam) {
+      if (rsvpParam === "true" || viewParam === "public-rsvp" || (viewParam === "rsvp" && searchParams.get("public") === "true")) {
+        setCurrentView("event-landing");
+      } else if (viewParam) {
         if (viewParam === "floor-plan") {
           setCurrentView("floor-plan");
           if (planIdParam) {
@@ -823,6 +982,8 @@ export function HomeContent() {
             setCurrentView(viewParam);
           }
         }
+      } else if (searchParams.get("ref") || searchParams.get("influencer") || searchParams.get("referral")) {
+        setCurrentView("event-landing");
       } else {
         setCurrentView("home");
       }
@@ -1237,34 +1398,42 @@ export function HomeContent() {
       case "sessions":
         syncArrayToDb(sessions, val, upsertSession, deleteSession);
         setSessions(val);
+        safeLocalStorageSet(`eventzone_cache_sessions_${activeEventId}`, val);
         break;
       case "attendees":
         syncArrayToDb(attendees, val, upsertAttendee, deleteAttendee);
         setAttendees(val);
+        safeLocalStorageSet(`eventzone_cache_attendees_${activeEventId}`, val);
         break;
       case "pending":
         syncArrayToDb(pending, val, upsertPending, deletePending);
         setPending(val);
+        safeLocalStorageSet(`eventzone_cache_pending_${activeEventId}`, val);
         break;
       case "organizations":
         syncArrayToDb(organizations, val, upsertOrganization, deleteOrganization);
         setOrganizations(val);
+        safeLocalStorageSet(`eventzone_cache_organizations_${activeEventId}`, val);
         break;
       case "sponsors":
         syncArrayToDb(sponsors, val, upsertSponsor, deleteSponsor);
         setSponsors(val);
+        safeLocalStorageSet(`eventzone_cache_sponsors_${activeEventId}`, val);
         break;
       case "exhibitors":
         syncArrayToDb(exhibitors, val, upsertExhibitor, deleteExhibitor);
         setExhibitors(val);
+        safeLocalStorageSet(`eventzone_cache_exhibitors_${activeEventId}`, val);
         break;
       case "opportunities":
         syncArrayToDb(opportunities, val, upsertOpportunity, deleteOpportunity);
         setOpportunities(val);
+        safeLocalStorageSet(`eventzone_cache_opportunities_${activeEventId}`, val);
         break;
       case "influencers":
         syncArrayToDb(influencers, val, upsertInfluencer, deleteInfluencer);
         setInfluencers(val);
+        safeLocalStorageSet(`eventzone_cache_influencers_${activeEventId}`, val);
         break;
       case "tickets":
         (val || []).forEach(newT => {
@@ -1292,14 +1461,17 @@ export function HomeContent() {
         });
         syncArrayToDb(tickets, val, upsertTicket, deleteTicket);
         setTickets(val);
+        safeLocalStorageSet(`eventzone_cache_tickets_${activeEventId}`, val);
         break;
       case "team":
         syncArrayToDb(team, val, upsertTeamMember, deleteTeamMember);
         setTeam(val);
+        safeLocalStorageSet(`eventzone_cache_team_${activeEventId}`, val);
         break;
       case "floorPlans":
         syncArrayToDb(floorPlans, val, upsertFloorPlan, deleteFloorPlan);
         setFloorPlans(val);
+        safeLocalStorageSet(`eventzone_cache_floorPlans_${activeEventId}`, val);
         break;
     }
   };
@@ -1808,60 +1980,59 @@ export function HomeContent() {
   // ==========================================================================
   if (currentView === "home") {
     return (
-      <>
-        <MainHomePage
-          events={publicEvents}
-          registrations={visitorRegistrations}
-          currentUser={currentUser}
-          onOpenAuth={(mode) => {
-            setAuthModalInitialMode(mode || "signin");
+      <MainHomePage
+        events={publicEvents}
+        registrations={visitorRegistrations}
+        currentUser={currentUser}
+        isLoading={isLoading}
+        onOpenAuth={(mode) => {
+          setAuthModalInitialMode(mode || "signin");
+          setCurrentView("auth");
+        }}
+        onSignOut={handleSignOut}
+        onSwitchRole={handleToggleRole}
+        onUpdateProfile={handleUpdateProfile}
+        onOpenProfile={() => setCurrentView("profile")}
+        onOpenEventsHub={() => {
+          if (!currentUser) {
+            setAuthModalInitialMode("signup");
             setCurrentView("auth");
-          }}
-          onSignOut={handleSignOut}
-          onSwitchRole={handleToggleRole}
-          onUpdateProfile={handleUpdateProfile}
-          onOpenProfile={() => setCurrentView("profile")}
-          onOpenEventsHub={() => {
-            if (!currentUser) {
-              setAuthModalInitialMode("signup");
-              setCurrentView("auth");
-            } else {
-              setCurrentView("events-hub");
-            }
-          }}
-          onOpenVisitorPasses={() => setCurrentView("my-tickets")}
-          onSelectEventForDashboard={(eventId) => {
-            setActiveEventStateId(eventId);
-            setCurrentView("overview");
-          }}
-          onViewFloorPlan={(eventId) => {
-            setActiveEventStateId(eventId);
-            setCurrentView("floor-plan");
-            setInitialPreviewMode(true);
-          }}
-          onViewLivePage={(eventId) => {
-            setActiveEventStateId(eventId);
-            setCurrentView("event-landing");
-          }}
-          onRegisterForEvent={handleVisitorRegister}
-          onOpenCreationWizard={() => {
-            if (!currentUser) {
-              setAuthModalInitialMode("signup");
-              setCurrentView("auth");
-            } else {
-              setIsCreationWizardOpen(true);
-            }
-          }}
-          onSwitchToOrganizer={() => {
-            if (!currentUser) {
-              setAuthModalInitialMode("signup");
-              setCurrentView("auth");
-            } else {
-              setCurrentView("events-hub");
-            }
-          }}
-        />
-      </>
+          } else {
+            setCurrentView("events-hub");
+          }
+        }}
+        onOpenVisitorPasses={() => setCurrentView("my-tickets")}
+        onSelectEventForDashboard={(eventId) => {
+          setActiveEventStateId(eventId);
+          setCurrentView("overview");
+        }}
+        onViewFloorPlan={(eventId) => {
+          setActiveEventStateId(eventId);
+          setCurrentView("floor-plan");
+          setInitialPreviewMode(true);
+        }}
+        onViewLivePage={(eventId) => {
+          setActiveEventStateId(eventId);
+          setCurrentView("event-landing");
+        }}
+        onRegisterForEvent={handleVisitorRegister}
+        onOpenCreationWizard={() => {
+          if (!currentUser) {
+            setAuthModalInitialMode("signup");
+            setCurrentView("auth");
+          } else {
+            setIsCreationWizardOpen(true);
+          }
+        }}
+        onSwitchToOrganizer={() => {
+          if (!currentUser) {
+            setAuthModalInitialMode("signup");
+            setCurrentView("auth");
+          } else {
+            setCurrentView("events-hub");
+          }
+        }}
+      />
     );
   }
 
@@ -1869,10 +2040,13 @@ export function HomeContent() {
   // 1.5. EVENT PUBLIC LANDING PAGE & REGISTRATION (VISITOR & ATTENDEE VIEW)
   // ==========================================================================
   if (currentView === "event-landing" || currentView === "register") {
-    const rawLanding = publicEvents.find(e => e.id === activeEventId) || userEvents.find(e => e.id === activeEventId) || {};
-    const landingEventDetails = (eventDetails && (!activeEventId || eventDetails.id === activeEventId))
-      ? { ...rawLanding, ...eventDetails }
-      : (publicEvents.find(e => e.id === activeEventId) || userEvents.find(e => e.id === activeEventId) || eventDetails);
+    if (isLoading && !eventDetails?.title) {
+      return <LandingPageSkeleton />;
+    }
+    const rawLanding = publicEvents.find(e => String(e.id) === String(activeEventId)) || userEvents.find(e => String(e.id) === String(activeEventId)) || null;
+    const landingEventDetails = (eventDetails && eventDetails.title)
+      ? { ...(rawLanding || {}), ...eventDetails }
+      : (rawLanding || eventDetails || null);
     return (
       <EventPublicLandingPage
         eventId={activeEventId}
@@ -1926,7 +2100,10 @@ export function HomeContent() {
   // 2. ORGANIZER EVENTS HUB VIEW
   // ==========================================================================
   if (currentView === "events-hub") {
-    if (!currentUser && authInitialized) {
+    if (isAuthProcessing || !authInitialized) {
+      return <EventsHubSkeleton />;
+    }
+    if (!currentUser) {
       return (
         <AuthView
           initialMode="signin"
@@ -1938,6 +2115,9 @@ export function HomeContent() {
           onClose={() => setCurrentView("home")}
         />
       );
+    }
+    if (isLoading && userEvents.length === 0) {
+      return <EventsHubSkeleton />;
     }
     return (
       <OrganizerEventsHub
@@ -1968,7 +2148,10 @@ export function HomeContent() {
   // 2.5. CREATE NEW EVENT (DEDICATED FULL-PAGE VIEW)
   // ==========================================================================
   if (currentView === "create-event") {
-    if (!currentUser && authInitialized) {
+    if (isAuthProcessing || !authInitialized) {
+      return <EventsHubSkeleton />;
+    }
+    if (!currentUser) {
       return (
         <AuthView
           initialMode="signin"
@@ -1996,38 +2179,39 @@ export function HomeContent() {
   // ==========================================================================
   if (currentView === "visitor-portal") {
     return (
-      <>
-        <VisitorPortal
-          events={publicEvents}
-          registrations={visitorRegistrations}
-          onRegisterForEvent={handleVisitorRegister}
-          onViewFloorPlan={(eventId) => {
-            setActiveEventStateId(eventId);
-            setCurrentView("floor-plan");
-            setInitialPreviewMode(true);
-          }}
-          onViewLivePage={(eventId) => {
-            setActiveEventStateId(eventId);
-            setCurrentView("event-landing");
-          }}
-          onSwitchToOrganizer={() => setCurrentView("events-hub")}
-          onGoToHome={() => setCurrentView("home")}
-          onOpenAuth={(mode) => {
-            setAuthModalInitialMode(mode || "signin");
-            setCurrentView("auth");
-          }}
-          onOpenProfile={() => setCurrentView("profile")}
-          onSignOut={handleSignOut}
-          user={currentUser}
-        />
-      </>
+      <VisitorPortal
+        events={publicEvents}
+        registrations={visitorRegistrations}
+        onRegisterForEvent={handleVisitorRegister}
+        onViewFloorPlan={(eventId) => {
+          setActiveEventStateId(eventId);
+          setCurrentView("floor-plan");
+          setInitialPreviewMode(true);
+        }}
+        onViewLivePage={(eventId) => {
+          setActiveEventStateId(eventId);
+          setCurrentView("event-landing");
+        }}
+        onSwitchToOrganizer={() => setCurrentView("events-hub")}
+        onGoToHome={() => setCurrentView("home")}
+        onOpenAuth={(mode) => {
+          setAuthModalInitialMode(mode || "signin");
+          setCurrentView("auth");
+        }}
+        onOpenProfile={() => setCurrentView("profile")}
+        onSignOut={handleSignOut}
+        user={currentUser}
+      />
     );
   }
 
   // ==========================================================================
   // 4. SINGLE EVENT DASHBOARD (ORGANIZER VIEW)
   // ==========================================================================
-  if (!currentUser && authInitialized) {
+  if (isAuthProcessing || !authInitialized) {
+    return <OverviewSkeleton />;
+  }
+  if (!currentUser) {
     return (
       <AuthView
         initialMode="signin"
@@ -2416,6 +2600,14 @@ export function HomeContent() {
               <Mail size={14} className={`shrink-0 ${currentView === "communications" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
               <span>{t("dash.communications", "Communications")}</span>
             </button>
+
+            <button 
+              onClick={() => setCurrentView("developers")}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-left group ${currentView === "developers" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+            >
+              <Code2 size={14} className={`shrink-0 ${currentView === "developers" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
+              <span>{t("dash.developers", "Developers & API")}</span>
+            </button>
           </nav>
         </div>
 
@@ -2595,6 +2787,48 @@ export function HomeContent() {
                 Back to Dashboard
               </button>
             </div>
+          ) : isLoading && !isEditingFloorPlan ? (
+            (() => {
+              switch (currentView) {
+                case "overview":
+                  return <OverviewSkeleton />;
+                case "calendar":
+                  return <CalendarSkeleton />;
+                case "analytics":
+                  return <AnalyticsSkeleton />;
+                case "logistics":
+                  return <LogisticsSkeleton />;
+                case "documents":
+                  return <DocumentsSkeleton />;
+                case "forms":
+                  return <FormsSkeleton />;
+                case "rsvp":
+                  return <RSVPSkeleton />;
+                case "floor-plan":
+                  return <FloorPlanSkeleton />;
+                case "page-builder":
+                case "event-details":
+                  return <EventDetailsSkeleton />;
+                case "profile":
+                  return <ProfileSkeleton />;
+                case "attendees":
+                case "pending":
+                case "organizations":
+                case "sponsors":
+                case "exhibitors":
+                case "speakers":
+                case "opportunities":
+                case "influencers":
+                case "tickets":
+                case "check-in":
+                case "my-team":
+                case "communications":
+                case "developers":
+                  return <DevelopersSkeleton />;
+                default:
+                  return <TableViewSkeleton />;
+              }
+            })()
           ) : (
             <>
           {currentView === "overview" && (
@@ -2809,7 +3043,22 @@ export function HomeContent() {
             />
           )}
 
-          {!["overview", "calendar", "page-builder", "event-details", "forms", "rsvp", "logistics", "documents"].includes(currentView) && currentView !== "floor-plan" && (
+          {currentView === "developers" && (
+            <DevelopersView
+              state={{
+                eventDetails,
+                attendees,
+                pending,
+                tickets,
+                currentUser,
+                activeEventId
+              }}
+              onSwitchView={setCurrentView}
+              onOpenModal={handleOpenModal}
+            />
+          )}
+
+          {!["overview", "calendar", "page-builder", "event-details", "forms", "rsvp", "logistics", "documents", "developers"].includes(currentView) && currentView !== "floor-plan" && (
             <GenericTableView 
               viewName={currentView}
               state={{

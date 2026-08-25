@@ -10,6 +10,7 @@ import {
 import { uploadProfileAvatar } from "../lib/db";
 import UniversalTopBar from "./UniversalTopBar";
 import CountryPhoneInput from "./CountryPhoneInput";
+import { ProfileSkeleton } from "./SkeletonLoaders";
 
 // Curated list of popular summit networking & matchmaking interests
 const CURATED_INTERESTS = [
@@ -328,6 +329,7 @@ const normalizeSocialLinks = (user) => {
 
 export default function ProfileView({
   currentUser,
+  isLoading = false,
   onSaveProfile,
   onGoToHome,
   onOpenAuth,
@@ -380,6 +382,10 @@ export default function ProfileView({
       setSocialLinksList(normalizeSocialLinks(currentUser));
     }
   }, [currentUser]);
+
+  if (isLoading) {
+    return <ProfileSkeleton />;
+  }
 
   // If user is not logged in
   if (!currentUser) {

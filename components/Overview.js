@@ -11,6 +11,7 @@ import {
   Briefcase, UserCheck2, PieChart, Store, UserCog
 } from "lucide-react";
 import { useLanguage } from "../lib/i18n";
+import { OverviewSkeleton } from "./SkeletonLoaders";
 
 export default function Overview({ 
   eventDetails = {}, 
@@ -27,6 +28,7 @@ export default function Overview({
   rsvps = [],
   rsvpSettings = {},
   team = [],
+  isLoading = false,
   onSwitchView,
   onOpenModal,
   onPreviewLandingPage
@@ -36,6 +38,10 @@ export default function Overview({
   const [chartTimeframe, setChartTimeframe] = useState("7d"); // "7d" | "14d" | "30d"
   const [hoveredIndex, setHoveredIndex] = useState(null);
   const [readinessFloatingOpen, setReadinessFloatingOpen] = useState(false);
+
+  if (isLoading) {
+    return <OverviewSkeleton />;
+  }
 
   // 1. Core Event Metadata
   const title = eventDetails?.title || "Eventzone Summit";

@@ -2,44 +2,57 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { 
   Users, UserCheck, Clock, CheckCircle2, XCircle, AlertCircle,
   Search, Filter, Plus, Download, Share2, Settings, QrCode,
-  Utensils, ChevronDown, ChevronUp, Copy, Check, ExternalLink,
+  ChevronDown, ChevronUp, Copy, Check, ExternalLink,
   Trash2, Edit3, Sparkles, RefreshCw, BarChart2, PieChart,
   UserPlus, Mail, Phone, Building2, Calendar, ArrowRight, ShieldCheck,
   Award, TrendingUp, HelpCircle, X, Archive, RotateCcw
 } from "lucide-react";
 import { useLanguage } from "../lib/i18n";
 import QRCode from "qrcode";
-import { DIETARY_OPTIONS } from "./PublicRSVPModal";
 import SearchableSelect from "./SearchableSelect";
+import { RSVPSkeleton } from "./SkeletonLoaders";
 
 export default function RSVPView({
   rsvps = [],
   rsvpSettings = {},
   eventDetails = {},
   activeEventId,
+  isLoading = false,
   onSaveRSVPSettings,
   onSubmitRSVP,
   onUpdateRSVPStatus,
   onDeleteRSVP,
+  onPermanentDeleteRSVP,
   onArchiveRSVP,
   onRefreshData,
   onOpenPublicRSVP
 }) {
   const { t, isRTL } = useLanguage();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Local View / Tab state
   const [activeTab, setActiveTab] = useState("all"); // "all" | "attending" | "waitlisted" | "declined" | "tentative"
   const [searchQuery, setSearchQuery] = useState("");
-  const [dietaryFilter, setDietaryFilter] = useState("all");
   
   // Modals & Drawers
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [editingRsvp, setEditingRsvp] = useState(null);
+
+  // Guest Party & Companions Modal
+  const [selectedPartyRsvp, setSelectedPartyRsvp] = useState(null);
+  const [isEditingPartyNames, setIsEditingPartyNames] = useState(false);
+  const [partyNamesInput, setPartyNamesInput] = useState([]);
+  const [isSavingParty, setIsSavingParty] = useState(false);
 
   // Share Modal QR State
   const [copiedLink, setCopiedLink] = useState(false);
@@ -53,7 +66,6 @@ export default function RSVPView({
     maxPlusOnes: 2,
     allowWaitlist: true,
     deadline: "",
-    collectDietary: true,
     collectCompany: true,
     collectPhone: true,
     confirmationMessage: "Thank you for your RSVP! We look forward to seeing you at the event."
@@ -71,8 +83,6 @@ export default function RSVPView({
     status: "attending",
     plusOnes: 0,
     plusOnesNames: [""],
-    dietaryPreference: "None",
-    dietaryNotes: "",
     notes: ""
   });
   const [isSubmittingManual, setIsSubmittingManual] = useState(false);
@@ -87,7 +97,6 @@ export default function RSVPView({
         maxPlusOnes: rsvpSettings.maxPlusOnes ?? rsvpSettings.max_plus_ones ?? 2,
         allowWaitlist: rsvpSettings.allowWaitlist ?? rsvpSettings.allow_waitlist ?? true,
         deadline: rsvpSettings.deadline ? rsvpSettings.deadline.split("T")[0] : "",
-        collectDietary: rsvpSettings.collectDietary ?? rsvpSettings.collect_dietary ?? true,
         collectCompany: rsvpSettings.collectCompany ?? rsvpSettings.collect_company ?? true,
         collectPhone: rsvpSettings.collectPhone ?? rsvpSettings.collect_phone ?? true,
         confirmationMessage: rsvpSettings.confirmationMessage || rsvpSettings.confirmation_message || "Thank you for your RSVP!"
@@ -98,8 +107,8 @@ export default function RSVPView({
   // Generate Share QR code
   useEffect(() => {
     if (isShareModalOpen && typeof window !== 'undefined') {
-      const publicUrl = `${window.location.origin}/?event=${activeEventId}&view=rsvp`;
-      QRCode.toDataURL(publicUrl, { width: 220, margin: 1, color: { dark: '#0b5cdb', light: '#ffffff' } })
+      const publicUrl = `${window.location.origin}/?eventId=${activeEventId}&view=event-landing&rsvp=true`;
+      QRCode.toDataURL(publicUrl, { width: 260, margin: 1, color: { dark: '#0b5cdb', light: '#ffffff' } })
         .then(url => setShareQrUrl(url))
         .catch(e => console.error("Share QR Error:", e));
     }
@@ -117,18 +126,6 @@ export default function RSVPView({
     let tentativeResponses = 0;
     let checkedInCount = 0;
 
-    const dietaryCounts = {
-      "None": 0,
-      "Halal": 0,
-      "Vegetarian": 0,
-      "Vegan": 0,
-      "Gluten-Free": 0,
-      "Dairy-Free": 0,
-      "Kosher": 0,
-      "Nut Allergy": 0,
-      "Other": 0
-    };
-
     const plusOnesDist = {
       solo: 0,
       plus1: 0,
@@ -145,14 +142,6 @@ export default function RSVPView({
       if (st === 'attending') {
         attendingResponses++;
         attendingHeadcount += totalHeads;
-
-        // Dietary
-        const diet = r.dietaryPreference || r.dietary_preference || 'None';
-        if (dietaryCounts[diet] !== undefined) {
-          dietaryCounts[diet] += totalHeads;
-        } else {
-          dietaryCounts["Other"] += totalHeads;
-        }
 
         // Plus ones
         if (pOnes === 0) plusOnesDist.solo++;
@@ -190,7 +179,6 @@ export default function RSVPView({
       capacityUsedPct,
       spotsRemaining,
       acceptanceRate,
-      dietaryCounts,
       plusOnesDist,
       isAtCapacity: attendingHeadcount >= capacityLimit
     };
@@ -210,12 +198,6 @@ export default function RSVPView({
       if (activeTab === "declined" && st !== "declined") return false;
       if (activeTab === "tentative" && st !== "tentative") return false;
 
-      // Dietary filter
-      if (dietaryFilter !== "all") {
-        const diet = r.dietaryPreference || r.dietary_preference || 'None';
-        if (diet !== dietaryFilter) return false;
-      }
-
       // Search Query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
@@ -223,15 +205,14 @@ export default function RSVPView({
         const email = (r.email || '').toLowerCase();
         const comp = (r.company || '').toLowerCase();
         const notes = (r.notes || '').toLowerCase();
-        const dNotes = (r.dietaryNotes || r.dietary_notes || '').toLowerCase();
         const companions = (r.plusOnesNames || r.plus_ones_names || []).join(' ').toLowerCase();
 
-        return name.includes(q) || email.includes(q) || comp.includes(q) || notes.includes(q) || dNotes.includes(q) || companions.includes(q);
+        return name.includes(q) || email.includes(q) || comp.includes(q) || notes.includes(q) || companions.includes(q);
       }
 
       return true;
     });
-  }, [rsvps, activeTab, dietaryFilter, searchQuery]);
+  }, [rsvps, activeTab, searchQuery]);
 
   // ─────────────────────────────────────────────
   //  Action Handlers
@@ -284,8 +265,6 @@ export default function RSVPView({
         status: "attending",
         plusOnes: 0,
         plusOnesNames: [""],
-        dietaryPreference: "None",
-        dietaryNotes: "",
         notes: ""
       });
     } catch (err) {
@@ -304,6 +283,39 @@ export default function RSVPView({
     } catch (err) {
       console.error("Status update error:", err);
       alert("Failed to update status: " + err.message);
+    }
+  };
+
+  const openPartyModal = (rsvp) => {
+    setSelectedPartyRsvp(rsvp);
+    const pOnes = parseInt(rsvp.plusOnes || rsvp.plus_ones || 0, 10);
+    const rawNames = rsvp.plusOnesNames || rsvp.plus_ones_names || [];
+    const names = Array.isArray(rawNames) ? [...rawNames] : [];
+    while (names.length < pOnes) {
+      names.push("");
+    }
+    setPartyNamesInput(names.slice(0, pOnes));
+    setIsEditingPartyNames(false);
+  };
+
+  const handleSavePartyNames = async () => {
+    if (!selectedPartyRsvp) return;
+    setIsSavingParty(true);
+    try {
+      const cleanedNames = partyNamesInput.map(n => n.trim()).filter(Boolean);
+      if (onUpdateRSVPStatus) {
+        await onUpdateRSVPStatus(selectedPartyRsvp.id, selectedPartyRsvp.status, {
+          plusOnesNames: cleanedNames,
+          plus_ones_names: cleanedNames,
+        });
+      }
+      setSelectedPartyRsvp(prev => prev ? { ...prev, plusOnesNames: cleanedNames, plus_ones_names: cleanedNames } : null);
+      setIsEditingPartyNames(false);
+    } catch (err) {
+      console.error("Failed to update companion names:", err);
+      alert("Failed to update companion names: " + err.message);
+    } finally {
+      setIsSavingParty(false);
     }
   };
 
@@ -326,7 +338,17 @@ export default function RSVPView({
     }
   };
 
-  const handleDelete = handleArchive;
+  const handlePermanentDelete = async (rsvpId, name) => {
+    if (confirm(`Permanently delete the RSVP for ${name || 'this guest'}? This action cannot be undone.`)) {
+      if (onPermanentDeleteRSVP) {
+        await onPermanentDeleteRSVP(rsvpId);
+      } else if (onDeleteRSVP) {
+        await onDeleteRSVP(rsvpId);
+      }
+    }
+  };
+
+  const handleDelete = handlePermanentDelete;
 
   // Export to CSV
   const handleExportCSV = () => {
@@ -340,8 +362,6 @@ export default function RSVPView({
       "Total Headcount",
       "Plus-Ones Count",
       "Companion Names",
-      "Dietary Preference",
-      "Dietary Notes",
       "Special Notes",
       "Checked In",
       "Date Submitted"
@@ -360,8 +380,6 @@ export default function RSVPView({
         1 + pOnes,
         pOnes,
         `"${companions.replace(/"/g, '""')}"`,
-        `"${(r.dietaryPreference || r.dietary_preference || 'None').replace(/"/g, '""')}"`,
-        `"${(r.dietaryNotes || r.dietary_notes || '').replace(/"/g, '""')}"`,
         `"${(r.notes || '').replace(/"/g, '""')}"`,
         r.checkedIn || r.checked_in ? "Yes" : "No",
         `"${r.createdAt || r.created_at || ''}"`
@@ -378,12 +396,48 @@ export default function RSVPView({
     document.body.removeChild(link);
   };
 
+  const getPublicRsvpUrl = () => {
+    if (typeof window === "undefined") return "";
+    return `${window.location.origin}/?eventId=${activeEventId}&view=event-landing&rsvp=true`;
+  };
+
   const handleCopyShareLink = () => {
-    const publicUrl = `${window.location.origin}/?event=${activeEventId}&view=rsvp`;
-    navigator.clipboard.writeText(publicUrl);
+    const publicUrl = getPublicRsvpUrl();
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(publicUrl);
+    }
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
   };
+
+  const handleDownloadQr = () => {
+    if (!shareQrUrl) return;
+    const link = document.createElement("a");
+    link.href = shareQrUrl;
+    link.download = `RSVP_QR_${(eventDetails?.title || 'Event').replace(/\s+/g, '_')}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleShareWhatsApp = () => {
+    const title = eventDetails?.title || "Event";
+    const url = getPublicRsvpUrl();
+    const text = `RSVP for ${title}:\n${url}`;
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, "_blank");
+  };
+
+  const handleShareEmail = () => {
+    const title = eventDetails?.title || "Event";
+    const url = getPublicRsvpUrl();
+    const subject = `RSVP Invitation: ${title}`;
+    const body = `Hello,\n\nYou are cordially invited to RSVP for ${title}.\n\nPlease submit your attendance response here:\n${url}\n\nThank you!`;
+    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
+
+  if (isLoading) {
+    return <RSVPSkeleton />;
+  }
 
   return (
     <div className="space-y-6 animate-fade-in" dir={isRTL ? "rtl" : "ltr"}>
@@ -408,7 +462,7 @@ export default function RSVPView({
             </span>
           </div>
           <p className="text-sm text-slate-500">
-            {t("rsvp.subtitle", "Track guest attendance responses, companion headcounts, dietary requirements, and priority capacity waitlists.")}
+            {t("rsvp.subtitle", "Track guest attendance responses, companion headcounts, and priority capacity waitlists.")}
           </p>
         </div>
 
@@ -584,47 +638,61 @@ export default function RSVPView({
       </div>
 
       {/* ─────────────────────────────────────────────
-          3. RESPONSE ANALYTICS & DIETARY BREAKDOWN
+          3. RESPONSE ANALYTICS & CAPACITY BREAKDOWN
       ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         
-        {/* Dietary & Allergen Bar */}
-        <div className="lg:col-span-2 bg-white border border-slate-200/80 rounded-3xl p-5 shadow-xs space-y-4">
+        {/* Attendance & Capacity Overview */}
+        <div className="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Utensils size={16} className="text-emerald-600" />
+              <BarChart2 size={16} className="text-blue-600" />
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                {t("rsvp.dietaryBreakdown", "Dietary & Allergen Requirements")}
+                {t("rsvp.capacityOverview", "Attendance & Capacity Metrics")}
               </h3>
             </div>
             <span className="text-[11px] font-semibold text-slate-400">
-              Based on {analytics.attendingHeadcount} attending guests
+              {analytics.totalResponses} Total Responses
             </span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-            {Object.entries(analytics.dietaryCounts).map(([diet, count]) => {
-              const opt = DIETARY_OPTIONS.find(o => o.id === diet) || { icon: "🍽️" };
-              return (
-                <div 
-                  key={diet}
-                  onClick={() => setDietaryFilter(dietaryFilter === diet ? "all" : diet)}
-                  className={`p-3 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${
-                    dietaryFilter === diet
-                      ? 'bg-emerald-50 border-emerald-500 shadow-xs'
-                      : count > 0 
-                      ? 'bg-slate-50 border-slate-200/80 hover:border-slate-300' 
-                      : 'bg-slate-50/40 border-slate-100 opacity-60'
-                  }`}
-                >
-                  <div className="flex items-center justify-between text-xs text-slate-600">
-                    <span className="text-base">{opt.icon}</span>
-                    <span className="text-sm font-black text-slate-800">{count}</span>
-                  </div>
-                  <span className="text-[11px] font-bold text-slate-700 mt-2 truncate">{diet}</span>
-                </div>
-              );
-            })}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="p-3 bg-blue-50/70 border border-blue-100 rounded-2xl">
+              <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider block">Confirmed Heads</span>
+              <div className="text-xl font-black text-blue-900 mt-0.5">{analytics.attendingHeadcount}</div>
+              <span className="text-[10px] text-blue-500 font-medium">of {analytics.capacityLimit} max limit</span>
+            </div>
+
+            <div className="p-3 bg-emerald-50/70 border border-emerald-100 rounded-2xl">
+              <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block">Capacity Used</span>
+              <div className="text-xl font-black text-emerald-900 mt-0.5">{analytics.capacityUsedPct}%</div>
+              <span className="text-[10px] text-emerald-600 font-medium">{analytics.spotsRemaining} spots open</span>
+            </div>
+
+            <div className="p-3 bg-slate-50 border border-slate-150 rounded-2xl">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Checked In</span>
+              <div className="text-xl font-black text-slate-900 mt-0.5">{analytics.checkedInCount}</div>
+              <span className="text-[10px] text-slate-500 font-medium">{analytics.attendingHeadcount > 0 ? Math.round((analytics.checkedInCount / analytics.attendingHeadcount) * 100) : 0}% of confirmed</span>
+            </div>
+          </div>
+
+          <div className="space-y-1.5 pt-1">
+            <div className="flex items-center justify-between text-xs font-semibold text-slate-600">
+              <span>Overall Capacity Progress</span>
+              <span className="font-bold text-slate-900">{analytics.attendingHeadcount} / {analytics.capacityLimit} Guests</span>
+            </div>
+            <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+              <div 
+                className={`h-full rounded-full transition-all duration-500 ${
+                  analytics.capacityUsedPct >= 100 
+                    ? 'bg-amber-500' 
+                    : analytics.capacityUsedPct >= 80 
+                    ? 'bg-blue-600' 
+                    : 'bg-emerald-500'
+                }`}
+                style={{ width: `${analytics.capacityUsedPct}%` }} 
+              />
+            </div>
           </div>
         </div>
 
@@ -637,6 +705,9 @@ export default function RSVPView({
                 {t("rsvp.plusOnesBreakdown", "Companions (+1s)")}
               </h3>
             </div>
+            <span className="text-[11px] font-semibold text-slate-400">
+              Max {settingsForm.maxPlusOnes} companions / attendee
+            </span>
           </div>
 
           <div className="space-y-3">
@@ -767,16 +838,6 @@ export default function RSVPView({
                 </button>
               )}
             </div>
-
-            {dietaryFilter !== "all" && (
-              <button
-                onClick={() => setDietaryFilter("all")}
-                className="px-2.5 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center gap-1 cursor-pointer"
-              >
-                <span>{dietaryFilter}</span>
-                <X size={12} />
-              </button>
-            )}
           </div>
         </div>
 
@@ -788,7 +849,6 @@ export default function RSVPView({
                 <th className="py-3 px-4">{t("rsvp.guestName", "Guest Info")}</th>
                 <th className="py-3 px-4">{t("rsvp.status", "Status")}</th>
                 <th className="py-3 px-4">{t("rsvp.companionCount", "Headcount")}</th>
-                <th className="py-3 px-4">{t("rsvp.dietaryPreference", "Dietary")}</th>
                 <th className="py-3 px-4">{t("rsvp.specialRequests", "Notes")}</th>
                 <th className="py-3 px-4">{t("rsvp.submittedAt", "Submitted")}</th>
                 <th className="py-3 px-4 text-right">{t("rsvp.actions", "Actions")}</th>
@@ -797,7 +857,7 @@ export default function RSVPView({
             <tbody className="divide-y divide-slate-100">
               {filteredRsvps.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-400 space-y-2">
+                  <td colSpan={6} className="py-12 text-center text-slate-400 space-y-2">
                     <Users size={32} className="mx-auto text-slate-300 stroke-[1.5]" />
                     <p className="font-bold text-slate-600">{t("rsvp.noRsvps", "No RSVPs match your criteria")}</p>
                     <p className="text-xs text-slate-400 max-w-sm mx-auto">
@@ -862,37 +922,53 @@ export default function RSVPView({
                         </select>
                       </td>
 
-                      {/* Headcount */}
+                      {/* Headcount & Companions */}
                       <td className="py-3 px-4">
-                        <div className="flex flex-col">
-                          <span className="font-bold text-slate-900">
-                            {1 + pOnes} {1 + pOnes === 1 ? "Head" : "Heads"}
-                          </span>
-                          {pOnes > 0 && (
-                            <span className="text-[10px] text-blue-600 font-semibold" title={companionList.join(", ")}>
-                              You + {pOnes} companion{pOnes > 1 ? "s" : ""}
+                        <div className="flex flex-col gap-1 items-start">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-slate-900">
+                              {1 + pOnes} {1 + pOnes === 1 ? "Head" : "Heads"}
                             </span>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Dietary */}
-                      <td className="py-3 px-4">
-                        {(rsvp.dietaryPreference || rsvp.dietary_preference) && (rsvp.dietaryPreference || rsvp.dietary_preference) !== "None" ? (
-                          <div className="flex flex-col gap-0.5">
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 border border-emerald-200 text-emerald-700 w-fit">
-                              <span>🍽️</span>
-                              <span>{rsvp.dietaryPreference || rsvp.dietary_preference}</span>
-                            </span>
-                            {(rsvp.dietaryNotes || rsvp.dietary_notes) && (
-                              <span className="text-[10px] text-slate-400 italic line-clamp-1">
-                                {rsvp.dietaryNotes || rsvp.dietary_notes}
+                            {pOnes > 0 && (
+                              <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-md bg-blue-50 text-blue-700 border border-blue-200/60">
+                                +{pOnes}
                               </span>
                             )}
                           </div>
-                        ) : (
-                          <span className="text-[11px] text-slate-400">Standard</span>
-                        )}
+
+                          {pOnes === 0 ? (
+                            <span className="text-[10px] text-slate-400 font-medium">Solo Guest</span>
+                          ) : (
+                            <div className="flex flex-col gap-1 items-start">
+                              {companionList.length > 0 && companionList.some(n => n && n.trim()) ? (
+                                <div className="flex flex-wrap items-center gap-1">
+                                  {companionList.map((name, i) => (
+                                    <button
+                                      key={i}
+                                      type="button"
+                                      onClick={() => openPartyModal(rsvp)}
+                                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-blue-50 hover:bg-blue-100/80 text-blue-700 border border-blue-200/70 text-[11px] font-medium transition-colors cursor-pointer text-left max-w-[170px] truncate group shadow-2xs"
+                                      title={`Companion #${i + 1}: ${name} (Click to view party details)`}
+                                    >
+                                      <UserCheck size={11} className="text-blue-600 shrink-0 group-hover:scale-110 transition-transform" />
+                                      <span className="truncate">{name}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => openPartyModal(rsvp)}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 border border-transparent text-slate-600 text-[10px] font-semibold transition-colors cursor-pointer shadow-2xs"
+                                  title="Click to view or specify companion names"
+                                >
+                                  <Users size={11} className="text-slate-400" />
+                                  <span>View {pOnes} Companion{pOnes > 1 ? "s" : ""}</span>
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </td>
 
                       {/* Notes */}
@@ -921,14 +997,24 @@ export default function RSVPView({
                           )}
 
                           {st === "archived" ? (
-                            <button
-                              onClick={() => handleQuickStatusChange(rsvp.id, "attending")}
-                              className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 transition-colors cursor-pointer flex items-center gap-1 text-[11px] font-bold"
-                              title="Restore RSVP"
-                            >
-                              <RotateCcw size={13} />
-                              <span>Restore</span>
-                            </button>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleQuickStatusChange(rsvp.id, "attending")}
+                                className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 transition-colors cursor-pointer flex items-center gap-1 text-[11px] font-bold"
+                                title="Restore RSVP"
+                              >
+                                <RotateCcw size={13} />
+                                <span>Restore</span>
+                              </button>
+                              <button
+                                onClick={() => handlePermanentDelete(rsvp.id, rsvp.fullName || rsvp.full_name)}
+                                className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition-colors cursor-pointer flex items-center gap-1 text-[11px] font-bold"
+                                title="Delete RSVP Permanently"
+                              >
+                                <Trash2 size={13} />
+                                <span>Delete</span>
+                              </button>
+                            </div>
                           ) : (
                             <button
                               onClick={() => handleArchive(rsvp.id, rsvp.fullName || rsvp.full_name)}
@@ -954,8 +1040,8 @@ export default function RSVPView({
       {/* ─────────────────────────────────────────────
           5. SETTINGS DRAWER / MODAL
       ───────────────────────────────────────────── */}
-      {isSettingsOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-fade-in">
+      {mounted && isSettingsOpen && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-md animate-fade-in font-sans">
           <div className="w-full max-w-lg bg-white border border-slate-200 rounded-3xl p-6 shadow-2xl space-y-5 animate-scale-up">
             <div className="flex items-center justify-between border-b border-slate-150 pb-4">
               <div className="flex items-center gap-2">
@@ -964,7 +1050,7 @@ export default function RSVPView({
               </div>
               <button 
                 onClick={() => setIsSettingsOpen(false)}
-                className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:text-rose-500 transition-colors"
+                className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
               >
                 ✕
               </button>
@@ -1091,14 +1177,15 @@ export default function RSVPView({
 
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ─────────────────────────────────────────────
           6. MANUAL GUEST RSVP MODAL
       ───────────────────────────────────────────── */}
-      {isManualModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
+      {mounted && isManualModalOpen && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-md animate-fade-in font-sans overflow-y-auto">
           <div className="w-full max-w-lg bg-white border border-slate-200 rounded-3xl p-6 shadow-2xl space-y-5 animate-scale-up my-8">
             <div className="flex items-center justify-between border-b border-slate-150 pb-4">
               <div className="flex items-center gap-2">
@@ -1107,7 +1194,7 @@ export default function RSVPView({
               </div>
               <button 
                 onClick={() => setIsManualModalOpen(false)}
-                className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:text-rose-500 transition-colors"
+                className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
               >
                 ✕
               </button>
@@ -1190,7 +1277,7 @@ export default function RSVPView({
 
               {/* Plus Ones */}
               {manualForm.status === "attending" && (
-                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2.5">
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-slate-800">Companions (+1s)</span>
                     <div className="flex items-center gap-1">
@@ -1198,8 +1285,16 @@ export default function RSVPView({
                         <button
                           key={n}
                           type="button"
-                          onClick={() => setManualForm({ ...manualForm, plusOnes: n })}
-                          className={`w-7 h-7 rounded-lg text-xs font-bold ${
+                          onClick={() => {
+                            const currentNames = [...(manualForm.plusOnesNames || [])];
+                            while (currentNames.length < n) currentNames.push("");
+                            setManualForm({ 
+                              ...manualForm, 
+                              plusOnes: n,
+                              plusOnesNames: currentNames.slice(0, n)
+                            });
+                          }}
+                          className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
                             manualForm.plusOnes === n ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-200'
                           }`}
                         >
@@ -1208,19 +1303,33 @@ export default function RSVPView({
                       ))}
                     </div>
                   </div>
-                </div>
-              )}
 
-              {/* Dietary */}
-              {manualForm.status === "attending" && (
-                <div>
-                  <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">Dietary Preference</label>
-                  <SearchableSelect
-                    value={manualForm.dietaryPreference}
-                    onChange={(val) => setManualForm({ ...manualForm, dietaryPreference: val })}
-                    options={DIETARY_OPTIONS.map(d => ({ value: d.id, label: d.label }))}
-                    placeholder="Select dietary preference..."
-                  />
+                  {manualForm.plusOnes > 0 && (
+                    <div className="space-y-2 pt-2 border-t border-slate-200/80">
+                      <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">
+                        Companion Full Names
+                      </label>
+                      {[...Array(manualForm.plusOnes)].map((_, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold flex items-center justify-center shrink-0">
+                            {idx + 1}
+                          </span>
+                          <input
+                            type="text"
+                            value={manualForm.plusOnesNames?.[idx] || ""}
+                            onChange={(e) => {
+                              const next = [...(manualForm.plusOnesNames || [])];
+                              while (next.length <= idx) next.push("");
+                              next[idx] = e.target.value;
+                              setManualForm({ ...manualForm, plusOnesNames: next });
+                            }}
+                            placeholder={`Companion #${idx + 1} Full Name`}
+                            className="flex-1 px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-600 shadow-2xs"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1241,7 +1350,7 @@ export default function RSVPView({
                 <button
                   type="button"
                   onClick={() => setIsManualModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50"
+                  className="px-4 py-2 rounded-xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -1256,53 +1365,113 @@ export default function RSVPView({
 
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ─────────────────────────────────────────────
           7. SHARE LINK & QR CODE MODAL
       ───────────────────────────────────────────── */}
-      {isShareModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-md bg-white border border-slate-200 rounded-3xl p-6 shadow-2xl space-y-5 animate-scale-up text-center">
-            <div className="flex items-center justify-between border-b border-slate-150 pb-3 text-left">
-              <div className="flex items-center gap-2">
-                <Share2 size={18} className="text-blue-600" />
-                <h3 className="text-base font-black text-slate-900">Public RSVP Link</h3>
+      {mounted && isShareModalOpen && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-md animate-fade-in font-sans">
+          <div className="w-full max-w-lg bg-white border border-slate-200 rounded-3xl p-6 sm:p-7 shadow-2xl space-y-5 animate-scale-up text-center">
+            <div className="flex items-center justify-between border-b border-slate-150 pb-3.5 text-left">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <Share2 size={18} />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900">Share Public RSVP Link</h3>
+                  <p className="text-xs text-slate-400 font-medium">Allow guests to submit attendance responses and receive digital passes.</p>
+                </div>
               </div>
               <button 
                 onClick={() => setIsShareModalOpen(false)}
-                className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:text-rose-500 transition-colors"
+                className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:text-rose-500 hover:border-rose-200 transition-colors cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
             <div className="space-y-4">
+              {/* QR Code Container */}
               {shareQrUrl && (
-                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 w-fit mx-auto shadow-2xs">
-                  <img src={shareQrUrl} alt="RSVP QR Code" className="w-44 h-44 object-contain mx-auto" />
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mt-2">Scan to RSVP on Mobile</span>
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 w-fit mx-auto shadow-2xs space-y-2.5">
+                  <img src={shareQrUrl} alt="RSVP QR Code" className="w-48 h-48 object-contain mx-auto rounded-lg bg-white p-1" />
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="text-[11px] font-bold text-slate-500">Scan on mobile</span>
+                    <span>•</span>
+                    <button
+                      onClick={handleDownloadQr}
+                      className="text-[11px] font-bold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <Download size={12} />
+                      <span>Download QR (PNG)</span>
+                    </button>
+                  </div>
                 </div>
               )}
 
-              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-left space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Shareable Direct URL</label>
+              {/* Direct Copyable Link */}
+              <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-left space-y-1.5">
+                <div className="flex justify-between items-center">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Direct Guest RSVP URL</label>
+                  {copiedLink && (
+                    <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1">
+                      <Check size={11} /> Link Copied to Clipboard!
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center gap-2">
                   <input
                     type="text"
                     readOnly
-                    value={typeof window !== 'undefined' ? `${window.location.origin}/?event=${activeEventId}&view=rsvp` : ""}
-                    className="flex-1 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-700"
+                    value={getPublicRsvpUrl()}
+                    className="flex-1 px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-800 outline-none select-all"
+                    onClick={(e) => e.target.select()}
                   />
                   <button
                     onClick={handleCopyShareLink}
-                    className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors shadow-xs"
+                    className={`px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all shadow-xs shrink-0 ${
+                      copiedLink ? "bg-emerald-600 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"
+                    }`}
                   >
-                    {copiedLink ? <Check size={13} /> : <Copy size={13} />}
-                    <span>{copiedLink ? "Copied" : "Copy"}</span>
+                    {copiedLink ? <Check size={14} /> : <Copy size={14} />}
+                    <span>{copiedLink ? "Copied" : "Copy Link"}</span>
                   </button>
                 </div>
+              </div>
+
+              {/* Action Buttons: Preview & Social Sharing */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const url = getPublicRsvpUrl();
+                    if (url) window.open(url, "_blank");
+                  }}
+                  className="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <ExternalLink size={13} className="text-slate-600" />
+                  <span>Open RSVP Page</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleShareWhatsApp}
+                  className="py-2.5 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <span>💬 WhatsApp</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleShareEmail}
+                  className="py-2.5 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200/80 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Mail size={13} className="text-indigo-600" />
+                  <span>Send Email</span>
+                </button>
               </div>
 
               {onOpenPublicRSVP && (
@@ -1311,15 +1480,211 @@ export default function RSVPView({
                     setIsShareModalOpen(false);
                     onOpenPublicRSVP();
                   }}
-                  className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                  className="text-xs font-semibold text-slate-400 hover:text-blue-600 pt-1 block mx-auto cursor-pointer"
                 >
-                  <ExternalLink size={13} />
-                  <span>Preview Guest Submission Modal</span>
+                  Test In-Modal Guest Response Form →
                 </button>
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ─────────────────────────────────────────────
+          8. GUEST PARTY & COMPANIONS MODAL
+      ───────────────────────────────────────────── */}
+      {mounted && selectedPartyRsvp && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-md animate-fade-in font-sans">
+          <div className="w-full max-w-lg bg-white border border-slate-200/90 rounded-3xl shadow-2xl overflow-hidden my-auto animate-scale-up text-slate-900 flex flex-col max-h-[90vh]">
+            
+            {/* Header */}
+            <div className="p-5 sm:px-6 sm:py-4.5 border-b border-slate-150 bg-gradient-to-b from-slate-50/90 to-white flex items-center justify-between gap-4 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-2xl bg-blue-50 text-blue-600 border border-blue-200/60 flex items-center justify-center shadow-2xs">
+                  <Users size={18} />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900">Guest Party & Companions</h3>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Party of {1 + parseInt(selectedPartyRsvp.plusOnes || selectedPartyRsvp.plus_ones || 0, 10)} for {selectedPartyRsvp.fullName || selectedPartyRsvp.full_name}
+                  </p>
+                </div>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setSelectedPartyRsvp(null)}
+                className="w-8 h-8 rounded-full border border-slate-200 bg-white hover:bg-slate-100 text-slate-400 hover:text-slate-700 flex items-center justify-center transition-colors cursor-pointer shrink-0 shadow-2xs"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="p-5 sm:p-6 flex-1 overflow-y-auto space-y-4 text-xs [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-slate-200 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
+              
+              {/* Primary Guest Card */}
+              <div className="p-4 bg-slate-50/90 border border-slate-200/90 rounded-2xl space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Primary Guest</span>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold capitalize ${
+                    (selectedPartyRsvp.status || 'attending') === 'attending' 
+                      ? 'bg-emerald-100 text-emerald-800' 
+                      : (selectedPartyRsvp.status || '') === 'waitlisted'
+                      ? 'bg-amber-100 text-amber-800'
+                      : 'bg-rose-100 text-rose-800'
+                  }`}>
+                    {selectedPartyRsvp.status || 'Attending'}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold flex items-center justify-center text-sm shadow-xs shrink-0">
+                    {(selectedPartyRsvp.fullName || selectedPartyRsvp.full_name || 'G').charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-bold text-slate-900 truncate">
+                      {selectedPartyRsvp.fullName || selectedPartyRsvp.full_name}
+                    </div>
+                    <div className="text-slate-500 truncate text-[11px]">{selectedPartyRsvp.email}</div>
+                    {(selectedPartyRsvp.phone || selectedPartyRsvp.company) && (
+                      <div className="text-[10px] text-slate-400 mt-0.5 flex flex-wrap items-center gap-2">
+                        {selectedPartyRsvp.phone && <span>{selectedPartyRsvp.phone}</span>}
+                        {selectedPartyRsvp.company && <span>• {selectedPartyRsvp.company}</span>}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Companions Section */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between pt-1">
+                  <div className="flex items-center gap-1.5">
+                    <UserPlus size={14} className="text-blue-600" />
+                    <span className="font-bold text-slate-800">
+                      Companion Guests ({parseInt(selectedPartyRsvp.plusOnes || selectedPartyRsvp.plus_ones || 0, 10)})
+                    </span>
+                  </div>
+
+                  {parseInt(selectedPartyRsvp.plusOnes || selectedPartyRsvp.plus_ones || 0, 10) > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingPartyNames(!isEditingPartyNames)}
+                      className="text-[11px] font-bold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <Edit3 size={12} />
+                      <span>{isEditingPartyNames ? "Cancel Edit" : "Edit Names"}</span>
+                    </button>
+                  )}
+                </div>
+
+                {parseInt(selectedPartyRsvp.plusOnes || selectedPartyRsvp.plus_ones || 0, 10) === 0 ? (
+                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-center text-slate-400 space-y-1">
+                    <Users size={20} className="mx-auto text-slate-300 stroke-[1.5]" />
+                    <p className="font-semibold text-xs text-slate-600">Solo Attendee</p>
+                    <p className="text-[11px] text-slate-400">This guest registered without additional companions (+1s).</p>
+                  </div>
+                ) : isEditingPartyNames ? (
+                  <div className="p-4 bg-blue-50/50 border border-blue-200/70 rounded-2xl space-y-3">
+                    <p className="text-[11px] text-blue-800 font-medium">
+                      Enter or update the full names for each companion in this party:
+                    </p>
+                    <div className="space-y-2">
+                      {partyNamesInput.map((name, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-bold text-[10px] flex items-center justify-center shrink-0">
+                            #{idx + 1}
+                          </span>
+                          <input
+                            type="text"
+                            value={name}
+                            onChange={(e) => {
+                              const next = [...partyNamesInput];
+                              next[idx] = e.target.value;
+                              setPartyNamesInput(next);
+                            }}
+                            placeholder={`Companion #${idx + 1} Full Name`}
+                            className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 transition-all shadow-2xs"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-blue-200/50">
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingPartyNames(false)}
+                        className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 font-bold text-xs cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSavePartyNames}
+                        disabled={isSavingParty}
+                        className="px-4 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors cursor-pointer shadow-xs"
+                      >
+                        {isSavingParty ? "Saving..." : "Save Companion Names"}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {partyNamesInput.map((name, idx) => (
+                      <div 
+                        key={idx} 
+                        className="p-3 bg-white border border-slate-200 rounded-2xl flex items-center justify-between gap-3 shadow-2xs"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="w-6 h-6 rounded-full bg-blue-50 text-blue-600 font-bold text-[10px] flex items-center justify-center shrink-0 border border-blue-100">
+                            #{idx + 1}
+                          </span>
+                          <div className="min-w-0">
+                            {name ? (
+                              <div className="font-bold text-slate-900 truncate">{name}</div>
+                            ) : (
+                              <div className="text-slate-400 italic text-[11px]">Name not specified yet</div>
+                            )}
+                            <div className="text-[10px] text-slate-400">Companion Guest</div>
+                          </div>
+                        </div>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200/60 shrink-0">
+                          <UserCheck size={10} />
+                          <span>Admitted with Party</span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Notes or Special Requests */}
+              {selectedPartyRsvp.notes && (
+                <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Party Notes / Requests</span>
+                  <p className="text-slate-700 text-xs leading-relaxed">{selectedPartyRsvp.notes}</p>
+                </div>
+              )}
+
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 sm:px-6 border-t border-slate-150 bg-slate-50/80 shrink-0 flex items-center justify-between gap-3">
+              <div className="text-[11px] font-semibold text-slate-500">
+                Total Headcount: <span className="font-bold text-slate-900">{1 + parseInt(selectedPartyRsvp.plusOnes || selectedPartyRsvp.plus_ones || 0, 10)} Guests</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedPartyRsvp(null)}
+                className="py-2 px-5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+
+          </div>
+        </div>,
+        document.body
       )}
 
     </div>

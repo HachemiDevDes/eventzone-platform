@@ -190,7 +190,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
 
   // Determine top stepper main step number (1, 2, or 3)
   const getMainStepNumber = () => {
-    if (currentScreen === "1A" || currentScreen === "1B") return 1;
+    if (currentScreen === "1A") return 1;
     if (["2A", "2B", "2C", "2D", "2E"].includes(currentScreen)) return 2;
     return 3;
   };
@@ -207,14 +207,6 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
     const autoSlug = formData.title.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
     if (autoSlug && (!formData.slug || formData.slug === "myevent")) {
       handleChange("slug", autoSlug);
-    }
-    setCurrentScreen("1B");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const handleNextFrom1B = (chosenType) => {
-    if (chosenType) {
-      handleChange("eventTypeCategory", chosenType);
     }
     setCurrentScreen("2A");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -256,10 +248,8 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
   const handleBack = () => {
     if (currentScreen === "1A") {
       if (onCancel) onCancel();
-    } else if (currentScreen === "1B") {
-      setCurrentScreen("1A");
     } else if (currentScreen === "2A") {
-      setCurrentScreen("1B");
+      setCurrentScreen("1A");
     } else if (currentScreen === "2B") {
       setCurrentScreen("2A");
     } else if (currentScreen === "2C") {
@@ -484,79 +474,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
         )}
 
         {/* ────────────────────────────────────────────────────────────────── */}
-        {/* SUB-STEP 1B (SCREENSHOT 1): What best describes "{Event Name}"?    */}
-        {/* ────────────────────────────────────────────────────────────────── */}
-        {currentScreen === "1B" && (
-          <div className="w-full animate-fade-in text-center">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
-              What best describes &ldquo;{formData.title || "Algeria job summit"}&rdquo;?
-            </h1>
-            <p className="text-sm text-slate-500 font-medium mt-2 mb-8">
-              This helps us customize your experience.
-            </p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto">
-              {[
-                {
-                  id: "Professional Event",
-                  title: "Professional Event",
-                  desc: "Conferences, summits, trade expos, corporate networking"
-                },
-                {
-                  id: "Community Event",
-                  title: "Community Event",
-                  desc: "Meetups, workshops, cultural gatherings, open days"
-                },
-                {
-                  id: "Personal Event",
-                  title: "Personal Event",
-                  desc: "Celebrations, parties, private gatherings"
-                }
-              ].map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => handleNextFrom1B(item.id)}
-                  className={`p-6 sm:p-8 rounded-2xl border text-center transition-all duration-200 cursor-pointer flex flex-col justify-center items-center gap-2 group hover:shadow-md ${
-                    formData.eventTypeCategory === item.id
-                      ? "bg-white border-blue-600 shadow-md ring-2 ring-blue-500/20"
-                      : "bg-white border-slate-200/90 hover:border-blue-400 hover:bg-blue-50/20"
-                  }`}
-                >
-                  <span className={`text-base font-bold transition-colors ${
-                    formData.eventTypeCategory === item.id ? "text-blue-600" : "text-slate-800 group-hover:text-blue-600"
-                  }`}>
-                    {item.title}
-                  </span>
-                  <span className="text-[11px] text-slate-400 font-medium leading-relaxed">
-                    {item.desc}
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            <div className="flex items-center justify-between max-w-3xl mx-auto mt-8 pt-4 border-t border-slate-200/70">
-              <button
-                type="button"
-                onClick={handleBack}
-                className="px-5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold text-xs transition-all cursor-pointer"
-              >
-                Back
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleNextFrom1B(formData.eventTypeCategory)}
-                className="px-7 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-md shadow-blue-600/30 transition-all cursor-pointer"
-              >
-                Next: Event details
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ────────────────────────────────────────────────────────────────── */}
-        {/* SUB-STEP 2A (SCREENSHOT 2): What best describes your event?        */}
+        {/* SUB-STEP 2A: What best describes your event? (Structure)          */}
         {/* ────────────────────────────────────────────────────────────────── */}
         {currentScreen === "2A" && (
           <div className="w-full animate-fade-in text-center">

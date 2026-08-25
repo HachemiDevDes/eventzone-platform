@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import SearchableSelect from "./SearchableSelect";
 import { useLanguage } from "../lib/i18n";
+import { AnalyticsSkeleton } from "./SkeletonLoaders";
 
 /**
  * AnalyticsView - Eventzone Intelligence Command Center
@@ -1209,6 +1210,10 @@ export default function AnalyticsView({
   // ─────────────────────────────────────────────────────────────────────────────
   // RENDER (Spread seamlessly across clean dashboard sections)
   // ─────────────────────────────────────────────────────────────────────────────
+  if (state?.isLoading) {
+    return <AnalyticsSkeleton />;
+  }
+
   return (
     <div className="space-y-6 animate-fade-in text-slate-800 pb-16">
       

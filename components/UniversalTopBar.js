@@ -195,12 +195,16 @@ export default function UniversalTopBar({
               className="flex items-center gap-2.5 p-1.5 pr-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-full transition-all cursor-pointer shadow-xs"
             >
               <img 
-                src={currentUser.avatar || currentUser.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80"} 
+                src={currentUser.avatar || currentUser.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.fullName || currentUser.full_name || "User")}&background=0b5cdb&color=fff`} 
                 alt="Avatar" 
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.fullName || currentUser.full_name || "User")}&background=0b5cdb&color=fff`;
+                }}
                 className="w-7 h-7 rounded-full object-cover border border-blue-500/40"
               />
               <div className="hidden sm:flex flex-col text-left">
-                <span className="text-xs font-bold text-slate-800 leading-tight truncate max-w-[120px]">{currentUser.fullName || currentUser.full_name || "User"}</span>
+                <span className="text-xs font-bold text-slate-800 leading-tight truncate max-w-[120px]">{currentUser.fullName || currentUser.full_name || currentUser.email?.split("@")[0] || "User"}</span>
                 <span className="text-[9px] font-semibold text-blue-600 uppercase tracking-wider">
                   {currentUser.role === "organizer" ? "Organizer" : "Visitor"}
                 </span>

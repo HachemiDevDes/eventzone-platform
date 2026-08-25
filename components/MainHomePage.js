@@ -13,11 +13,13 @@ import QRCode from "qrcode";
 import { useLanguage } from "../lib/i18n";
 import UniversalTopBar from "./UniversalTopBar";
 import SearchableSelect from "./SearchableSelect";
+import { HomePageSkeleton } from "./SkeletonLoaders";
 
 export default function MainHomePage({
   events = [],
   registrations = [],
   currentUser,
+  isLoading = false,
   onOpenAuth,
   onSignOut,
   onSwitchRole,
@@ -52,7 +54,7 @@ export default function MainHomePage({
   const [rsvpEvent, setRsvpEvent] = useState(null);
   const [rsvpName, setRsvpName] = useState(currentUser?.fullName || "");
   const [rsvpEmail, setRsvpEmail] = useState(currentUser?.email || "");
-  const [rsvpTier, setRsvpTier] = useState("VIP Access Pass");
+  const [rsvpTier, setRsvpTier] = useState("General Admission");
   const [rsvpLoading, setRsvpLoading] = useState(false);
   const [rsvpSuccess, setRsvpSuccess] = useState(null);
   const [qrCodeUrls, setQrCodeUrls] = useState({});
@@ -155,6 +157,10 @@ export default function MainHomePage({
   };
 
   const activeSlide = heroEvents[currentSlideIndex] || heroEvents[0] || {};
+
+  if (isLoading && events.length === 0) {
+    return <HomePageSkeleton />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
@@ -725,8 +731,8 @@ export default function MainHomePage({
                       value={rsvpTier}
                       onChange={(val) => setRsvpTier(val)}
                       options={[
-                        { value: "VIP Access Pass", label: "VIP Access Pass (Full floor plan + networking)" },
-                        { value: "Standard Admission", label: "Standard Admission (Keynotes + Expo Hall)" },
+                        { value: "General Admission", label: "General Admission (Keynotes + Expo Hall)" },
+                        { value: "All-Access Pass", label: "All-Access Pass (Full floor plan + networking)" },
                         { value: "Online Only", label: "Online Stream Pass" }
                       ]}
                       placeholder="Select access tier..."

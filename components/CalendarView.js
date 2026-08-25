@@ -1,14 +1,16 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Calendar, Archive, RotateCcw, Camera, Upload, Check, Loader2, X } from "lucide-react";
+import { Calendar, Archive, RotateCcw, Camera, Upload, Check, Loader2, X, Trash2 } from "lucide-react";
 import CustomDatePicker from "./CustomDatePicker";
 import CustomTimePicker from "./CustomTimePicker";
 import { generateUuid } from "../lib/db";
+import { CalendarSkeleton } from "./SkeletonLoaders";
 
 export default function CalendarView({
   sessions = [],
   attendees = [],
+  isLoading = false,
   onSaveSessions,
   onClearAllSessions,
   onUploadFile
@@ -321,10 +323,21 @@ export default function CalendarView({
     onSaveSessions(sessions.map(s => s.id === id ? { ...s, status: "published", isArchived: false } : s));
   };
 
+  const handleDeletePermanent = (id) => {
+    if (confirm("Permanently delete this session from the calendar? This action cannot be undone.")) {
+      onSaveSessions(sessions.filter(s => s.id !== id));
+      if (editingSessionId === id) resetForm();
+    }
+  };
+
   const handleDelete = handleArchive;
 
+  // Active vs Archived sessions
+  const activeSessions = sessions.filter(s => s.status !== "archived" && !s.isArchived);
+  const archivedSessions = sessions.filter(s => s.status === "archived" || s.isArchived);
+
   // Timeline separation logic - filter active sessions by default
-  const uniqueDates = [...new Set(sessions.filter(s => s.status !== "archived" && !s.isArchived).map(s => s.date))].filter(Boolean).sort();
+  const uniqueDates = [...new Set(activeSessions.map(s => s.date))].filter(Boolean).sort();
 
   const filteredSessions = sessions
     .filter(s => {
@@ -370,6 +383,10 @@ export default function CalendarView({
     const dates = `${formatGCalDate(start)}/${formatGCalDate(end)}`;
     return `${baseUrl}&text=${titleText}&details=${descText}&dates=${dates}`;
   };
+
+  if (isLoading) {
+    return <CalendarSkeleton />;
+  }
 
   return (
     <div className="flex flex-1 w-full min-h-[calc(100vh-140px)] bg-white border border-slate-200 rounded-3xl shadow-xs overflow-hidden">
@@ -723,7 +740,7 @@ export default function CalendarView({
         </header>
 
         {/* Dynamic Day Filter Tabs */}
-        {uniqueDates.length > 1 && (
+        {(uniqueDates.length > 1 || archivedSessions.length > 0) && (
           <div className="flex gap-2 p-1.5 bg-slate-200/70 rounded-2xl w-fit mb-6 max-w-full overflow-x-auto shrink-0 scrollbar-none">
             <button
               type="button"
@@ -732,7 +749,7 @@ export default function CalendarView({
                 activeFilter === "all" ? "bg-white text-blue-600 shadow-xs" : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              All Dates ({sessions.length})
+              All Active ({activeSessions.length})
             </button>
             {uniqueDates.map((date, i) => (
               <button
@@ -746,6 +763,18 @@ export default function CalendarView({
                 Day {i + 1} ({formatDateLabel(date)})
               </button>
             ))}
+            {archivedSessions.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setActiveFilter("archived")}
+                className={`px-4 py-2 rounded-xl font-bold text-xs transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                  activeFilter === "archived" ? "bg-amber-500 text-white shadow-xs" : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <Archive size={13} />
+                <span>Archived ({archivedSessions.length})</span>
+              </button>
+            )}
           </div>
         )}
 
@@ -755,14 +784,19 @@ export default function CalendarView({
             <div className="flex flex-col items-center justify-center text-center p-16 bg-white border border-slate-200 rounded-3xl gap-3 text-slate-400">
               <Calendar size={48} className="opacity-25" />
               <div>
-                <h3 className="text-base font-bold text-slate-700">No sessions scheduled</h3>
-                <p className="text-xs text-slate-400 mt-1">Use the panel on the left to add your first session details.</p>
+                <h3 className="text-base font-bold text-slate-700">
+                  {activeFilter === "archived" ? "No archived sessions" : "No sessions scheduled"}
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  {activeFilter === "archived" ? "Archived sessions will appear here." : "Use the panel on the left to add your first session details."}
+                </p>
               </div>
             </div>
           ) : (
             (() => {
               let lastDate = null;
               return filteredSessions.map(session => {
+                const isArchivedSession = session.status === "archived" || session.isArchived;
                 const renderSeparator = activeFilter === "all" && session.date !== lastDate;
                 if (renderSeparator) {
                   lastDate = session.date;
@@ -779,30 +813,63 @@ export default function CalendarView({
                       </div>
                     )}
 
-                    <div className="bg-white border border-slate-200 rounded-3xl p-6 flex flex-col gap-4 hover:shadow-md transition-all relative group">
+                    <div className={`bg-white border ${isArchivedSession ? 'border-slate-200 opacity-80' : 'border-slate-200'} rounded-3xl p-6 flex flex-col gap-4 hover:shadow-md transition-all relative group`}>
                       <div className="flex justify-between items-start gap-4">
-                        <div className="px-3 py-1 bg-blue-50 border border-blue-200/80 rounded-full text-blue-700 font-extrabold text-xs select-none">
-                          <span>{session.startTime} — {session.endTime}</span>
+                        <div className="flex items-center gap-2">
+                          <div className="px-3 py-1 bg-blue-50 border border-blue-200/80 rounded-full text-blue-700 font-extrabold text-xs select-none">
+                            <span>{session.startTime} — {session.endTime}</span>
+                          </div>
+                          {isArchivedSession && (
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
+                              Archived
+                            </span>
+                          )}
                         </div>
 
                         <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button 
-                            type="button"
-                            onClick={() => startEdit(session)}
-                            className="px-2.5 py-1 bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 rounded-lg text-xs font-bold transition-colors cursor-pointer"
-                            title="Edit Session"
-                          >
-                            Edit
-                          </button>
-                          <button 
-                            type="button"
-                            onClick={() => handleArchive(session.id)}
-                            className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
-                            title="Archive Session (Data preserved)"
-                          >
-                            <Archive size={11} />
-                            <span>Archive</span>
-                          </button>
+                          {!isArchivedSession && (
+                            <button 
+                              type="button"
+                              onClick={() => startEdit(session)}
+                              className="px-2.5 py-1 bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                              title="Edit Session"
+                            >
+                              Edit
+                            </button>
+                          )}
+
+                          {isArchivedSession ? (
+                            <div className="flex items-center gap-1">
+                              <button 
+                                type="button"
+                                onClick={() => handleRestore(session.id)}
+                                className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
+                                title="Restore Session"
+                              >
+                                <RotateCcw size={12} />
+                                <span>Restore</span>
+                              </button>
+                              <button 
+                                type="button"
+                                onClick={() => handleDeletePermanent(session.id)}
+                                className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
+                                title="Delete Session Permanently"
+                              >
+                                <Trash2 size={12} />
+                                <span>Delete</span>
+                              </button>
+                            </div>
+                          ) : (
+                            <button 
+                              type="button"
+                              onClick={() => handleArchive(session.id)}
+                              className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
+                              title="Archive Session (Data preserved)"
+                            >
+                              <Archive size={11} />
+                              <span>Archive</span>
+                            </button>
+                          )}
                         </div>
                       </div>
 
