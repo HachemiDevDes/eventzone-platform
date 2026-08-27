@@ -905,15 +905,9 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
 
   // Helper to detect company sponsor/exhibitor role for an attendee
   const getAttendeeRoleInfo = (a) => {
-    const org = organizations.find(o => o.id === a.orgId || o.id === a.org_id || (a.company && o.name && a.company.trim().toLowerCase() === o.name.trim().toLowerCase()));
-    const sponsor = sponsors.find(s => !s.isArchived && s.status !== 'archived' && (
-      (org && (s.orgId === org.id || s.org_id === org.id)) ||
-      (a.company && s.name && a.company.trim().toLowerCase() === s.name.trim().toLowerCase())
-    ));
-    const exhibitor = exhibitors.find(e => !e.isArchived && e.status !== 'archived' && (
-      (org && (e.orgId === org.id || e.org_id === org.id)) ||
-      (a.company && e.name && a.company.trim().toLowerCase() === e.name.trim().toLowerCase())
-    ));
+    const org = organizations.find(o => (a.orgId && o.id === a.orgId) || (a.org_id && o.id === a.org_id));
+    const sponsor = org ? sponsors.find(s => !s.isArchived && s.status !== 'archived' && (s.orgId === org.id || s.org_id === org.id)) : null;
+    const exhibitor = org ? exhibitors.find(e => !e.isArchived && e.status !== 'archived' && (e.orgId === org.id || e.org_id === org.id)) : null;
     return { org, sponsor, exhibitor };
   };
 
@@ -2445,8 +2439,8 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
 
   // Helper to check linked sponsor/exhibitor roles
   const getOrgRoles = (org) => {
-    const isSponsor = sponsors.find(s => !s.isArchived && s.status !== 'archived' && (s.orgId === org.id || s.org_id === org.id || (s.name && org.name && s.name.toLowerCase() === org.name.toLowerCase())));
-    const isExhibitor = exhibitors.find(e => !e.isArchived && e.status !== 'archived' && (e.orgId === org.id || e.org_id === org.id || (e.name && org.name && e.name.toLowerCase() === org.name.toLowerCase())));
+    const isSponsor = org?.id ? sponsors.find(s => !s.isArchived && s.status !== 'archived' && (s.orgId === org.id || s.org_id === org.id)) : null;
+    const isExhibitor = org?.id ? exhibitors.find(e => !e.isArchived && e.status !== 'archived' && (e.orgId === org.id || e.org_id === org.id)) : null;
     return { isSponsor, isExhibitor };
   };
 

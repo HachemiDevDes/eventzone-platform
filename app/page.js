@@ -79,7 +79,7 @@ import {
   fetchInfluencers, upsertInfluencer, deleteInfluencer, archiveInfluencer, recordInfluencerClick,
   fetchTickets, upsertTicket, deleteTicket, archiveTicket,
   fetchTeam, upsertTeamMember, deleteTeamMember, archiveTeamMember,
-  fetchFloorPlans, upsertFloorPlan, deleteFloorPlan, archiveFloorPlan, generateUuid,
+  fetchFloorPlans, upsertFloorPlan, deleteFloorPlan, archiveFloorPlan, restoreFloorPlan, permanentDeleteFloorPlan, generateUuid,
   fetchForms, upsertForm, deleteForm, archiveForm,
   fetchFormSubmissions, submitFormResponse, deleteFormSubmission,
   fetchRSVPs, fetchRSVPSettings, upsertRSVPSettings, submitGuestRSVP, updateRSVPStatus, deleteRSVP, archiveRSVP,
@@ -1424,7 +1424,27 @@ export function HomeContent() {
     }
   };
 
-  const handleDeleteFloorPlan = handleArchiveFloorPlan;
+  const handleRestoreFloorPlan = async (id) => {
+    try {
+      await restoreFloorPlan(id);
+      setFloorPlans(prev => prev.map(p => p.id === id ? { ...p, status: 'published', isArchived: false } : p));
+    } catch (err) {
+      console.error("Restore floor plan error:", err);
+    }
+  };
+
+  const handlePermanentDeleteFloorPlan = async (id) => {
+    try {
+      await permanentDeleteFloorPlan(id);
+      setFloorPlans(prev => prev.filter(p => p.id !== id));
+      if (activeFloorPlanId === id) setActiveFloorPlanId(null);
+    } catch (err) {
+      console.error("Permanent delete floor plan error:", err);
+      setFloorPlans(prev => prev.filter(p => p.id !== id));
+    }
+  };
+
+  const handleDeleteFloorPlan = handlePermanentDeleteFloorPlan;
 
   const handleRenameFloorPlan = async (id, newName) => {
     setFloorPlans(prev => {
@@ -1842,17 +1862,23 @@ export function HomeContent() {
         return exists ? prev.map(o => o.id === saved.id ? saved : o) : [...prev, saved];
       });
 
-      // If user also checked "Designate as Sponsor"
+      // 1. Manage Sponsor Linkage
+      const existingSponsor = (sponsors || []).find(s => !s.isArchived && (s.orgId === saved.id || s.org_id === saved.id));
       if (linkOptions.createSponsor) {
         const sponsorPayload = {
+          id: existingSponsor?.id,
           name: saved.name,
           orgId: saved.id,
           tier: linkOptions.sponsorTier || 'silver',
           amount: linkOptions.sponsorAmount || null,
+          currency: linkOptions.sponsorCurrency || 'DZD',
           website: saved.website || '#',
           image: saved.logo || '',
           industry: saved.industry || '',
           contact: saved.contact || '',
+          booth: linkOptions.sponsorBooth || '',
+          perks: linkOptions.sponsorPerks || ['vip_passes', 'main_stage_branding'],
+          notes: linkOptions.sponsorNotes || '',
           status: 'active'
         };
         const savedSponsor = await upsertSponsor(sponsorPayload, activeEventId);
@@ -1860,16 +1886,24 @@ export function HomeContent() {
           const exists = prev.some(s => s.id === savedSponsor.id || (s.orgId && s.orgId === saved.id));
           return exists ? prev.map(s => (s.id === savedSponsor.id || s.orgId === saved.id) ? savedSponsor : s) : [...prev, savedSponsor];
         });
+      } else if (existingSponsor) {
+        // User unchecked sponsor checkbox for an organization that was previously a sponsor
+        await deleteSponsor(existingSponsor.id, activeEventId);
+        setSponsors(prev => prev.filter(s => s.id !== existingSponsor.id));
       }
 
-      // If user also checked "Designate as Exhibitor"
+      // 2. Manage Exhibitor Linkage
+      const existingExhibitor = (exhibitors || []).find(e => !e.isArchived && (e.orgId === saved.id || e.org_id === saved.id));
       if (linkOptions.createExhibitor) {
         const exhibitorPayload = {
+          id: existingExhibitor?.id,
           name: saved.name,
           orgId: saved.id,
           booth: linkOptions.exhibitorBooth || 'Not Assigned',
           boothNumber: linkOptions.exhibitorBooth || 'Not Assigned',
           boothType: linkOptions.exhibitorBoothType || 'Standard 3x3m (9 m²)',
+          staffCount: linkOptions.exhibitorStaffCount || 2,
+          description: linkOptions.exhibitorProducts || '',
           industry: saved.industry || '',
           contact: saved.contact || '',
           email: saved.email || '',
@@ -1882,6 +1916,10 @@ export function HomeContent() {
           const exists = prev.some(e => e.id === savedExhibitor.id || (e.orgId && e.orgId === saved.id));
           return exists ? prev.map(e => (e.id === savedExhibitor.id || e.orgId === saved.id) ? savedExhibitor : e) : [...prev, savedExhibitor];
         });
+      } else if (existingExhibitor) {
+        // User unchecked exhibitor checkbox for an organization that was previously an exhibitor
+        await deleteExhibitor(existingExhibitor.id, activeEventId);
+        setExhibitors(prev => prev.filter(e => e.id !== existingExhibitor.id));
       }
 
       return saved;
@@ -1982,15 +2020,8 @@ export function HomeContent() {
 
   const handleRegisterNewPersonnel = async (personnelData, org) => {
     try {
-      const isSponsor = sponsors.find(s => !s.isArchived && s.status !== 'archived' && (
-        (org.id && (s.orgId === org.id || s.org_id === org.id)) ||
-        (org.name && s.name && s.name.trim().toLowerCase() === org.name.trim().toLowerCase())
-      ));
-
-      const isExhibitor = exhibitors.find(e => !e.isArchived && e.status !== 'archived' && (
-        (org.id && (e.orgId === org.id || e.org_id === org.id)) ||
-        (org.name && e.name && e.name.trim().toLowerCase() === org.name.trim().toLowerCase())
-      ));
+      const isSponsor = org?.id ? sponsors.find(s => !s.isArchived && s.status !== 'archived' && (s.orgId === org.id || s.org_id === org.id)) : null;
+      const isExhibitor = org?.id ? exhibitors.find(e => !e.isArchived && e.status !== 'archived' && (e.orgId === org.id || e.org_id === org.id)) : null;
 
       let tierName = "Partner Pass";
       if (isSponsor) {
@@ -3230,7 +3261,10 @@ export function HomeContent() {
               onEdit={(id) => setActiveFloorPlanId(id)}
               onCreateNew={handleCreateFloorPlan}
               onDuplicate={handleDuplicateFloorPlan}
-              onDelete={handleDeleteFloorPlan}
+              onArchive={handleArchiveFloorPlan}
+              onRestore={handleRestoreFloorPlan}
+              onDelete={handlePermanentDeleteFloorPlan}
+              onPermanentDelete={handlePermanentDeleteFloorPlan}
               onRename={handleRenameFloorPlan}
             />
           )}

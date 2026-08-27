@@ -209,40 +209,25 @@ export default function CompanyDrawer({
     }));
   }, [organizations]);
 
-  // Linked Sponsor & Exhibitor info for current organization
+  // Linked Sponsor & Exhibitor info for current organization (Strict ID linkage)
   const linkedSponsor = useMemo(() => {
-    if (!item && !orgName) return null;
-    const targetId = item?.id;
-    const targetName = (item?.name || orgName || '').trim().toLowerCase();
-    return sponsors.find(s => !s.isArchived && s.status !== 'archived' && (
-      (targetId && (s.orgId === targetId || s.org_id === targetId)) ||
-      (targetName && s.name && s.name.trim().toLowerCase() === targetName)
-    ));
-  }, [sponsors, item, orgName]);
+    if (!item?.id) return null;
+    return sponsors.find(s => !s.isArchived && s.status !== 'archived' && (s.orgId === item.id || s.org_id === item.id));
+  }, [sponsors, item]);
 
   const linkedExhibitor = useMemo(() => {
-    if (!item && !orgName) return null;
-    const targetId = item?.id;
-    const targetName = (item?.name || orgName || '').trim().toLowerCase();
-    return exhibitors.find(e => !e.isArchived && e.status !== 'archived' && (
-      (targetId && (e.orgId === targetId || e.org_id === targetId)) ||
-      (targetName && e.name && e.name.trim().toLowerCase() === targetName)
-    ));
-  }, [exhibitors, item, orgName]);
+    if (!item?.id) return null;
+    return exhibitors.find(e => !e.isArchived && e.status !== 'archived' && (e.orgId === item.id || e.org_id === item.id));
+  }, [exhibitors, item]);
 
-  // List of attendees currently assigned to this company
+  // List of attendees currently assigned to this company (Strict ID linkage)
   const assignedPersonnel = useMemo(() => {
-    if (!item && !orgName) return [];
-    const targetId = item?.id;
-    const targetName = (item?.name || orgName || '').trim().toLowerCase();
-
+    if (!item?.id) return [];
     return (attendees || []).filter(a => {
       if (a.isArchived || a.status === 'archived') return false;
-      const isMatchId = targetId && (a.orgId === targetId || a.org_id === targetId);
-      const isMatchName = targetName && a.company && a.company.trim().toLowerCase() === targetName;
-      return isMatchId || isMatchName;
+      return a.orgId === item.id || a.org_id === item.id;
     });
-  }, [attendees, item, orgName]);
+  }, [attendees, item]);
 
   // Dropdown options for unassigned attendees
   const unassignedAttendeesOptions = useMemo(() => {
@@ -350,8 +335,42 @@ export default function CompanyDrawer({
           setOrgContactPhone(item.phone || item.contactPhone || "");
           setOrgNotes(item.notes || "");
           setOrgStatus(item.status || (item.isArchived ? "archived" : "active"));
-          setAlsoCreateSponsor(false);
-          setAlsoCreateExhibitor(false);
+
+          // Pre-populate sponsorship data if this organization is a sponsor
+          const existingSponsor = (sponsors || []).find(s => !s.isArchived && s.status !== 'archived' && (s.orgId === item.id || s.org_id === item.id));
+          if (existingSponsor) {
+            setAlsoCreateSponsor(true);
+            setSponsorTier(existingSponsor.tier || "silver");
+            setSponsorAmount(existingSponsor.amount || existingSponsor.packageValue || "");
+            setSponsorCurrency(existingSponsor.currency || "DZD");
+            setSponsorBooth(existingSponsor.booth || existingSponsor.assignedBooth || "");
+            setSponsorPerks(Array.isArray(existingSponsor.perks) ? existingSponsor.perks : ["vip_passes", "main_stage_branding"]);
+            setSponsorNotes(existingSponsor.notes || "");
+          } else {
+            setAlsoCreateSponsor(false);
+            setSponsorTier("silver");
+            setSponsorAmount("");
+            setSponsorCurrency("DZD");
+            setSponsorBooth("");
+            setSponsorPerks(["vip_passes", "main_stage_branding"]);
+            setSponsorNotes("");
+          }
+
+          // Pre-populate exhibitor data if this organization is an exhibitor
+          const existingExhibitor = (exhibitors || []).find(e => !e.isArchived && e.status !== 'archived' && (e.orgId === item.id || e.org_id === item.id));
+          if (existingExhibitor) {
+            setAlsoCreateExhibitor(true);
+            setExhibitorBooth(existingExhibitor.booth || existingExhibitor.boothNumber || existingExhibitor.booth_number || "");
+            setExhibitorBoothType(existingExhibitor.boothType || "Standard 3x3m (9 m²)");
+            setExhibitorStaffCount(existingExhibitor.staffCount || existingExhibitor.badgeCount || 2);
+            setExhibitorProducts(existingExhibitor.description || existingExhibitor.products || "");
+          } else {
+            setAlsoCreateExhibitor(false);
+            setExhibitorBooth(availableBooths.length > 0 ? availableBooths[0].value : "Booth A-01");
+            setExhibitorBoothType("Standard 3x3m (9 m²)");
+            setExhibitorStaffCount(2);
+            setExhibitorProducts("");
+          }
         } else {
           setOrgName("");
           setOrgIndustry("Technology, AI & Software");
@@ -366,7 +385,17 @@ export default function CompanyDrawer({
           setOrgNotes("");
           setOrgStatus("active");
           setAlsoCreateSponsor(false);
+          setSponsorTier("silver");
+          setSponsorAmount("");
+          setSponsorCurrency("DZD");
+          setSponsorBooth("");
+          setSponsorPerks(["vip_passes", "main_stage_branding"]);
+          setSponsorNotes("");
           setAlsoCreateExhibitor(false);
+          setExhibitorBooth(availableBooths.length > 0 ? availableBooths[0].value : "Booth A-01");
+          setExhibitorBoothType("Standard 3x3m (9 m²)");
+          setExhibitorStaffCount(2);
+          setExhibitorProducts("");
         }
       } else if (mode === "sponsor") {
         if (item) {
@@ -543,9 +572,15 @@ export default function CompanyDrawer({
             createSponsor: alsoCreateSponsor,
             sponsorTier,
             sponsorAmount: sponsorAmount ? parseFloat(sponsorAmount) : null,
+            sponsorCurrency,
+            sponsorBooth,
+            sponsorPerks,
+            sponsorNotes,
             createExhibitor: alsoCreateExhibitor,
             exhibitorBooth,
-            exhibitorBoothType
+            exhibitorBoothType,
+            exhibitorStaffCount,
+            exhibitorProducts
           });
         }
       } else if (currentMode === "sponsor") {
@@ -1000,33 +1035,83 @@ export default function CompanyDrawer({
                       </label>
 
                       {alsoCreateSponsor && (
-                        <div className="mt-4 pt-4 border-t border-amber-200/60 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div className="flex flex-col gap-1.5">
-                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                              Sponsorship Tier
-                            </label>
-                            <SearchableSelect
-                              value={sponsorTier}
-                              onChange={(val) => setSponsorTier(val)}
-                              options={SPONSOR_TIERS}
-                              placeholder="-- Select Tier --"
-                              isClearable={false}
-                            />
+                        <div className="mt-4 pt-4 border-t border-amber-200/60 flex flex-col gap-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                Sponsorship Tier
+                              </label>
+                              <SearchableSelect
+                                value={sponsorTier}
+                                onChange={(val) => setSponsorTier(val)}
+                                options={SPONSOR_TIERS}
+                                placeholder="-- Select Tier --"
+                                isClearable={false}
+                              />
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                Sponsorship Package Value ({sponsorCurrency})
+                              </label>
+                              <div className="relative">
+                                <DollarSign size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                <input
+                                  type="number"
+                                  value={sponsorAmount}
+                                  onChange={(e) => setSponsorAmount(e.target.value)}
+                                  placeholder="e.g. 500000"
+                                  className="w-full pl-9 pr-3.5 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-amber-500"
+                                />
+                              </div>
+                            </div>
                           </div>
 
-                          <div className="flex flex-col gap-1.5">
-                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                              Sponsorship Package Value
-                            </label>
-                            <div className="relative">
-                              <DollarSign size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                Assigned Sponsor Booth (Optional)
+                              </label>
                               <input
-                                type="number"
-                                value={sponsorAmount}
-                                onChange={(e) => setSponsorAmount(e.target.value)}
-                                placeholder="e.g. 500000"
-                                className="w-full pl-9 pr-3.5 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-amber-500"
+                                type="text"
+                                value={sponsorBooth}
+                                onChange={(e) => setSponsorBooth(e.target.value)}
+                                placeholder="e.g. VIP Pavilion / Booth S-01"
+                                className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-amber-500"
                               />
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                Internal Sponsor Notes
+                              </label>
+                              <input
+                                type="text"
+                                value={sponsorNotes}
+                                onChange={(e) => setSponsorNotes(e.target.value)}
+                                placeholder="e.g. Contract signed, deliverables agreed"
+                                className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-amber-500"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Perks checkboxes */}
+                          <div className="flex flex-col gap-2 pt-1">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                              Included Sponsorship Deliverables & Perks
+                            </label>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {SPONSOR_PERKS_OPTIONS.map(perk => (
+                                <label key={perk.id} className="flex items-center gap-2 p-2 rounded-xl bg-white border border-amber-100 hover:border-amber-300 transition-all cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={sponsorPerks.includes(perk.id)}
+                                    onChange={() => toggleSponsorPerk(perk.id)}
+                                    className="w-3.5 h-3.5 rounded text-amber-600 focus:ring-amber-500"
+                                  />
+                                  <span className="text-[11px] font-semibold text-slate-700">{perk.label}</span>
+                                </label>
+                              ))}
                             </div>
                           </div>
                         </div>
@@ -1054,31 +1139,62 @@ export default function CompanyDrawer({
                       </label>
 
                       {alsoCreateExhibitor && (
-                        <div className="mt-4 pt-4 border-t border-blue-200/60 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div className="flex flex-col gap-1.5">
-                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                              Booth Number / Code
-                            </label>
-                            <input
-                              type="text"
-                              value={exhibitorBooth}
-                              onChange={(e) => setExhibitorBooth(e.target.value)}
-                              placeholder="e.g. Booth A-101, Pavilion 3"
-                              className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-500"
-                            />
+                        <div className="mt-4 pt-4 border-t border-blue-200/60 flex flex-col gap-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                Booth Number / Code
+                              </label>
+                              <input
+                                type="text"
+                                value={exhibitorBooth}
+                                onChange={(e) => setExhibitorBooth(e.target.value)}
+                                placeholder="e.g. Booth A-101, Pavilion 3"
+                                className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-500"
+                              />
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                Booth Configuration
+                              </label>
+                              <SearchableSelect
+                                value={exhibitorBoothType}
+                                onChange={(val) => setExhibitorBoothType(val)}
+                                options={BOOTH_TYPES}
+                                placeholder="-- Select Booth Type --"
+                                isClearable={false}
+                              />
+                            </div>
                           </div>
 
-                          <div className="flex flex-col gap-1.5">
-                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                              Booth Configuration
-                            </label>
-                            <SearchableSelect
-                              value={exhibitorBoothType}
-                              onChange={(val) => setExhibitorBoothType(val)}
-                              options={BOOTH_TYPES}
-                              placeholder="-- Select Booth Type --"
-                              isClearable={false}
-                            />
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                Allocated Staff Badge Passes
+                              </label>
+                              <input
+                                type="number"
+                                min="1"
+                                max="50"
+                                value={exhibitorStaffCount}
+                                onChange={(e) => setExhibitorStaffCount(parseInt(e.target.value) || 2)}
+                                className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-500"
+                              />
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                Products & Showcase Description
+                              </label>
+                              <input
+                                type="text"
+                                value={exhibitorProducts}
+                                onChange={(e) => setExhibitorProducts(e.target.value)}
+                                placeholder="e.g. Cloud SaaS Demos, VR Hardware"
+                                className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-500"
+                              />
+                            </div>
                           </div>
                         </div>
                       )}
