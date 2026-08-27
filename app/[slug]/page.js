@@ -7,7 +7,8 @@ import EventPublicLandingPage from "../../components/EventPublicLandingPage";
 import AttendeePortalView from "../../components/AttendeePortalView";
 import { LandingPageSkeleton } from "../../components/SkeletonLoaders";
 import { 
-  fetchEventDetails, 
+  fetchEventDetails,
+  fetchEventBundle,
   fetchTickets, 
   fetchSessions, 
   fetchSponsors, 
@@ -96,7 +97,47 @@ export default function DynamicEventLandingPage({ params }) {
       setNotFound(false);
 
       try {
-        // 1. Resolve event by slug or UUID
+        // 1. Try unified high-performance bundle fetch (returns event and all public modules in 1 call)
+        const bundle = await fetchEventBundle(slug);
+        if (bundle && bundle.event && bundle.event.id) {
+          if (!isMounted) return;
+          const event = bundle.event;
+          setEventDetails(event);
+          setTickets(bundle.tickets || []);
+          setSessions(bundle.sessions || []);
+          setSponsors(bundle.sponsors || []);
+          setExhibitors(bundle.exhibitors || []);
+          setFloorPlans(bundle.floorPlans || []);
+          setInfluencers(bundle.influencers || []);
+          setForms(bundle.forms || []);
+          setRsvpSettings(bundle.rsvpSettings || {});
+
+          // Track influencer referral if present in search params
+          if (typeof window !== "undefined") {
+            const sp = new URLSearchParams(window.location.search);
+            const refCode = sp.get("ref") || sp.get("referral") || sp.get("influencer");
+            if (refCode) {
+              recordInfluencerClick(event.id, refCode).catch(() => {});
+            }
+          }
+
+          // Fetch remaining dynamic public collections concurrently
+          const [loadedAttendees, loadedDocuments, loadedSubmissions, loadedRsvps] = await Promise.all([
+            fetchAttendees(event.id).catch(() => []),
+            fetchDocuments(event.id).catch(() => []),
+            fetchFormSubmissions(event.id).catch(() => []),
+            fetchRSVPs(event.id).catch(() => [])
+          ]);
+
+          if (!isMounted) return;
+          setAttendees(loadedAttendees || []);
+          setDocuments(loadedDocuments || []);
+          setFormSubmissions(loadedSubmissions || []);
+          setRsvps(loadedRsvps || []);
+          return;
+        }
+
+        // 2. Granular fallback if RPC bundle is unavailable
         const event = await fetchEventDetails(slug);
         if (!event || !event.id) {
           if (isMounted) {
@@ -118,7 +159,7 @@ export default function DynamicEventLandingPage({ params }) {
           }
         }
 
-        // 2. Parallel fetch all related public data
+        // Parallel fetch all related public data
         const eventId = event.id;
         const [
           loadedTickets,

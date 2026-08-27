@@ -68,7 +68,7 @@ import { getEffectivePermissions, canViewModule, canEditModule, getModulePermiss
 import { LanguageProvider, useLanguage } from "../lib/i18n";
 
 import {
-  fetchEventDetails, updateEventDetails,
+  fetchEventDetails, updateEventDetails, fetchEventBundle,
   fetchSessions, upsertSession, deleteSession, archiveSession,
   fetchAttendees, upsertAttendee, deleteAttendee, archiveParticipant,
   fetchPending, upsertPending, deletePending,
@@ -698,28 +698,83 @@ export function HomeContent() {
       };
 
       try {
-        // Fast individual non-blocking parallel fetches — UI updates as each arrives!
-        fetchAndSet(fetchEventDetails(activeEventId), (val) => {
-          setEventDetails(val);
-          safeLocalStorageSet(`eventzone_cached_event_${activeEventId}`, val);
-        }, "event");
+        // 1. High-Performance Bundle Fetch (returns event, tickets, sessions, sponsors, exhibitors, orgs, forms, floor plans, rsvp settings, influencers, opportunities, team in 1 fast query)
+        fetchEventBundle(activeEventId).then((bundle) => {
+          if (bundle) {
+            if (bundle.event) {
+              setEventDetails(bundle.event);
+              safeLocalStorageSet(`eventzone_cached_event_${activeEventId}`, bundle.event);
+            }
+            if (bundle.tickets) {
+              setTickets(bundle.tickets);
+              safeLocalStorageSet(`eventzone_cache_tickets_${activeEventId}`, bundle.tickets);
+            }
+            if (bundle.sessions) {
+              setSessions(bundle.sessions);
+              safeLocalStorageSet(`eventzone_cache_sessions_${activeEventId}`, bundle.sessions);
+            }
+            if (bundle.sponsors) {
+              setSponsors(bundle.sponsors);
+              safeLocalStorageSet(`eventzone_cache_sponsors_${activeEventId}`, bundle.sponsors);
+            }
+            if (bundle.exhibitors) {
+              setExhibitors(bundle.exhibitors);
+              safeLocalStorageSet(`eventzone_cache_exhibitors_${activeEventId}`, bundle.exhibitors);
+            }
+            if (bundle.organizations) {
+              setOrganizations(bundle.organizations);
+              safeLocalStorageSet(`eventzone_cache_organizations_${activeEventId}`, bundle.organizations);
+            }
+            if (bundle.forms) {
+              setForms(bundle.forms);
+              safeLocalStorageSet(`eventzone_cache_forms_${activeEventId}`, bundle.forms);
+            }
+            if (bundle.floorPlans) {
+              setFloorPlans(bundle.floorPlans);
+              safeLocalStorageSet(`eventzone_cache_floorPlans_${activeEventId}`, bundle.floorPlans);
+            }
+            if (bundle.rsvpSettings) {
+              setRsvpSettings(bundle.rsvpSettings);
+              safeLocalStorageSet(`eventzone_cache_rsvpSettings_${activeEventId}`, bundle.rsvpSettings);
+            }
+            if (bundle.influencers) {
+              setInfluencers(bundle.influencers);
+              safeLocalStorageSet(`eventzone_cache_influencers_${activeEventId}`, bundle.influencers);
+            }
+            if (bundle.opportunities) {
+              setOpportunities(bundle.opportunities);
+              safeLocalStorageSet(`eventzone_cache_opportunities_${activeEventId}`, bundle.opportunities);
+            }
+            if (bundle.team) {
+              setTeam(bundle.team);
+              safeLocalStorageSet(`eventzone_cache_team_${activeEventId}`, bundle.team);
+            }
+          }
+        }).catch((err) => {
+          console.warn("Bundle fetch fallback to granular calls:", err);
+          fetchAndSet(fetchEventDetails(activeEventId), (val) => {
+            setEventDetails(val);
+            safeLocalStorageSet(`eventzone_cached_event_${activeEventId}`, val);
+          }, "event");
+          fetchAndSet(fetchTickets(activeEventId), setTickets, "tickets");
+          fetchAndSet(fetchInfluencers(activeEventId), setInfluencers, "influencers");
+          fetchAndSet(fetchOpportunities(activeEventId), setOpportunities, "opportunities");
+          fetchAndSet(fetchOrganizations(activeEventId), setOrganizations, "organizations");
+          fetchAndSet(fetchSponsors(activeEventId), setSponsors, "sponsors");
+          fetchAndSet(fetchExhibitors(activeEventId), setExhibitors, "exhibitors");
+          fetchAndSet(fetchSessions(activeEventId), setSessions, "sessions");
+          fetchAndSet(fetchTeam(activeEventId), setTeam, "team");
+          fetchAndSet(fetchFloorPlans(activeEventId), setFloorPlans, "floorPlans");
+          fetchAndSet(fetchForms(activeEventId), setForms, "forms");
+          fetchAndSet(fetchRSVPSettings(activeEventId), setRsvpSettings, "rsvpSettings");
+        });
 
-        fetchAndSet(fetchTickets(activeEventId), setTickets, "tickets");
-        fetchAndSet(fetchInfluencers(activeEventId), setInfluencers, "influencers");
-        fetchAndSet(fetchOpportunities(activeEventId), setOpportunities, "opportunities");
-        fetchAndSet(fetchOrganizations(activeEventId), setOrganizations, "organizations");
-        fetchAndSet(fetchSponsors(activeEventId), setSponsors, "sponsors");
-        fetchAndSet(fetchExhibitors(activeEventId), setExhibitors, "exhibitors");
-        fetchAndSet(fetchSessions(activeEventId), setSessions, "sessions");
-        fetchAndSet(fetchTeam(activeEventId), setTeam, "team");
-        fetchAndSet(fetchFloorPlans(activeEventId), setFloorPlans, "floorPlans");
-        fetchAndSet(fetchForms(activeEventId), setForms, "forms");
+        // 2. Parallel non-blocking fetches for rsvps, logistics & documents
         fetchAndSet(fetchRSVPs(activeEventId), setRsvps, "rsvps");
-        fetchAndSet(fetchRSVPSettings(activeEventId), setRsvpSettings, "rsvpSettings");
         fetchAndSet(fetchLogistics(activeEventId), setLogisticsData, "logisticsData");
         fetchAndSet(fetchDocuments(activeEventId), setDocuments, "documents");
 
-        // Tickets, Form Submissions & Attendees (with joint merging)
+        // 3. Single coordinated parallel fetch for attendees, pending & submissions
         const [loadedTickets, loadedSubmissions, rawAttendees, rawPending] = await Promise.all([
           fetchTickets(activeEventId).catch(() => []),
           fetchFormSubmissions(activeEventId).catch(() => []),
@@ -1502,7 +1557,7 @@ export function HomeContent() {
     const newIds = new Set(newArr.map(i => String(i.id)));
     for (const item of oldArr) {
       if (!newIds.has(String(item.id))) {
-        deleteFn(item.id).catch(e => console.error('Delete failed:', e));
+        deleteFn(item.id, item.email || item, activeEventId).catch(e => console.error('Delete failed:', e));
       }
     }
     for (const item of newArr) {
@@ -1857,13 +1912,32 @@ export function HomeContent() {
   const handleSaveOrganization = async (orgData, linkOptions = {}) => {
     try {
       const saved = await upsertOrganization(orgData, activeEventId);
+      const cleanTargetId = String(saved.id);
+      const cleanName = (saved.name || '').trim().toLowerCase();
+
       setOrganizations(prev => {
-        const exists = prev.some(o => o.id === saved.id);
-        return exists ? prev.map(o => o.id === saved.id ? saved : o) : [...prev, saved];
+        const exists = prev.some(o => 
+          String(o.id) === cleanTargetId || 
+          (orgData.id && String(o.id) === String(orgData.id)) ||
+          (o.name && cleanName && o.name.trim().toLowerCase() === cleanName)
+        );
+        if (exists) {
+          return prev.map(o => 
+            (String(o.id) === cleanTargetId || (orgData.id && String(o.id) === String(orgData.id)) || (o.name && cleanName && o.name.trim().toLowerCase() === cleanName))
+              ? { ...o, ...saved, id: saved.id }
+              : o
+          );
+        }
+        return [...prev, saved];
       });
 
       // 1. Manage Sponsor Linkage (Sync if existing, create if requested)
-      const existingSponsor = (sponsors || []).find(s => !s.isArchived && s.status !== 'archived' && (s.orgId === saved.id || s.org_id === saved.id));
+      const existingSponsor = (sponsors || []).find(s => !s.isArchived && s.status !== 'archived' && (
+        String(s.orgId) === cleanTargetId || 
+        String(s.org_id) === cleanTargetId ||
+        (s.name && cleanName && s.name.trim().toLowerCase() === cleanName)
+      ));
+
       if (existingSponsor) {
         const updatedSponsor = {
           ...existingSponsor,
@@ -1896,7 +1970,12 @@ export function HomeContent() {
       }
 
       // 2. Manage Exhibitor Linkage (Sync if existing, create if requested)
-      const existingExhibitor = (exhibitors || []).find(e => !e.isArchived && e.status !== 'archived' && (e.orgId === saved.id || e.org_id === saved.id));
+      const existingExhibitor = (exhibitors || []).find(e => !e.isArchived && e.status !== 'archived' && (
+        String(e.orgId) === cleanTargetId || 
+        String(e.org_id) === cleanTargetId ||
+        (e.name && cleanName && e.name.trim().toLowerCase() === cleanName)
+      ));
+
       if (existingExhibitor) {
         const updatedExhibitor = {
           ...existingExhibitor,
@@ -1940,34 +2019,46 @@ export function HomeContent() {
   const handleSaveSponsor = async (sponsorData) => {
     try {
       const saved = await upsertSponsor(sponsorData, activeEventId);
+      const cleanTargetId = String(saved.id);
+      const cleanName = (saved.name || '').trim().toLowerCase();
+      const targetOrgId = sponsorData.orgId || sponsorData.org_id || saved.orgId || saved.org_id;
+
       setSponsors(prev => {
-        const exists = prev.some(s => s.id === saved.id);
-        return exists ? prev.map(s => s.id === saved.id ? saved : s) : [...prev, saved];
+        const exists = prev.some(s => 
+          String(s.id) === cleanTargetId ||
+          (sponsorData.id && String(s.id) === String(sponsorData.id)) ||
+          (targetOrgId && (String(s.orgId) === String(targetOrgId) || String(s.org_id) === String(targetOrgId))) ||
+          (s.name && cleanName && s.name.trim().toLowerCase() === cleanName)
+        );
+
+        if (exists) {
+          return prev.map(s => 
+            (String(s.id) === cleanTargetId || (sponsorData.id && String(s.id) === String(sponsorData.id)) || (targetOrgId && (String(s.orgId) === String(targetOrgId) || String(s.org_id) === String(targetOrgId))) || (s.name && cleanName && s.name.trim().toLowerCase() === cleanName))
+              ? { ...s, ...saved, id: saved.id }
+              : s
+          );
+        }
+        return [...prev, saved];
       });
 
-      // If linked with an organization, sync contact & details to organization as well
-      const targetOrgId = sponsorData.orgId || sponsorData.org_id || saved.orgId || saved.org_id;
-      if (targetOrgId) {
-        const existingOrg = organizations.find(o => String(o.id) === String(targetOrgId));
-        if (existingOrg) {
-          const updatedOrg = {
-            ...existingOrg,
-            name: sponsorData.name || existingOrg.name,
-            logo: sponsorData.image || sponsorData.logo || existingOrg.logo,
-            industry: sponsorData.industry || existingOrg.industry,
-            contact: sponsorData.contact || sponsorData.contactPerson || existingOrg.contact,
-            jobTitle: sponsorData.jobTitle || existingOrg.jobTitle,
-            email: sponsorData.email || sponsorData.contactEmail || existingOrg.email,
-            phone: sponsorData.phone || sponsorData.contactPhone || existingOrg.phone,
-            notes: sponsorData.notes || existingOrg.notes
-          };
-          try {
-            const savedOrg = await upsertOrganization(updatedOrg, activeEventId);
-            setOrganizations(prev => prev.map(o => String(o.id) === String(savedOrg.id) ? savedOrg : o));
-          } catch (orgErr) {
-            console.warn("Could not sync sponsor to linked organization:", orgErr);
+      // If linked with an organization, sync contact & details in state cleanly
+      if (targetOrgId || cleanName) {
+        setOrganizations(prev => prev.map(o => {
+          if ((targetOrgId && (String(o.id) === String(targetOrgId) || String(o.orgId) === String(targetOrgId))) || (o.name && cleanName && o.name.trim().toLowerCase() === cleanName)) {
+            return {
+              ...o,
+              name: sponsorData.name || o.name,
+              logo: sponsorData.image || sponsorData.logo || o.logo,
+              industry: sponsorData.industry || o.industry,
+              contact: sponsorData.contact || sponsorData.contactPerson || o.contact,
+              jobTitle: sponsorData.jobTitle || o.jobTitle,
+              email: sponsorData.email || sponsorData.contactEmail || o.email,
+              phone: sponsorData.phone || sponsorData.contactPhone || o.phone,
+              notes: sponsorData.notes || o.notes
+            };
           }
-        }
+          return o;
+        }));
       }
 
       return saved;
@@ -1980,34 +2071,46 @@ export function HomeContent() {
   const handleSaveExhibitor = async (exhibitorData) => {
     try {
       const saved = await upsertExhibitor(exhibitorData, activeEventId);
+      const cleanTargetId = String(saved.id);
+      const cleanName = (saved.name || '').trim().toLowerCase();
+      const targetOrgId = exhibitorData.orgId || exhibitorData.org_id || saved.orgId || saved.org_id;
+
       setExhibitors(prev => {
-        const exists = prev.some(e => e.id === saved.id);
-        return exists ? prev.map(e => e.id === saved.id ? saved : e) : [...prev, saved];
+        const exists = prev.some(e => 
+          String(e.id) === cleanTargetId ||
+          (exhibitorData.id && String(e.id) === String(exhibitorData.id)) ||
+          (targetOrgId && (String(e.orgId) === String(targetOrgId) || String(e.org_id) === String(targetOrgId))) ||
+          (e.name && cleanName && e.name.trim().toLowerCase() === cleanName)
+        );
+
+        if (exists) {
+          return prev.map(e => 
+            (String(e.id) === cleanTargetId || (exhibitorData.id && String(e.id) === String(exhibitorData.id)) || (targetOrgId && (String(e.orgId) === String(targetOrgId) || String(e.org_id) === String(targetOrgId))) || (e.name && cleanName && e.name.trim().toLowerCase() === cleanName))
+              ? { ...e, ...saved, id: saved.id }
+              : e
+          );
+        }
+        return [...prev, saved];
       });
 
-      // If linked with an organization, sync contact & details to organization as well
-      const targetOrgId = exhibitorData.orgId || exhibitorData.org_id || saved.orgId || saved.org_id;
-      if (targetOrgId) {
-        const existingOrg = organizations.find(o => String(o.id) === String(targetOrgId));
-        if (existingOrg) {
-          const updatedOrg = {
-            ...existingOrg,
-            name: exhibitorData.name || existingOrg.name,
-            logo: exhibitorData.logo || existingOrg.logo,
-            industry: exhibitorData.industry || existingOrg.industry,
-            contact: exhibitorData.contact || exhibitorData.contactPerson || existingOrg.contact,
-            jobTitle: exhibitorData.jobTitle || existingOrg.jobTitle,
-            email: exhibitorData.email || exhibitorData.contactEmail || existingOrg.email,
-            phone: exhibitorData.phone || exhibitorData.contactPhone || existingOrg.phone,
-            notes: exhibitorData.notes || existingOrg.notes
-          };
-          try {
-            const savedOrg = await upsertOrganization(updatedOrg, activeEventId);
-            setOrganizations(prev => prev.map(o => String(o.id) === String(savedOrg.id) ? savedOrg : o));
-          } catch (orgErr) {
-            console.warn("Could not sync exhibitor to linked organization:", orgErr);
+      // If linked with an organization, sync contact & details in state cleanly
+      if (targetOrgId || cleanName) {
+        setOrganizations(prev => prev.map(o => {
+          if ((targetOrgId && (String(o.id) === String(targetOrgId) || String(o.orgId) === String(targetOrgId))) || (o.name && cleanName && o.name.trim().toLowerCase() === cleanName)) {
+            return {
+              ...o,
+              name: exhibitorData.name || o.name,
+              logo: exhibitorData.logo || o.logo,
+              industry: exhibitorData.industry || o.industry,
+              contact: exhibitorData.contact || exhibitorData.contactPerson || o.contact,
+              jobTitle: exhibitorData.jobTitle || o.jobTitle,
+              email: exhibitorData.email || exhibitorData.contactEmail || o.email,
+              phone: exhibitorData.phone || exhibitorData.contactPhone || o.phone,
+              notes: exhibitorData.notes || o.notes
+            };
           }
-        }
+          return o;
+        }));
       }
 
       return saved;
@@ -3424,18 +3527,26 @@ export function HomeContent() {
               key={activeFloorPlanId}
               exhibitors={exhibitors.map(ex => {
                 const org = organizations.find(o => String(o.id) === String(ex.org_id || ex.orgId));
+                const contactEmail = ex.contactEmail || ex.email || org?.email || '';
+                const contactName = ex.contact || ex.contactPerson || org?.contact || '';
+                const matchingAtt = attendees.find(a => 
+                  !a.isArchived && a.status !== 'archived' && (
+                    (contactEmail && a.email && a.email.trim().toLowerCase() === contactEmail.trim().toLowerCase()) ||
+                    (contactName && a.name && a.name.trim().toLowerCase() === contactName.trim().toLowerCase())
+                  )
+                );
                 return {
                   ...ex,
                   logo: ex.logo || org?.logo || '',
                   description: ex.description || org?.description || org?.about || '',
                   about: ex.about || ex.description || org?.about || org?.description || '',
                   website: ex.website || org?.website || '',
-                  contact: ex.contact || ex.contactPerson || org?.contact || '',
-                  contactPerson: ex.contactPerson || ex.contact || org?.contact || '',
-                  contactEmail: ex.contactEmail || ex.email || org?.email || '',
-                  contactPhone: ex.contactPhone || ex.phone || org?.phone || '',
-                  contactPosition: ex.contactPosition || ex.position || ex.jobTitle || org?.jobTitle || 'Representative',
-                  contactPhoto: ex.contactPhoto || ex.contactAvatar || ex.photo || ex.avatar || '',
+                  contact: contactName,
+                  contactPerson: contactName,
+                  contactEmail: contactEmail,
+                  contactPhone: ex.contactPhone || ex.phone || org?.phone || matchingAtt?.phone || '',
+                  contactPosition: ex.contactPosition || ex.position || ex.jobTitle || org?.jobTitle || matchingAtt?.jobTitle || 'Representative',
+                  contactPhoto: matchingAtt?.image || matchingAtt?.avatar || matchingAtt?.photo || matchingAtt?.badgePicture || ex.contactPhoto || ex.contactAvatar || ex.photo || ex.avatar || '',
                   personnel: ex.personnel || [],
                 };
               })}
