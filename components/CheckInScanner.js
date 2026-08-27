@@ -154,6 +154,209 @@ export default function CheckInScanner({
     }
   }, []);
 
+  // Forward ref for scan next
+  const handleScanNextRef = useRef(null);
+
+  // Auto-dismiss countdown bar for successful check-ins (3.5s)
+  const startAutoNextCountdown = useCallback(() => {
+    setCountdownPct(100);
+    const duration = 3500;
+    const interval = 50;
+    const step = (interval / duration) * 100;
+
+    let remaining = 100;
+    if (autoNextTimerRef.current) {
+      clearInterval(autoNextTimerRef.current);
+    }
+    autoNextTimerRef.current = setInterval(() => {
+      remaining -= step;
+      if (remaining <= 0) {
+        clearInterval(autoNextTimerRef.current);
+        autoNextTimerRef.current = null;
+        if (handleScanNextRef.current) {
+          handleScanNextRef.current();
+        }
+      } else {
+        setCountdownPct(remaining);
+      }
+    }, interval);
+  }, []);
+
+  // Handle scanned QR payload
+  const handleScannedPayload = useCallback(
+    async (rawCode) => {
+      if (!rawCode || isProcessing) return;
+      const code = String(rawCode).trim();
+      if (!code) return;
+
+      // Prevent re-scanning the exact same code within 3 seconds
+      const now = Date.now();
+      if (lastScannedCodeRef.current === code && now - lastScanTimestampRef.current < 3000) {
+        return;
+      }
+
+      lastScannedCodeRef.current = code;
+      lastScanTimestampRef.current = now;
+      isScanningRef.current = false;
+      setIsProcessing(true);
+
+      // Clear any previous auto-timer
+      if (autoNextTimerRef.current) {
+        clearInterval(autoNextTimerRef.current);
+        autoNextTimerRef.current = null;
+      }
+
+      try {
+        const res = await fetch("/api/checkin/scan", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            eventId,
+            payload: code,
+            checkedInBy: staffName || staffEmail || "Gate Staff",
+          }),
+        });
+
+        const data = await res.json();
+
+        if (data.status === "success") {
+          playAudioFeedback("success");
+          triggerHaptic("success");
+          setActiveResult({
+            status: "success",
+            attendee: data.attendee,
+            message: data.message || "Attendance Confirmed!",
+            checkedInAt: data.attendee?.checkedInAt || new Date().toISOString(),
+            rawScanned: code,
+          });
+          if (onScanResult) onScanResult(data);
+          startAutoNextCountdown();
+        } else if (data.status === "already_checked_in") {
+          playAudioFeedback("already");
+          triggerHaptic("already");
+          setActiveResult({
+            status: "already_checked_in",
+            attendee: data.attendee,
+            message: "Already Checked In",
+            checkedInAt: data.checkedInAt || data.attendee?.checkedInAt || new Date().toISOString(),
+            checkedInBy: data.checkedInBy || "Gate Staff",
+            rawScanned: code,
+          });
+        } else {
+          playAudioFeedback("invalid");
+          triggerHaptic("invalid");
+          setActiveResult({
+            status: "invalid",
+            attendee: null,
+            message: data.message || "Invalid ticket pass for this event.",
+            rawScanned: code,
+          });
+        }
+      } catch (err) {
+        console.error("Scan processing error:", err);
+        playAudioFeedback("invalid");
+        setActiveResult({
+          status: "invalid",
+          attendee: null,
+          message: "Network error during pass verification. Please try again.",
+          rawScanned: code,
+        });
+      } finally {
+        setIsProcessing(false);
+      }
+    },
+    [eventId, isProcessing, onScanResult, staffEmail, staffName, startAutoNextCountdown]
+  );
+
+  // Universal jsQR fallback
+  const runJsQrFallback = useCallback(
+    (ctx, width, height) => {
+      try {
+        const imageData = ctx.getImageData(0, 0, width, height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: "dontInvert",
+        });
+
+        if (code && code.data) {
+          handleScannedPayload(code.data);
+        } else if (isScanningRef.current) {
+          animFrameIdRef.current = requestAnimationFrame(scanVideoFrame);
+        }
+      } catch {
+        if (isScanningRef.current) {
+          animFrameIdRef.current = requestAnimationFrame(scanVideoFrame);
+        }
+      }
+    },
+    [handleScannedPayload]
+  );
+
+  // Scan video frame using BarcodeDetector if available or jsQR fallback
+  const scanVideoFrame = useCallback(() => {
+    if (!isScanningRef.current) return;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+
+    if (video && video.readyState >= 2 && canvas) {
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      if (ctx) {
+        const videoWidth = video.videoWidth;
+        const videoHeight = video.videoHeight;
+
+        if (videoWidth > 0 && videoHeight > 0) {
+          canvas.width = videoWidth;
+          canvas.height = videoHeight;
+          ctx.drawImage(video, 0, 0, videoWidth, videoHeight);
+
+          // Fast native BarcodeDetector if available in browser
+          if (typeof window !== "undefined" && "BarcodeDetector" in window) {
+            try {
+              const barcodeDetector = new window.BarcodeDetector({ formats: ["qr_code"] });
+              barcodeDetector
+                .detect(canvas)
+                .then((barcodes) => {
+                  if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+                    handleScannedPayload(barcodes[0].rawValue);
+                  } else if (isScanningRef.current) {
+                    animFrameIdRef.current = requestAnimationFrame(scanVideoFrame);
+                  }
+                })
+                .catch(() => {
+                  runJsQrFallback(ctx, videoWidth, videoHeight);
+                });
+              return;
+            } catch {
+              // BarcodeDetector fallback
+            }
+          }
+
+          // Universal jsQR fallback
+          runJsQrFallback(ctx, videoWidth, videoHeight);
+          return;
+        }
+      }
+    }
+
+    if (isScanningRef.current) {
+      animFrameIdRef.current = requestAnimationFrame(scanVideoFrame);
+    }
+  }, [handleScannedPayload, runJsQrFallback]);
+
+  // Resume scanning for next attendee
+  const handleScanNext = useCallback(() => {
+    if (autoNextTimerRef.current) {
+      clearInterval(autoNextTimerRef.current);
+      autoNextTimerRef.current = null;
+    }
+    setActiveResult(null);
+    lastScannedCodeRef.current = "";
+    isScanningRef.current = true;
+    requestAnimationFrame(scanVideoFrame);
+  }, [scanVideoFrame]);
+
+  handleScanNextRef.current = handleScanNext;
+
   // Initialize camera with iOS Safari compatibility & graceful fallbacks
   const startCamera = useCallback(async () => {
     stopCamera();
@@ -270,183 +473,6 @@ export default function CheckInScanner({
     setFacingMode((prev) => (prev === "environment" ? "user" : "environment"));
   };
 
-  // Handle scanned QR payload
-  const handleScannedPayload = useCallback(
-    async (rawCode) => {
-      if (!rawCode || isProcessing) return;
-      const code = String(rawCode).trim();
-      if (!code) return;
-
-      // Prevent re-scanning the exact same code within 3 seconds
-      const now = Date.now();
-      if (lastScannedCodeRef.current === code && now - lastScanTimestampRef.current < 3000) {
-        return;
-      }
-
-      lastScannedCodeRef.current = code;
-      lastScanTimestampRef.current = now;
-      isScanningRef.current = false;
-      setIsProcessing(true);
-
-      // Clear any previous auto-timer
-      if (autoNextTimerRef.current) {
-        clearInterval(autoNextTimerRef.current);
-        autoNextTimerRef.current = null;
-      }
-
-      try {
-        const res = await fetch("/api/checkin/scan", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            eventId,
-            payload: code,
-            checkedInBy: staffName || staffEmail || "Gate Staff",
-          }),
-        });
-
-        const data = await res.json();
-
-        if (data.status === "success") {
-          playAudioFeedback("success");
-          triggerHaptic("success");
-          setActiveResult({
-            status: "success",
-            attendee: data.attendee,
-            message: data.message || "Attendance Confirmed!",
-            checkedInAt: data.attendee?.checkedInAt || new Date().toISOString(),
-            rawScanned: code,
-          });
-          if (onScanResult) onScanResult(data);
-          startAutoNextCountdown();
-        } else if (data.status === "already_checked_in") {
-          playAudioFeedback("already");
-          triggerHaptic("already");
-          setActiveResult({
-            status: "already_checked_in",
-            attendee: data.attendee,
-            message: "Already Checked In",
-            checkedInAt: data.checkedInAt || data.attendee?.checkedInAt || new Date().toISOString(),
-            checkedInBy: data.checkedInBy || "Gate Staff",
-            rawScanned: code,
-          });
-        } else {
-          playAudioFeedback("invalid");
-          triggerHaptic("invalid");
-          setActiveResult({
-            status: "invalid",
-            attendee: null,
-            message: data.message || "Invalid ticket pass for this event.",
-            rawScanned: code,
-          });
-        }
-      } catch (err) {
-        console.error("Scan processing error:", err);
-        playAudioFeedback("invalid");
-        setActiveResult({
-          status: "invalid",
-          attendee: null,
-          message: "Network error during pass verification. Please try again.",
-          rawScanned: code,
-        });
-      } finally {
-        setIsProcessing(false);
-      }
-    },
-    [eventId, isProcessing, onScanResult, staffEmail, staffName]
-  );
-
-  // Auto-dismiss countdown bar for successful check-ins (3.5s)
-  const startAutoNextCountdown = () => {
-    setCountdownPct(100);
-    const duration = 3500;
-    const interval = 50;
-    const step = (interval / duration) * 100;
-
-    let remaining = 100;
-    autoNextTimerRef.current = setInterval(() => {
-      remaining -= step;
-      if (remaining <= 0) {
-        clearInterval(autoNextTimerRef.current);
-        autoNextTimerRef.current = null;
-        handleScanNext();
-      } else {
-        setCountdownPct(remaining);
-      }
-    }, interval);
-  };
-
-  // Scan video frame using BarcodeDetector if available or jsQR fallback
-  const scanVideoFrame = useCallback(() => {
-    if (!isScanningRef.current) return;
-
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-
-    if (video && video.readyState >= 2 && canvas) {
-      const ctx = canvas.getContext("2d", { willReadFrequently: true });
-      if (ctx) {
-        const videoWidth = video.videoWidth;
-        const videoHeight = video.videoHeight;
-
-        if (videoWidth > 0 && videoHeight > 0) {
-          canvas.width = videoWidth;
-          canvas.height = videoHeight;
-          ctx.drawImage(video, 0, 0, videoWidth, videoHeight);
-
-          // Fast native BarcodeDetector if available in browser
-          if (typeof window !== "undefined" && "BarcodeDetector" in window) {
-            try {
-              const barcodeDetector = new window.BarcodeDetector({ formats: ["qr_code"] });
-              barcodeDetector
-                .detect(canvas)
-                .then((barcodes) => {
-                  if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
-                    handleScannedPayload(barcodes[0].rawValue);
-                  } else if (isScanningRef.current) {
-                    animFrameIdRef.current = requestAnimationFrame(scanVideoFrame);
-                  }
-                })
-                .catch(() => {
-                  runJsQrFallback(ctx, videoWidth, videoHeight);
-                });
-              return;
-            } catch {
-              // BarcodeDetector fallback
-            }
-          }
-
-          // Universal jsQR fallback
-          runJsQrFallback(ctx, videoWidth, videoHeight);
-          return;
-        }
-      }
-    }
-
-    if (isScanningRef.current) {
-      animFrameIdRef.current = requestAnimationFrame(scanVideoFrame);
-    }
-  }, [handleScannedPayload]);
-
-  const runJsQrFallback = (ctx, width, height) => {
-    try {
-      const imageData = ctx.getImageData(0, 0, width, height);
-      const code = jsQR(imageData.data, imageData.width, imageData.height, {
-        inversionAttempts: "dontInvert",
-      });
-
-      if (code && code.data) {
-        handleScannedPayload(code.data);
-      } else if (isScanningRef.current) {
-        animFrameIdRef.current = requestAnimationFrame(scanVideoFrame);
-      }
-    } catch {
-      if (isScanningRef.current) {
-        animFrameIdRef.current = requestAnimationFrame(scanVideoFrame);
-      }
-    }
-  };
-
   // Decode QR from uploaded image file
   const handleFileUpload = (e) => {
     const file = e.target.files?.[0];
@@ -479,18 +505,6 @@ export default function CheckInScanner({
     };
     reader.readAsDataURL(file);
     e.target.value = "";
-  };
-
-  // Resume scanning for next attendee
-  const handleScanNext = () => {
-    if (autoNextTimerRef.current) {
-      clearInterval(autoNextTimerRef.current);
-      autoNextTimerRef.current = null;
-    }
-    setActiveResult(null);
-    lastScannedCodeRef.current = "";
-    isScanningRef.current = true;
-    requestAnimationFrame(scanVideoFrame);
   };
 
   // Lifecycle
