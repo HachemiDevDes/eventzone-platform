@@ -688,11 +688,12 @@ function renderDynamicCellData(row, col) {
   );
 }
 
-// Full Submission & Intake Form Inspector Modal
+// Full Submission & Intake Form Inspector Slide-Over Drawer
 function SubmissionDetailsModal({ item, type = "attendee", forms = [], tickets = [], onClose, onApprove, onDecline }) {
   if (!item) return null;
 
   const [previewPhoto, setPreviewPhoto] = useState(false);
+  const [activeLightboxImg, setActiveLightboxImg] = useState(null);
   const ticketName = getResolvedTicketName(item, tickets);
   const matchedTicket = (tickets || []).find(t => t.name === ticketName || t.tier === ticketName || t.id === ticketName);
   const matchedForm = matchedTicket?.formId 
@@ -703,180 +704,267 @@ function SubmissionDetailsModal({ item, type = "attendee", forms = [], tickets =
   const answerEntries = Object.entries(answers);
   const displayImg = getAttendeeDisplayImage(item);
 
-  return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white border border-slate-200 rounded-3xl shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
-        {/* Header */}
-        <div className="p-6 border-b border-slate-150 flex items-center justify-between bg-slate-50">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-650 font-black text-lg">
-              <FileText size={20} />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-slate-900 leading-tight">
-                {type === "pending" ? "Pending Registration Intake" : "Attendee Registration Details"}
-              </h3>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">
-                Full registration questionnaire responses and contact details
-              </p>
-            </div>
-          </div>
-          <button 
-            onClick={onClose}
-            className="w-8 h-8 rounded-full bg-slate-200/80 hover:bg-slate-300 text-slate-600 flex items-center justify-center transition-colors cursor-pointer"
-          >
-            <X size={16} />
-          </button>
-        </div>
+  // Helper to detect if a form response value is image data (base64 or image url)
+  const isImageValue = (val) => {
+    if (!val || typeof val !== "string") return false;
+    const clean = val.trim();
+    return clean.startsWith("data:image/") || clean.startsWith("blob:") || /\.(jpeg|jpg|gif|png|webp|svg)(\?.*)?$/i.test(clean);
+  };
 
-        {/* Content Body */}
-        <div className="p-6 overflow-y-auto space-y-6">
-          {/* Identity & Ticket Summary Card */}
-          <div className="bg-gradient-to-br from-indigo-50/70 via-slate-50 to-emerald-50/30 border border-indigo-100/80 rounded-2xl p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setPreviewPhoto(true)}
-                  className="relative group/modalavatar cursor-zoom-in shrink-0 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
-                  title="Click to view full photo"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img 
-                    src={displayImg} 
-                    className="w-14 h-14 rounded-2xl object-cover border border-indigo-200 shadow-inner group-hover/modalavatar:ring-2 group-hover/modalavatar:ring-indigo-500 transition-all" 
-                    alt="" 
-                  />
-                  <div className="absolute inset-0 bg-slate-900/35 rounded-2xl opacity-0 group-hover/modalavatar:opacity-100 flex items-center justify-center transition-opacity text-white">
-                    <Maximize2 size={16} className="drop-shadow" />
+  const isFileUrl = (val) => {
+    if (!val || typeof val !== "string") return false;
+    const clean = val.trim();
+    return (clean.startsWith("http://") || clean.startsWith("https://")) && !isImageValue(clean);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-hidden select-none animate-fade-in font-sans">
+      {/* Blurry Backdrop */}
+      <div
+        onClick={onClose}
+        className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-300 cursor-pointer"
+      />
+
+      <div className="fixed inset-y-0 right-0 max-w-full flex pl-6 sm:pl-10">
+        <div className="w-screen max-w-2xl lg:max-w-3xl bg-white shadow-2xl flex flex-col border-l border-slate-100 transform transition-transform ease-in-out duration-300">
+          {/* Top Header */}
+          <header className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70 shrink-0">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black text-lg shrink-0 ${
+                type === "pending" ? "bg-amber-50 text-amber-600 border border-amber-200" : "bg-blue-50 text-blue-600 border border-blue-200"
+              }`}>
+                {type === "pending" ? <Clock size={20} /> : <FileText size={20} />}
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-extrabold text-slate-900 leading-tight">
+                    {type === "pending" ? "Pending Registration Intake" : "Attendee Registration Details"}
+                  </h3>
+                  {type === "pending" ? (
+                    <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-extrabold border border-amber-200 uppercase tracking-wider">
+                      Pending Review
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-extrabold border border-emerald-200 uppercase tracking-wider">
+                      Approved
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">
+                  Full registration questionnaire responses and contact details
+                </p>
+              </div>
+            </div>
+
+            <button 
+              type="button"
+              onClick={onClose}
+              className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+          </header>
+
+          {/* Drawer Content Body */}
+          <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6">
+            {/* Identity & Ticket Summary Card */}
+            <div className="bg-gradient-to-br from-indigo-50/60 via-slate-50 to-blue-50/30 border border-slate-200/80 rounded-2xl p-5 sm:p-6 shadow-2xs">
+              <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
+                <div className="flex items-center gap-3.5">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewPhoto(true)}
+                    className="relative group/modalavatar cursor-zoom-in shrink-0 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                    title="Click to view full photo"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img 
+                      src={displayImg} 
+                      className="w-16 h-16 rounded-2xl object-cover border-2 border-white shadow-sm ring-1 ring-slate-200 group-hover/modalavatar:ring-blue-500 transition-all" 
+                      alt="" 
+                    />
+                    <div className="absolute inset-0 bg-slate-900/35 rounded-2xl opacity-0 group-hover/modalavatar:opacity-100 flex items-center justify-center transition-opacity text-white">
+                      <Maximize2 size={18} className="drop-shadow" />
+                    </div>
+                  </button>
+
+                  <div>
+                    <h4 className="text-lg font-black text-slate-900 leading-tight">
+                      {item.name || "Guest Attendee"}
+                    </h4>
+                    <span className="text-xs font-semibold text-slate-500 block mt-0.5">
+                      {item.email || "No email provided"}
+                    </span>
                   </div>
-                </button>
-                <div>
-                  <h4 className="text-base font-extrabold text-slate-900 leading-snug">{item.name || "Guest Attendee"}</h4>
-                  <span className="text-xs font-semibold text-slate-500">{item.email}</span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="px-3 py-1 rounded-full bg-blue-600 text-white font-extrabold text-xs shadow-xs">
+                    {ticketName}
+                  </span>
+                  {type === "pending" ? (
+                    <span className="px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold flex items-center gap-1">
+                      <Clock size={12} /> Pending Review
+                    </span>
+                  ) : (
+                    <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold flex items-center gap-1">
+                      <CheckCircle2 size={12} /> Registered
+                    </span>
+                  )}
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="px-3 py-1 rounded-full bg-indigo-650 text-white font-extrabold text-xs shadow-sm">
-                  {ticketName}
-                </span>
-                {type === "pending" ? (
-                  <span className="px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold flex items-center gap-1">
-                    <Clock size={12} /> Pending Review
-                  </span>
-                ) : (
-                  <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold flex items-center gap-1">
-                    <CheckCircle2 size={12} /> Registered
-                  </span>
+              {/* Core Info Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-slate-200/80 text-xs">
+                <div className="bg-white/80 p-3 rounded-xl border border-slate-150 shadow-2xs">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Company / Org</span>
+                  <span className="font-bold text-slate-800 break-words">{item.company || "—"}</span>
+                </div>
+                <div className="bg-white/80 p-3 rounded-xl border border-slate-150 shadow-2xs">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Job Title</span>
+                  <span className="font-bold text-slate-800 break-words">{item.jobTitle || item.job_title || "—"}</span>
+                </div>
+                <div className="bg-white/80 p-3 rounded-xl border border-slate-150 shadow-2xs">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Phone Number</span>
+                  <span className="font-bold text-slate-800 break-words">{item.phone || "—"}</span>
+                </div>
+                <div className="bg-white/80 p-3 rounded-xl border border-slate-150 shadow-2xs">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Submitted Date</span>
+                  <span className="font-bold text-slate-800">{item.date || item.registeredDate || "—"}</span>
+                </div>
+                {item.note && (
+                  <div className="col-span-2 sm:col-span-4 bg-white/80 p-3 rounded-xl border border-slate-150 shadow-2xs">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Application Note</span>
+                    <span className="font-medium text-slate-700 italic break-words">{item.note}</span>
+                  </div>
                 )}
               </div>
             </div>
 
-            {/* Core Info Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-3 border-t border-indigo-100/60 text-xs">
-              <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Company / Org</span>
-                <span className="font-bold text-slate-800">{item.company || "—"}</span>
+            {/* Questionnaire & Dynamic Form Answers */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                <h5 className="text-xs font-extrabold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles size={14} className="text-blue-600" />
+                  <span>Ticket Form Questionnaire Responses</span>
+                </h5>
+                {matchedForm && (
+                  <span className="text-[10px] font-extrabold text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full">
+                    Form: {matchedForm.title}
+                  </span>
+                )}
               </div>
-              <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Job Title</span>
-                <span className="font-bold text-slate-800">{item.jobTitle || item.job_title || "—"}</span>
-              </div>
-              <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Phone</span>
-                <span className="font-bold text-slate-800">{item.phone || "—"}</span>
-              </div>
-              <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Submitted Date</span>
-                <span className="font-bold text-slate-800">{item.date || item.registeredDate || "—"}</span>
-              </div>
-              {item.note && (
-                <div className="col-span-2">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Application Note</span>
-                  <span className="font-medium text-slate-700 italic">{item.note}</span>
+
+              {answerEntries.length === 0 ? (
+                <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-8 text-center text-xs text-slate-400 font-medium">
+                  No custom ticket form questions were attached or answered for this registration.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  {answerEntries.map(([key, val]) => {
+                    // Resolve friendly label from matched form if available
+                    const fieldDef = matchedForm?.fields?.find(f => f.id === key);
+                    const label = fieldDef?.label || key.replace(/^f_/, "").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+
+                    const isImg = isImageValue(val);
+                    const isFile = isFileUrl(val);
+
+                    return (
+                      <div 
+                        key={key} 
+                        className={`bg-slate-50/80 border border-slate-200/80 rounded-2xl p-4 flex flex-col justify-between gap-2 shadow-2xs ${
+                          isImg ? "sm:col-span-2" : ""
+                        }`}
+                      >
+                        <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">
+                          {label}
+                        </span>
+
+                        {isImg ? (
+                          <div className="flex items-center gap-4 pt-1">
+                            <button
+                              type="button"
+                              onClick={() => setActiveLightboxImg({ url: val, label })}
+                              className="relative group cursor-zoom-in shrink-0 rounded-xl overflow-hidden border border-slate-200 shadow-xs focus:outline-none"
+                              title="Click to view full image"
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img 
+                                src={val} 
+                                alt={label} 
+                                className="w-20 h-20 object-cover group-hover:scale-105 transition-transform" 
+                              />
+                              <div className="absolute inset-0 bg-slate-900/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
+                                <Maximize2 size={16} />
+                              </div>
+                            </button>
+
+                            <div className="text-xs space-y-1">
+                              <span className="font-bold text-slate-800 block">Uploaded Photo</span>
+                              <span className="text-[11px] text-slate-500 font-medium block">
+                                Click photo thumbnail to inspect in full resolution
+                              </span>
+                            </div>
+                          </div>
+                        ) : isFile ? (
+                          <div className="pt-1">
+                            <a
+                              href={val}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 text-blue-600 border border-slate-200 rounded-xl text-xs font-bold transition-colors"
+                            >
+                              <ExternalLink size={13} />
+                              <span>View Attachment File</span>
+                            </a>
+                          </div>
+                        ) : (
+                          <div className="text-xs font-bold text-slate-900 leading-snug break-words">
+                            {Array.isArray(val) ? val.join(", ") : (typeof val === "boolean" ? (val ? "Yes" : "No") : (String(val) || "—"))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
           </div>
 
-          {/* Questionnaire & Dynamic Form Answers */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h5 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles size={13} className="text-indigo-600" />
-                Ticket Form Questionnaire Responses
-              </h5>
-              {matchedForm && (
-                <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">
-                  Form: {matchedForm.title}
-                </span>
-              )}
-            </div>
+          {/* Sticky Drawer Footer */}
+          <footer className="px-6 py-4 border-t border-slate-100 bg-slate-50/80 backdrop-blur-xs flex items-center justify-between gap-3 shrink-0">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs"
+            >
+              Close
+            </button>
 
-            {answerEntries.length === 0 ? (
-              <div className="bg-slate-50 border border-slate-150 rounded-2xl p-6 text-center text-xs text-slate-400 font-medium">
-                No custom ticket form questions were attached or answered for this registration.
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {answerEntries.map(([key, val]) => {
-                  // Resolve friendly label from matched form if available
-                  const fieldDef = matchedForm?.fields?.find(f => f.id === key);
-                  const label = fieldDef?.label || key.replace(/^f_/, "").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-
-                  let displayValue = String(val);
-                  if (Array.isArray(val)) {
-                    displayValue = val.join(", ");
-                  } else if (typeof val === "boolean") {
-                    displayValue = val ? "Yes" : "No";
-                  }
-
-                  return (
-                    <div key={key} className="bg-slate-50 border border-slate-150 rounded-xl p-3.5 flex flex-col justify-between">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                        {label}
-                      </span>
-                      <span className="text-xs font-bold text-slate-900 leading-snug">
-                        {displayValue || "—"}
-                      </span>
-                    </div>
-                  );
-                })}
+            {type === "pending" && (
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => onDecline && onDecline(item.id)}
+                  className="px-4 py-2.5 bg-rose-50 hover:bg-rose-600 border border-rose-200 hover:border-rose-600 text-rose-700 hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs"
+                >
+                  Decline Application
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onApprove && onApprove(item)}
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold transition-all cursor-pointer shadow-md hover:shadow-lg flex items-center gap-1.5"
+                >
+                  <Check size={14} className="stroke-[3]" />
+                  <span>Approve & Issue Pass</span>
+                </button>
               </div>
             )}
-          </div>
-        </div>
-
-        {/* Footer Actions */}
-        <div className="p-5 border-t border-slate-150 bg-slate-50 flex items-center justify-between gap-3">
-          <button
-            onClick={onClose}
-            className="px-4 py-2.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all cursor-pointer"
-          >
-            Close
-          </button>
-
-          {type === "pending" && (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => onDecline && onDecline(item.id)}
-                className="px-4 py-2.5 bg-rose-50 hover:bg-rose-600 border border-rose-200 hover:border-rose-600 text-rose-700 hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm"
-              >
-                Decline Application
-              </button>
-              <button
-                onClick={() => onApprove && onApprove(item)}
-                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold transition-all cursor-pointer shadow-md hover:shadow-lg flex items-center gap-1.5"
-              >
-                <Check size={14} className="stroke-[3]" />
-                Approve & Issue Pass
-              </button>
-            </div>
-          )}
+          </footer>
         </div>
       </div>
 
+      {/* Main Avatar Lightbox Modal */}
       {previewPhoto && (
         <ImageLightboxModal
           preview={{
@@ -886,6 +974,19 @@ function SubmissionDetailsModal({ item, type = "attendee", forms = [], tickets =
             ticket: ticketName
           }}
           onClose={() => setPreviewPhoto(false)}
+        />
+      )}
+
+      {/* Custom Answer Image Lightbox Modal */}
+      {activeLightboxImg && (
+        <ImageLightboxModal
+          preview={{
+            url: activeLightboxImg.url,
+            name: activeLightboxImg.label || 'Questionnaire Image',
+            email: item.name || '',
+            ticket: ticketName
+          }}
+          onClose={() => setActiveLightboxImg(null)}
         />
       )}
     </div>
@@ -2431,9 +2532,15 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
     onUpdateState("organizations", organizations.map(o => o.id === id ? { ...o, isArchived: false, status: 'active' } : o));
   };
 
-  const handleDeletePermanent = (id) => {
-    if (confirm("Permanently delete this organization? This action cannot be undone.")) {
-      onUpdateState("organizations", organizations.filter(o => o.id !== id));
+  const handleDeletePermanent = async (id) => {
+    if (confirm("Permanently delete this organization and all its linked sponsors/exhibitors? This action cannot be undone.")) {
+      if (state.onDeleteOrganization) {
+        await state.onDeleteOrganization(id);
+      } else {
+        onUpdateState("organizations", organizations.filter(o => o.id !== id));
+        onUpdateState("sponsors", sponsors.filter(s => s.orgId !== id && s.org_id !== id));
+        onUpdateState("exhibitors", exhibitors.filter(e => e.orgId !== id && e.org_id !== id));
+      }
     }
   };
 
@@ -2712,17 +2819,31 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
                     )}
 
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                      {!isArchived && (
-                        <button 
-                          onClick={() => onOpenModal("org", o)}
-                          className="px-2.5 py-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                          title="Edit Organization"
-                        >
-                          Edit
-                        </button>
-                      )}
-
-                      {isArchived ? (
+                      {!isArchived ? (
+                        <div className="flex items-center gap-1">
+                          <button 
+                            onClick={() => onOpenModal("org", o)}
+                            className="px-2.5 py-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                            title="Edit Organization"
+                          >
+                            Edit
+                          </button>
+                          <button 
+                            onClick={() => handleArchive(o.id)}
+                            className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                            title="Archive Organization"
+                          >
+                            <Archive size={13} />
+                          </button>
+                          <button 
+                            onClick={() => handleDeletePermanent(o.id)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                            title="Permanently Delete Organization"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      ) : (
                         <div className="flex items-center gap-1">
                           <button 
                             onClick={() => handleRestore(o.id)}
@@ -2739,14 +2860,6 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
                             <Trash2 size={13} />
                           </button>
                         </div>
-                      ) : (
-                        <button 
-                          onClick={() => handleArchive(o.id)}
-                          className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                          title="Archive Organization"
-                        >
-                          <Archive size={13} />
-                        </button>
                       )}
                     </div>
                   </div>
@@ -3020,21 +3133,39 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
                           )}
 
                           {isArchived ? (
-                            <button
-                              onClick={() => handleRestore(o.id)}
-                              className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                              title="Restore"
-                            >
-                              <RotateCcw size={13} />
-                            </button>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleRestore(o.id)}
+                                className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                                title="Restore"
+                              >
+                                <RotateCcw size={13} />
+                              </button>
+                              <button
+                                onClick={() => handleDeletePermanent(o.id)}
+                                className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                                title="Permanently Delete Organization"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
                           ) : (
-                            <button
-                              onClick={() => handleArchive(o.id)}
-                              className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                              title="Archive"
-                            >
-                              <Archive size={13} />
-                            </button>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleArchive(o.id)}
+                                className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                                title="Archive"
+                              >
+                                <Archive size={13} />
+                              </button>
+                              <button
+                                onClick={() => handleDeletePermanent(o.id)}
+                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                                title="Permanently Delete Organization"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
                           )}
                         </div>
                       </td>
@@ -3068,9 +3199,13 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
     onUpdateState("sponsors", sponsors.map(s => s.id === id ? { ...s, isArchived: false, status: 'active' } : s));
   };
 
-  const handleDeletePermanent = (id) => {
+  const handleDeletePermanent = async (id) => {
     if (confirm("Permanently delete this sponsor? This action cannot be undone.")) {
-      onUpdateState("sponsors", sponsors.filter(s => s.id !== id));
+      if (state.onDeleteSponsor) {
+        await state.onDeleteSponsor(id);
+      } else {
+        onUpdateState("sponsors", sponsors.filter(s => s.id !== id));
+      }
     }
   };
 
@@ -3219,41 +3354,58 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
                   <p className="text-slate-400 text-xs italic py-2">No sponsors registered in this tier.</p>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {list.map(s => {
+                    {list.map((s, index) => {
                       const isArchived = s.isArchived || s.status === 'archived';
                       const matchedOrg = organizations.find(o => o.id === s.orgId || o.id === s.org_id);
+                      const itemKey = s.id ? `sponsor-${s.id}` : `sponsor-idx-${index}-${s.name || 'unnamed'}`;
 
                       return (
                         <div 
-                          key={s.id} 
+                          key={itemKey} 
                           className={`bg-slate-50 border ${isArchived ? 'border-slate-300 opacity-70' : 'border-slate-200'} rounded-2xl p-4 flex flex-col items-center text-center gap-2.5 relative group hover:bg-white hover:border-blue-200 hover:shadow-xs transition-all duration-200`}
                         >
                           <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                            {!isArchived && (
-                              <button 
-                                onClick={() => onOpenModal("sponsor", s)}
-                                className="text-blue-600 hover:bg-blue-50 p-1 rounded-md text-[10px] font-bold cursor-pointer"
-                                title="Edit Sponsor"
-                              >
-                                Edit
-                              </button>
-                            )}
-                            {isArchived ? (
-                              <button 
-                                onClick={() => handleRestore(s.id)}
-                                className="text-emerald-600 hover:bg-emerald-50 p-1 rounded-md cursor-pointer"
-                                title="Restore"
-                              >
-                                <RotateCcw size={12} />
-                              </button>
+                            {!isArchived ? (
+                              <div className="flex items-center gap-1">
+                                <button 
+                                  onClick={() => onOpenModal("sponsor", s)}
+                                  className="text-blue-600 hover:bg-blue-50 p-1 rounded-md text-[10px] font-bold cursor-pointer"
+                                  title="Edit Sponsor"
+                                >
+                                  Edit
+                                </button>
+                                <button 
+                                  onClick={() => handleArchive(s.id)}
+                                  className="text-slate-400 hover:text-amber-600 hover:bg-amber-50 p-1 rounded-md cursor-pointer"
+                                  title="Archive Sponsor"
+                                >
+                                  <Archive size={12} />
+                                </button>
+                                <button 
+                                  onClick={() => handleDeletePermanent(s.id)}
+                                  className="text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-1 rounded-md cursor-pointer"
+                                  title="Delete Sponsor"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
                             ) : (
-                              <button 
-                                onClick={() => handleArchive(s.id)}
-                                className="text-slate-400 hover:text-amber-600 hover:bg-amber-50 p-1 rounded-md cursor-pointer"
-                                title="Archive Sponsor"
-                              >
-                                <Archive size={12} />
-                              </button>
+                              <div className="flex items-center gap-1">
+                                <button 
+                                  onClick={() => handleRestore(s.id)}
+                                  className="text-emerald-600 hover:bg-emerald-50 p-1 rounded-md cursor-pointer"
+                                  title="Restore"
+                                >
+                                  <RotateCcw size={12} />
+                                </button>
+                                <button 
+                                  onClick={() => handleDeletePermanent(s.id)}
+                                  className="text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-1 rounded-md cursor-pointer"
+                                  title="Permanently Delete Sponsor"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
                             )}
                           </div>
 
@@ -3321,12 +3473,13 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredSponsors.map(s => {
+                {filteredSponsors.map((s, index) => {
                   const matchedOrg = organizations.find(o => o.id === s.orgId || o.id === s.org_id);
                   const isArchived = s.isArchived || s.status === 'archived';
+                  const itemKey = s.id ? `sponsor-row-${s.id}` : `sponsor-row-idx-${index}-${s.name || 'unnamed'}`;
 
                   return (
-                    <tr key={s.id} className="hover:bg-slate-50/60 transition-colors">
+                    <tr key={itemKey} className="hover:bg-slate-50/60 transition-colors">
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-3">
                           <img 
@@ -3377,8 +3530,16 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
                           <button
                             onClick={() => isArchived ? handleRestore(s.id) : handleArchive(s.id)}
                             className="p-1.5 text-slate-400 hover:text-amber-600 rounded-lg cursor-pointer"
+                            title={isArchived ? "Restore Sponsor" : "Archive Sponsor"}
                           >
                             {isArchived ? <RotateCcw size={13} /> : <Archive size={13} />}
+                          </button>
+                          <button
+                            onClick={() => handleDeletePermanent(s.id)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer transition-colors"
+                            title="Permanently Delete Sponsor"
+                          >
+                            <Trash2 size={13} />
                           </button>
                         </div>
                       </td>
@@ -3401,9 +3562,13 @@ function ExhibitorsView({ state, onUpdateState, onOpenModal }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState("grid"); // "grid" | "table"
 
-  const handleDelete = (id) => {
-    if (confirm("Remove this exhibitor?")) {
-      onUpdateState("exhibitors", exhibitors.filter(e => e.id !== id));
+  const handleDelete = async (id) => {
+    if (confirm("Permanently delete this exhibitor? This action cannot be undone.")) {
+      if (state.onDeleteExhibitor) {
+        await state.onDeleteExhibitor(id);
+      } else {
+        onUpdateState("exhibitors", exhibitors.filter(e => e.id !== id));
+      }
     }
   };
 
@@ -3509,13 +3674,14 @@ function ExhibitorsView({ state, onUpdateState, onOpenModal }) {
         </div>
       ) : viewMode === "grid" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredExhibitors.map(e => {
+          {filteredExhibitors.map((e, index) => {
             const matchedOrg = organizations.find(o => o.id === e.orgId || o.id === e.org_id);
             const boothDisplay = e.booth || e.boothNumber || "Unassigned";
+            const itemKey = e.id ? `exhibitor-${e.id}` : `exhibitor-idx-${index}-${e.name || 'unnamed'}`;
 
             return (
               <div 
-                key={e.id} 
+                key={itemKey} 
                 className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between relative group"
               >
                 <div>
@@ -3617,11 +3783,12 @@ function ExhibitorsView({ state, onUpdateState, onOpenModal }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredExhibitors.map(e => {
+                {filteredExhibitors.map((e, index) => {
                   const matchedOrg = organizations.find(o => o.id === e.orgId || o.id === e.org_id);
+                  const itemKey = e.id ? `exhibitor-row-${e.id}` : `exhibitor-row-idx-${index}-${e.name || 'unnamed'}`;
 
                   return (
-                    <tr key={e.id} className="hover:bg-slate-50/60 transition-colors">
+                    <tr key={itemKey} className="hover:bg-slate-50/60 transition-colors">
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-3">
                           {e.logo || e.logo_url ? (
