@@ -479,7 +479,7 @@ export default function CheckInScanner({
   }, [facingMode]);
 
   return (
-    <div className="relative w-full h-full flex flex-col bg-black text-white overflow-hidden select-none font-sans">
+    <div className="absolute inset-0 w-full h-full flex flex-col bg-black text-white overflow-hidden select-none font-sans">
       {/* Hidden processing canvas */}
       <canvas ref={canvasRef} className="hidden" />
 
@@ -541,7 +541,7 @@ export default function CheckInScanner({
         </div>
 
         {/* Viewfinder Reticle Overlay */}
-        {cameraPermission === "granted" && !activeResult && (
+        {cameraPermission !== "denied" && !activeResult && (
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10">
             {/* Target Reticle Box */}
             <div className="relative w-64 h-64 sm:w-72 sm:h-72 max-w-[76vw] max-h-[76vw] flex items-center justify-center rounded-3xl">
@@ -583,14 +583,6 @@ export default function CheckInScanner({
               >
                 <RefreshCw size={15} />
                 Try Enabling Camera
-              </button>
-
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full py-3.5 bg-white/10 hover:bg-white/15 text-white rounded-2xl font-semibold text-xs border border-white/10 transition-all cursor-pointer flex items-center justify-center gap-2"
-              >
-                <Upload size={15} />
-                Upload QR Code Photo
               </button>
 
               {onSwitchToList && (
