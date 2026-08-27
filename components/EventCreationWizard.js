@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { 
   Sparkles, Calendar, MapPin, Building2, 
   Image as ImageIcon, Users, ArrowRight, ArrowLeft, 
@@ -77,6 +77,8 @@ const INDUSTRIES = [
   "Other / General Business"
 ];
 
+const DEFAULT_FALLBACK_BANNER = "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80";
+
 const TIMEZONES = [
   { id: "Africa/Algiers", name: "Africa/Algiers", offset: "GMT+1", time: "1:08 PM now" },
   { id: "Africa/Lagos", name: "Africa/Lagos", offset: "GMT+1", time: "1:08 PM now" },
@@ -89,18 +91,17 @@ const TIMEZONES = [
   { id: "UTC", name: "UTC (Coordinated Universal Time)", offset: "GMT+0", time: "12:08 PM now" }
 ];
 
-export default function EventCreationWizard({ onCancel, onEventCreated, userId, onUploadFile }) {
+export default function EventCreationWizard({ onCancel, onEventCreated, userId, onUploadFile, currentUser }) {
   const { t, lang, setLang, isRTL, languages } = useLanguage();
   const [langMenuOpen, setLangMenuOpen] = useState(false);
 
   // Current screen state:
   // "1A": Event Name input
-  // "1B": Describe "{Event Name}"? (Professional / Community / Personal) [SCREENSHOT 1]
-  // "2A": What best describes your event? (Single date / Multiple dates / Appointment) [SCREENSHOT 2]
-  // "2B": When is your event? (Dates / Times / Timezone) [SCREENSHOT 3]
+  // "2A": What best describes your event? (Single date / Multiple dates / Appointment)
+  // "2B": When is your event? (Dates / Times / Timezone)
   // "2C": Where is your event? (Venue / Hybrid / Virtual)
   // "2D": Category & Banner selection
-  // "2E": Customize your event URL [SCREENSHOT 4]
+  // "2E": Customize your event URL
   // "3":  Account information & Final Launch
   const [currentScreen, setCurrentScreen] = useState("1A");
   const [loading, setLoading] = useState(false);
@@ -117,20 +118,34 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
     eventTypeCategory: "Professional Event",
     structureType: "Multiple dates, times or sessions",
     category: "Technology & Software",
-    type: "Hybrid",
+    type: "In-Person",
     location: "Algiers International Conference Center (CIC), Algeria",
+    virtualUrl: "",
+    virtualPlatform: "Zoom Webinar / Meeting",
+    virtualInstructions: "",
     startDate: "2026-11-05",
     startTime: "09:00",
     endDate: "2026-11-08",
     endTime: "18:00",
     timezone: "Africa/Algiers",
-    description: "An international summit bringing together leading industry executives, regulators, and innovators.",
-    banner: PRESET_BANNERS[0].url,
+    description: "",
+    banner: "",
     capacity: 800,
-    hostName: "Event Organizer",
-    hostEmail: "organizer@eventzone.io",
-    organization: "Eventzone Host Organization",
+    hostName: currentUser?.fullName || "",
+    hostEmail: currentUser?.email || "",
+    organization: currentUser?.companyName || "Eventzone Host Organization",
   });
+
+  useEffect(() => {
+    if (currentUser) {
+      setFormData(prev => ({
+        ...prev,
+        hostName: prev.hostName || currentUser.fullName || "",
+        hostEmail: prev.hostEmail || currentUser.email || "",
+        organization: prev.organization === "Eventzone Host Organization" ? (currentUser.companyName || prev.organization) : prev.organization
+      }));
+    }
+  }, [currentUser]);
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -293,15 +308,6 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
           >
             <img src="https://i.imgur.com/jFDrQbM.png" alt="eventzone" style={{ height: '28px', width: 'auto', maxWidth: '160px', objectFit: 'contain' }} className="h-7 w-auto object-contain" />
           </div>
-
-          <div className="h-5 w-px bg-slate-200" />
-
-          <button
-            onClick={onCancel}
-            className="text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors p-1.5 rounded-xl hover:bg-slate-100 cursor-pointer"
-          >
-            Cancel
-          </button>
         </div>
 
         {/* Center: Stepper Line (1 Event name — 2 Event details — 3 Account information) */}
@@ -409,13 +415,6 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
               </div>
             )}
           </div>
-
-          <button
-            onClick={onCancel}
-            className="text-slate-400 hover:text-slate-600 p-2 rounded-xl hover:bg-slate-100 transition-colors font-bold cursor-pointer"
-          >
-            ✕
-          </button>
         </div>
       </header>
 
@@ -685,21 +684,46 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
                 </div>
               </div>
 
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-2">
-                  Venue / Location Address
-                </label>
-                <div className="relative">
-                  <MapPin size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="e.g. Algiers International Conference Center (CIC), Algeria"
-                    value={formData.location}
-                    onChange={(e) => handleChange("location", e.target.value)}
-                    className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-2xl text-xs font-semibold text-slate-900 outline-none transition-all"
-                  />
+              {/* Physical Venue Input (In-Person or Hybrid) */}
+              {(formData.type === "In-Person" || formData.type === "Hybrid") && (
+                <div className="space-y-2 animate-fade-in">
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                    Venue / Location Address
+                  </label>
+                  <div className="relative">
+                    <MapPin size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="e.g. Algiers International Conference Center (CIC), Algeria"
+                      value={formData.location}
+                      onChange={(e) => handleChange("location", e.target.value)}
+                      className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-2xl text-xs font-semibold text-slate-900 outline-none transition-all"
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* Virtual Stream Input (Virtual or Hybrid) */}
+              {(formData.type === "Virtual" || formData.type === "Hybrid") && (
+                <div className="space-y-3 pt-3 border-t border-slate-100 animate-fade-in">
+                  <div className="text-xs font-bold text-slate-800">
+                    Virtual Stream &amp; Remote Access
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                      Online Meeting / Live Stream URL
+                    </label>
+                    <input
+                      type="url"
+                      placeholder="e.g. https://zoom.us/j/987654321, Google Meet, or YouTube Live"
+                      value={formData.virtualUrl}
+                      onChange={(e) => handleChange("virtualUrl", e.target.value)}
+                      className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-2xl text-xs font-semibold text-slate-900 font-mono outline-none transition-all"
+                    />
+                  </div>
+                </div>
+              )}
 
               <button
                 type="button"
@@ -771,7 +795,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
 
                 {/* Main Custom Upload Box */}
                 <div className="space-y-3">
-                  {isCustomBanner && formData.banner ? (
+                  {formData.banner ? (
                     <div className="relative rounded-2xl overflow-hidden border-2 border-blue-600 shadow-md group">
                       <div className="h-44 w-full relative bg-slate-950">
                         <img 
@@ -780,46 +804,34 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
                           className="w-full h-full object-cover"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end p-4">
-                          <div>
-                            <span className="px-2 py-0.5 rounded-md bg-blue-600 text-white text-[9px] font-extrabold uppercase">
-                              Active Event Banner
-                            </span>
-                            <h4 className="text-sm font-bold text-white mt-1">
-                              {formData.title || "Your Event Title"}
-                            </h4>
-                          </div>
+                          <h4 className="text-sm font-bold text-white">
+                            {formData.title || "Your Event Title"}
+                          </h4>
                         </div>
                       </div>
 
                       {/* Action Bar */}
-                      <div className="bg-slate-900 px-4 py-3 flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-xs text-slate-300">
-                          <CheckCircle2 size={15} className="text-emerald-400" />
-                          <span className="font-semibold">Ready to save &amp; sync to database</span>
-                        </div>
+                      <div className="bg-slate-900 px-4 py-3 flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={uploadingBanner}
+                          className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-900 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
+                        >
+                          Replace Photo
+                        </button>
 
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => fileInputRef.current?.click()}
-                            disabled={uploadingBanner}
-                            className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-900 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
-                          >
-                            Replace Photo
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              handleChange("banner", PRESET_BANNERS[0].url);
-                              setIsCustomBanner(false);
-                            }}
-                            className="px-2.5 py-1.5 bg-slate-800 hover:bg-rose-500/20 hover:text-rose-400 text-slate-400 rounded-xl text-xs font-semibold transition-all cursor-pointer"
-                            title="Reset to starter preset"
-                          >
-                            Reset
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleChange("banner", "");
+                            setIsCustomBanner(false);
+                          }}
+                          className="px-2.5 py-1.5 bg-slate-800 hover:bg-rose-500/20 hover:text-rose-400 text-slate-400 rounded-xl text-xs font-semibold transition-all cursor-pointer"
+                          title="Remove photo"
+                        >
+                          Remove
+                        </button>
                       </div>
                     </div>
                   ) : (
@@ -855,45 +867,6 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
                       )}
                     </div>
                   )}
-
-                  {/* Preset Banners Alternative */}
-                  <div className="pt-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                        Or pick from curated templates
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                      {PRESET_BANNERS.map((preset) => {
-                        const isSelected = !isCustomBanner && formData.banner === preset.url;
-                        return (
-                          <div
-                            key={preset.url}
-                            onClick={() => {
-                              handleChange("banner", preset.url);
-                              setIsCustomBanner(false);
-                            }}
-                            className={`h-20 rounded-xl overflow-hidden relative cursor-pointer border-2 transition-all group ${
-                              isSelected 
-                                ? "border-blue-600 ring-3 ring-blue-100 scale-102" 
-                                : "border-slate-200 opacity-60 hover:opacity-100 hover:border-slate-300"
-                            }`}
-                          >
-                            <img src={preset.url} alt={preset.name} className="w-full h-full object-cover" />
-                            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end p-1.5">
-                              <span className="text-[9px] font-bold text-white leading-tight truncate">{preset.name}</span>
-                            </div>
-                            {isSelected && (
-                              <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-xs">
-                                <Check size={10} />
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
                 </div>
               </div>
 
@@ -1063,7 +1036,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
               {/* Live Preview Card Mini */}
               <div className="md:col-span-5 flex flex-col justify-between bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-xs">
                 <div className="h-32 w-full relative overflow-hidden bg-slate-900">
-                  <img src={formData.banner} alt="Cover" className="w-full h-full object-cover" />
+                  <img src={formData.banner || DEFAULT_FALLBACK_BANNER} alt="Cover" className="w-full h-full object-cover" />
                   <div className="absolute top-2.5 left-2.5">
                     <span className="px-2.5 py-0.5 rounded-full text-[9px] font-extrabold bg-white/95 text-blue-700 uppercase">
                       {formData.type}
@@ -1087,8 +1060,22 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
                       <span>{formData.startDate} — {formData.endDate}</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <MapPin size={12} className="text-blue-600 shrink-0" />
-                      <span className="truncate">{formData.location}</span>
+                      {formData.type === "Virtual" ? (
+                        <>
+                          <Video size={12} className="text-purple-600 shrink-0" />
+                          <span className="truncate">{formData.virtualPlatform || "Online Virtual Stream"}</span>
+                        </>
+                      ) : formData.type === "Hybrid" ? (
+                        <>
+                          <Globe size={12} className="text-blue-600 shrink-0" />
+                          <span className="truncate">{formData.location || "Hybrid Summit"}</span>
+                        </>
+                      ) : (
+                        <>
+                          <MapPin size={12} className="text-blue-600 shrink-0" />
+                          <span className="truncate">{formData.location || "Physical Venue"}</span>
+                        </>
+                      )}
                     </div>
                     <div className="flex items-center gap-1.5 text-blue-600 font-semibold truncate pt-1">
                       <LinkIcon size={12} className="shrink-0" />

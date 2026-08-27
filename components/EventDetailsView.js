@@ -1136,62 +1136,78 @@ export default function EventDetailsView({
               </p>
             </div>
 
-            {/* Event Logo Card */}
-            <div className="p-4.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 shadow-2xs">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
-                <div className="flex items-center gap-3.5">
-                  <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200 shadow-2xs flex items-center justify-center overflow-hidden shrink-0">
-                    {eventLogo ? (
+            {/* Event Logo Upload UI */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium text-slate-700">
+                  Event Logo / Brand Mark
+                </label>
+                <span className="text-[11px] text-slate-400 font-normal">PNG, SVG, JPG up to 5MB</span>
+              </div>
+
+              {eventLogo ? (
+                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3 animate-fade-in shadow-2xs">
+                  <div className="flex items-center gap-3">
+                    <div className="w-14 h-14 rounded-xl bg-white border border-slate-200 flex items-center justify-center p-1.5 shadow-2xs shrink-0 overflow-hidden">
                       <img
                         src={eventLogo}
                         alt="Event Logo"
-                        className="w-full h-full object-contain p-1.5"
+                        className="w-full h-full object-contain"
                       />
-                    ) : (
-                      <Sparkles size={24} className="text-blue-500" />
-                    )}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-xs font-bold text-slate-900">Event Logo / Brand Mark</h3>
-                      {eventLogo ? (
-                        <span className="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold">
-                          Logo Active
-                        </span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded-full bg-slate-200/60 text-slate-600 text-[10px] font-semibold">
-                          Optional
-                        </span>
-                      )}
                     </div>
-                    <p className="text-[11px] text-slate-500 mt-0.5">
-                      Displayed on public navigation bars, delegate registration passes, and confirmation tickets (Max 5MB).
-                    </p>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-900">Event Logo</span>
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold">
+                          Active
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        Displayed on public header, tickets, and badges.
+                      </p>
+                    </div>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => eventLogoFileInputRef.current?.click()}
-                    disabled={uploadingEventLogo}
-                    className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
-                  >
-                    <Upload size={12} />
-                    <span>{uploadingEventLogo ? "Uploading..." : "Upload Logo"}</span>
-                  </button>
-                  {eventLogo && (
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => eventLogoFileInputRef.current?.click()}
+                      disabled={uploadingEventLogo}
+                      className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-800 text-xs font-bold transition-all cursor-pointer shadow-2xs"
+                    >
+                      {uploadingEventLogo ? "Uploading..." : "Replace Logo"}
+                    </button>
                     <button
                       type="button"
                       onClick={() => setEventLogo("")}
                       className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
                       title="Remove event logo"
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={15} />
                     </button>
-                  )}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div
+                  onClick={() => !uploadingEventLogo && eventLogoFileInputRef.current?.click()}
+                  className="p-4 rounded-2xl border border-dashed border-slate-300 hover:border-blue-500 bg-slate-50/60 hover:bg-blue-50/30 flex items-center justify-between gap-3 transition-all cursor-pointer group shadow-2xs"
+                >
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 group-hover:text-blue-600 transition-colors block">
+                      {uploadingEventLogo ? "Uploading event logo..." : "Click to upload event logo"}
+                    </span>
+                    <span className="text-[11px] text-slate-400 block mt-0.5">
+                      Displayed on public navigation bars, delegate registration passes, and confirmation tickets
+                    </span>
+                  </div>
+
+                  <div className="shrink-0">
+                    <span className="px-3.5 py-1.5 rounded-xl bg-white border border-slate-200 group-hover:border-blue-300 group-hover:text-blue-600 text-slate-700 text-xs font-bold shadow-2xs transition-all inline-block">
+                      {uploadingEventLogo ? "Uploading..." : "Upload Logo"}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -1464,63 +1480,26 @@ export default function EventDetailsView({
                           className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 font-medium placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white transition-all shadow-2xs"
                         />
                       </div>
-
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-slate-700">Detailed Physical Address / Hall / Room</label>
-                        <input
-                          type="text"
-                          value={venueAddress}
-                          onChange={(e) => setVenueAddress(e.target.value)}
-                          placeholder="e.g. Route Nationale 11, Staoueli, Algiers, Algeria"
-                          className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 font-medium placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white transition-all shadow-2xs"
-                        />
-                      </div>
                     </div>
                   )}
 
                   {/* Virtual Live Stream Details (Virtual or Hybrid) */}
                   {(type === "Virtual" || type === "Hybrid") && (
                     <div className="pt-3 border-t border-slate-100 space-y-4 animate-fade-in">
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
-                        <Video size={15} className="text-purple-600" />
-                        <span>Virtual Stream &amp; Remote Access</span>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-medium text-slate-700 flex items-center gap-1">
-                            <LinkIcon size={12} className="text-purple-500" />
-                            <span>Online Meeting / Live Stream URL</span>
-                          </label>
-                          <input
-                            type="url"
-                            value={virtualUrl}
-                            onChange={(e) => setVirtualUrl(e.target.value)}
-                            placeholder="e.g. https://zoom.us/j/987654321 or https://youtube.com/live/..."
-                            className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 font-medium placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white transition-all shadow-2xs font-mono"
-                          />
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-medium text-slate-700">Streaming Platform</label>
-                          <SearchableSelect
-                            value={virtualPlatform}
-                            onChange={(val) => setVirtualPlatform(val)}
-                            options={VIRTUAL_PLATFORMS}
-                            placeholder="Select platform..."
-                            searchPlaceholder="Search streaming platform..."
-                          />
-                        </div>
+                      <div className="text-xs font-bold text-slate-800">
+                        Virtual Stream &amp; Remote Access
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-slate-700">Remote Attendee Joining Instructions</label>
+                        <label className="text-xs font-medium text-slate-700">
+                          Online Meeting / Live Stream URL
+                        </label>
                         <input
-                          type="text"
-                          value={virtualInstructions}
-                          onChange={(e) => setVirtualInstructions(e.target.value)}
-                          placeholder="e.g. Access link and credentials will be sent to registered email."
-                          className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 font-medium placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white transition-all shadow-2xs"
+                          type="url"
+                          value={virtualUrl}
+                          onChange={(e) => setVirtualUrl(e.target.value)}
+                          placeholder="e.g. https://zoom.us/j/987654321 or https://youtube.com/live/..."
+                          className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 font-medium placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white transition-all shadow-2xs font-mono"
                         />
                       </div>
                     </div>
@@ -1754,27 +1733,15 @@ export default function EventDetailsView({
                             {/* Virtual Link Fields if Virtual or Hybrid */}
                             {(stopFormat === "Virtual" || stopFormat === "Hybrid") && (
                               <div className="p-3.5 rounded-xl bg-purple-50/40 border border-purple-200 space-y-3">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                  <div className="space-y-1">
-                                    <label className="text-[11px] font-semibold text-slate-700">Online Meeting / Stream URL</label>
-                                    <input
-                                      type="url"
-                                      value={stop.virtualUrl || ""}
-                                      onChange={(e) => handleUpdateStop(stop.id, "virtualUrl", e.target.value)}
-                                      placeholder="e.g. https://zoom.us/j/..."
-                                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 font-mono placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-all shadow-2xs"
-                                    />
-                                  </div>
-                                  <div className="space-y-1">
-                                    <label className="text-[11px] font-semibold text-slate-700">Platform</label>
-                                    <SearchableSelect
-                                       value={stop.virtualPlatform || "Zoom Webinar / Meeting"}
-                                       onChange={(val) => handleUpdateStop(stop.id, "virtualPlatform", val)}
-                                       options={VIRTUAL_PLATFORMS}
-                                       placeholder="Select platform..."
-                                       searchPlaceholder="Search streaming platform..."
-                                     />
-                                  </div>
+                                <div className="space-y-1">
+                                  <label className="text-[11px] font-semibold text-slate-700">Online Meeting / Stream URL</label>
+                                  <input
+                                    type="url"
+                                    value={stop.virtualUrl || ""}
+                                    onChange={(e) => handleUpdateStop(stop.id, "virtualUrl", e.target.value)}
+                                    placeholder="e.g. https://zoom.us/j/..."
+                                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 font-mono placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-all shadow-2xs"
+                                  />
                                 </div>
                               </div>
                             )}
@@ -1814,16 +1781,11 @@ export default function EventDetailsView({
             {/* 1. YOUTUBE VIDEO SECTION */}
             <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-red-100 text-red-600 flex items-center justify-center font-bold shrink-0">
-                    <Video size={16} />
-                  </div>
-                  <div>
-                    <h3 className="text-xs font-bold text-slate-900">Hero YouTube Video / Promo Trailer</h3>
-                    <p className="text-[11px] text-slate-500">
-                      When provided, this video will play in the landing page hero section, and visitors can swipe to view pictures.
-                    </p>
-                  </div>
+                <div>
+                  <h3 className="text-xs font-bold text-slate-900">Hero YouTube Video / Promo Trailer</h3>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    When provided, this video will play in the landing page hero section, and visitors can swipe to view pictures.
+                  </p>
                 </div>
 
                 {youtubeUrl && (
@@ -1888,25 +1850,20 @@ export default function EventDetailsView({
             {/* 2. EVENT IMAGES & GALLERY (UP TO 5 IMAGES, MAX 5MB) */}
             <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold shrink-0">
-                    <ImageIcon size={16} />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xs font-bold text-slate-900">Event Photos &amp; Banners</h3>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${
+                      galleryImages.length >= 5 
+                        ? "bg-amber-50 border-amber-300 text-amber-800" 
+                        : "bg-blue-50 border-blue-200 text-blue-700"
+                    }`}>
+                      {galleryImages.length} / 5 uploaded
+                    </span>
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-xs font-bold text-slate-900">Event Photos &amp; Banners</h3>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${
-                        galleryImages.length >= 5 
-                          ? "bg-amber-50 border-amber-300 text-amber-800" 
-                          : "bg-blue-50 border-blue-200 text-blue-700"
-                      }`}>
-                        {galleryImages.length} / 5 uploaded
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-500 mt-0.5">
-                      Upload up to 5 images (max 5MB each). The first photo is used as the primary cover banner.
-                    </p>
-                  </div>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Upload up to 5 images (max 5MB each). The first photo is used as the primary cover banner.
+                  </p>
                 </div>
 
                 <div className="flex items-center gap-2 self-start sm:self-center">
@@ -1948,8 +1905,7 @@ export default function EventDetailsView({
                         />
                         {/* Primary Cover Badge */}
                         {isPrimary ? (
-                          <div className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-full bg-blue-600 text-white text-[10px] font-extrabold flex items-center gap-1 shadow-md">
-                            <Sparkles size={11} />
+                          <div className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-full bg-blue-600 text-white text-[10px] font-extrabold shadow-md">
                             <span>Primary Cover Banner</span>
                           </div>
                         ) : (
@@ -2022,61 +1978,77 @@ export default function EventDetailsView({
             </div>
 
             {/* Organizer / Host Logo Card */}
-            <div className="p-4.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 shadow-2xs">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
-                <div className="flex items-center gap-3.5">
-                  <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200 shadow-2xs flex items-center justify-center overflow-hidden shrink-0">
-                    {organizerLogo ? (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium text-slate-700">
+                  Organizer / Host Entity Logo
+                </label>
+                <span className="text-[11px] text-slate-400 font-normal">PNG, SVG, JPG up to 5MB</span>
+              </div>
+
+              {organizerLogo ? (
+                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3 animate-fade-in shadow-2xs">
+                  <div className="flex items-center gap-3">
+                    <div className="w-14 h-14 rounded-xl bg-white border border-slate-200 flex items-center justify-center p-1.5 shadow-2xs shrink-0 overflow-hidden">
                       <img
                         src={organizerLogo}
                         alt="Organizer Logo"
-                        className="w-full h-full object-contain p-1.5"
+                        className="w-full h-full object-contain"
                       />
-                    ) : (
-                      <Building2 size={24} className="text-slate-400" />
-                    )}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-xs font-bold text-slate-900">Organizer / Host Entity Logo</h3>
-                      {organizerLogo ? (
-                        <span className="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold">
-                          Logo Active
-                        </span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded-full bg-slate-200/60 text-slate-600 text-[10px] font-semibold">
-                          Optional
-                        </span>
-                      )}
                     </div>
-                    <p className="text-[11px] text-slate-500 mt-0.5">
-                      Displayed on delegate badges, host credentials, and footer recognition (Max 5MB).
-                    </p>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-900">Host Logo</span>
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold">
+                          Active
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        Displayed on delegate badges, host credentials, and footer recognition.
+                      </p>
+                    </div>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => organizerLogoFileInputRef.current?.click()}
-                    disabled={uploadingOrganizerLogo}
-                    className="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
-                  >
-                    <Upload size={12} />
-                    <span>{uploadingOrganizerLogo ? "Uploading..." : "Upload Logo"}</span>
-                  </button>
-                  {organizerLogo && (
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => organizerLogoFileInputRef.current?.click()}
+                      disabled={uploadingOrganizerLogo}
+                      className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-800 text-xs font-bold transition-all cursor-pointer shadow-2xs"
+                    >
+                      {uploadingOrganizerLogo ? "Uploading..." : "Replace Logo"}
+                    </button>
                     <button
                       type="button"
                       onClick={() => setOrganizerLogo("")}
                       className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
                       title="Remove organizer logo"
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={15} />
                     </button>
-                  )}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div
+                  onClick={() => !uploadingOrganizerLogo && organizerLogoFileInputRef.current?.click()}
+                  className="p-4 rounded-2xl border border-dashed border-slate-300 hover:border-blue-500 bg-slate-50/60 hover:bg-blue-50/30 flex items-center justify-between gap-3 transition-all cursor-pointer group shadow-2xs"
+                >
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 group-hover:text-blue-600 transition-colors block">
+                      {uploadingOrganizerLogo ? "Uploading organizer logo..." : "Click to upload organizer logo"}
+                    </span>
+                    <span className="text-[11px] text-slate-400 block mt-0.5">
+                      Displayed on delegate badges, host credentials, and footer recognition
+                    </span>
+                  </div>
+
+                  <div className="shrink-0">
+                    <span className="px-3.5 py-1.5 rounded-xl bg-white border border-slate-200 group-hover:border-blue-300 group-hover:text-blue-600 text-slate-700 text-xs font-bold shadow-2xs transition-all inline-block">
+                      {uploadingOrganizerLogo ? "Uploading..." : "Upload Logo"}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-1.5">

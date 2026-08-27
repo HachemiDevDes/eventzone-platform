@@ -17,12 +17,18 @@ ALTER TABLE public.sessions ADD COLUMN IF NOT EXISTS speaker_id UUID;
 ALTER TABLE public.sessions ADD COLUMN IF NOT EXISTS location TEXT;
 ALTER TABLE public.sessions ADD COLUMN IF NOT EXISTS track TEXT;
 
+-- 2. Events additional columns
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS checkin_passcode TEXT;
+
 -- 3. Participants additional columns
 ALTER TABLE public.participants ADD COLUMN IF NOT EXISTS phone TEXT;
 ALTER TABLE public.participants ADD COLUMN IF NOT EXISTS wilaya TEXT;
 ALTER TABLE public.participants ADD COLUMN IF NOT EXISTS type TEXT;
 ALTER TABLE public.participants ADD COLUMN IF NOT EXISTS status_badge TEXT;
+ALTER TABLE public.participants ADD COLUMN IF NOT EXISTS checked_in BOOLEAN DEFAULT FALSE;
 ALTER TABLE public.participants ADD COLUMN IF NOT EXISTS checked_in_at TIMESTAMPTZ;
+ALTER TABLE public.participants ADD COLUMN IF NOT EXISTS checked_in_by TEXT;
+ALTER TABLE public.participants ADD COLUMN IF NOT EXISTS badge_code TEXT;
 
 -- 4. Organizations additional columns
 ALTER TABLE public.organizations ADD COLUMN IF NOT EXISTS description TEXT;

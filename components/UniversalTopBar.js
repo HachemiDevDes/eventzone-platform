@@ -75,10 +75,10 @@ export default function UniversalTopBar({
   };
 
   const handleForOrganizersClick = () => {
-    if (!currentUser) {
-      if (onOpenAuth) onOpenAuth("signup");
-    } else {
-      if (onOpenEventsHub) onOpenEventsHub();
+    if (onOpenCreationWizard) {
+      onOpenCreationWizard();
+    } else if (onOpenEventsHub) {
+      onOpenEventsHub();
     }
   };
 
@@ -136,7 +136,7 @@ export default function UniversalTopBar({
           onClick={handleForOrganizersClick}
           className="text-xs font-bold text-slate-600 hover:text-blue-600 transition-colors cursor-pointer bg-transparent border-0"
         >
-          {t("nav.forOrganizers", "For Organizers")}
+          {t("nav.forOrganizers", "Organise an event")}
         </button>
       </nav>
 

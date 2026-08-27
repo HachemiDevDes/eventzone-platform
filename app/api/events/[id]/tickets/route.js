@@ -108,48 +108,6 @@ export async function GET(request, context) {
       }
     }
 
-    // If no tickets found in DB, provide default starter tiers
-    if (tickets.length === 0) {
-      tickets = [
-        {
-          id: "t-std-pass",
-          name: "Standard Attendee Pass",
-          tier: "Standard Attendee Pass",
-          price: 0,
-          currency: "DZD",
-          description: "Full access to keynotes, exhibitions, networking lounges, and digital badge.",
-          features: ["Access to main stage", "Exhibitor floor access", "Instant QR Badge", "Networking lounge"],
-          totalQuantity: 500,
-          soldQuantity: 0,
-          availableQuantity: 500,
-          isSoldOut: false,
-          requiresApproval: false,
-          isPopular: true,
-          color: "blue",
-          formId: null,
-          isActive: true,
-        },
-        {
-          id: "t-vip-pass",
-          name: "VIP Executive Pass",
-          tier: "VIP Executive Pass",
-          price: 15000,
-          currency: "DZD",
-          description: "Priority VIP seating, private speaker reception, catering lounge, and fast-track check-in.",
-          features: ["VIP Front Row Seating", "Speaker Reception Access", "Complimentary Lunch & Lounge", "Fast-Track Badging"],
-          totalQuantity: 80,
-          soldQuantity: 0,
-          availableQuantity: 80,
-          isSoldOut: false,
-          requiresApproval: true,
-          isPopular: false,
-          color: "purple",
-          formId: null,
-          isActive: true,
-        },
-      ];
-    }
-
     // 3. Fetch linked forms / custom questions if any
     let forms = [];
     if (isValidUuid(eventId)) {

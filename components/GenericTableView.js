@@ -8,8 +8,10 @@ import {
   Calendar, Upload, Plus, BarChart4, Pencil, Mail, FileText,
   Printer, QrCode, Layers, Archive, RotateCcw,
   Eye, Phone, Clock, CheckCircle2, XCircle, Sparkles, Filter, Info, ShieldCheck, ArrowUpRight,
-  Maximize2, User, Download, Camera, Loader2, MoreVertical, MoreHorizontal
+  Maximize2, User, Download, Camera, Loader2, MoreVertical, MoreHorizontal,
+  Store, Globe, ExternalLink, DollarSign, LayoutGrid, List, Copy, Smartphone
 } from "lucide-react";
+import QRCode from "qrcode";
 import { useLanguage } from "../lib/i18n";
 import { logCommunication, fetchCommunications } from "../lib/db";
 import { motion, AnimatePresence } from "framer-motion";
@@ -24,6 +26,7 @@ import TeamView from "./TeamView";
 import DocumentsView from "./DocumentsView";
 import AnalyticsView from "./AnalyticsView";
 import DevelopersView from "./DevelopersView";
+import CommunicationsView from "./CommunicationsView";
 import {
   TableViewSkeleton,
   LogisticsSkeleton,
@@ -1089,35 +1092,72 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
   };
 
   // Toggle Check-in status directly from Attendees list
-  const handleToggleCheckin = (id) => {
+  const handleToggleCheckin = async (id) => {
+    const target = attendees.find(a => a.id === id);
+    if (!target) return;
+    const isCurrentlyChecked = Boolean(target.status === "checked-in" || target.status === "checked_in" || target.checkedIn || target.checked_in);
+    const nextState = !isCurrentlyChecked;
+    const checkinTime = nextState ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null;
+
     const updated = attendees.map(a => {
       if (a.id === id) {
-        const isCheckedIn = a.status === "checked-in";
         return {
           ...a,
-          status: isCheckedIn ? "registered" : "checked-in",
-          checkinTime: isCheckedIn ? null : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          status: nextState ? "checked_in" : "registered",
+          checkedIn: nextState,
+          checked_in: nextState,
+          checkedInAt: nextState ? new Date().toISOString() : null,
+          checkinTime
         };
       }
       return a;
     });
     onUpdateState("attendees", updated);
+
+    try {
+      await toggleAttendeeCheckin({
+        eventId: state.activeEventId,
+        attendeeId: id,
+        checkedIn: nextState,
+        checkedInBy: "Organizer Console"
+      });
+    } catch (e) {
+      console.warn("handleToggleCheckin DB error:", e);
+    }
   };
 
-  const handleBulkCheckin = (checkin = true) => {
+  const handleBulkCheckin = async (checkin = true) => {
     const selectedKeys = new Set(selectedIds);
+    const now = checkin ? new Date().toISOString() : null;
+    const checkinTime = checkin ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null;
+
     const updated = attendees.map((a, idx) => {
       const key = a.id || `att-${idx}`;
       if (selectedKeys.has(key)) {
         return {
           ...a,
-          status: checkin ? "checked-in" : "registered",
-          checkinTime: checkin ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null
+          status: checkin ? "checked_in" : "registered",
+          checkedIn: checkin,
+          checked_in: checkin,
+          checkedInAt: now,
+          checkinTime
         };
       }
       return a;
     });
     onUpdateState("attendees", updated);
+
+    for (const key of Array.from(selectedKeys)) {
+      try {
+        await toggleAttendeeCheckin({
+          eventId: state.activeEventId,
+          attendeeId: key,
+          checkedIn: checkin,
+          checkedInBy: "Organizer Console"
+        });
+      } catch (e) {}
+    }
+
     setSelectedIds(new Set());
   };
 
@@ -1359,7 +1399,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                 paginated.map((a, idx) => {
                   const globalIdx = (currentPage - 1) * pageSize + idx;
                   const isArchived = a.status === 'archived' || a.isArchived;
-                  const isCheckedIn = a.status === 'checked-in';
+                  const isCheckedIn = Boolean(a.status === 'checked-in' || a.status === 'checked_in' || a.checkedIn || a.checked_in);
                   const displayImg = getAttendeeDisplayImage(a);
                   const attendeeKey = a.id || `att-${globalIdx}`;
                   const isMenuActive = activeActionsMenu === attendeeKey;
@@ -1448,7 +1488,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                               ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' 
                               : 'bg-indigo-50 text-indigo-700 border border-indigo-100'
                         }`}>
-                          {isArchived ? 'ARCHIVED' : (isCheckedIn ? 'checked in' : 'registered')}
+                          {isArchived ? 'ARCHIVED' : (isCheckedIn ? 'Checked In' : 'Registered')}
                         </span>
                       </td>
                       <td className="py-4 px-6 text-slate-400 font-medium whitespace-nowrap">{a.registeredDate || "—"}</td>
@@ -2310,7 +2350,11 @@ function PendingView({ state, onUpdateState }) {
 
 // 4. PARTNER ORGANIZATIONS VIEW
 function OrganizationsView({ state, onUpdateState, onOpenModal }) {
-  const { organizations } = state;
+  const { organizations = [], sponsors = [], exhibitors = [] } = state;
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedIndustry, setSelectedIndustry] = useState("all");
+  const [statusTab, setStatusTab] = useState("all"); // "all" | "active" | "sponsors" | "exhibitors" | "archived"
+  const [viewMode, setViewMode] = useState("grid"); // "grid" | "table"
 
   const handleArchive = (id) => {
     if (confirm("Archive this organization? (Preserved in archives)")) {
@@ -2328,104 +2372,626 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
     }
   };
 
+  // Helper to check linked sponsor/exhibitor roles
+  const getOrgRoles = (org) => {
+    const isSponsor = sponsors.find(s => !s.isArchived && s.status !== 'archived' && (s.orgId === org.id || s.org_id === org.id || (s.name && org.name && s.name.toLowerCase() === org.name.toLowerCase())));
+    const isExhibitor = exhibitors.find(e => !e.isArchived && e.status !== 'archived' && (e.orgId === org.id || e.org_id === org.id || (e.name && org.name && e.name.toLowerCase() === org.name.toLowerCase())));
+    return { isSponsor, isExhibitor };
+  };
+
+  // KPI Counts
+  const activeCount = organizations.filter(o => !o.isArchived && o.status !== 'archived').length;
+  const archivedCount = organizations.filter(o => o.isArchived || o.status === 'archived').length;
+  const activeSponsorsCount = sponsors.filter(s => !s.isArchived && s.status !== 'archived').length;
+  const activeExhibitorsCount = exhibitors.filter(e => !e.isArchived && e.status !== 'archived').length;
+
+  // Extract unique industries for SearchableSelect
+  const industryOptions = useMemo(() => {
+    const set = new Set();
+    organizations.forEach(o => {
+      if (o.industry) set.add(o.industry);
+    });
+    return [
+      { value: "all", label: "All Industries" },
+      ...Array.from(set).map(ind => ({ value: ind, label: ind }))
+    ];
+  }, [organizations]);
+
+  // Filter organizations
+  const filteredOrganizations = useMemo(() => {
+    return organizations.filter(o => {
+      const isArchived = o.isArchived || o.status === 'archived';
+      const { isSponsor, isExhibitor } = getOrgRoles(o);
+
+      // Sub-tab filter
+      if (statusTab === "active" && isArchived) return false;
+      if (statusTab === "sponsors" && (!isSponsor || isArchived)) return false;
+      if (statusTab === "exhibitors" && (!isExhibitor || isArchived)) return false;
+      if (statusTab === "archived" && !isArchived) return false;
+
+      // Industry filter
+      if (selectedIndustry !== "all" && o.industry !== selectedIndustry) return false;
+
+      // Text search
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchesName = o.name?.toLowerCase().includes(q);
+        const matchesIndustry = o.industry?.toLowerCase().includes(q);
+        const matchesContact = o.contact?.toLowerCase().includes(q);
+        const matchesEmail = o.email?.toLowerCase().includes(q);
+        if (!matchesName && !matchesIndustry && !matchesContact && !matchesEmail) return false;
+      }
+
+      return true;
+    });
+  }, [organizations, searchQuery, selectedIndustry, statusTab, sponsors, exhibitors]);
+
   return (
-    <div className="flex flex-col gap-6 w-full">
-      <header className="flex justify-between items-center select-none">
+    <div className="flex flex-col gap-6 w-full animate-fade-in select-none">
+      
+      {/* 1. Header (Clean title without icon + Blue action button) */}
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Partner Organizations</h2>
-          <p className="text-sm text-slate-500">Partner institutions, corporations and groups connected to the event.</p>
+          <div className="flex items-center gap-2.5">
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight">Partner Organizations</h2>
+            <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-black border border-blue-100">
+              {organizations.length} Companies
+            </span>
+          </div>
+          <p className="text-sm text-slate-500 font-medium mt-0.5">
+            Manage partner corporations, institutions, sponsors, and exhibitors connected to your event.
+          </p>
         </div>
+
         <button 
           onClick={() => onOpenModal("org")}
-          className="bg-indigo-650 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-xl text-sm transition-all hover:shadow duration-200 cursor-pointer"
+          className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-4 rounded-xl text-xs transition-all hover:shadow-md hover:-translate-y-0.5 flex items-center gap-2 cursor-pointer shadow-xs shadow-blue-100 shrink-0"
         >
-          Add Organization
+          <Plus size={16} />
+          <span>Add Organization</span>
         </button>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {organizations.length === 0 ? (
-          <div className="col-span-full text-center py-20 text-slate-400">No organizations registered yet.</div>
-        ) : (
-          organizations.map(o => {
+      {/* 2. KPI Executive Stat Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0">
+            <Building2 size={20} />
+          </div>
+          <div>
+            <div className="text-xl font-black text-slate-800 leading-tight">{organizations.length}</div>
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Total Companies</div>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold shrink-0">
+            <Award size={20} />
+          </div>
+          <div>
+            <div className="text-xl font-black text-amber-700 leading-tight">{activeSponsorsCount}</div>
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Active Sponsors</div>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0">
+            <Store size={20} />
+          </div>
+          <div>
+            <div className="text-xl font-black text-blue-700 leading-tight">{activeExhibitorsCount}</div>
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Active Exhibitors</div>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold shrink-0">
+            <Layers size={20} />
+          </div>
+          <div>
+            <div className="text-xl font-black text-purple-700 leading-tight">{Math.max(1, industryOptions.length - 1)}</div>
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Sectors Represented</div>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Search & Filter Bar with Status Tabs & View Switcher */}
+      <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row gap-3 items-center justify-between">
+        
+        {/* Status Tabs (All, Active, Sponsors, Exhibitors, Archived) */}
+        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl w-full md:w-auto overflow-x-auto scrollbar-none">
+          <button
+            onClick={() => setStatusTab("all")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              statusTab === "all" ? "bg-white text-slate-900 shadow-xs font-extrabold" : "text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            All ({organizations.length})
+          </button>
+          <button
+            onClick={() => setStatusTab("active")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              statusTab === "active" ? "bg-white text-blue-700 shadow-xs font-extrabold" : "text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            Active ({activeCount})
+          </button>
+          <button
+            onClick={() => setStatusTab("sponsors")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              statusTab === "sponsors" ? "bg-white text-amber-700 shadow-xs font-extrabold" : "text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            Sponsors ({activeSponsorsCount})
+          </button>
+          <button
+            onClick={() => setStatusTab("exhibitors")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              statusTab === "exhibitors" ? "bg-white text-blue-700 shadow-xs font-extrabold" : "text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            Exhibitors ({activeExhibitorsCount})
+          </button>
+          <button
+            onClick={() => setStatusTab("archived")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              statusTab === "archived" ? "bg-white text-slate-700 shadow-xs font-extrabold" : "text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            Archived ({archivedCount})
+          </button>
+        </div>
+
+        {/* Search, Industry Filter & Grid/Table Switcher */}
+        <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full md:w-auto">
+          
+          {/* Search Box */}
+          <div className="relative w-full sm:w-56">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search company, sector..."
+              className="w-full pl-8.5 pr-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 bg-slate-50/50"
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                <X size={12} />
+              </button>
+            )}
+          </div>
+
+          {/* Industry Filter using SearchableSelect */}
+          <div className="w-full sm:w-48">
+            <SearchableSelect
+              value={selectedIndustry}
+              onChange={(val) => setSelectedIndustry(val || "all")}
+              options={industryOptions}
+              placeholder="All Industries"
+              searchPlaceholder="Filter industry..."
+              isClearable={false}
+            />
+          </div>
+
+          {/* Grid vs Table View Switcher */}
+          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 shrink-0 self-end sm:self-auto">
+            <button
+              onClick={() => setViewMode("grid")}
+              className={`p-1.5 px-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                viewMode === "grid" ? "bg-white text-blue-600 shadow-xs font-extrabold" : "text-slate-500 hover:text-slate-800"
+              }`}
+              title="Grid View"
+            >
+              <LayoutGrid size={14} />
+              <span className="hidden sm:inline text-[11px]">Grid</span>
+            </button>
+            <button
+              onClick={() => setViewMode("table")}
+              className={`p-1.5 px-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                viewMode === "table" ? "bg-white text-blue-600 shadow-xs font-extrabold" : "text-slate-500 hover:text-slate-800"
+              }`}
+              title="Table View"
+            >
+              <List size={14} />
+              <span className="hidden sm:inline text-[11px]">Table</span>
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+
+      {/* 4. CONTENT: Grid View OR Table View */}
+      {filteredOrganizations.length === 0 ? (
+        <div className="bg-white rounded-3xl p-14 text-center border border-dashed border-slate-200 shadow-xs space-y-3 flex flex-col items-center justify-center">
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+            <Building2 size={24} />
+          </div>
+          <h3 className="text-base font-bold text-slate-800">No organizations found</h3>
+          <p className="text-xs text-slate-500 max-w-sm">
+            Try adjusting search keywords, clearing industry filters, or register your first partner organization.
+          </p>
+          <button
+            onClick={() => onOpenModal("org")}
+            className="mt-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl text-xs transition-colors cursor-pointer"
+          >
+            Add Organization
+          </button>
+        </div>
+      ) : viewMode === "grid" ? (
+        /* ────────── GRID VIEW ────────── */
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filteredOrganizations.map(o => {
             const isArchived = o.isArchived || o.status === 'archived';
+            const { isSponsor, isExhibitor } = getOrgRoles(o);
+
             return (
-              <div key={o.id} className={`bg-white border ${isArchived ? 'border-slate-300 opacity-70' : 'border-slate-200'} rounded-3xl p-6 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between relative group`}>
-                <div className="flex justify-between items-start mb-4">
-                  {o.logo ? (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={o.logo} className="w-12 h-12 rounded-xl object-cover border border-slate-100 shadow-inner" alt={o.name} />
-                  ) : (
-                    <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 font-extrabold text-xl flex items-center justify-center select-none">
-                      {o.name.charAt(0)}
-                    </div>
-                  )}
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    {!isArchived && (
-                      <button 
-                        onClick={() => onOpenModal("org", o)}
-                        className="px-2 py-1 hover:text-indigo-600 text-slate-450 hover:bg-indigo-50 border border-transparent hover:border-indigo-100 rounded-lg text-[11px] font-bold transition-all duration-200 cursor-pointer"
-                        title="Edit Organization"
-                      >
-                        Edit
-                      </button>
-                    )}
-                    {isArchived ? (
-                      <div className="flex items-center gap-1">
-                        <button 
-                          onClick={() => handleRestore(o.id)}
-                          className="px-2 py-1 text-emerald-600 hover:bg-emerald-50 border border-transparent hover:border-emerald-100 rounded-lg text-[11px] font-bold transition-all duration-200 cursor-pointer flex items-center gap-1"
-                          title="Restore Organization"
-                        >
-                          <RotateCcw size={11} />
-                          <span>Restore</span>
-                        </button>
-                        <button 
-                          onClick={() => handleDeletePermanent(o.id)}
-                          className="px-2 py-1 text-rose-500 hover:bg-rose-50 border border-transparent hover:border-rose-100 rounded-lg text-[11px] font-bold transition-all duration-200 cursor-pointer flex items-center gap-1"
-                          title="Delete Organization Permanently"
-                        >
-                          <Trash2 size={11} />
-                          <span>Delete</span>
-                        </button>
-                      </div>
+              <div 
+                key={o.id} 
+                className={`bg-white border ${isArchived ? 'border-slate-200 bg-slate-50/50 opacity-75' : 'border-slate-200/90'} rounded-3xl p-5 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between relative group`}
+              >
+                <div>
+                  {/* Top Row: Logo & Actions */}
+                  <div className="flex justify-between items-start mb-3.5">
+                    {o.logo ? (
+                      <img 
+                        src={o.logo} 
+                        className="w-12 h-12 rounded-2xl object-cover border border-slate-100 shadow-xs bg-white" 
+                        alt={o.name} 
+                      />
                     ) : (
-                      <button 
-                        onClick={() => handleArchive(o.id)}
-                        className="px-2 py-1 text-slate-400 hover:text-amber-600 hover:bg-amber-50 border border-transparent hover:border-amber-100 rounded-lg text-[11px] font-bold transition-all duration-200 cursor-pointer flex items-center gap-1"
-                        title="Archive Organization (Data preserved)"
-                      >
-                        <Archive size={11} />
-                        <span>Archive</span>
-                      </button>
+                      <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 font-black text-xl flex items-center justify-center select-none border border-blue-100">
+                        {o.name ? o.name.charAt(0).toUpperCase() : 'O'}
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                      {!isArchived && (
+                        <button 
+                          onClick={() => onOpenModal("org", o)}
+                          className="px-2.5 py-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                          title="Edit Organization"
+                        >
+                          Edit
+                        </button>
+                      )}
+
+                      {isArchived ? (
+                        <div className="flex items-center gap-1">
+                          <button 
+                            onClick={() => handleRestore(o.id)}
+                            className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                            title="Restore"
+                          >
+                            <RotateCcw size={13} />
+                          </button>
+                          <button 
+                            onClick={() => handleDeletePermanent(o.id)}
+                            className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                            title="Permanently Delete"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      ) : (
+                        <button 
+                          onClick={() => handleArchive(o.id)}
+                          className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                          title="Archive Organization"
+                        >
+                          <Archive size={13} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Name & Role Badges */}
+                  <div className="flex flex-col gap-1.5 mb-3">
+                    <h3 className="text-base font-black text-slate-900 tracking-tight flex items-center justify-between">
+                      <span className="truncate">{o.name}</span>
+                      {isArchived && (
+                        <span className="text-[9px] uppercase font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full shrink-0 ml-2">
+                          Archived
+                        </span>
+                      )}
+                    </h3>
+
+                    {/* Sector & Event Role Tags */}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full">
+                        {o.industry || "General Business"}
+                      </span>
+
+                      {isSponsor && (
+                        <span className="text-[10px] font-extrabold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                          {isSponsor.tier ? `${isSponsor.tier.toUpperCase()} SPONSOR` : 'SPONSOR'}
+                        </span>
+                      )}
+
+                      {isExhibitor && (
+                        <span className="text-[10px] font-extrabold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
+                          {isExhibitor.booth || isExhibitor.boothNumber || 'BOOTH'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Contact Info & Details */}
+                  <div className="border-t border-slate-100 pt-3 flex flex-col gap-1.5 text-xs text-slate-600 font-medium">
+                    {o.contact && (
+                      <span className="flex items-center gap-2 truncate">
+                        <Users size={12} className="text-slate-400 shrink-0" />
+                        <span className="truncate">{o.contact} {o.jobTitle ? `(${o.jobTitle})` : ''}</span>
+                      </span>
+                    )}
+
+                    {o.email && (
+                      <span className="flex items-center gap-2 truncate">
+                        <Mail size={12} className="text-slate-400 shrink-0" />
+                        <a href={`mailto:${o.email}`} className="truncate hover:text-blue-600">{o.email}</a>
+                      </span>
+                    )}
+
+                    {o.phone && (
+                      <span className="flex items-center gap-2 truncate">
+                        <Phone size={12} className="text-slate-400 shrink-0" />
+                        <span className="truncate">{o.phone}</span>
+                      </span>
+                    )}
+
+                    {o.website && (
+                      <span className="flex items-center gap-2 truncate mt-0.5">
+                        <Globe size={12} className="text-slate-400 shrink-0" />
+                        <a href={o.website.startsWith('http') ? o.website : `https://${o.website}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-bold truncate flex items-center gap-1">
+                          <span>{o.website.replace(/^https?:\/\//, '')}</span>
+                          <ExternalLink size={10} />
+                        </a>
+                      </span>
                     )}
                   </div>
                 </div>
-                
-                <h3 className="text-md font-bold text-slate-800 mb-4 flex items-center justify-between">
-                  <span>{o.name}</span>
-                  {isArchived && <span className="text-[10px] uppercase font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">Archived</span>}
-                </h3>
 
-                <div className="border-t border-slate-100 pt-4 flex flex-col gap-2 text-[11px] font-semibold text-slate-500 leading-normal">
-                  <span className="flex items-center gap-2"><Building2 size={13} className="text-slate-400 shrink-0" /> Sector: <strong className="text-slate-700">{o.industry}</strong></span>
-                  <span className="flex items-center gap-2"><Users size={13} className="text-slate-400 shrink-0" /> Contact: <strong className="text-slate-700">{o.contact}</strong></span>
-                  {o.website && (
-                    <span className="mt-2 block"><a href={o.website} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:text-indigo-750 font-bold hover:underline">Visit Website →</a></span>
-                  )}
-                </div>
+                {/* 1-Click Conversion Actions (Clean buttons WITHOUT icons) */}
+                {!isArchived && (
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2">
+                    {!isSponsor && (
+                      <button
+                        onClick={() => onOpenModal("sponsor", {
+                          orgId: o.id,
+                          name: o.name,
+                          logo: o.logo,
+                          image: o.logo,
+                          industry: o.industry,
+                          website: o.website,
+                          contact: o.contact
+                        })}
+                        className="flex-1 py-1.5 px-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-bold transition-all text-center cursor-pointer"
+                        title="Make this company an official sponsor"
+                      >
+                        Make Sponsor
+                      </button>
+                    )}
+
+                    {!isExhibitor && (
+                      <button
+                        onClick={() => onOpenModal("exhibitor", {
+                          orgId: o.id,
+                          name: o.name,
+                          logo: o.logo,
+                          industry: o.industry,
+                          email: o.email,
+                          phone: o.phone,
+                          contact: o.contact
+                        })}
+                        className="flex-1 py-1.5 px-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-bold transition-all text-center cursor-pointer"
+                        title="Assign an exhibition booth for this company"
+                      >
+                        Make Exhibitor
+                      </button>
+                    )}
+                  </div>
+                )}
+
               </div>
             );
-          })
-        )}
-      </div>
+          })}
+        </div>
+      ) : (
+        /* ────────── TABLE VIEW ────────── */
+        <div className="bg-white border border-slate-200/80 rounded-3xl shadow-xs overflow-hidden">
+          <div className="overflow-x-auto w-full">
+            <table className="w-full border-collapse text-left text-xs font-semibold text-slate-700">
+              <thead>
+                <tr className="bg-slate-50/80 border-b border-slate-200/80 text-[10px] text-slate-400 font-extrabold uppercase tracking-wider select-none">
+                  <th className="py-4 px-6">Company & Sector</th>
+                  <th className="py-4 px-6">Primary Contact</th>
+                  <th className="py-4 px-6">Event Roles</th>
+                  <th className="py-4 px-6">Website / Link</th>
+                  <th className="py-4 px-6">Status</th>
+                  <th className="py-4 px-6 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredOrganizations.map(o => {
+                  const isArchived = o.isArchived || o.status === 'archived';
+                  const { isSponsor, isExhibitor } = getOrgRoles(o);
+
+                  return (
+                    <tr 
+                      key={o.id}
+                      className={`hover:bg-slate-50/60 transition-colors ${isArchived ? 'opacity-65 bg-slate-50/30' : ''}`}
+                    >
+                      {/* Company & Sector */}
+                      <td className="py-4 px-6">
+                        <div className="flex items-center gap-3">
+                          {o.logo ? (
+                            <img src={o.logo} className="w-10 h-10 rounded-xl object-cover border border-slate-100 shrink-0 bg-white" alt={o.name} />
+                          ) : (
+                            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 font-black text-sm flex items-center justify-center shrink-0 border border-blue-100">
+                              {o.name ? o.name.charAt(0).toUpperCase() : 'O'}
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <h4 className="font-extrabold text-slate-900 text-sm truncate">{o.name}</h4>
+                            <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full inline-block mt-0.5">
+                              {o.industry || "General"}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Primary Contact */}
+                      <td className="py-4 px-6">
+                        <div className="space-y-0.5">
+                          <div className="font-bold text-slate-900 truncate">{o.contact || "—"}</div>
+                          {o.email && (
+                            <a href={`mailto:${o.email}`} className="text-slate-500 hover:text-blue-600 block truncate text-[11px]">
+                              {o.email}
+                            </a>
+                          )}
+                          {o.phone && (
+                            <span className="text-slate-400 block text-[11px] font-medium">{o.phone}</span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Event Roles */}
+                      <td className="py-4 px-6">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {isSponsor && (
+                            <span className="text-[10px] font-extrabold text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-xl">
+                              {isSponsor.tier ? `${isSponsor.tier.toUpperCase()} SPONSOR` : 'SPONSOR'}
+                            </span>
+                          )}
+                          {isExhibitor && (
+                            <span className="text-[10px] font-extrabold text-blue-800 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-xl">
+                              {isExhibitor.booth || isExhibitor.boothNumber || 'BOOTH ALLOCATED'}
+                            </span>
+                          )}
+                          {!isSponsor && !isExhibitor && (
+                            <span className="text-[11px] text-slate-400 font-medium">Partner</span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Website */}
+                      <td className="py-4 px-6">
+                        {o.website ? (
+                          <a 
+                            href={o.website.startsWith('http') ? o.website : `https://${o.website}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="text-blue-600 hover:underline font-bold text-xs inline-flex items-center gap-1 max-w-[150px] truncate"
+                          >
+                            <span>{o.website.replace(/^https?:\/\//, '')}</span>
+                            <ExternalLink size={10} />
+                          </a>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+
+                      {/* Status */}
+                      <td className="py-4 px-6">
+                        {isArchived ? (
+                          <span className="text-[10px] font-extrabold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                            Archived
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                            Active
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Actions */}
+                      <td className="py-4 px-6 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {!isArchived && !isSponsor && (
+                            <button
+                              onClick={() => onOpenModal("sponsor", {
+                                orgId: o.id,
+                                name: o.name,
+                                logo: o.logo,
+                                image: o.logo,
+                                industry: o.industry,
+                                website: o.website,
+                                contact: o.contact
+                              })}
+                              className="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 text-[11px] font-bold transition-all cursor-pointer"
+                              title="Make Sponsor"
+                            >
+                              Make Sponsor
+                            </button>
+                          )}
+
+                          {!isArchived && !isExhibitor && (
+                            <button
+                              onClick={() => onOpenModal("exhibitor", {
+                                orgId: o.id,
+                                name: o.name,
+                                logo: o.logo,
+                                industry: o.industry,
+                                email: o.email,
+                                phone: o.phone,
+                                contact: o.contact
+                              })}
+                              className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-[11px] font-bold transition-all cursor-pointer"
+                              title="Make Exhibitor"
+                            >
+                              Make Exhibitor
+                            </button>
+                          )}
+
+                          {!isArchived && (
+                            <button
+                              onClick={() => onOpenModal("org", o)}
+                              className="px-2.5 py-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                              title="Edit"
+                            >
+                              Edit
+                            </button>
+                          )}
+
+                          {isArchived ? (
+                            <button
+                              onClick={() => handleRestore(o.id)}
+                              className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                              title="Restore"
+                            >
+                              <RotateCcw size={13} />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleArchive(o.id)}
+                              className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                              title="Archive"
+                            >
+                              <Archive size={13} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
 
 // 5. EVENT SPONSORS VIEW
 function SponsorsView({ state, onUpdateState, onOpenModal }) {
-  const { sponsors } = state;
+  const { sponsors = [], organizations = [] } = state;
+  const [searchQuery, setSearchQuery] = useState("");
+  const [tierFilter, setTierFilter] = useState("all");
+  const [viewMode, setViewMode] = useState("grid"); // "grid" | "table"
 
   const handleArchive = (id) => {
     if (confirm("Archive this sponsor? (Preserved in archives)")) {
@@ -2443,108 +3009,332 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
     }
   };
 
-  const getSponsorsByTier = (tier) => sponsors.filter(s => s.tier === tier);
+  const TIERS_CONFIG = [
+    { key: "diamond", name: "Diamond Tier", color: "text-sky-600 border-sky-100 bg-sky-50/40" },
+    { key: "gold", name: "Gold Tier", color: "text-amber-600 border-amber-100 bg-amber-50/40" },
+    { key: "silver", name: "Silver Tier", color: "text-slate-600 border-slate-200 bg-slate-50/50" },
+    { key: "bronze", name: "Bronze Tier", color: "text-amber-800 border-orange-100 bg-orange-50/30" },
+    { key: "title", name: "Title / Presenting", color: "text-purple-700 border-purple-100 bg-purple-50/40" },
+    { key: "partner", name: "Strategic Partners", color: "text-blue-700 border-blue-100 bg-blue-50/40" },
+    { key: "custom", name: "Custom Packages", color: "text-indigo-700 border-indigo-100 bg-indigo-50/40" }
+  ];
 
-  const renderSponsorTierList = (tierName, tierKey, colorClass) => {
-    const list = getSponsorsByTier(tierKey);
-    return (
-      <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm flex flex-col gap-6">
-        <h3 className={`text-md font-bold flex items-center gap-2 pb-4 border-b border-slate-100 ${colorClass}`}>
-          <Award size={18} />
-          {tierName}
-        </h3>
-        {list.length === 0 ? (
-          <p className="text-slate-400 text-xs italic">No sponsors added in this tier.</p>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-            {list.map(s => {
-              const isArchived = s.isArchived || s.status === 'archived';
-              return (
-                <div key={s.id} className={`bg-slate-50 border ${isArchived ? 'border-slate-300 opacity-70' : 'border-slate-150'} rounded-2xl p-4 flex flex-col items-center gap-3 text-center relative group hover:bg-white hover:border-indigo-150 transition-all duration-200`}>
-                  <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    {!isArchived && (
-                      <button 
-                        onClick={() => onOpenModal("sponsor", s)}
-                        className="text-indigo-650 hover:bg-indigo-50 px-1.5 py-0.5 rounded-md font-bold text-[10px] leading-none cursor-pointer flex items-center justify-center border border-transparent hover:border-indigo-100"
-                        title="Edit Sponsor"
-                      >
-                        Edit
-                      </button>
-                    )}
-                    {isArchived ? (
-                      <div className="flex items-center gap-1">
-                        <button 
-                          onClick={() => handleRestore(s.id)}
-                          className="text-emerald-600 hover:bg-emerald-50 px-1.5 py-0.5 rounded-md font-bold text-xs leading-none cursor-pointer flex items-center justify-center border border-transparent hover:border-emerald-100"
-                          title="Restore Sponsor"
-                        >
-                          <RotateCcw size={11} />
-                        </button>
-                        <button 
-                          onClick={() => handleDeletePermanent(s.id)}
-                          className="text-rose-500 hover:bg-rose-50 px-1.5 py-0.5 rounded-md font-bold text-xs leading-none cursor-pointer flex items-center justify-center border border-transparent hover:border-rose-100"
-                          title="Delete Sponsor Permanently"
-                        >
-                          <Trash2 size={11} />
-                        </button>
-                      </div>
-                    ) : (
-                      <button 
-                        onClick={() => handleArchive(s.id)}
-                        className="text-slate-400 hover:text-amber-600 hover:bg-amber-50 px-1.5 py-0.5 rounded-md font-bold text-xs leading-none cursor-pointer flex items-center justify-center border border-transparent hover:border-amber-100"
-                        title="Archive Sponsor"
-                      >
-                        <Archive size={11} />
-                      </button>
-                    )}
-                  </div>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img 
-                    src={s.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=random`} 
-                    className="w-14 h-14 rounded-full object-cover shadow-sm bg-white" 
-                    alt="" 
-                  />
-                  <h4 className="text-xs font-bold text-slate-800 truncate w-full">{s.name}</h4>
-                  {isArchived && <span className="text-[9px] uppercase font-bold text-slate-400 bg-slate-200 px-1.5 py-0.2 rounded-full">Archived</span>}
-                  {s.website && (
-                    <a href={s.website} target="_blank" rel="noopener noreferrer" className="text-[10px] text-indigo-650 hover:underline font-semibold leading-none">Website</a>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    );
-  };
+  const filteredSponsors = useMemo(() => {
+    return sponsors.filter(s => {
+      if (tierFilter !== "all" && (s.tier || 'silver').toLowerCase() !== tierFilter.toLowerCase()) return false;
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchesName = s.name?.toLowerCase().includes(q);
+        const matchesIndustry = s.industry?.toLowerCase().includes(q);
+        if (!matchesName && !matchesIndustry) return false;
+      }
+      return true;
+    });
+  }, [sponsors, tierFilter, searchQuery]);
 
   return (
-    <div className="flex flex-col gap-8 w-full">
-      <header className="flex justify-between items-center select-none">
+    <div className="flex flex-col gap-6 w-full animate-fade-in select-none">
+      
+      {/* Header (Clean title without icon + Blue action button) */}
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Event Sponsors</h2>
-          <p className="text-sm text-slate-500">Sponsors categorized by tier. Displayed on public pages.</p>
+          <div className="flex items-center gap-2.5">
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight">Event Sponsors</h2>
+            <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-black border border-blue-100">
+              {sponsors.length} Sponsors
+            </span>
+          </div>
+          <p className="text-sm text-slate-500 font-medium mt-0.5">
+            Sponsors categorized by tier level. Prominently featured on your public landing page.
+          </p>
         </div>
+
         <button 
           onClick={() => onOpenModal("sponsor")}
-          className="bg-indigo-650 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-xl text-sm transition-all hover:shadow duration-200 cursor-pointer"
+          className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-4 rounded-xl text-xs transition-all hover:shadow-md hover:-translate-y-0.5 flex items-center gap-2 cursor-pointer shadow-xs shadow-blue-100 shrink-0"
         >
-          Add Sponsor
+          <Plus size={16} />
+          <span>Add Sponsor</span>
         </button>
       </header>
 
-      <div className="flex flex-col gap-6">
-        {renderSponsorTierList("💎 Diamond Tier", "diamond", "text-sky-500")}
-        {renderSponsorTierList("🥇 Gold Tier", "gold", "text-amber-500")}
-        {renderSponsorTierList("🥈 Silver Tier", "silver", "text-slate-450")}
+      {/* Toolbar */}
+      <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row gap-3 items-center justify-between">
+        <div className="relative w-full sm:w-72">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search sponsor by name..."
+            className="w-full pl-8.5 pr-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 bg-slate-50/50"
+          />
+        </div>
+
+        <div className="flex items-center gap-2.5 w-full sm:w-auto">
+          <div className="w-full sm:w-48">
+            <SearchableSelect
+              value={tierFilter}
+              onChange={(val) => setTierFilter(val || "all")}
+              options={[
+                { value: "all", label: "All Tiers" },
+                { value: "diamond", label: "Diamond" },
+                { value: "gold", label: "Gold" },
+                { value: "silver", label: "Silver" },
+                { value: "bronze", label: "Bronze" },
+                { value: "title", label: "Title" },
+                { value: "partner", label: "Strategic" },
+                { value: "custom", label: "Custom" }
+              ]}
+              isClearable={false}
+            />
+          </div>
+
+          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 shrink-0">
+            <button
+              onClick={() => setViewMode("grid")}
+              className={`p-1.5 px-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                viewMode === "grid" ? "bg-white text-blue-600 shadow-xs font-extrabold" : "text-slate-500 hover:text-slate-800"
+              }`}
+              title="Grid View"
+            >
+              <LayoutGrid size={14} />
+              <span className="hidden sm:inline text-[11px]">Grid</span>
+            </button>
+            <button
+              onClick={() => setViewMode("table")}
+              className={`p-1.5 px-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                viewMode === "table" ? "bg-white text-blue-600 shadow-xs font-extrabold" : "text-slate-500 hover:text-slate-800"
+              }`}
+              title="Table View"
+            >
+              <List size={14} />
+              <span className="hidden sm:inline text-[11px]">Table</span>
+            </button>
+          </div>
+        </div>
       </div>
+
+      {/* Grid or Table */}
+      {filteredSponsors.length === 0 ? (
+        <div className="bg-white rounded-3xl p-14 text-center border border-dashed border-slate-200 shadow-xs space-y-3 flex flex-col items-center justify-center">
+          <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+            <Award size={24} />
+          </div>
+          <h3 className="text-base font-bold text-slate-800">No sponsors found</h3>
+          <p className="text-xs text-slate-500 max-w-sm">
+            Add official corporate sponsors or link partner organizations to sponsor packages.
+          </p>
+          <button
+            onClick={() => onOpenModal("sponsor")}
+            className="mt-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl text-xs transition-colors cursor-pointer"
+          >
+            Add Sponsor
+          </button>
+        </div>
+      ) : viewMode === "grid" ? (
+        <div className="flex flex-col gap-5">
+          {TIERS_CONFIG.map(tier => {
+            const list = filteredSponsors.filter(s => (s.tier || 'silver').toLowerCase() === tier.key.toLowerCase());
+            if (tierFilter !== "all" && tierFilter.toLowerCase() !== tier.key.toLowerCase()) return null;
+            if (list.length === 0 && tierFilter !== "all") return null;
+
+            return (
+              <div key={tier.key} className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-xs flex flex-col gap-5">
+                <div className="flex justify-between items-center pb-3.5 border-b border-slate-100">
+                  <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                    <span>{tier.name}</span>
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+                      {list.length}
+                    </span>
+                  </h3>
+                </div>
+
+                {list.length === 0 ? (
+                  <p className="text-slate-400 text-xs italic py-2">No sponsors registered in this tier.</p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {list.map(s => {
+                      const isArchived = s.isArchived || s.status === 'archived';
+                      const matchedOrg = organizations.find(o => o.id === s.orgId || o.id === s.org_id);
+
+                      return (
+                        <div 
+                          key={s.id} 
+                          className={`bg-slate-50 border ${isArchived ? 'border-slate-300 opacity-70' : 'border-slate-200'} rounded-2xl p-4 flex flex-col items-center text-center gap-2.5 relative group hover:bg-white hover:border-blue-200 hover:shadow-xs transition-all duration-200`}
+                        >
+                          <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                            {!isArchived && (
+                              <button 
+                                onClick={() => onOpenModal("sponsor", s)}
+                                className="text-blue-600 hover:bg-blue-50 p-1 rounded-md text-[10px] font-bold cursor-pointer"
+                                title="Edit Sponsor"
+                              >
+                                Edit
+                              </button>
+                            )}
+                            {isArchived ? (
+                              <button 
+                                onClick={() => handleRestore(s.id)}
+                                className="text-emerald-600 hover:bg-emerald-50 p-1 rounded-md cursor-pointer"
+                                title="Restore"
+                              >
+                                <RotateCcw size={12} />
+                              </button>
+                            ) : (
+                              <button 
+                                onClick={() => handleArchive(s.id)}
+                                className="text-slate-400 hover:text-amber-600 hover:bg-amber-50 p-1 rounded-md cursor-pointer"
+                                title="Archive Sponsor"
+                              >
+                                <Archive size={12} />
+                              </button>
+                            )}
+                          </div>
+
+                          <img 
+                            src={s.image || s.logo || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=random`} 
+                            className="w-14 h-14 rounded-2xl object-cover shadow-xs bg-white border border-slate-100 p-0.5" 
+                            alt={s.name} 
+                          />
+
+                          <div className="w-full flex flex-col items-center gap-0.5">
+                            <h4 className="text-xs font-black text-slate-900 truncate w-full">{s.name}</h4>
+                            {matchedOrg && (
+                              <span className="text-[9px] font-bold text-slate-400 truncate flex items-center gap-1">
+                                <Building2 size={10} />
+                                <span>{matchedOrg.name}</span>
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex flex-wrap items-center justify-center gap-1 mt-1">
+                            {s.amount && (
+                              <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                                {Number(s.amount).toLocaleString()} {s.currency || 'DZD'}
+                              </span>
+                            )}
+                            {s.booth && (
+                              <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
+                                {s.booth}
+                              </span>
+                            )}
+                          </div>
+
+                          {s.website && s.website !== "#" && (
+                            <a 
+                              href={s.website.startsWith('http') ? s.website : `https://${s.website}`} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="text-[10px] text-blue-600 hover:underline font-bold mt-1 flex items-center gap-1"
+                            >
+                              <span>Website</span>
+                              <ExternalLink size={9} />
+                            </a>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="bg-white border border-slate-200/80 rounded-3xl shadow-xs overflow-hidden">
+          <div className="overflow-x-auto w-full">
+            <table className="w-full border-collapse text-left text-xs font-semibold text-slate-700">
+              <thead>
+                <tr className="bg-slate-50/80 border-b border-slate-200/80 text-[10px] text-slate-400 font-extrabold uppercase tracking-wider select-none">
+                  <th className="py-4 px-6">Sponsor</th>
+                  <th className="py-4 px-6">Tier Level</th>
+                  <th className="py-4 px-6">Linked Organization</th>
+                  <th className="py-4 px-6">Contribution</th>
+                  <th className="py-4 px-6">Booth</th>
+                  <th className="py-4 px-6 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredSponsors.map(s => {
+                  const matchedOrg = organizations.find(o => o.id === s.orgId || o.id === s.org_id);
+                  const isArchived = s.isArchived || s.status === 'archived';
+
+                  return (
+                    <tr key={s.id} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="py-4 px-6">
+                        <div className="flex items-center gap-3">
+                          <img 
+                            src={s.image || s.logo || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=random`} 
+                            className="w-10 h-10 rounded-xl object-cover border border-slate-100 bg-white" 
+                            alt={s.name} 
+                          />
+                          <div>
+                            <h4 className="font-extrabold text-slate-900 text-sm">{s.name}</h4>
+                            {s.website && (
+                              <a href={s.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-[11px] font-bold">
+                                {s.website.replace(/^https?:\/\//, '')}
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-6">
+                        <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-xl bg-amber-50 text-amber-800 border border-amber-200">
+                          {s.tier || 'Silver'}
+                        </span>
+                      </td>
+                      <td className="py-4 px-6">
+                        <span className="text-slate-600 font-bold">{matchedOrg ? matchedOrg.name : '—'}</span>
+                      </td>
+                      <td className="py-4 px-6">
+                        {s.amount ? (
+                          <span className="font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-lg text-xs">
+                            {Number(s.amount).toLocaleString()} {s.currency || 'DZD'}
+                          </span>
+                        ) : '—'}
+                      </td>
+                      <td className="py-4 px-6">
+                        {s.booth ? (
+                          <span className="font-bold text-blue-700 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-lg text-xs">
+                            {s.booth}
+                          </span>
+                        ) : '—'}
+                      </td>
+                      <td className="py-4 px-6 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => onOpenModal("sponsor", s)}
+                            className="px-2.5 py-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => isArchived ? handleRestore(s.id) : handleArchive(s.id)}
+                            className="p-1.5 text-slate-400 hover:text-amber-600 rounded-lg cursor-pointer"
+                          >
+                            {isArchived ? <RotateCcw size={13} /> : <Archive size={13} />}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
 
 // 6. EVENT EXHIBITORS VIEW
 function ExhibitorsView({ state, onUpdateState, onOpenModal }) {
-  const { exhibitors } = state;
+  const { exhibitors = [], organizations = [] } = state;
+  const [searchQuery, setSearchQuery] = useState("");
+  const [viewMode, setViewMode] = useState("grid"); // "grid" | "table"
 
   const handleDelete = (id) => {
     if (confirm("Remove this exhibitor?")) {
@@ -2552,67 +3342,279 @@ function ExhibitorsView({ state, onUpdateState, onOpenModal }) {
     }
   };
 
+  const filteredExhibitors = useMemo(() => {
+    return exhibitors.filter(e => {
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchesName = e.name?.toLowerCase().includes(q);
+        const matchesBooth = (e.booth || e.boothNumber)?.toLowerCase().includes(q);
+        const matchesContact = (e.contact || e.contactPerson)?.toLowerCase().includes(q);
+        const matchesEmail = (e.email || e.contactEmail)?.toLowerCase().includes(q);
+        if (!matchesName && !matchesBooth && !matchesContact && !matchesEmail) return false;
+      }
+      return true;
+    });
+  }, [exhibitors, searchQuery]);
+
   return (
-    <div className="flex flex-col gap-6 w-full">
-      <header className="flex justify-between items-center select-none">
+    <div className="flex flex-col gap-6 w-full animate-fade-in select-none">
+      
+      {/* Header (Clean title without icon + Blue action button) */}
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Event Exhibitors</h2>
-          <p className="text-sm text-slate-500">Manage booths and exhibitors present at the venue.</p>
+          <div className="flex items-center gap-2.5">
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight">Event Exhibitors</h2>
+            <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-black border border-blue-100">
+              {exhibitors.length} Exhibitors
+            </span>
+          </div>
+          <p className="text-sm text-slate-500 font-medium mt-0.5">
+            Manage exhibition booths, floor plan allocation, and representative credentials.
+          </p>
         </div>
+
         <button 
           onClick={() => onOpenModal("exhibitor")}
-          className="bg-indigo-650 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-xl text-sm transition-all hover:shadow duration-200 cursor-pointer"
+          className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-4 rounded-xl text-xs transition-all hover:shadow-md hover:-translate-y-0.5 flex items-center gap-2 cursor-pointer shadow-xs shadow-blue-100 shrink-0"
         >
-          Add Exhibitor
+          <Plus size={16} />
+          <span>Add Exhibitor</span>
         </button>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {exhibitors.length === 0 ? (
-          <div className="col-span-full text-center py-20 text-slate-400">No exhibitors registered yet.</div>
-        ) : (
-          exhibitors.map(e => (
-            <div key={e.id} className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between relative group">
-              <div className="flex justify-between items-start mb-4">
-                {e.logo ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={e.logo} className="w-12 h-12 rounded-xl object-cover border border-slate-100 shadow-inner" alt={e.name} />
-                ) : (
-                  <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 font-extrabold text-xl flex items-center justify-center select-none">
-                    🎪
-                  </div>
-                )}
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                  <button 
-                    onClick={() => onOpenModal("exhibitor", e)}
-                    className="px-2 py-1 hover:text-indigo-600 text-slate-450 hover:bg-indigo-50 border border-transparent hover:border-indigo-100 rounded-lg text-[11px] font-bold transition-all duration-200 cursor-pointer"
-                    title="Edit Exhibitor"
-                  >
-                    Edit
-                  </button>
-                  <button 
-                    onClick={() => handleDelete(e.id)}
-                    className="px-2 py-1 hover:text-rose-600 text-slate-450 hover:bg-rose-50 border border-transparent hover:border-rose-100 rounded-lg text-[11px] font-bold transition-all duration-200 cursor-pointer"
-                    title="Remove Exhibitor"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-              
-              <h3 className="text-md font-bold text-slate-800 mb-4">{e.name}</h3>
+      {/* Toolbar */}
+      <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row gap-3 items-center justify-between">
+        <div className="relative w-full sm:w-72">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search exhibitor, booth #, staff..."
+            className="w-full pl-8.5 pr-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 bg-slate-50/50"
+          />
+        </div>
 
-              <div className="border-t border-slate-100 pt-4 flex flex-col gap-2 text-[11px] font-semibold text-slate-500 leading-normal">
-                <span className="flex items-center gap-2"><Briefcase size={13} className="text-slate-400 shrink-0" /> Booth: <strong className="text-slate-700">{e.booth || "Not Assigned"}</strong></span>
-                <span className="flex items-center gap-2"><Users size={13} className="text-slate-400 shrink-0" /> Staff Contact: <strong className="text-slate-700">{e.contact}</strong></span>
-                {e.email && (
-                  <span className="flex items-center gap-2"><Mail size={13} className="text-slate-400 shrink-0" /> Email: <strong className="text-slate-700">{e.email}</strong></span>
-                )}
-              </div>
-            </div>
-          ))
-        )}
+        <div className="flex items-center gap-3">
+          <div className="text-xs font-bold text-slate-500">
+            Total: <strong className="text-slate-800">{filteredExhibitors.length}</strong> booths
+          </div>
+
+          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 shrink-0">
+            <button
+              onClick={() => setViewMode("grid")}
+              className={`p-1.5 px-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                viewMode === "grid" ? "bg-white text-blue-600 shadow-xs font-extrabold" : "text-slate-500 hover:text-slate-800"
+              }`}
+              title="Grid View"
+            >
+              <LayoutGrid size={14} />
+              <span className="hidden sm:inline text-[11px]">Grid</span>
+            </button>
+            <button
+              onClick={() => setViewMode("table")}
+              className={`p-1.5 px-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                viewMode === "table" ? "bg-white text-blue-600 shadow-xs font-extrabold" : "text-slate-500 hover:text-slate-800"
+              }`}
+              title="Table View"
+            >
+              <List size={14} />
+              <span className="hidden sm:inline text-[11px]">Table</span>
+            </button>
+          </div>
+        </div>
       </div>
+
+      {/* Grid or Table */}
+      {filteredExhibitors.length === 0 ? (
+        <div className="bg-white rounded-3xl p-14 text-center border border-dashed border-slate-200 shadow-xs space-y-3 flex flex-col items-center justify-center">
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+            <Store size={24} />
+          </div>
+          <h3 className="text-base font-bold text-slate-800">No exhibitors registered yet</h3>
+          <p className="text-xs text-slate-500 max-w-sm">
+            Assign booth spaces to registered organizations or add a standalone exhibitor.
+          </p>
+          <button
+            onClick={() => onOpenModal("exhibitor")}
+            className="mt-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl text-xs transition-colors cursor-pointer"
+          >
+            Add Exhibitor
+          </button>
+        </div>
+      ) : viewMode === "grid" ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filteredExhibitors.map(e => {
+            const matchedOrg = organizations.find(o => o.id === e.orgId || o.id === e.org_id);
+            const boothDisplay = e.booth || e.boothNumber || "Unassigned";
+
+            return (
+              <div 
+                key={e.id} 
+                className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between relative group"
+              >
+                <div>
+                  <div className="flex justify-between items-start mb-3.5">
+                    {e.logo || e.logo_url ? (
+                      <img 
+                        src={e.logo || e.logo_url} 
+                        className="w-12 h-12 rounded-2xl object-cover border border-slate-100 shadow-xs bg-white" 
+                        alt={e.name} 
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 font-black text-xl flex items-center justify-center select-none border border-blue-100">
+                        {e.name ? e.name.charAt(0).toUpperCase() : 'E'}
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                      <button 
+                        onClick={() => onOpenModal("exhibitor", e)}
+                        className="px-2.5 py-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                        title="Edit Exhibitor"
+                      >
+                        Edit
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(e.id)}
+                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                        title="Remove Exhibitor"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1 mb-3">
+                    <h3 className="text-base font-black text-slate-900 tracking-tight truncate">
+                      {e.name}
+                    </h3>
+                    {matchedOrg && (
+                      <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                        <Building2 size={10} />
+                        <span>{matchedOrg.name}</span>
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="mb-3.5">
+                    <span className="text-xs font-black text-blue-800 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-xl inline-flex items-center gap-1.5">
+                      <span>{boothDisplay}</span>
+                    </span>
+                  </div>
+
+                  <div className="border-t border-slate-100 pt-3 flex flex-col gap-1.5 text-xs text-slate-600 font-medium">
+                    {(e.contact || e.contactPerson) && (
+                      <span className="flex items-center gap-2 truncate">
+                        <Users size={12} className="text-slate-400 shrink-0" />
+                        <span className="truncate">{e.contact || e.contactPerson}</span>
+                      </span>
+                    )}
+                    {(e.email || e.contactEmail) && (
+                      <span className="flex items-center gap-2 truncate">
+                        <Mail size={12} className="text-slate-400 shrink-0" />
+                        <a href={`mailto:${e.email || e.contactEmail}`} className="truncate hover:text-blue-600">{e.email || e.contactEmail}</a>
+                      </span>
+                    )}
+                    {(e.phone || e.contactPhone) && (
+                      <span className="flex items-center gap-2 truncate">
+                        <Phone size={12} className="text-slate-400 shrink-0" />
+                        <span className="truncate">{e.phone || e.contactPhone}</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] font-bold text-slate-500">
+                  <span className="flex items-center gap-1 text-slate-600">
+                    <Ticket size={12} className="text-blue-500" />
+                    <span>{e.staffCount || e.badgeCount || 2} Staff Passes</span>
+                  </span>
+                  <span className="text-[10px] text-slate-400 uppercase font-extrabold">{e.boothType || "Standard"}</span>
+                </div>
+
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="bg-white border border-slate-200/80 rounded-3xl shadow-xs overflow-hidden">
+          <div className="overflow-x-auto w-full">
+            <table className="w-full border-collapse text-left text-xs font-semibold text-slate-700">
+              <thead>
+                <tr className="bg-slate-50/80 border-b border-slate-200/80 text-[10px] text-slate-400 font-extrabold uppercase tracking-wider select-none">
+                  <th className="py-4 px-6">Exhibitor</th>
+                  <th className="py-4 px-6">Booth Allocation</th>
+                  <th className="py-4 px-6">Staff Contact</th>
+                  <th className="py-4 px-6">Passes Quota</th>
+                  <th className="py-4 px-6">Linked Organization</th>
+                  <th className="py-4 px-6 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredExhibitors.map(e => {
+                  const matchedOrg = organizations.find(o => o.id === e.orgId || o.id === e.org_id);
+
+                  return (
+                    <tr key={e.id} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="py-4 px-6">
+                        <div className="flex items-center gap-3">
+                          {e.logo || e.logo_url ? (
+                            <img src={e.logo || e.logo_url} className="w-10 h-10 rounded-xl object-cover border border-slate-100 bg-white" alt={e.name} />
+                          ) : (
+                            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 font-black text-sm flex items-center justify-center border border-blue-100">
+                              {e.name ? e.name.charAt(0).toUpperCase() : 'E'}
+                            </div>
+                          )}
+                          <h4 className="font-extrabold text-slate-900 text-sm">{e.name}</h4>
+                        </div>
+                      </td>
+                      <td className="py-4 px-6">
+                        <span className="font-black text-blue-800 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-xl text-xs">
+                          {e.booth || e.boothNumber || 'Unassigned'}
+                        </span>
+                      </td>
+                      <td className="py-4 px-6">
+                        <div className="space-y-0.5">
+                          <div className="font-bold text-slate-900">{e.contact || e.contactPerson || '—'}</div>
+                          {(e.email || e.contactEmail) && (
+                            <a href={`mailto:${e.email || e.contactEmail}`} className="text-slate-500 hover:text-blue-600 block text-[11px]">
+                              {e.email || e.contactEmail}
+                            </a>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-4 px-6">
+                        <span className="font-bold text-slate-700">{e.staffCount || e.badgeCount || 2} Passes</span>
+                      </td>
+                      <td className="py-4 px-6">
+                        <span className="text-slate-600 font-bold">{matchedOrg ? matchedOrg.name : '—'}</span>
+                      </td>
+                      <td className="py-4 px-6 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => onOpenModal("exhibitor", e)}
+                            className="px-2.5 py-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(e.id)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg cursor-pointer"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
@@ -3329,19 +4331,39 @@ function CheckInView({ state, onUpdateState }) {
     setCurrentPage(1);
   }, [search]);
 
-  const handleToggle = (id) => {
+  const handleToggle = async (id) => {
+    const target = attendees.find(a => a.id === id);
+    if (!target) return;
+    const isCurrentlyChecked = Boolean(target.status === "checked-in" || target.status === "checked_in" || target.checkedIn || target.checked_in);
+    const nextState = !isCurrentlyChecked;
+    const checkinTime = nextState ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null;
+    const now = nextState ? new Date().toISOString() : null;
+
     const updated = attendees.map(a => {
       if (a.id === id) {
-        const isCheckedIn = a.status === "checked-in";
         return {
           ...a,
-          status: isCheckedIn ? "registered" : "checked-in",
-          checkinTime: isCheckedIn ? null : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          status: nextState ? "checked_in" : "registered",
+          checkedIn: nextState,
+          checked_in: nextState,
+          checkedInAt: now,
+          checkinTime
         };
       }
       return a;
     });
     onUpdateState("attendees", updated);
+
+    try {
+      await toggleAttendeeCheckin({
+        eventId: state.activeEventId,
+        attendeeId: id,
+        checkedIn: nextState,
+        checkedInBy: "Organizer Console"
+      });
+    } catch (e) {
+      console.warn("handleToggle check-in DB error:", e);
+    }
   };
 
   // Direct 1-Click Print Badge Handler for CheckInView
@@ -3415,7 +4437,8 @@ function CheckInView({ state, onUpdateState }) {
       return;
     }
 
-    if (matched.status === "checked-in") {
+    const isAlreadyChecked = Boolean(matched.status === "checked-in" || matched.status === "checked_in" || matched.checkedIn || matched.checked_in);
+    if (isAlreadyChecked) {
       setScanFeedback({
         type: "warning",
         title: "Already Checked In",
@@ -3426,10 +4449,20 @@ function CheckInView({ state, onUpdateState }) {
     }
 
     const checkinTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const now = new Date().toISOString();
     const updated = attendees.map(a => 
-      a.id === matched.id ? { ...a, status: "checked-in", checkinTime } : a
+      a.id === matched.id ? { ...a, status: "checked_in", checkedIn: true, checked_in: true, checkedInAt: now, checkinTime } : a
     );
     onUpdateState("attendees", updated);
+
+    try {
+      toggleAttendeeCheckin({
+        eventId: state.activeEventId,
+        attendeeId: matched.id,
+        checkedIn: true,
+        checkedInBy: "Organizer Scanner"
+      });
+    } catch (e) {}
 
     setScanFeedback({
       type: "success",
@@ -3503,19 +4536,87 @@ function CheckInView({ state, onUpdateState }) {
         </div>
       )}
 
+      {/* Mobile Staff Check-In App Banner & Passcode Card */}
+      {(() => {
+        const eventDetails = state.eventDetails || {};
+        const eventId = eventDetails.id || state.activeEventId || "";
+        const eventPasscode = eventDetails.checkinPasscode || eventDetails.checkin_passcode || (eventId ? String(eventId).slice(0, 6).toUpperCase() : "202688");
+        const checkinUrl = `https://ci.eventzone.pro`;
+        const localCheckinUrl = `/checkin?eventId=${eventId}&passcode=${eventPasscode}`;
+
+        return (
+          <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 border border-indigo-500/30 rounded-3xl p-6 shadow-xl text-white relative overflow-hidden">
+            {/* Background Glow */}
+            <div className="absolute top-0 right-0 -mt-8 -mr-8 w-48 h-48 bg-blue-500/15 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+              <div className="space-y-2 max-w-xl">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-bold">
+                  <Smartphone size={13} />
+                  <span>Mobile Gate Portal &bull; ci.eventzone.pro</span>
+                </div>
+                <h3 className="text-xl font-black text-white tracking-tight">
+                  Mobile Staff Check-In Web App
+                </h3>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Gate staff and volunteers can open <strong className="text-white">ci.eventzone.pro</strong> on their mobile phones, enter their email and the event passcode below to scan badges with their phone camera or check in delegates manually.
+                </p>
+              </div>
+
+              {/* Passcode & Quick Actions */}
+              <div className="flex flex-wrap items-center gap-3 shrink-0">
+                {/* Passcode Box */}
+                <div className="bg-white/10 border border-white/15 px-4 py-3 rounded-2xl flex flex-col">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Event Passcode
+                  </span>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-lg font-mono font-black tracking-widest text-emerald-400">
+                      {eventPasscode}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(eventPasscode);
+                        alert(`Passcode "${eventPasscode}" copied to clipboard! Share it with your check-in staff.`);
+                      }}
+                      title="Copy Passcode"
+                      className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-white/10 cursor-pointer transition-colors"
+                    >
+                      <Copy size={15} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Open Mobile Portal */}
+                <a
+                  href={localCheckinUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold text-xs shadow-lg shadow-blue-600/30 flex items-center gap-2 cursor-pointer transition-all hover:scale-102"
+                >
+                  <ExternalLink size={15} />
+                  <span>Open Check-In Web App</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
           <div>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Attendance Rate</span>
             <div className="text-2xl font-extrabold text-slate-800 mt-2">
-              {attendees.filter(a => a.status === "checked-in").length} <span className="text-sm font-semibold text-slate-400">/ {attendees.length}</span>
+              {attendees.filter(a => a.status === "checked-in" || a.checked_in).length} <span className="text-sm font-semibold text-slate-400">/ {attendees.length}</span>
             </div>
           </div>
           <div className="mt-4">
             <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
               <div 
                 className="h-full bg-emerald-500 rounded-full" 
-                style={{ width: `${attendees.length > 0 ? (attendees.filter(a => a.status === "checked-in").length / attendees.length) * 100 : 0}%` }}
+                style={{ width: `${attendees.length > 0 ? (attendees.filter(a => a.status === "checked-in" || a.checked_in).length / attendees.length) * 100 : 0}%` }}
               ></div>
             </div>
           </div>
@@ -3527,7 +4628,7 @@ function CheckInView({ state, onUpdateState }) {
             <div className="text-2xl font-extrabold text-slate-800 mt-2">Ready for Scans</div>
           </div>
           <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1 mt-4">
-            <Check size={12} /> Scannable unique QR codes active
+            <Check size={12} /> Scannable unique QR codes active on ci.eventzone.pro
           </span>
         </div>
       </div>
@@ -3587,16 +4688,20 @@ function CheckInView({ state, onUpdateState }) {
                 </tr>
               ) : (
                 paginated.map(a => {
-                  const isCheckedIn = a.status === "checked-in";
+                  const isCheckedIn = Boolean(a.status === "checked-in" || a.status === "checked_in" || a.checkedIn || a.checked_in);
                   return (
                     <tr key={a.id} className="hover:bg-slate-50/50 transition-colors duration-150">
                       <td className="py-4 px-6 font-semibold flex items-center gap-3">
                         <span className="text-slate-850 font-bold">{a.name}</span>
                       </td>
-                      <td className="py-4 px-6 font-bold text-slate-650">{a.ticketType}</td>
+                      <td className="py-4 px-6 font-bold text-slate-650">{a.ticketType || a.ticket_type || "Standard"}</td>
                       <td className="py-4 px-6">
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${isCheckedIn ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
-                          {a.status}
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${
+                          isCheckedIn 
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                            : 'bg-slate-100 text-slate-600 border-slate-200'
+                        }`}>
+                          {isCheckedIn ? 'Checked In' : 'Registered'}
                         </span>
                       </td>
                       <td className="py-4 px-6 text-slate-400 font-bold">{a.checkinTime || "-"}</td>
@@ -3798,187 +4903,4 @@ function CheckInView({ state, onUpdateState }) {
   );
 }
 
-// 12. COMMUNICATIONS VIEW
-function CommunicationsView({ state, onUpdateState }) {
-  const { attendees, exhibitors, team } = state;
-  const [recipientGroup, setRecipientGroup] = useState("all"); // "all" | "attendees" | "exhibitors" | "team"
-  const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("");
-  const [isSending, setIsSending] = useState(false);
-  const [history, setHistory] = useState([]);
-  const [historyLoading, setHistoryLoading] = useState(true);
-
-  // Fetch communications history
-  React.useEffect(() => {
-    fetchCommunications()
-      .then((data) => setHistory(data))
-      .catch((err) => console.error("Error loading communications history:", err))
-      .finally(() => setHistoryLoading(false));
-  }, []);
-
-  const getRecipientEmails = () => {
-    switch (recipientGroup) {
-      case "attendees":
-        return attendees.map(a => a.email).filter(Boolean);
-      case "exhibitors":
-        return exhibitors.map(e => e.email).filter(Boolean);
-      case "team":
-        return team.map(t => t.email).filter(Boolean);
-      case "all":
-      default: {
-        const allEmails = [
-          ...attendees.map(a => a.email),
-          ...exhibitors.map(e => e.email),
-          ...team.map(t => t.email)
-        ];
-        return Array.from(new Set(allEmails)).filter(Boolean);
-      }
-    }
-  };
-
-  const handleSend = async (e) => {
-    e.preventDefault();
-    if (!subject.trim() || !body.trim()) return;
-
-    const emails = getRecipientEmails();
-    if (emails.length === 0) {
-      alert(`There are no valid email addresses in the "${recipientGroup}" recipient group.`);
-      return;
-    }
-
-    setIsSending(true);
-    try {
-      // Send real broadcast emails via Hostinger SMTP
-      const broadcastRes = await fetch("/api/email/broadcast", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          recipients: emails,
-          subject: subject.trim(),
-          body: body.trim(),
-          eventTitle: "Eventzone Summit",
-          organizerName: "Eventzone Team",
-        }),
-      });
-      const broadcastData = await broadcastRes.json().catch(() => ({}));
-
-      // Log the communication in the Supabase db
-      const newComm = await logCommunication({
-        subject: subject.trim(),
-        body: body.trim(),
-        recipientCount: emails.length
-      });
-
-      // Update local history state
-      setHistory(prev => [newComm, ...prev]);
-
-      setSubject("");
-      setBody("");
-      const sentCount = broadcastData?.sent !== undefined ? broadcastData.sent : emails.length;
-      alert(`Broadcast announcement successfully sent to ${sentCount} recipient(s)!`);
-    } catch (err) {
-      console.error("Failed to send broadcast announcement:", err);
-      alert("Failed to send broadcast announcement. Please verify connection and try again.");
-    } finally {
-      setIsSending(false);
-    }
-  };
-
-  return (
-    <div className="flex flex-col gap-8 w-full pb-10">
-      <header className="select-none">
-        <h2 className="text-2xl font-bold text-slate-900">Announcements & Communications</h2>
-        <p className="text-sm text-slate-500">Contact all attendees, exhibitors, or staff members of the event with direct email broadcasts.</p>
-      </header>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-        {/* Left pane: Broadcast Form */}
-        <div className="lg:col-span-2 bg-white border border-slate-250/60 rounded-3xl p-6.5 shadow-sm flex flex-col gap-6">
-          <h3 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider">
-            Send New Broadcast Announcement
-          </h3>
-
-          <form onSubmit={handleSend} className="flex flex-col gap-5">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-bold text-slate-450 uppercase tracking-wider">Recipient Group</label>
-              <SearchableSelect
-                value={recipientGroup}
-                onChange={(val) => setRecipientGroup(val)}
-                options={[
-                  { value: "all", label: "Everyone (All Attendees, Exhibitors & Team Members)" },
-                  { value: "attendees", label: `All Registered Attendees Only (${attendees.length})` },
-                  { value: "exhibitors", label: `All Registered Exhibitors Only (${exhibitors.length})` },
-                  { value: "team", label: `My Organizer Team & Staff Only (${team.length})` }
-                ]}
-                placeholder="Select recipient group..."
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-bold text-slate-450 uppercase tracking-wider">Subject Line</label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. Schedule update or venue directions"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-slate-200 focus:border-indigo-400 focus:outline-none rounded-xl text-xs font-semibold"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-bold text-slate-450 uppercase tracking-wider">Message Content</label>
-              <textarea
-                rows={7}
-                required
-                placeholder="Write your email body here..."
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-slate-200 focus:border-indigo-400 focus:outline-none rounded-xl text-xs font-semibold resize-none"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={isSending}
-              className="w-full bg-indigo-650 hover:bg-indigo-750 text-white font-bold py-3.5 px-4 rounded-xl text-xs flex items-center justify-center hover:shadow hover:-translate-y-0.5 transition-all select-none cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
-            >
-              {isSending ? "Simulating Broadcast..." : "Send Broadcast Announcement"}
-            </button>
-          </form>
-        </div>
-
-        {/* Right pane: Sent History list */}
-        <div className="bg-white border border-slate-250/60 rounded-3xl p-6.5 shadow-sm flex flex-col gap-5">
-          <h3 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider">
-            Broadcast History
-          </h3>
-
-          <div className="flex flex-col gap-3 max-h-[460px] overflow-y-auto pr-1">
-            {historyLoading ? (
-              <div className="text-xs font-semibold text-slate-400 text-center py-6">Loading history...</div>
-            ) : history.length === 0 ? (
-              <div className="text-xs font-semibold text-slate-400 text-center py-6">No announcements sent yet.</div>
-            ) : (
-              history.map((item) => (
-                <div key={item.id} className="border border-slate-100 rounded-xl p-3.5 hover:bg-slate-50/50 transition-colors flex flex-col gap-2">
-                  <div className="flex justify-between items-start">
-                    <span className="text-[10px] font-extrabold text-indigo-650 bg-indigo-50/50 px-2 py-0.5 rounded-full">
-                      {item.recipient_count || 0} Recipients
-                    </span>
-                    <span className="text-[9px] font-semibold text-slate-400">
-                      {item.sent_at ? new Date(item.sent_at).toLocaleDateString() : ""}
-                    </span>
-                  </div>
-                  <h4 className="text-xs font-bold text-slate-850 truncate">{item.subject}</h4>
-                  <p className="text-[10px] font-semibold text-slate-500 line-clamp-3 whitespace-pre-wrap">{item.body}</p>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 

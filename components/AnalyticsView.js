@@ -132,7 +132,7 @@ export default function AnalyticsView({
   const capacity = Number(eventDetails.capacity) || 0;
   const capacityPct = capacity > 0 ? Math.min(100, (filteredCount / capacity) * 100) : 0;
 
-  const checkedInCount = filteredAttendees.filter(a => a.status === "checked-in").length;
+  const checkedInCount = filteredAttendees.filter(a => a.status === "checked-in" || a.status === "checked_in" || a.checkedIn || a.checked_in).length;
   const checkinPct = filteredCount > 0 ? (checkedInCount / filteredCount) * 100 : 0;
 
   // Real Ticket Price & Gross Estimated Revenue Calculation (Responsive to Timeframe)
@@ -277,7 +277,7 @@ export default function AnalyticsView({
       });
 
       const count = tierAttendees.length;
-      const checkedIn = tierAttendees.filter(a => a.status === "checked-in").length;
+      const checkedIn = tierAttendees.filter(a => a.status === "checked-in" || a.status === "checked_in" || a.checkedIn || a.checked_in).length;
       const tierRevenue = count * price;
       const pctOfTotal = filteredCount > 0 ? (count / filteredCount) * 100 : 0;
       const quotaPct = quota > 0 ? Math.min(100, (count / quota) * 100) : null;

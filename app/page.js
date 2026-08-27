@@ -60,6 +60,7 @@ import PublicRSVPModal from "../components/PublicRSVPModal";
 import TicketDrawer from "../components/TicketDrawer";
 import AttendeeDrawer from "../components/AttendeeDrawer";
 import TeamMemberDrawer from "../components/TeamMemberDrawer";
+import CompanyDrawer from "../components/CompanyDrawer";
 import SearchableSelect from "../components/SearchableSelect";
 import { getEffectivePermissions, canViewModule, canEditModule, getModulePermission } from "../lib/permissions";
 import { LanguageProvider, useLanguage } from "../lib/i18n";
@@ -167,6 +168,15 @@ export function HomeContent() {
     return DEFAULT_EVENT_ID;
   });
   const [isCreationWizardOpen, setIsCreationWizardOpen] = useState(false);
+  const [pendingEventCreation, setPendingEventCreation] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = sessionStorage.getItem("eventzone_pending_event_creation");
+        return saved ? JSON.parse(saved) : null;
+      } catch (e) {}
+    }
+    return null;
+  });
   const [eventSwitcherOpen, setEventSwitcherOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
@@ -477,8 +487,38 @@ export function HomeContent() {
         setAuthInitialized(true);
         setIsAuthProcessing(false);
       } else if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") && session?.user && isMounted) {
-        await syncUserProfile(session);
+        const syncedUser = await syncUserProfile(session);
         
+        // Check if there was a pending event creation waiting for login!
+        let pendingData = null;
+        if (typeof window !== "undefined") {
+          try {
+            const saved = sessionStorage.getItem("eventzone_pending_event_creation");
+            if (saved) {
+              pendingData = JSON.parse(saved);
+              sessionStorage.removeItem("eventzone_pending_event_creation");
+            }
+          } catch (e) {}
+        }
+
+        if (pendingData && session?.user?.id) {
+          try {
+            const finalForm = {
+              ...pendingData,
+              hostName: pendingData.hostName || syncedUser?.fullName || session.user.user_metadata?.full_name || "Event Organizer",
+              hostEmail: pendingData.hostEmail || syncedUser?.email || session.user.email || "organizer@eventzone.pro"
+            };
+            const created = await createEvent(finalForm, session.user.id);
+            setUserEvents(prev => [created, ...prev]);
+            setPublicEvents(prev => [created, ...prev]);
+            setActiveEventStateId(created.id);
+            setCurrentView("overview");
+            return;
+          } catch (err) {
+            console.error("Failed to auto-publish pending event after OAuth login:", err);
+          }
+        }
+
         // Handle post-login navigation if returning from OAuth / sign in
         if (typeof window !== "undefined") {
           const returnView = sessionStorage.getItem("eventzone_auth_return_view");
@@ -998,9 +1038,46 @@ export function HomeContent() {
   }, []);
 
   // Auth Success Handler
-  const handleAuthSuccess = (user) => {
+  const handleAuthSuccess = async (user) => {
     setCurrentUser(user);
     setAuthModalOpen(false);
+
+    // Check if there is a pending event waiting to be published
+    let pendingData = pendingEventCreation;
+    if (!pendingData && typeof window !== "undefined") {
+      try {
+        const saved = sessionStorage.getItem("eventzone_pending_event_creation");
+        if (saved) {
+          pendingData = JSON.parse(saved);
+        }
+      } catch (e) {}
+    }
+
+    if (pendingData) {
+      if (typeof window !== "undefined") {
+        try {
+          sessionStorage.removeItem("eventzone_pending_event_creation");
+          sessionStorage.removeItem("eventzone_auth_return_view");
+        } catch (e) {}
+      }
+      setPendingEventCreation(null);
+      try {
+        const finalForm = {
+          ...pendingData,
+          hostName: pendingData.hostName || user.fullName || "Event Organizer",
+          hostEmail: pendingData.hostEmail || user.email || "organizer@eventzone.pro"
+        };
+        const created = await createEvent(finalForm, user.id);
+        setUserEvents(prev => [created, ...prev]);
+        setPublicEvents(prev => [created, ...prev]);
+        setActiveEventStateId(created.id);
+        setCurrentView("overview");
+        return;
+      } catch (err) {
+        console.error("Failed to publish pending event:", err);
+      }
+    }
+
     if (user.role === "organizer") {
       setCurrentView("events-hub");
     } else {
@@ -1074,8 +1151,21 @@ export function HomeContent() {
 
   // Event Creation Handler
   const handleEventCreated = async (formData) => {
+    if (!currentUser) {
+      setPendingEventCreation(formData);
+      if (typeof window !== "undefined") {
+        try {
+          sessionStorage.setItem("eventzone_pending_event_creation", JSON.stringify(formData));
+          sessionStorage.setItem("eventzone_auth_return_view", "create-event");
+        } catch (e) {}
+      }
+      setAuthModalInitialMode("signup");
+      setCurrentView("auth");
+      return;
+    }
+
     try {
-      const created = await createEvent(formData, currentUser?.id);
+      const created = await createEvent(formData, currentUser.id);
       setUserEvents(prev => [created, ...prev]);
       setPublicEvents(prev => [created, ...prev]);
       setActiveEventStateId(created.id);
@@ -1725,6 +1815,91 @@ export function HomeContent() {
     }
   };
 
+  const handleSaveOrganization = async (orgData, linkOptions = {}) => {
+    try {
+      const saved = await upsertOrganization(orgData);
+      setOrganizations(prev => {
+        const exists = prev.some(o => o.id === saved.id);
+        return exists ? prev.map(o => o.id === saved.id ? saved : o) : [...prev, saved];
+      });
+
+      // If user also checked "Designate as Sponsor"
+      if (linkOptions.createSponsor) {
+        const sponsorPayload = {
+          name: saved.name,
+          orgId: saved.id,
+          tier: linkOptions.sponsorTier || 'silver',
+          amount: linkOptions.sponsorAmount || null,
+          website: saved.website || '#',
+          image: saved.logo || '',
+          industry: saved.industry || '',
+          contact: saved.contact || '',
+          status: 'active'
+        };
+        const savedSponsor = await upsertSponsor(sponsorPayload, activeEventId);
+        setSponsors(prev => {
+          const exists = prev.some(s => s.id === savedSponsor.id || (s.orgId && s.orgId === saved.id));
+          return exists ? prev.map(s => (s.id === savedSponsor.id || s.orgId === saved.id) ? savedSponsor : s) : [...prev, savedSponsor];
+        });
+      }
+
+      // If user also checked "Designate as Exhibitor"
+      if (linkOptions.createExhibitor) {
+        const exhibitorPayload = {
+          name: saved.name,
+          orgId: saved.id,
+          booth: linkOptions.exhibitorBooth || 'Not Assigned',
+          boothNumber: linkOptions.exhibitorBooth || 'Not Assigned',
+          boothType: linkOptions.exhibitorBoothType || 'Standard 3x3m (9 m²)',
+          industry: saved.industry || '',
+          contact: saved.contact || '',
+          email: saved.email || '',
+          phone: saved.phone || '',
+          logo: saved.logo || '',
+          status: 'active'
+        };
+        const savedExhibitor = await upsertExhibitor(exhibitorPayload, activeEventId);
+        setExhibitors(prev => {
+          const exists = prev.some(e => e.id === savedExhibitor.id || (e.orgId && e.orgId === saved.id));
+          return exists ? prev.map(e => (e.id === savedExhibitor.id || e.orgId === saved.id) ? savedExhibitor : e) : [...prev, savedExhibitor];
+        });
+      }
+
+      return saved;
+    } catch (err) {
+      console.error("Failed to save organization:", err);
+      throw err;
+    }
+  };
+
+  const handleSaveSponsor = async (sponsorData) => {
+    try {
+      const saved = await upsertSponsor(sponsorData, activeEventId);
+      setSponsors(prev => {
+        const exists = prev.some(s => s.id === saved.id);
+        return exists ? prev.map(s => s.id === saved.id ? saved : s) : [...prev, saved];
+      });
+      return saved;
+    } catch (err) {
+      console.error("Failed to save sponsor:", err);
+      throw err;
+    }
+  };
+
+  const handleSaveExhibitor = async (exhibitorData) => {
+    try {
+      const saved = await upsertExhibitor(exhibitorData, activeEventId);
+      setExhibitors(prev => {
+        const exists = prev.some(e => e.id === saved.id);
+        return exists ? prev.map(e => e.id === saved.id ? saved : e) : [...prev, saved];
+      });
+      return saved;
+    } catch (err) {
+      console.error("Failed to save exhibitor:", err);
+      throw err;
+    }
+  };
+
   const handleSaveLogisticsItem = async (type, item) => {
     try {
       const saved = await upsertLogisticsItem(type, item, activeEventId);
@@ -1945,14 +2120,7 @@ export function HomeContent() {
           setCurrentView("auth");
         }}
         onOpenProfile={() => setCurrentView("profile")}
-        onOpenCreationWizard={() => {
-          if (!currentUser) {
-            setAuthModalInitialMode("signup");
-            setCurrentView("auth");
-          } else {
-            setIsCreationWizardOpen(true);
-          }
-        }}
+        onOpenCreationWizard={() => setCurrentView("create-event")}
         onOpenEventsHub={() => {
           if (!currentUser) {
             setAuthModalInitialMode("signup");
@@ -2016,14 +2184,7 @@ export function HomeContent() {
           setCurrentView("event-landing");
         }}
         onRegisterForEvent={handleVisitorRegister}
-        onOpenCreationWizard={() => {
-          if (!currentUser) {
-            setAuthModalInitialMode("signup");
-            setCurrentView("auth");
-          } else {
-            setIsCreationWizardOpen(true);
-          }
-        }}
+        onOpenCreationWizard={() => setCurrentView("create-event")}
         onSwitchToOrganizer={() => {
           if (!currentUser) {
             setAuthModalInitialMode("signup");
@@ -2148,27 +2309,21 @@ export function HomeContent() {
   // 2.5. CREATE NEW EVENT (DEDICATED FULL-PAGE VIEW)
   // ==========================================================================
   if (currentView === "create-event") {
-    if (isAuthProcessing || !authInitialized) {
+    if (isAuthProcessing) {
       return <EventsHubSkeleton />;
-    }
-    if (!currentUser) {
-      return (
-        <AuthView
-          initialMode="signin"
-          onAuthSuccess={(u) => {
-            setCurrentUser(u);
-            setCurrentView("create-event");
-          }}
-          onGoToHome={() => setCurrentView("home")}
-          onClose={() => setCurrentView("home")}
-        />
-      );
     }
     return (
       <EventCreationWizard
-        onCancel={() => setCurrentView("events-hub")}
+        onCancel={() => {
+          if (currentUser) {
+            setCurrentView("events-hub");
+          } else {
+            setCurrentView("home");
+          }
+        }}
         onEventCreated={handleEventCreated}
         userId={currentUser?.id}
+        currentUser={currentUser}
         onUploadFile={uploadFileToBucket}
       />
     );
@@ -3147,95 +3302,23 @@ export function HomeContent() {
         eventTitle={eventDetails?.title || "Eventzone Summit"}
       />
 
-      {/* Record Creation Modals (Other types) */}
-      {activeModalType && activeModalType !== "ticket" && activeModalType !== "attendee" && activeModalType !== "team" && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
-          <div className="bg-white border border-slate-150 rounded-3xl p-8 max-w-md w-full shadow-2xl flex flex-col gap-6 relative animate-scale-up">
-            <header className="flex justify-between items-center select-none">
-              <h3 className="text-lg font-bold text-slate-800">
-                {activeModalType === "org" && "Add Partner Organization"}
-                {activeModalType === "sponsor" && "Add Event Sponsor"}
-                {activeModalType === "exhibitor" && "Register Exhibitor"}
-              </h3>
-              <button 
-                onClick={closeModal}
-                className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:text-rose-500 hover:border-rose-100 transition-colors cursor-pointer text-sm font-bold"
-              >
-                ✕
-              </button>
-            </header>
-
-            <form onSubmit={handleModalSubmit} className="flex flex-col gap-5">
-
-              {activeModalType === "org" && (
-                <>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Organization Name</label>
-                    <input type="text" required value={modalName} onChange={(e) => setModalName(e.target.value)} placeholder="e.g. Sonatrach" className="px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600" />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Sector / Industry</label>
-                    <input type="text" required value={modalSector} onChange={(e) => setModalSector(e.target.value)} placeholder="e.g. Energy" className="px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600" />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contact Person</label>
-                    <input type="text" required value={modalContact} onChange={(e) => setModalContact(e.target.value)} placeholder="e.g. Ahmed B." className="px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600" />
-                  </div>
-                </>
-              )}
-
-              {activeModalType === "sponsor" && (
-                <>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Sponsor Name</label>
-                    <input type="text" required value={modalName} onChange={(e) => setModalName(e.target.value)} placeholder="e.g. Air Liquide" className="px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600" />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tier</label>
-                    <SearchableSelect
-                      value={modalTier}
-                      onChange={(val) => setModalTier(val)}
-                      options={[
-                        { value: "diamond", label: "Diamond Tier" },
-                        { value: "gold", label: "Gold Tier" },
-                        { value: "silver", label: "Silver Tier" }
-                      ]}
-                      placeholder="Select tier..."
-                    />
-                  </div>
-                </>
-              )}
-
-              {activeModalType === "exhibitor" && (
-                <>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Select Organization</label>
-                    <SearchableSelect
-                      value={modalOrgId}
-                      onChange={(val) => setModalOrgId(val)}
-                      options={organizations.map(org => ({ value: org.id, label: org.name }))}
-                      placeholder="-- Choose Organization --"
-                      searchPlaceholder="Search organization by name..."
-                      required
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contact Email</label>
-                    <input type="email" required value={modalEmail} onChange={(e) => setModalEmail(e.target.value)} placeholder="exhibitor@domain.com" className="px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600" />
-                  </div>
-                </>
-              )}
-              
-              <button 
-                type="submit" 
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 px-4 rounded-xl text-xs transition-all hover:shadow hover:-translate-y-0.5 mt-3 cursor-pointer"
-              >
-                Save Entry
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Company / Organization / Sponsor / Exhibitor Slide-Over Drawer */}
+      <CompanyDrawer
+        isOpen={activeModalType === "org" || activeModalType === "sponsor" || activeModalType === "exhibitor"}
+        onClose={closeModal}
+        mode={activeModalType || "org"}
+        item={editingItem}
+        organizations={organizations}
+        sponsors={sponsors}
+        exhibitors={exhibitors}
+        floorPlans={floorPlans}
+        onSaveOrganization={handleSaveOrganization}
+        onSaveSponsor={handleSaveSponsor}
+        onSaveExhibitor={handleSaveExhibitor}
+        onUploadFile={uploadFileToBucket}
+        activeEventId={activeEventId}
+        eventTitle={eventDetails?.title || "Eventzone Summit"}
+      />
 
       {/* Global Public RSVP Modal (Preview & Direct Trigger) */}
       <PublicRSVPModal

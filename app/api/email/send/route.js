@@ -6,47 +6,110 @@ import {
   sendBroadcastEmail, 
   sendExhibitorPacketEmail 
 } from "@/lib/mailer";
+import { createClient } from "@supabase/supabase-js";
+
+function getSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://awkreadldqmidcrrqukm.supabase.co";
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3a3JlYWRsZHFtaWRjcnJxdWttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEwNjg2MzgsImV4cCI6MjA2NjY0NDYzOH0.Z1iVvA983vKq37P2d_F7z27L3Rj3b-g4P-7e5yQk0z0";
+  return createClient(supabaseUrl, supabaseKey);
+}
+
+function isValidUuid(id) {
+  if (!id || typeof id !== "string") return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+}
+
+// Query for event-specific customized trigger template
+async function getTriggerTemplate(eventId, triggerId) {
+  if (!isValidUuid(eventId) || !triggerId) return null;
+  try {
+    const supabase = getSupabaseClient();
+    const { data } = await supabase
+      .from("communication_templates")
+      .select("*")
+      .eq("event_id", eventId)
+      .eq("trigger_id", triggerId)
+      .eq("is_trigger", true)
+      .maybeSingle();
+    return data;
+  } catch (err) {
+    console.warn("Could not query trigger template:", err);
+    return null;
+  }
+}
 
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { type, to, subject, html, text, ...rest } = body;
+    const { type, to, subject, html, text, eventId, ...rest } = body;
 
     if (!to) {
       return NextResponse.json({ error: "Missing 'to' recipient email." }, { status: 400 });
     }
 
     let result;
+    const triggerIdMap = {
+      ticket_confirmation: "trigger_ticket_pass",
+      approval_confirmation: "trigger_ticket_pass",
+      rsvp_confirmation: "trigger_rsvp_confirmation",
+      exhibitor_packet: "trigger_exhibitor_briefing",
+      team_invite: "trigger_team_invite"
+    };
+
+    const triggerId = triggerIdMap[type];
+    const customTrigger = triggerId && eventId ? await getTriggerTemplate(eventId, triggerId) : null;
+
+    let finalSubject = subject;
+    if (!finalSubject && customTrigger?.subject) {
+      finalSubject = customTrigger.subject;
+    }
 
     switch (type) {
       case "ticket_confirmation":
       case "approval_confirmation":
         result = await sendTicketConfirmationEmail({ 
           to, 
-          subject,
+          subject: finalSubject,
           isApproval: type === "approval_confirmation" || rest.isApproval,
+          eventId,
           ...rest 
         });
         break;
 
       case "rsvp_confirmation":
-        result = await sendRSVPConfirmationEmail({ to, ...rest });
+        result = await sendRSVPConfirmationEmail({ 
+          to, 
+          subject: finalSubject,
+          eventId,
+          ...rest 
+        });
         break;
 
       case "broadcast":
-        result = await sendBroadcastEmail({ to, subject, body: rest.body || text || "", ...rest });
+        result = await sendBroadcastEmail({ 
+          to, 
+          subject: finalSubject, 
+          body: rest.body || text || "", 
+          eventId,
+          ...rest 
+        });
         break;
 
       case "exhibitor_packet":
-        result = await sendExhibitorPacketEmail({ to, ...rest });
+        result = await sendExhibitorPacketEmail({ 
+          to, 
+          subject: finalSubject,
+          eventId,
+          ...rest 
+        });
         break;
 
       case "custom":
       default:
-        if (!subject || (!html && !text)) {
+        if (!finalSubject || (!html && !text)) {
           return NextResponse.json({ error: "Missing subject or content." }, { status: 400 });
         }
-        result = await sendEmail({ to, subject, html, text, ...rest });
+        result = await sendEmail({ to, subject: finalSubject, html, text, ...rest });
         break;
     }
 

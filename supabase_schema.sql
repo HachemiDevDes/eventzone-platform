@@ -67,6 +67,7 @@ ALTER TABLE public.events ADD COLUMN IF NOT EXISTS cover_url TEXT;
 ALTER TABLE public.events ADD COLUMN IF NOT EXISTS capacity INTEGER DEFAULT 500;
 ALTER TABLE public.events ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'published';
 ALTER TABLE public.events ADD COLUMN IF NOT EXISTS organizer_id UUID;
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS checkin_passcode TEXT;
 
 -- 4. Sessions Table
 CREATE TABLE IF NOT EXISTS public.sessions (
@@ -94,7 +95,11 @@ CREATE TABLE IF NOT EXISTS public.participants (
   status_participation TEXT DEFAULT 'registered',
   registered_at TIMESTAMPTZ DEFAULT NOW(),
   image TEXT,
-  is_speaker BOOLEAN DEFAULT FALSE
+  is_speaker BOOLEAN DEFAULT FALSE,
+  checked_in BOOLEAN DEFAULT FALSE,
+  checked_in_at TIMESTAMPTZ,
+  checked_in_by TEXT,
+  badge_code TEXT
 );
 
 -- 6. Pending Registrations Table

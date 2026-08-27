@@ -5,8 +5,8 @@ import {
   Code2, Terminal, Key, Webhook, Layers, Copy, Check, ExternalLink, 
   Play, Plus, Trash2, ShieldCheck, Sparkles, RefreshCw, Send, CheckCircle2, 
   AlertCircle, ChevronRight, HelpCircle, Eye, Sliders, Smartphone, Laptop, 
-  Monitor, Palette, FileCode2, ArrowUpRight, Lock, Globe, Cpu, Database, 
-  Activity, Info, X
+  Monitor, Palette, Pipette, FileCode2, ArrowUpRight, Lock, Globe, Cpu, Database, 
+  Activity, Info, X, Search, Ticket, Package, AlertTriangle, ArrowRight
 } from "lucide-react";
 import { useLanguage } from "../lib/i18n";
 import SearchableSelect from "./SearchableSelect";
@@ -23,6 +23,35 @@ const PRESET_COLORS = [
   { name: "Amber", hex: "#d97706" },
   { name: "Rose", hex: "#e11d48" },
   { name: "Slate", hex: "#0f172a" },
+];
+
+const EMBED_FRAMEWORKS = [
+  { id: "iframe", label: "Iframe" },
+  { id: "script", label: "Script" },
+  { id: "react", label: "React / Next.js" },
+  { id: "vue", label: "Vue / Nuxt" },
+  { id: "angular", label: "Angular" },
+  { id: "svelte", label: "Svelte" },
+  { id: "wordpress", label: "WordPress" },
+  { id: "shopify", label: "Shopify" },
+  { id: "flutter", label: "Flutter" },
+  { id: "react_native", label: "React Native" },
+];
+
+const REST_LANGUAGES = [
+  { id: "curl", label: "cURL" },
+  { id: "javascript", label: "JavaScript" },
+  { id: "nodejs", label: "Node.js" },
+  { id: "python", label: "Python" },
+  { id: "php", label: "PHP" },
+  { id: "go", label: "Go" },
+  { id: "csharp", label: "C# / .NET" },
+  { id: "java", label: "Java" },
+  { id: "ruby", label: "Ruby" },
+  { id: "rust", label: "Rust" },
+  { id: "dart", label: "Dart" },
+  { id: "swift", label: "Swift" },
+  { id: "kotlin", label: "Kotlin" },
 ];
 
 export default function DevelopersView({
@@ -45,15 +74,29 @@ export default function DevelopersView({
 
   // Sub-Navigation Tabs
   const [activeTab, setActiveTab] = useState("overview"); // "overview" | "embed_builder" | "api_keys" | "rest_docs" | "webhooks" | "logs"
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Direct Ticket Form Selection (Each ticket has its own direct form & API)
+  const [selectedTicketId, setSelectedTicketId] = useState(() => tickets[0]?.id || "");
+
+  // Update selected ticket if tickets list changes and none selected
+  useEffect(() => {
+    if (tickets.length > 0 && (!selectedTicketId || !tickets.some(t => t.id === selectedTicketId))) {
+      setSelectedTicketId(tickets[0].id);
+    }
+  }, [tickets, selectedTicketId]);
+
+  const currentSelectedTicket = useMemo(() => {
+    return tickets.find(t => t.id === selectedTicketId) || tickets[0] || null;
+  }, [tickets, selectedTicketId]);
 
   // 1. Embed Builder State
   const [embedTheme, setEmbedTheme] = useState("light"); // "light" | "dark"
   const [embedColor, setEmbedColor] = useState("#2563eb");
   const [customHex, setCustomHex] = useState("#2563eb");
-  const [selectedTicketFilter, setSelectedTicketFilter] = useState("all");
   const [hideHeader, setHideHeader] = useState(false);
   const [embedLang, setEmbedLang] = useState("en");
-  const [embedSnippetType, setEmbedSnippetType] = useState("iframe"); // "iframe" | "script" | "react" | "wordpress" | "link"
+  const [embedSnippetType, setEmbedSnippetType] = useState("iframe");
   const [previewDevice, setPreviewDevice] = useState("desktop"); // "desktop" | "mobile"
   const [copiedKey, setCopiedKey] = useState(null);
 
@@ -66,8 +109,8 @@ export default function DevelopersView({
   const [recentlyCreatedKey, setRecentlyCreatedKey] = useState(null);
 
   // 3. REST Playground State
-  const [selectedEndpoint, setSelectedEndpoint] = useState("get_tickets"); // "get_tickets" | "register_attendee" | "get_attendees"
-  const [codeLanguage, setCodeLanguage] = useState("curl"); // "curl" | "javascript" | "python" | "php" | "nodejs"
+  const [selectedEndpoint, setSelectedEndpoint] = useState("register_attendee"); // "register_attendee" | "get_tickets" | "get_attendees"
+  const [codeLanguage, setCodeLanguage] = useState("curl");
   const [playgroundLoading, setPlaygroundLoading] = useState(false);
   const [playgroundResponse, setPlaygroundResponse] = useState(null);
   const [playgroundPayload, setPlaygroundPayload] = useState({
@@ -75,14 +118,26 @@ export default function DevelopersView({
     email: "alex.vance@example.com",
     phone: "+213 555 12 34 56",
     company: "Vance Tech Labs",
-    jobTitle: "Chief Technology Officer",
-    ticketType: tickets[0]?.name || "Standard Attendee Pass",
+    jobTitle: "Lead Software Architect",
+    ticketType: currentSelectedTicket?.name || "General Admission",
+    ticketId: currentSelectedTicket?.id || undefined,
     referralCode: "PROMO2026",
     answers: {
       dietary_requirements: "None",
       tshirt_size: "L"
     }
   });
+
+  // Sync playground payload when selected ticket changes
+  useEffect(() => {
+    if (currentSelectedTicket) {
+      setPlaygroundPayload(prev => ({
+        ...prev,
+        ticketType: currentSelectedTicket.name,
+        ticketId: currentSelectedTicket.id,
+      }));
+    }
+  }, [currentSelectedTicket]);
 
   // 4. Webhooks State
   const [webhooks, setWebhooks] = useState([]);
@@ -125,8 +180,8 @@ export default function DevelopersView({
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
-  // Embed URL generation
-  const embedUrl = useMemo(() => {
+  // Direct Ticket Form URL generation
+  const directTicketEmbedUrl = useMemo(() => {
     const params = new URLSearchParams({
       eventId: currentEventId,
       theme: embedTheme,
@@ -134,43 +189,45 @@ export default function DevelopersView({
       hideHeader: hideHeader ? "true" : "false",
       lang: embedLang,
     });
-    if (selectedTicketFilter && selectedTicketFilter !== "all") {
-      params.set("ticketId", selectedTicketFilter);
+    if (selectedTicketId) {
+      params.set("ticketId", selectedTicketId);
     }
     return `${origin}/embed/tickets?${params.toString()}`;
-  }, [currentEventId, embedTheme, embedColor, hideHeader, embedLang, selectedTicketFilter, origin]);
+  }, [currentEventId, selectedTicketId, embedTheme, embedColor, hideHeader, embedLang, origin]);
 
-  // Code snippets for Embed Builder
+  // Direct Code snippets for Selected Ticket Form across Multiple Frameworks
   const embedSnippets = useMemo(() => {
+    const ticketName = currentSelectedTicket?.name || "Event Ticket";
+
     return {
-      iframe: `<!-- Eventzone Tickets Responsive Embed Widget -->
+      iframe: `<!-- Eventzone Direct Ticket Form Embed (${ticketName}) -->
 <iframe 
-  src="${embedUrl}" 
+  src="${directTicketEmbedUrl}" 
   width="100%" 
-  height="650" 
+  height="600" 
   frameborder="0" 
-  style="border: none; border-radius: 24px; overflow: hidden; width: 100%; min-height: 550px;"
-  title="${eventDetails?.title || 'Eventzone'} Tickets"
+  style="border: none; border-radius: 24px; overflow: hidden; width: 100%; min-height: 520px;"
+  title="${ticketName} Registration"
   allow="clipboard-write"
 ></iframe>`,
 
-      script: `<!-- 1. Place the container wherever you want the ticket forms to render -->
+      script: `<!-- 1. Container for ${ticketName} registration form -->
 <div 
   id="eventzone-tickets-widget" 
   data-event-id="${currentEventId}" 
+  ${selectedTicketId ? `data-ticket-id="${selectedTicketId}"` : ""}
   data-theme="${embedTheme}" 
   data-color="${embedColor}" 
   data-hide-header="${hideHeader}"
-  ${selectedTicketFilter !== "all" ? `data-ticket-id="${selectedTicketFilter}"` : ""}
 ></div>
 
-<!-- 2. Drop-in Eventzone widget library -->
+<!-- 2. Drop-in Eventzone widget script -->
 <script src="${origin}/embed.js" async></script>`,
 
-      react: `// React / Next.js Ticket Widget Component
+      react: `// React / Next.js Component (${ticketName})
 import React, { useEffect, useRef } from "react";
 
-export default function EventzoneTicketWidget() {
+export default function TicketRegistrationWidget() {
   const iframeRef = useRef(null);
 
   useEffect(() => {
@@ -179,7 +236,7 @@ export default function EventzoneTicketWidget() {
         iframeRef.current.style.height = event.data.height + "px";
       }
       if (event.data?.type === "EVENTZONE_REGISTRATION_SUCCESS") {
-        console.log("New registration completed:", event.data.data);
+        console.log("Registration Success:", event.data.data);
       }
     }
     window.addEventListener("message", handleMessage);
@@ -189,30 +246,187 @@ export default function EventzoneTicketWidget() {
   return (
     <iframe
       ref={iframeRef}
-      src="${embedUrl}"
+      src="${directTicketEmbedUrl}"
       width="100%"
-      height="650"
-      style={{ border: "none", borderRadius: "24px", overflow: "hidden", minHeight: "550px" }}
-      title="Eventzone Tickets"
+      height="600"
+      style={{ border: "none", borderRadius: "24px", overflow: "hidden", minHeight: "520px" }}
+      title="${ticketName} Registration"
     />
   );
 }`,
 
-      wordpress: `<!-- WordPress / Webflow Custom HTML Block -->
-<div class="eventzone-embed-container" style="max-width: 720px; margin: 0 auto;">
+      vue: `<!-- Vue 3 / Nuxt 3 Component (${ticketName}) -->
+<script setup>
+import { ref, onMounted, onUnmounted } from 'vue';
+
+const iframeRef = ref(null);
+
+function handleMessage(event) {
+  if (event.data?.type === 'EVENTZONE_RESIZE' && iframeRef.value) {
+    iframeRef.value.style.height = event.data.height + 'px';
+  }
+  if (event.data?.type === 'EVENTZONE_REGISTRATION_SUCCESS') {
+    console.log('Registration received:', event.data.data);
+  }
+}
+
+onMounted(() => window.addEventListener('message', handleMessage));
+onUnmounted(() => window.removeEventListener('message', handleMessage));
+</script>
+
+<template>
+  <div class="eventzone-ticket-widget">
+    <iframe
+      ref="iframeRef"
+      src="${directTicketEmbedUrl}"
+      width="100%"
+      height="600"
+      style="border: none; border-radius: 24px; overflow: hidden; width: 100%; min-height: 520px;"
+      title="${ticketName} Registration"
+    />
+  </div>
+</template>`,
+
+      angular: `// Angular Component (${ticketName})
+import { Component, HostListener } from '@angular/core';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+
+@Component({
+  selector: 'app-ticket-widget',
+  template: \`
+    <iframe 
+      [src]="embedUrl" 
+      width="100%" 
+      [style.height.px]="frameHeight" 
+      frameborder="0"
+      style="border: none; border-radius: 24px; overflow: hidden; width: 100%; min-height: 520px;"
+      title="${ticketName} Registration"
+    ></iframe>
+  \`
+})
+export class TicketWidgetComponent {
+  frameHeight = 600;
+  embedUrl: SafeResourceUrl;
+
+  constructor(private sanitizer: DomSanitizer) {
+    this.embedUrl = this.sanitizer.bypassSecurityTrustResourceUrl('${directTicketEmbedUrl}');
+  }
+
+  @HostListener('window:message', ['$event'])
+  onMessage(event: MessageEvent) {
+    if (event.data?.type === 'EVENTZONE_RESIZE') {
+      this.frameHeight = event.data.height;
+    }
+  }
+}`,
+
+      svelte: `<!-- Svelte / SvelteKit Component (${ticketName}) -->
+<script>
+  import { onMount } from 'svelte';
+  let iframeElement;
+
+  onMount(() => {
+    function handleMessage(event) {
+      if (event.data?.type === 'EVENTZONE_RESIZE' && iframeElement) {
+        iframeElement.style.height = event.data.height + 'px';
+      }
+      if (event.data?.type === 'EVENTZONE_REGISTRATION_SUCCESS') {
+        console.log('Registration complete:', event.data.data);
+      }
+    }
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  });
+</script>
+
+<iframe
+  bind:this={iframeElement}
+  src="${directTicketEmbedUrl}"
+  width="100%"
+  height="600"
+  style="border: none; border-radius: 24px; overflow: hidden; width: 100%; min-height: 520px;"
+  title="${ticketName} Registration"
+/>`,
+
+      wordpress: `<!-- WordPress / Webflow Custom HTML Block (${ticketName}) -->
+<div class="eventzone-ticket-form-wrapper" style="max-width: 680px; margin: 0 auto;">
   <iframe 
-    src="${embedUrl}" 
+    src="${directTicketEmbedUrl}" 
     width="100%" 
-    height="650" 
+    height="600" 
     frameborder="0" 
-    style="border: none; border-radius: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); width: 100%; min-height: 550px;"
-    title="Eventzone Registration"
+    style="border: none; border-radius: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); width: 100%; min-height: 520px;"
+    title="${ticketName} Registration"
   ></iframe>
 </div>`,
 
-      link: embedUrl,
+      shopify: `<!-- Shopify Liquid Section/Snippet: eventzone-ticket-form.liquid -->
+<div class="eventzone-shopify-wrapper page-width" style="max-width: 720px; margin: 2rem auto;">
+  <iframe 
+    src="${directTicketEmbedUrl}" 
+    width="100%" 
+    height="600" 
+    frameborder="0" 
+    style="border: none; border-radius: 24px; width: 100%; min-height: 520px;"
+    title="${ticketName} Registration"
+  ></iframe>
+</div>`,
+
+      flutter: `// Flutter Mobile WebView Screen (${ticketName})
+import 'package:flutter/material.dart';
+import 'package:webview_flutter/webview_flutter.dart';
+
+class TicketRegistrationScreen extends StatefulWidget {
+  const TicketRegistrationScreen({super.key});
+
+  @override
+  State<TicketRegistrationScreen> createState() => _TicketRegistrationScreenState();
+}
+
+class _TicketRegistrationScreenState extends State<TicketRegistrationScreen> {
+  late final WebViewController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..loadRequest(Uri.parse('${directTicketEmbedUrl}'));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('${ticketName} Registration')),
+      body: WebViewWidget(controller: controller),
+    );
+  }
+}`,
+
+      react_native: `// React Native Component (${ticketName})
+import React from 'react';
+import { StyleSheet, View } from 'react-native';
+import { WebView } from 'react-native-webview';
+
+export default function TicketRegistration() {
+  return (
+    <View style={styles.container}>
+      <WebView 
+        source={{ uri: '${directTicketEmbedUrl}' }}
+        style={styles.webview}
+        javaScriptEnabled={true}
+        domStorageEnabled={true}
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#fff' },
+  webview: { flex: 1 },
+});`,
     };
-  }, [embedUrl, currentEventId, embedTheme, embedColor, hideHeader, selectedTicketFilter, origin, eventDetails]);
+  }, [directTicketEmbedUrl, currentEventId, selectedTicketId, embedTheme, embedColor, hideHeader, origin, currentSelectedTicket]);
 
   // Generate API Key
   const handleCreateApiKey = async () => {
@@ -287,21 +501,14 @@ export default function EventzoneTicketWidget() {
     const startTime = Date.now();
 
     try {
-      if (selectedEndpoint === "get_tickets") {
-        const res = await fetch(`/api/events/${currentEventId}/tickets`);
-        const data = await res.json();
-        setPlaygroundResponse({
-          status: res.status,
-          statusText: res.statusText || "OK",
-          durationMs: Date.now() - startTime,
-          data: data,
-        });
-      } else if (selectedEndpoint === "register_attendee") {
+      if (selectedEndpoint === "register_attendee") {
         const res = await fetch(`/api/events/${currentEventId}/tickets/register`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             ...playgroundPayload,
+            ticketId: currentSelectedTicket?.id || selectedTicketId,
+            ticketType: currentSelectedTicket?.name || playgroundPayload.ticketType,
             source: "rest_api_playground",
           }),
         });
@@ -309,6 +516,15 @@ export default function EventzoneTicketWidget() {
         setPlaygroundResponse({
           status: res.status,
           statusText: res.statusText || (res.ok ? "Created" : "Error"),
+          durationMs: Date.now() - startTime,
+          data: data,
+        });
+      } else if (selectedEndpoint === "get_tickets") {
+        const res = await fetch(`/api/events/${currentEventId}/tickets`);
+        const data = await res.json();
+        setPlaygroundResponse({
+          status: res.status,
+          statusText: res.statusText || "OK",
           durationMs: Date.now() - startTime,
           data: data,
         });
@@ -334,58 +550,28 @@ export default function EventzoneTicketWidget() {
     }
   };
 
-  // REST Code Generation
+  // REST Code Generation across Multiple Backend Languages
   const restCodeSnippets = useMemo(() => {
     const apiKeyHeader = apiKeys[0]?.key || "ez_live_YOUR_API_KEY";
-
-    if (selectedEndpoint === "get_tickets") {
-      const url = `${origin}/api/events/${currentEventId}/tickets`;
-      return {
-        curl: `curl -X GET "${url}" \\
-  -H "Accept: application/json"`,
-        javascript: `// Fetch available tickets and pricing
-fetch("${url}")
-  .then(res => res.json())
-  .then(data => {
-    console.log("Available tickets:", data.tickets);
-  });`,
-        python: `import requests
-
-url = "${url}"
-response = requests.get(url)
-data = response.json()
-
-print(data["tickets"])`,
-        php: `<?php
-$curl = curl_init();
-curl_setopt_array($curl, [
-  CURLOPT_URL => "${url}",
-  CURLOPT_RETURNTRANSFER => true,
-]);
-$response = curl_exec($curl);
-curl_close($curl);
-$data = json_decode($response, true);
-print_r($data["tickets"]);
-?>`,
-        nodejs: `const axios = require("axios");
-
-async function getTickets() {
-  const { data } = await axios.get("${url}");
-  console.log("Tickets:", data.tickets);
-}
-getTickets();`,
-      };
-    }
+    const ticketName = currentSelectedTicket?.name || "Standard Pass";
+    const targetTicketId = currentSelectedTicket?.id || "ticket-uuid";
 
     if (selectedEndpoint === "register_attendee") {
       const url = `${origin}/api/events/${currentEventId}/tickets/register`;
-      const bodyJson = JSON.stringify(playgroundPayload, null, 2);
+      const currentPayload = {
+        ...playgroundPayload,
+        ticketType: ticketName,
+        ticketId: targetTicketId
+      };
+      const bodyJson = JSON.stringify(currentPayload, null, 2);
+
       return {
         curl: `curl -X POST "${url}" \\
   -H "Content-Type: application/json" \\
   -H "x-api-key: ${apiKeyHeader}" \\
-  -d '${JSON.stringify(playgroundPayload)}'`,
-        javascript: `// Register attendee into Eventzone
+  -d '${JSON.stringify(currentPayload)}'`,
+
+        javascript: `// Modern JS Fetch (${ticketName})
 const response = await fetch("${url}", {
   method: "POST",
   headers: {
@@ -396,25 +582,40 @@ const response = await fetch("${url}", {
 });
 
 const result = await response.json();
-console.log("Registration Badge Code:", result.badge?.code);`,
-        python: `import requests
+console.log("Badge Code:", result.badge?.code);`,
+
+        nodejs: `// Node.js Axios (${ticketName})
+const axios = require("axios");
+
+async function registerAttendee() {
+  const { data } = await axios.post("${url}", ${bodyJson}, {
+    headers: { "x-api-key": "${apiKeyHeader}" }
+  });
+  console.log("Attendee Registered:", data.attendee);
+}
+registerAttendee();`,
+
+        python: `# Python Requests (${ticketName})
+import requests
 
 url = "${url}"
 headers = {
     "Content-Type": "application/json",
     "x-api-key": "${apiKeyHeader}"
 }
-payload = ${JSON.stringify(playgroundPayload, null, 4)}
+payload = ${JSON.stringify(currentPayload, null, 4)}
 
 response = requests.post(url, json=payload, headers=headers)
 print("Badge Code:", response.json().get("badge", {}).get("code"))`,
+
         php: `<?php
+// PHP cURL (${ticketName})
 $curl = curl_init();
 curl_setopt_array($curl, [
   CURLOPT_URL => "${url}",
   CURLOPT_RETURNTRANSFER => true,
   CURLOPT_POST => true,
-  CURLOPT_POSTFIELDS => '${JSON.stringify(playgroundPayload)}',
+  CURLOPT_POSTFIELDS => '${JSON.stringify(currentPayload)}',
   CURLOPT_HTTPHEADER => [
     'Content-Type: application/json',
     'x-api-key: ${apiKeyHeader}'
@@ -424,15 +625,275 @@ $response = curl_exec($curl);
 curl_close($curl);
 echo $response;
 ?>`,
-        nodejs: `const axios = require("axios");
 
-async function registerAttendee() {
-  const response = await axios.post("${url}", ${bodyJson}, {
-    headers: { "x-api-key": "${apiKeyHeader}" }
-  });
-  console.log("Attendee Created:", response.data.attendee);
+        go: `// Go (Golang) (${ticketName})
+package main
+
+import (
+	"bytes"
+	"fmt"
+	"io"
+	"net/http"
+)
+
+func main() {
+	url := "${url}"
+	payload := []byte(\`${JSON.stringify(currentPayload)}\`)
+
+	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(payload))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("x-api-key", "${apiKeyHeader}")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	fmt.Println(string(body))
+}`,
+
+        csharp: `// C# .NET HttpClient (${ticketName})
+using System;
+using System.Net.Http;
+using System.Text;
+using System.Threading.Tasks;
+
+class Program {
+    static async Task Main() {
+        var client = new HttpClient();
+        client.DefaultRequestHeaders.Add("x-api-key", "${apiKeyHeader}");
+
+        var json = @"${JSON.stringify(currentPayload)}";
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        var response = await client.PostAsync("${url}", content);
+        var result = await response.Content.ReadAsStringAsync();
+        Console.WriteLine(result);
+    }
+}`,
+
+        java: `// Java 11+ HttpClient (${ticketName})
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+
+public class Main {
+    public static void main(String[] args) throws Exception {
+        HttpClient client = HttpClient.newHttpClient();
+        String json = """
+        ${JSON.stringify(currentPayload, null, 8)}
+        """;
+
+        HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create("${url}"))
+            .header("Content-Type", "application/json")
+            .header("x-api-key", "${apiKeyHeader}")
+            .POST(HttpRequest.BodyPublishers.ofString(json))
+            .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        System.out.println(response.body());
+    }
+}`,
+
+        ruby: `# Ruby Net::HTTP (${ticketName})
+require 'net/http'
+require 'uri'
+require 'json'
+
+uri = URI.parse("${url}")
+request = Net::HTTP::Post.new(uri)
+request.content_type = "application/json"
+request["x-api-key"] = "${apiKeyHeader}"
+request.body = JSON.dump(${JSON.stringify(currentPayload, null, 2)})
+
+response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) do |http|
+  http.request(request)
+end
+
+puts response.body`,
+
+        rust: `// Rust Reqwest (${ticketName})
+use reqwest::header::{HeaderMap, HeaderValue, CONTENT_TYPE};
+use serde_json::json;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std.error::Error>> {
+    let client = reqwest::Client::new();
+    let mut headers = HeaderMap::new();
+    headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
+    headers.insert("x-api-key", HeaderValue::from_static("${apiKeyHeader}"));
+
+    let payload = json!(${JSON.stringify(currentPayload, null, 4)});
+
+    let res = client.post("${url}")
+        .headers(headers)
+        .json(&payload)
+        .send()
+        .await?
+        .text()
+        .await?;
+
+    println!("{}", res);
+    Ok(())
+}`,
+
+        dart: `// Dart / Flutter HTTP (${ticketName})
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
+Future<void> registerAttendee() async {
+  final url = Uri.parse('${url}');
+  final response = await http.post(
+    url,
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': '${apiKeyHeader}',
+    },
+    body: jsonEncode(${JSON.stringify(currentPayload, null, 2)}),
+  );
+
+  print('Status: \${response.statusCode}');
+  print('Body: \${response.body}');
+}`,
+
+        swift: `// Swift URLSession (${ticketName})
+import Foundation
+
+let url = URL(string: "${url}")!
+var request = URLRequest(url: url)
+request.httpMethod = "POST"
+request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+request.setValue("${apiKeyHeader}", forHTTPHeaderField: "x-api-key")
+
+let jsonPayload: [String: Any] = [
+    "name": "${currentPayload.name}",
+    "email": "${currentPayload.email}",
+    "ticketType": "${currentPayload.ticketType}",
+    "ticketId": "${currentPayload.ticketId}"
+]
+request.httpBody = try? JSONSerialization.data(withJSONObject: jsonPayload)
+
+let task = URLSession.shared.dataTask(with: request) { data, response, error in
+    if let data = data, let str = String(data: data, encoding: .utf8) {
+        print(str)
+    }
 }
-registerAttendee();`,
+task.resume()`,
+
+        kotlin: `// Kotlin OkHttp (${ticketName})
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+
+fun main() {
+    val client = OkHttpClient()
+    val mediaType = "application/json; charset=utf-8".toMediaType()
+    val json = """${JSON.stringify(currentPayload)}"""
+    val body = json.toRequestBody(mediaType)
+
+    val request = Request.Builder()
+        .url("${url}")
+        .post(body)
+        .addHeader("Content-Type", "application/json")
+        .addHeader("x-api-key", "${apiKeyHeader}")
+        .build()
+
+    client.newCall(request).execute().use { response ->
+        println(response.body?.string())
+    }
+}`,
+      };
+    }
+
+    if (selectedEndpoint === "get_tickets") {
+      const url = `${origin}/api/events/${currentEventId}/tickets`;
+      return {
+        curl: `curl -X GET "${url}" \\
+  -H "Accept: application/json"`,
+        javascript: `fetch("${url}")
+  .then(res => res.json())
+  .then(data => console.log(data.tickets));`,
+        nodejs: `const axios = require("axios");
+const { data } = await axios.get("${url}");
+console.log(data.tickets);`,
+        python: `import requests
+response = requests.get("${url}")
+print(response.json()["tickets"])`,
+        php: `<?php
+$res = file_get_contents("${url}");
+print_r(json_decode($res, true)["tickets"]);
+?>`,
+        go: `package main
+
+import (
+	"fmt"
+	"io"
+	"net/http"
+)
+
+func main() {
+	resp, _ := http.Get("${url}")
+	body, _ := io.ReadAll(resp.Body)
+	fmt.Println(string(body))
+}`,
+        csharp: `using System;
+using System.Net.Http;
+using System.Threading.Tasks;
+
+class Program {
+    static async Task Main() {
+        var client = new HttpClient();
+        var res = await client.GetStringAsync("${url}");
+        Console.WriteLine(res);
+    }
+}`,
+        java: `import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+
+public class Main {
+    public static void main(String[] args) throws Exception {
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest req = HttpRequest.newBuilder().uri(URI.create("${url}")).GET().build();
+        HttpResponse<String> res = client.send(req, HttpResponse.BodyHandlers.ofString());
+        System.out.println(res.body());
+    }
+}`,
+        ruby: `require 'net/http'
+require 'uri'
+res = Net::HTTP.get(URI.parse("${url}"))
+puts res`,
+        rust: `#[tokio::main]
+async fn main() -> Result<(), reqwest::Error> {
+    let body = reqwest::get("${url}").await?.text().await?;
+    println!("{}", body);
+    Ok(())
+}`,
+        dart: `import 'package:http/http.dart' as http;
+void main() async {
+  final res = await http.get(Uri.parse('${url}'));
+  print(res.body);
+}`,
+        swift: `import Foundation
+let url = URL(string: "${url}")!
+URLSession.shared.dataTask(with: url) { data, _, _ in
+    if let data = data { print(String(data: data, encoding: .utf8)!) }
+}.resume()`,
+        kotlin: `import okhttp3.OkHttpClient
+import okhttp3.Request
+fun main() {
+    val client = OkHttpClient()
+    val request = Request.Builder().url("${url}").build()
+    val response = client.newCall(request).execute()
+    println(response.body?.string())
+}`,
       };
     }
 
@@ -445,13 +906,16 @@ registerAttendee();`,
   headers: { "x-api-key": "${apiKeyHeader}" }
 })
   .then(res => res.json())
-  .then(data => console.log("Attendees list:", data.attendees));`,
+  .then(data => console.log(data.attendees));`,
+        nodejs: `const axios = require("axios");
+const { data } = await axios.get("${url}", {
+  headers: { "x-api-key": "${apiKeyHeader}" }
+});
+console.log(data.attendees);`,
         python: `import requests
-
-url = "${url}"
 headers = { "x-api-key": "${apiKeyHeader}" }
-response = requests.get(url, headers=headers)
-print("Total Attendees:", response.json()["count"])`,
+res = requests.get("${url}", headers=headers)
+print(res.json()["attendees"])`,
         php: `<?php
 $curl = curl_init();
 curl_setopt_array($curl, [
@@ -463,260 +927,602 @@ $response = curl_exec($curl);
 curl_close($curl);
 echo $response;
 ?>`,
-        nodejs: `const axios = require("axios");
-
-async function fetchAttendees() {
-  const { data } = await axios.get("${url}", {
-    headers: { "x-api-key": "${apiKeyHeader}" }
-  });
-  console.log("Count:", data.count);
-}
-fetchAttendees();`,
+        go: `package main
+import (
+	"fmt"
+	"io"
+	"net/http"
+)
+func main() {
+	req, _ := http.NewRequest("GET", "${url}", nil)
+	req.Header.Set("x-api-key", "${apiKeyHeader}")
+	resp, _ := (&http.Client{}).Do(req)
+	body, _ := io.ReadAll(resp.Body)
+	fmt.Println(string(body))
+}`,
+        csharp: `using System;
+using System.Net.Http;
+using System.Threading.Tasks;
+class Program {
+    static async Task Main() {
+        var client = new HttpClient();
+        client.DefaultRequestHeaders.Add("x-api-key", "${apiKeyHeader}");
+        var res = await client.GetStringAsync("${url}");
+        Console.WriteLine(res);
+    }
+}`,
+        java: `import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+public class Main {
+    public static void main(String[] args) throws Exception {
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest req = HttpRequest.newBuilder().uri(URI.create("${url}")).header("x-api-key", "${apiKeyHeader}").GET().build();
+        HttpResponse<String> res = client.send(req, HttpResponse.BodyHandlers.ofString());
+        System.out.println(res.body());
+    }
+}`,
+        ruby: `require 'net/http'
+require 'uri'
+uri = URI.parse("${url}")
+req = Net::HTTP::Get.new(uri)
+req['x-api-key'] = "${apiKeyHeader}"
+res = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) { |http| http.request(req) }
+puts res.body`,
+        rust: `#[tokio::main]
+async fn main() -> Result<(), reqwest::Error> {
+    let client = reqwest::Client::new();
+    let body = client.get("${url}").header("x-api-key", "${apiKeyHeader}").send().await?.text().await?;
+    println!("{}", body);
+    Ok(())
+}`,
+        dart: `import 'package:http/http.dart' as http;
+void main() async {
+  final res = await http.get(Uri.parse('${url}'), headers: {'x-api-key': '${apiKeyHeader}'});
+  print(res.body);
+}`,
+        swift: `import Foundation
+var req = URLRequest(url: URL(string: "${url}")!)
+req.setValue("${apiKeyHeader}", forHTTPHeaderField: "x-api-key")
+URLSession.shared.dataTask(with: req) { data, _, _ in
+    if let data = data { print(String(data: data, encoding: .utf8)!) }
+}.resume()`,
+        kotlin: `import okhttp3.OkHttpClient
+import okhttp3.Request
+fun main() {
+    val client = OkHttpClient()
+    val request = Request.Builder().url("${url}").addHeader("x-api-key", "${apiKeyHeader}").build()
+    val response = client.newCall(request).execute()
+    println(response.body?.string())
+}`,
       };
     }
 
-    return { curl: "", javascript: "", python: "", php: "", nodejs: "" };
-  }, [selectedEndpoint, currentEventId, playgroundPayload, apiKeys, origin]);
+    return {};
+  }, [selectedEndpoint, currentEventId, apiKeys, playgroundPayload, origin, currentSelectedTicket]);
 
-  // External Registrations Log
+  // Combined external activity records
   const externalRegistrations = useMemo(() => {
-    const combined = [
-      ...attendees.map((a) => ({
-        id: a.id,
-        name: a.name || `${a.first_name || ""} ${a.last_name || ""}`.trim() || "Attendee",
-        email: a.email,
-        ticketType: a.ticketType || a.ticket_type || "Standard Pass",
-        status: "registered",
-        date: a.registeredAt || a.registered_at || new Date().toISOString(),
-        source: a.source || (a.phone ? "Embed / API" : "Web Platform"),
-        raw: a,
-      })),
-      ...pending.map((p) => ({
+    const fromAttendees = attendees.map((a) => ({
+      id: a.id,
+      name: a.name || `${a.firstName || ""} ${a.lastName || ""}`.trim() || a.email,
+      email: a.email,
+      ticketType: a.ticketType || a.tier || "General Admission",
+      source: a.source || "Direct Form Embed",
+      status: "registered",
+      date: a.date || a.createdAt || new Date().toISOString(),
+      raw: a,
+    }));
+
+    const fromPending = pending.map((p) => {
+      let parsedNote = {};
+      try {
+        parsedNote = typeof p.note === "string" ? JSON.parse(p.note) : p.note || {};
+      } catch (e) {
+        parsedNote = { rawText: p.note };
+      }
+      return {
         id: p.id,
-        name: p.name || "Pending Applicant",
+        name: p.name || p.email,
         email: p.email,
-        ticketType: p.ticketType || "Application",
-        status: "pending",
-        date: p.date || p.created_at || new Date().toISOString(),
-        source: "Embed / API",
-        raw: p,
-      })),
-    ];
-    return combined.slice(0, 25);
+        ticketType: parsedNote.ticketType || "Pending Approval",
+        source: parsedNote.source || "Direct Form Embed",
+        status: "pending_review",
+        date: p.date || new Date().toISOString(),
+        raw: { ...p, parsedNote },
+      };
+    });
+
+    return [...fromAttendees, ...fromPending].sort((a, b) => new Date(b.date) - new Date(a.date));
   }, [attendees, pending]);
 
-  // Options for ticket dropdown using SearchableSelect
-  const ticketOptions = useMemo(() => {
-    const base = [{ value: "all", label: "All Active Ticket Tiers" }];
-    const tierOpts = tickets.map((t) => ({
-      value: t.id,
-      label: `${t.name} (${Number(t.price || 0) === 0 ? "Free" : `${Number(t.price).toLocaleString()} DZD`})`,
-    }));
-    return [...base, ...tierOpts];
-  }, [tickets]);
+  // Filtered registrations
+  const filteredRegistrations = useMemo(() => {
+    if (!searchQuery.trim()) return externalRegistrations;
+    const q = searchQuery.toLowerCase();
+    return externalRegistrations.filter(
+      (r) =>
+        r.name?.toLowerCase().includes(q) ||
+        r.email?.toLowerCase().includes(q) ||
+        r.ticketType?.toLowerCase().includes(q) ||
+        r.source?.toLowerCase().includes(q)
+    );
+  }, [externalRegistrations, searchQuery]);
+
+  // Filtered API Keys
+  const filteredApiKeys = useMemo(() => {
+    if (!searchQuery.trim()) return apiKeys;
+    const q = searchQuery.toLowerCase();
+    return apiKeys.filter(
+      (k) =>
+        k.name?.toLowerCase().includes(q) ||
+        k.keyPrefix?.toLowerCase().includes(q) ||
+        k.permissions?.toLowerCase().includes(q)
+    );
+  }, [apiKeys, searchQuery]);
+
+  // Filtered Webhooks
+  const filteredWebhooks = useMemo(() => {
+    if (!searchQuery.trim()) return webhooks;
+    const q = searchQuery.toLowerCase();
+    return webhooks.filter((w) => w.url?.toLowerCase().includes(q));
+  }, [webhooks, searchQuery]);
 
   return (
-    <div className="flex flex-col gap-8 w-full max-w-7xl mx-auto pb-12 font-sans select-none animate-fade-in">
-      {/* 1. Header Banner */}
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs">
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-black shadow-xs">
-              <Code2 size={22} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-                  Developers & Tickets API
-                </h1>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  CORS Enabled
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 font-medium">
-                Embed interactive ticket checkout forms on external websites or ingest attendee registrations directly via REST API.
-              </p>
-            </div>
+    <div className="space-y-6 animate-fade-in text-slate-800 pb-16 w-full font-sans select-none">
+      {/* ─────────────────────────────────────────────
+          1. HEADER SECTION (Matches Logistics layout)
+      ───────────────────────────────────────────── */}
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+              Developers & Tickets API
+            </h1>
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
+              CORS Active
+            </span>
           </div>
+          <p className="text-xs text-slate-500 font-medium">
+            Command center for public REST APIs, embeddable registration widgets, API keys, and real-time webhook ingestion.
+          </p>
         </div>
 
-        {/* Quick event ID pill */}
-        <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-2xl border border-slate-200">
-          <div className="flex flex-col text-left px-2">
-            <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Target Event ID</span>
-            <span className="text-xs font-mono font-bold text-slate-800 truncate max-w-[170px]">{currentEventId}</span>
-          </div>
+        {/* Action Buttons Row */}
+        <div className="flex flex-wrap items-center gap-2.5">
           <button
+            type="button"
             onClick={() => handleCopy(currentEventId, "eventId")}
-            className="p-2 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 transition-colors cursor-pointer"
-            title="Copy Event ID"
+            className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl text-xs sm:text-sm transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
           >
-            {copiedKey === "eventId" ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
+            {copiedKey === "eventId" ? (
+              <>
+                <Check size={14} className="text-emerald-600" />
+                <span className="text-emerald-600 font-bold">Event ID Copied</span>
+              </>
+            ) : (
+              <>
+                <Copy size={14} />
+                <span>Copy Event ID</span>
+              </>
+            )}
           </button>
+
+          {activeTab === "embed_builder" && (
+            <a
+              href={directTicketEmbedUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl text-xs sm:text-sm transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+            >
+              <ExternalLink size={14} />
+              <span>Open Form Page</span>
+            </a>
+          )}
+
+          {activeTab === "api_keys" && (
+            <button
+              onClick={() => setIsNewKeyModalOpen(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs sm:text-sm shadow-sm transition-all flex items-center gap-2 cursor-pointer"
+            >
+              <Plus size={16} />
+              <span>Generate API Key</span>
+            </button>
+          )}
+
+          {activeTab === "webhooks" && (
+            <button
+              onClick={() => setIsNewWebhookModalOpen(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs sm:text-sm shadow-sm transition-all flex items-center gap-2 cursor-pointer"
+            >
+              <Plus size={16} />
+              <span>Add Webhook</span>
+            </button>
+          )}
+
+          {activeTab === "rest_docs" && (
+            <button
+              onClick={handleRunPlaygroundRequest}
+              disabled={playgroundLoading}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs sm:text-sm shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+            >
+              <Play size={15} />
+              <span>{playgroundLoading ? "Sending..." : "Test Registration API"}</span>
+            </button>
+          )}
+
+          {activeTab !== "api_keys" && activeTab !== "webhooks" && activeTab !== "rest_docs" && (
+            <button
+              onClick={() => setIsNewKeyModalOpen(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs sm:text-sm shadow-sm transition-all flex items-center gap-2 cursor-pointer"
+            >
+              <Plus size={16} />
+              <span>Generate API Key</span>
+            </button>
+          )}
         </div>
       </header>
 
-      {/* 2. Sub-Navigation Tabs Bar */}
-      <div className="flex items-center gap-1.5 border-b border-slate-200 overflow-x-auto pb-0">
+      {/* ─────────────────────────────────────────────
+          2. EXECUTIVE KPI CARDS (Matches Logistics layout)
+      ───────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* Card 1: Ticket Tiers */}
+        <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500">Published Ticket Tiers</span>
+            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+              <Ticket size={16} />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl font-black text-slate-900">{tickets.length}</div>
+            <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-slate-500">
+              <span className="text-blue-600 font-bold">{tickets.filter(t => !t.isSoldOut).length}</span> active ticket forms ready
+            </div>
+          </div>
+        </div>
+
+        {/* Card 2: API Keys */}
+        <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500">Developer API Keys</span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <Key size={16} />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl font-black text-slate-900">{apiKeys.length}</div>
+            <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-emerald-600">
+              <CheckCircle2 size={12} className="shrink-0" />
+              <span>{apiKeys.filter(k => k.is_active !== false).length} active credentials</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 3: Webhooks */}
+        <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500">Active Webhooks</span>
+            <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <Webhook size={16} />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl font-black text-slate-900">{webhooks.length}</div>
+            <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-indigo-600">
+              Real-time delivery active
+            </div>
+          </div>
+        </div>
+
+        {/* Card 4: Ingestion Health */}
+        <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500">API Health & Ingestion</span>
+            <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
+              <ShieldCheck size={16} />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="flex items-center justify-between">
+              <span className="text-2xl font-black text-slate-900">100%</span>
+              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-teal-100 text-teal-700">
+                Online
+              </span>
+            </div>
+            {/* Progress Bar */}
+            <div className="w-full bg-slate-150 h-1.5 rounded-full mt-2 overflow-hidden">
+              <div className="h-full bg-teal-500 rounded-full w-full transition-all duration-500" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ─────────────────────────────────────────────
+          3. SUB-MODULE TABS NAVIGATION (Matches Logistics tab strip)
+      ───────────────────────────────────────────── */}
+      <div className="flex items-center border-b border-slate-200 gap-1 overflow-x-auto">
         {[
           { id: "overview", label: "Quickstart & Overview", icon: Sparkles },
-          { id: "embed_builder", label: "Embed Widget Builder", icon: Layers, badge: "Popular" },
+          { id: "embed_builder", label: "Embed Ticket Form", icon: Layers, badge: "Popular" },
           { id: "api_keys", label: "API Keys", icon: Key, badge: apiKeys.length },
           { id: "rest_docs", label: "REST API & Playground", icon: Terminal },
           { id: "webhooks", label: "Webhooks", icon: Webhook, badge: webhooks.length },
-          { id: "logs", label: "Live Ingestion Logs", icon: Activity },
+          { id: "logs", label: "Live Ingestion Logs", icon: Activity, badge: attendees.length },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-3 border-b-2 font-bold text-xs transition-all whitespace-nowrap cursor-pointer ${
+              onClick={() => {
+                setActiveTab(tab.id);
+                setSearchQuery("");
+              }}
+              className={`relative flex items-center gap-2 px-4 py-3 font-bold text-xs transition-all cursor-pointer !rounded-none whitespace-nowrap ${
                 isActive
-                  ? "border-blue-600 text-blue-600 font-extrabold bg-blue-50/50 rounded-t-2xl"
-                  : "border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300"
+                  ? "text-blue-600 font-black bg-blue-50/50"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
               }`}
             >
-              <Icon size={15} className={isActive ? "text-blue-600" : "text-slate-400"} />
+              <Icon size={14} className={isActive ? "text-blue-600" : "text-slate-400"} />
               <span>{tab.label}</span>
               {tab.badge !== undefined && (
                 <span
-                  className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-full ${
-                    isActive ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"
+                  className={`px-1.5 py-0.5 rounded-full text-[10px] font-extrabold ${
+                    isActive
+                      ? "bg-blue-600 text-white"
+                      : tab.badge === "Popular"
+                      ? "bg-amber-100 text-amber-800"
+                      : "bg-slate-100 text-slate-600"
                   }`}
                 >
                   {tab.badge}
                 </span>
+              )}
+              {isActive && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
               )}
             </button>
           );
         })}
       </div>
 
-      {/* ──────────────────────────────────────────────────────────────────────── */}
+      {/* ─────────────────────────────────────────────
+          4. TAB CONTENTS
+      ───────────────────────────────────────────── */}
+
       {/* TAB 1: QUICKSTART & OVERVIEW */}
-      {/* ──────────────────────────────────────────────────────────────────────── */}
       {activeTab === "overview" && (
-        <div className="space-y-8 animate-fade-in">
+        <div className="space-y-6 animate-fade-in">
+          {/* Direct Ticket Forms Table / Directory */}
+          <div className="bg-white rounded-3xl border border-slate-150 p-6 sm:p-8 shadow-xs space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900">Direct Ticket Form Widgets & APIs</h3>
+                <p className="text-xs text-slate-500">Each ticket tier has its own direct form widget and dedicated registration API endpoint.</p>
+              </div>
+              <button
+                onClick={() => onSwitchView ? onSwitchView("tickets") : (onOpenModal && onOpenModal("ticket"))}
+                className="px-3.5 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold transition-colors cursor-pointer self-start sm:self-center flex items-center gap-1.5"
+              >
+                <Plus size={14} />
+                <span>Manage Ticket Tiers</span>
+              </button>
+            </div>
+
+            {tickets.length === 0 ? (
+              <div className="p-10 rounded-2xl border border-dashed border-slate-200 text-center space-y-3 bg-slate-50/50">
+                <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto">
+                  <Ticket size={22} />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-sm font-bold text-slate-800">No Ticket Tiers Published Yet</h4>
+                  <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                    Create ticket tiers in the Tickets & Pricing module to generate direct checkout forms and endpoints.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onSwitchView ? onSwitchView("tickets") : (onOpenModal && onOpenModal("ticket"))}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+                >
+                  Create Your First Ticket
+                </button>
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100 border border-slate-150 rounded-2xl overflow-hidden">
+                {tickets.map((t) => {
+                  const isFree = !t.price || Number(t.price) === 0;
+                  const ticketEmbedUrl = `${origin}/embed/tickets?eventId=${currentEventId}&ticketId=${t.id}`;
+                  const ticketIframeCode = `<iframe src="${ticketEmbedUrl}" width="100%" height="600" frameborder="0" style="border:none;border-radius:24px;width:100%;min-height:520px;" title="${t.name} Registration"></iframe>`;
+
+                  return (
+                    <div key={t.id} className="p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-slate-50/60 transition-colors">
+                      <div className="space-y-1.5 flex-1 min-w-0">
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-sm font-extrabold text-slate-900">{t.name}</span>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                            isFree ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-blue-50 text-blue-700 border border-blue-200"
+                          }`}>
+                            {isFree ? "Free Pass" : `${Number(t.price).toLocaleString()} DZD`}
+                          </span>
+                          {t.requiresApproval && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                              Requires Approval
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-slate-500 font-mono">
+                          <span className="truncate max-w-md">ID: {t.id}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(ticketIframeCode, `iframe-${t.id}`)}
+                          className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                        >
+                          {copiedKey === `iframe-${t.id}` ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+                          <span>{copiedKey === `iframe-${t.id}` ? "Copied!" : "Copy Embed Code"}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedTicketId(t.id);
+                            setActiveTab("embed_builder");
+                          }}
+                          className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                        >
+                          <Eye size={13} />
+                          <span>Customize & Preview Form</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           {/* 3-Step Flow Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs relative overflow-hidden flex flex-col justify-between">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white p-6 rounded-3xl border border-slate-150 shadow-xs relative overflow-hidden flex flex-col justify-between">
               <div className="space-y-3">
                 <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-black text-sm">
                   1
                 </div>
-                <h3 className="text-base font-extrabold text-slate-900">Choose Integration Mode</h3>
+                <h3 className="text-base font-extrabold text-slate-900">Direct Form Embed</h3>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  Use our responsive <strong>Iframe Widget</strong>, drop-in <strong>JavaScript Library</strong>, or integrate custom forms via <strong>REST API</strong>.
+                  Embed the registration form for any specific ticket directly on your custom pricing card or button.
                 </p>
               </div>
               <button
                 onClick={() => setActiveTab("embed_builder")}
                 className="mt-4 flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:underline cursor-pointer"
               >
-                <span>Launch Embed Builder</span>
+                <span>Launch Form Customizer</span>
                 <ChevronRight size={13} />
               </button>
             </div>
 
-            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs relative overflow-hidden flex flex-col justify-between">
+            <div className="bg-white p-6 rounded-3xl border border-slate-150 shadow-xs relative overflow-hidden flex flex-col justify-between">
               <div className="space-y-3">
                 <div className="w-10 h-10 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center font-black text-sm">
                   2
                 </div>
-                <h3 className="text-base font-extrabold text-slate-900">Embed on Your Website</h3>
+                <h3 className="text-base font-extrabold text-slate-900">Direct Ticket API</h3>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  Copy and paste the snippet onto Webflow, WordPress, Wix, React, or custom HTML. The form automatically matches your brand colors.
+                  Use our REST endpoint to submit registrations for any specific ticket tier directly from your backend.
                 </p>
               </div>
               <button
-                onClick={() => setActiveTab("embed_builder")}
+                onClick={() => setActiveTab("rest_docs")}
                 className="mt-4 flex items-center gap-1.5 text-xs font-bold text-purple-600 hover:underline cursor-pointer"
               >
-                <span>Generate Embed Code</span>
+                <span>Open API Playground</span>
                 <ChevronRight size={13} />
               </button>
             </div>
 
-            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs relative overflow-hidden flex flex-col justify-between">
+            <div className="bg-white p-6 rounded-3xl border border-slate-150 shadow-xs relative overflow-hidden flex flex-col justify-between">
               <div className="space-y-3">
                 <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-black text-sm">
                   3
                 </div>
-                <h3 className="text-base font-extrabold text-slate-900">Real-Time Ingestion</h3>
+                <h3 className="text-base font-extrabold text-slate-900">Instant Ingestion</h3>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  Attendees register on your website and instantly appear in Eventzone with verifiable QR badges, capacity tracking, and email passes.
+                  Attendees receive instant digital QR badges, custom form questions are saved, and webhooks fire in real-time.
                 </p>
               </div>
               <button
                 onClick={() => onSwitchView && onSwitchView("attendees")}
                 className="mt-4 flex items-center gap-1.5 text-xs font-bold text-emerald-600 hover:underline cursor-pointer"
               >
-                <span>View All Attendees ({attendees.length})</span>
+                <span>View Attendees ({attendees.length})</span>
                 <ChevronRight size={13} />
               </button>
-            </div>
-          </div>
-
-          {/* Quick API Endpoints Table */}
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-extrabold text-slate-900">Live API Endpoints</h3>
-                <p className="text-xs text-slate-500">Publicly accessible endpoints ready for external frontend and server integrations.</p>
-              </div>
-              <button
-                onClick={() => setActiveTab("rest_docs")}
-                className="px-3.5 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
-              >
-                Open API Tester
-              </button>
-            </div>
-
-            <div className="divide-y divide-slate-100 border border-slate-150 rounded-2xl overflow-hidden">
-              <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50">
-                <div className="flex items-center gap-3">
-                  <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase bg-emerald-100 text-emerald-700">GET</span>
-                  <span className="font-mono text-xs font-bold text-slate-800">/api/events/{currentEventId}/tickets</span>
-                </div>
-                <span className="text-xs text-slate-500 font-medium">Fetch active ticket tiers, prices, capacity, & questionnaires</span>
-              </div>
-
-              <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white">
-                <div className="flex items-center gap-3">
-                  <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase bg-blue-100 text-blue-700">POST</span>
-                  <span className="font-mono text-xs font-bold text-slate-800">/api/events/{currentEventId}/tickets/register</span>
-                </div>
-                <span className="text-xs text-slate-500 font-medium">Submit attendee registration & generate digital QR badge</span>
-              </div>
-
-              <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50">
-                <div className="flex items-center gap-3">
-                  <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase bg-purple-100 text-purple-700">GET</span>
-                  <span className="font-mono text-xs font-bold text-slate-800">/embed/tickets?eventId={currentEventId}</span>
-                </div>
-                <span className="text-xs text-slate-500 font-medium">Standalone checkout widget page for iframes & popups</span>
-              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ──────────────────────────────────────────────────────────────────────── */}
-      {/* TAB 2: EMBED BUILDER & LIVE PREVIEW */}
-      {/* ──────────────────────────────────────────────────────────────────────── */}
+      {/* TAB 2: EMBED TICKET FORM BUILDER */}
       {activeTab === "embed_builder" && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-fade-in">
           {/* Controls Configurator (Left 5 Cols) */}
-          <div className="lg:col-span-5 bg-white p-6 sm:p-7 rounded-3xl border border-slate-200 shadow-xs space-y-6">
+          <div className="lg:col-span-5 bg-white p-6 sm:p-7 rounded-3xl border border-slate-150 shadow-xs space-y-6">
             <div>
-              <h3 className="text-base font-extrabold text-slate-900">Embed Configurator</h3>
-              <p className="text-xs text-slate-500">Customize the look, colors, and behavior of your ticket registration form.</p>
+              <h3 className="text-base font-extrabold text-slate-900">Ticket Form Configurator</h3>
+              <p className="text-xs text-slate-500">Customize and embed the direct registration form for each specific ticket tier.</p>
+            </div>
+
+            {/* Select Target Ticket Tier */}
+            <div className="space-y-2.5">
+              <label className="text-xs font-bold text-slate-800 flex items-center justify-between">
+                <span>Select Target Ticket Tier</span>
+                <span className="text-[10px] font-extrabold uppercase text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
+                  Direct Form
+                </span>
+              </label>
+
+              {tickets.length === 0 ? (
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl space-y-2">
+                  <span className="text-xs font-bold text-amber-900 block">No tickets created yet</span>
+                  <p className="text-[11px] text-amber-700">Please create ticket tiers first in Tickets & Pricing to configure form widgets.</p>
+                  <button
+                    type="button"
+                    onClick={() => onSwitchView ? onSwitchView("tickets") : (onOpenModal && onOpenModal("ticket"))}
+                    className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-[11px] cursor-pointer"
+                  >
+                    Create Tickets
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-2">
+                  {tickets.map((t) => {
+                    const isSelected = selectedTicketId === t.id;
+                    const isFree = !t.price || Number(t.price) === 0;
+                    return (
+                      <div
+                        key={t.id}
+                        onClick={() => setSelectedTicketId(t.id)}
+                        className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                          isSelected
+                            ? "bg-blue-50/70 border-blue-500 ring-2 ring-blue-500/20 shadow-xs"
+                            : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                            isSelected ? "border-blue-600 bg-blue-600" : "border-slate-300 bg-white"
+                          }`}>
+                            {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                          </div>
+                          <div>
+                            <span className="text-xs font-extrabold text-slate-900 block leading-tight">{t.name}</span>
+                            <span className="text-[10px] font-mono text-slate-400">{t.id}</span>
+                          </div>
+                        </div>
+
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                          isFree ? "bg-emerald-100 text-emerald-800" : "bg-blue-100 text-blue-800"
+                        }`}>
+                          {isFree ? "Free" : `${Number(t.price).toLocaleString()} DZD`}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Theme Picker */}
-            <div className="space-y-2">
+            <div className="space-y-2 pt-2 border-t border-slate-150">
               <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
                 <span>Color Theme</span>
                 <span className="text-[10px] font-semibold text-slate-400 capitalize">{embedTheme} Mode</span>
@@ -729,7 +1535,7 @@ fetchAttendees();`,
                     embedTheme === "light" ? "bg-blue-50 border-blue-500 text-blue-700 shadow-2xs" : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
                   }`}
                 >
-                  <SunIcon size={14} />
+                  <SunIcon />
                   <span>Light Theme</span>
                 </button>
                 <button
@@ -739,19 +1545,19 @@ fetchAttendees();`,
                     embedTheme === "dark" ? "bg-slate-900 border-slate-900 text-white shadow-2xs" : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
                   }`}
                 >
-                  <MoonIcon size={14} />
+                  <MoonIcon />
                   <span>Dark Theme</span>
                 </button>
               </div>
             </div>
 
-            {/* Primary Accent Color */}
+            {/* Accent Color Picker */}
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
                 <span>Brand Accent Color</span>
-                <span className="font-mono text-[10px] font-bold text-slate-500">{embedColor}</span>
+                <span className="text-[11px] font-mono text-slate-400">{embedColor}</span>
               </label>
-              <div className="flex flex-wrap gap-2 items-center">
+              <div className="flex flex-wrap items-center gap-2">
                 {PRESET_COLORS.map((c) => (
                   <button
                     key={c.hex}
@@ -760,83 +1566,69 @@ fetchAttendees();`,
                       setEmbedColor(c.hex);
                       setCustomHex(c.hex);
                     }}
-                    className={`w-7 h-7 rounded-xl transition-transform cursor-pointer relative ${
-                      embedColor === c.hex ? "scale-115 ring-2 ring-offset-2 ring-slate-400" : "hover:scale-105"
-                    }`}
                     style={{ backgroundColor: c.hex }}
-                    title={c.name}
+                    className={`w-7 h-7 rounded-xl flex items-center justify-center text-white transition-transform cursor-pointer ${
+                      embedColor === c.hex ? "scale-110 ring-2 ring-offset-2 ring-blue-600 shadow-xs" : "hover:scale-105"
+                    }`}
                   >
-                    {embedColor === c.hex && <Check size={13} className="text-white mx-auto" />}
+                    {embedColor === c.hex && <Check size={14} />}
                   </button>
                 ))}
-                <input
-                  type="color"
-                  value={customHex}
-                  onChange={(e) => {
-                    setCustomHex(e.target.value);
-                    setEmbedColor(e.target.value);
-                  }}
-                  className="w-7 h-7 rounded-xl cursor-pointer border border-slate-200 bg-transparent p-0 overflow-hidden"
-                  title="Custom Hex Picker"
-                />
+                <label
+                  className={`w-7 h-7 rounded-xl flex items-center justify-center border border-slate-200 hover:border-slate-300 text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-50 transition-all cursor-pointer shadow-2xs relative group ${
+                    !PRESET_COLORS.some((c) => c.hex.toLowerCase() === embedColor.toLowerCase())
+                      ? "ring-2 ring-offset-2 ring-blue-600 border-blue-500 text-blue-600"
+                      : ""
+                  }`}
+                  title="Pick Custom Color"
+                >
+                  <Pipette size={13} className="group-hover:scale-110 transition-transform" />
+                  <input
+                    type="color"
+                    value={customHex}
+                    onChange={(e) => {
+                      setCustomHex(e.target.value);
+                      setEmbedColor(e.target.value);
+                    }}
+                    className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                  />
+                </label>
               </div>
             </div>
 
-            {/* Ticket Tier Filter (SearchableSelect) */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-700">Pre-Select Ticket Tier</label>
-              <SearchableSelect
-                value={selectedTicketFilter}
-                onChange={(val) => setSelectedTicketFilter(val)}
-                options={ticketOptions}
-                placeholder="All Active Tickets"
-              />
-              <p className="text-[10px] text-slate-400">Selecting a specific tier automatically skips the tier selector and opens its direct form.</p>
-            </div>
 
-            {/* Toggles */}
-            <div className="space-y-3 pt-2 border-t border-slate-150">
+            {/* Code Snippet Tabs with Multi-Framework Buttons */}
+            <div className="space-y-2.5 pt-2 border-t border-slate-150">
               <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-xs font-bold text-slate-800 block">Hide Event Header Banner</span>
-                  <span className="text-[10px] text-slate-400">Useful when embedding directly inside your existing event landing page.</span>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={hideHeader}
-                  onChange={(e) => setHideHeader(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 rounded-md cursor-pointer"
-                />
-              </div>
-            </div>
-
-            {/* Code Snippet Tabs */}
-            <div className="space-y-2 pt-2 border-t border-slate-150">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-slate-800">Generated Integration Code</label>
-                <div className="flex items-center gap-1">
-                  {["iframe", "script", "react", "wordpress"].map((st) => (
-                    <button
-                      key={st}
-                      type="button"
-                      onClick={() => setEmbedSnippetType(st)}
-                      className={`px-2 py-1 rounded-lg text-[10px] font-bold capitalize transition-colors cursor-pointer ${
-                        embedSnippetType === st ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                      }`}
-                    >
-                      {st}
-                    </button>
-                  ))}
-                </div>
+                <label className="text-xs font-bold text-slate-800">Integration Framework</label>
+                <span className="text-[10px] font-semibold text-slate-400">10+ Frameworks</span>
               </div>
 
-              <div className="relative">
-                <pre className="p-3.5 bg-slate-900 text-slate-100 rounded-2xl text-[11px] font-mono overflow-x-auto max-h-48 border border-slate-800">
-                  {embedSnippets[embedSnippetType]}
+              {/* Framework Pills Strip */}
+              <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-2xl">
+                {EMBED_FRAMEWORKS.map((fw) => (
+                  <button
+                    key={fw.id}
+                    type="button"
+                    onClick={() => setEmbedSnippetType(fw.id)}
+                    className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all cursor-pointer ${
+                      embedSnippetType === fw.id
+                        ? "bg-blue-600 text-white shadow-xs"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-white/60"
+                    }`}
+                  >
+                    {fw.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="relative mt-2">
+                <pre className="p-3.5 bg-slate-900 text-slate-100 rounded-2xl text-[11px] font-mono overflow-x-auto max-h-56 border border-slate-800 leading-relaxed">
+                  {embedSnippets[embedSnippetType] || embedSnippets.iframe}
                 </pre>
                 <button
                   type="button"
-                  onClick={() => handleCopy(embedSnippets[embedSnippetType], "embedCode")}
+                  onClick={() => handleCopy(embedSnippets[embedSnippetType] || embedSnippets.iframe, "embedCode")}
                   className="absolute top-2 right-2 px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer backdrop-blur-md"
                 >
                   {copiedKey === "embedCode" ? (
@@ -852,28 +1644,15 @@ fetchAttendees();`,
                   )}
                 </button>
               </div>
-
-              <div className="pt-2">
-                <a
-                  href={embedUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                >
-                  <span>Open Standalone Embed Page</span>
-                  <ExternalLink size={13} />
-                </a>
-              </div>
             </div>
           </div>
 
           {/* Live Interactive Preview (Right 7 Cols) */}
-          <div className="lg:col-span-7 bg-white p-6 sm:p-7 rounded-3xl border border-slate-200 shadow-xs space-y-4">
+          <div className="lg:col-span-7 bg-white p-6 sm:p-7 rounded-3xl border border-slate-150 shadow-xs space-y-4">
             <div className="flex items-center justify-between border-b pb-4 border-slate-150">
-              <div className="flex items-center gap-2">
-                <Sparkles size={16} className="text-blue-600" />
-                <h3 className="text-base font-extrabold text-slate-900">Live Preview</h3>
-              </div>
+              <h3 className="text-base font-extrabold text-slate-900">
+                Live Form Preview {currentSelectedTicket ? `(${currentSelectedTicket.name})` : ""}
+              </h3>
 
               {/* Device switcher */}
               <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
@@ -906,41 +1685,39 @@ fetchAttendees();`,
             }`}>
               <div className="rounded-2xl overflow-hidden shadow-sm bg-white">
                 <iframe
-                  key={`${embedUrl}-${embedTheme}-${embedColor}`}
-                  src={embedUrl}
+                  key={`${directTicketEmbedUrl}-${selectedTicketId}-${embedTheme}-${embedColor}`}
+                  src={directTicketEmbedUrl}
                   className="w-full min-h-[520px] border-0"
-                  title="Live Ticket Form Preview"
+                  title="Direct Ticket Form Preview"
                 />
               </div>
             </div>
 
             <p className="text-[11px] text-center text-slate-400 font-medium">
-              💡 This is a live preview. Submissions made here will register attendees directly into your event dashboard.
+              💡 This preview shows the direct registration form for <strong>{currentSelectedTicket?.name || "this ticket"}</strong>. Submitting will register attendees immediately into your Eventzone platform.
             </p>
           </div>
         </div>
       )}
 
-      {/* ──────────────────────────────────────────────────────────────────────── */}
       {/* TAB 3: API KEYS & AUTHENTICATION */}
-      {/* ──────────────────────────────────────────────────────────────────────── */}
       {activeTab === "api_keys" && (
         <div className="space-y-6 animate-fade-in">
-          {/* Top action card */}
-          <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h3 className="text-base font-extrabold text-slate-900">Event API Keys</h3>
-              <p className="text-xs text-slate-500 max-w-xl">
-                API Keys allow your backend servers or applications to query attendees, submit batch registrations, and verify tickets securely.
-              </p>
-            </div>
-            <button
-              onClick={() => setIsNewKeyModalOpen(true)}
-              className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer shrink-0"
-            >
-              <Plus size={15} />
-              <span>Generate New API Key</span>
-            </button>
+          {/* Search bar & filter */}
+          <div className="bg-white p-4 rounded-2xl border border-slate-150 shadow-xs flex items-center gap-3">
+            <Search size={16} className="text-slate-400 shrink-0 ml-1" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search API keys by name, prefix, or permissions..."
+              className="w-full bg-transparent text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none"
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery("")} className="text-slate-400 hover:text-slate-600 p-1">
+                <X size={14} />
+              </button>
+            )}
           </div>
 
           {/* Recently Created Key Alert Modal */}
@@ -975,20 +1752,20 @@ fetchAttendees();`,
           )}
 
           {/* Keys Table */}
-          <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs">
+          <div className="bg-white rounded-3xl border border-slate-150 overflow-hidden shadow-xs">
             <div className="p-5 border-b border-slate-150 flex items-center justify-between">
               <span className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">Active Keys</span>
-              <span className="text-xs font-bold text-slate-400">{apiKeys.length} generated</span>
+              <span className="text-xs font-bold text-slate-400">{filteredApiKeys.length} keys</span>
             </div>
 
             {loadingKeys ? (
               <div className="p-8 text-center text-slate-400 text-xs animate-pulse">Loading API keys...</div>
-            ) : apiKeys.length === 0 ? (
+            ) : filteredApiKeys.length === 0 ? (
               <div className="p-12 text-center space-y-3">
                 <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
                   <Key size={22} />
                 </div>
-                <h4 className="text-sm font-bold text-slate-700">No API Keys Generated Yet</h4>
+                <h4 className="text-sm font-bold text-slate-700">No API Keys Found</h4>
                 <p className="text-xs text-slate-400 max-w-sm mx-auto">
                   Public GET endpoints do not require an API key, but generating one allows secure backend access.
                 </p>
@@ -1001,7 +1778,7 @@ fetchAttendees();`,
               </div>
             ) : (
               <div className="divide-y divide-slate-150">
-                {apiKeys.map((k) => (
+                {filteredApiKeys.map((k) => (
                   <div key={k.id} className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/60 transition-colors">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
@@ -1026,7 +1803,7 @@ fetchAttendees();`,
                       <span>Created: {k.createdAt ? new Date(k.createdAt).toLocaleDateString() : "Recently"}</span>
                       <button
                         onClick={() => handleDeleteKey(k.id)}
-                        className="p-2 rounded-xl hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
                         title="Revoke Key"
                       >
                         <Trash2 size={15} />
@@ -1040,293 +1817,262 @@ fetchAttendees();`,
         </div>
       )}
 
-      {/* ──────────────────────────────────────────────────────────────────────── */}
-      {/* TAB 4: REST API REFERENCE & INTERACTIVE PLAYGROUND */}
-      {/* ──────────────────────────────────────────────────────────────────────── */}
+      {/* TAB 4: REST API & PLAYGROUND */}
       {activeTab === "rest_docs" && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-fade-in">
-          {/* Endpoint Selector & Code (Left 6 Cols) */}
-          <div className="lg:col-span-6 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs space-y-6">
-            <div className="flex items-center justify-between">
+        <div className="space-y-6 animate-fade-in">
+          {/* Target Ticket Selector for API */}
+          {tickets.length > 0 && (
+            <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h3 className="text-base font-extrabold text-slate-900">REST API Explorer</h3>
-                <p className="text-xs text-slate-500">Test API requests directly with live data from this event.</p>
+                <span className="text-xs font-bold text-slate-800 block">Select Ticket Tier for API Request</span>
+                <span className="text-[11px] text-slate-500">Each ticket tier has its own parameters (name, id, and price).</span>
               </div>
-
-              {/* Language Switcher */}
-              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
-                {["curl", "javascript", "python", "nodejs"].map((langId) => (
+              <div className="flex items-center gap-2 overflow-x-auto">
+                {tickets.map((t) => (
                   <button
-                    key={langId}
+                    key={t.id}
                     type="button"
-                    onClick={() => setCodeLanguage(langId)}
-                    className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase transition-all cursor-pointer ${
-                      codeLanguage === langId ? "bg-white text-slate-900 shadow-2xs" : "text-slate-500 hover:text-slate-800"
+                    onClick={() => setSelectedTicketId(t.id)}
+                    className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                      selectedTicketId === t.id
+                        ? "bg-blue-600 border-blue-600 text-white shadow-xs"
+                        : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
                     }`}
                   >
-                    {langId === "javascript" ? "JS" : langId === "nodejs" ? "Node" : langId}
+                    {t.name}
                   </button>
                 ))}
               </div>
             </div>
+          )}
 
-            {/* Endpoint Tabs */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          {/* Endpoint selector strip */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1">
+            {[
+              { id: "register_attendee", method: "POST", path: "/tickets/register", label: `Register Attendee (${currentSelectedTicket?.name || "Direct Ticket"})` },
+              { id: "get_tickets", method: "GET", path: "/tickets", label: "List Active Tickets" },
+              { id: "get_attendees", method: "GET", path: "/attendees", label: "Query Attendees" },
+            ].map((ep) => (
               <button
+                key={ep.id}
                 type="button"
-                onClick={() => setSelectedEndpoint("get_tickets")}
-                className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
-                  selectedEndpoint === "get_tickets" ? "bg-blue-50 border-blue-500 text-blue-700 shadow-2xs" : "bg-slate-50 border-slate-200 hover:bg-slate-100"
+                onClick={() => {
+                  setSelectedEndpoint(ep.id);
+                  setPlaygroundResponse(null);
+                }}
+                className={`px-3.5 py-2 rounded-2xl border text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
+                  selectedEndpoint === ep.id
+                    ? "bg-slate-900 border-slate-900 text-white shadow-xs"
+                    : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
                 }`}
               >
-                <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-emerald-100 text-emerald-700 inline-block mb-1">GET</span>
-                <span className="text-xs font-bold block truncate">Fetch Tickets</span>
+                <span
+                  className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${
+                    ep.method === "GET" ? "bg-emerald-500/20 text-emerald-300" : "bg-blue-500/20 text-blue-300"
+                  }`}
+                >
+                  {ep.method}
+                </span>
+                <span>{ep.label}</span>
               </button>
-
-              <button
-                type="button"
-                onClick={() => setSelectedEndpoint("register_attendee")}
-                className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
-                  selectedEndpoint === "register_attendee" ? "bg-blue-50 border-blue-500 text-blue-700 shadow-2xs" : "bg-slate-50 border-slate-200 hover:bg-slate-100"
-                }`}
-              >
-                <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-blue-100 text-blue-700 inline-block mb-1">POST</span>
-                <span className="text-xs font-bold block truncate">Register Attendee</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setSelectedEndpoint("get_attendees")}
-                className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
-                  selectedEndpoint === "get_attendees" ? "bg-blue-50 border-blue-500 text-blue-700 shadow-2xs" : "bg-slate-50 border-slate-200 hover:bg-slate-100"
-                }`}
-              >
-                <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-purple-100 text-purple-700 inline-block mb-1">GET</span>
-                <span className="text-xs font-bold block truncate">Query Attendees</span>
-              </button>
-            </div>
-
-            {/* Editable Payload for POST */}
-            {selectedEndpoint === "register_attendee" && (
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-800">Sample Registration Payload (JSON)</label>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-bold text-slate-400">Full Name</span>
-                    <input
-                      type="text"
-                      value={playgroundPayload.name}
-                      onChange={(e) => setPlaygroundPayload((p) => ({ ...p, name: e.target.value }))}
-                      className="w-full px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-bold text-slate-400">Email</span>
-                    <input
-                      type="email"
-                      value={playgroundPayload.email}
-                      onChange={(e) => setPlaygroundPayload((p) => ({ ...p, email: e.target.value }))}
-                      className="w-full px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Code Snippet Box */}
-            <div className="relative">
-              <pre className="p-4 bg-slate-900 text-slate-100 rounded-2xl text-[11px] font-mono overflow-x-auto max-h-64 border border-slate-800">
-                {restCodeSnippets[codeLanguage]}
-              </pre>
-              <button
-                type="button"
-                onClick={() => handleCopy(restCodeSnippets[codeLanguage], "restSnippet")}
-                className="absolute top-2 right-2 px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[10px] font-bold flex items-center gap-1 cursor-pointer backdrop-blur-md"
-              >
-                {copiedKey === "restSnippet" ? (
-                  <>
-                    <Check size={12} className="text-emerald-400" />
-                    <span>Copied!</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy size={12} />
-                    <span>Copy</span>
-                  </>
-                )}
-              </button>
-            </div>
-
-            {/* Execute Button */}
-            <button
-              type="button"
-              disabled={playgroundLoading}
-              onClick={handleRunPlaygroundRequest}
-              className="w-full py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black flex items-center justify-center gap-2 shadow-md transition-transform active:scale-98 cursor-pointer disabled:opacity-50"
-            >
-              {playgroundLoading ? (
-                <>
-                  <RefreshCw size={14} className="animate-spin" />
-                  <span>Executing Request...</span>
-                </>
-              ) : (
-                <>
-                  <Play size={14} />
-                  <span>Execute Test Request</span>
-                </>
-              )}
-            </button>
+            ))}
           </div>
 
-          {/* Response Inspector (Right 6 Cols) */}
-          <div className="lg:col-span-6 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs space-y-4">
-            <div className="flex items-center justify-between border-b pb-4 border-slate-150">
-              <div className="flex items-center gap-2">
-                <Terminal size={16} className="text-blue-600" />
-                <h3 className="text-base font-extrabold text-slate-900">API Response</h3>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* Left: Code Snippets (7 Cols) */}
+            <div className="lg:col-span-7 bg-white p-6 sm:p-7 rounded-3xl border border-slate-150 shadow-xs space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900">Code Examples</h3>
+                  <p className="text-xs text-slate-500">Ready-to-use backend snippets in 13+ languages.</p>
+                </div>
               </div>
 
-              {playgroundResponse && (
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
-                      playgroundResponse.status >= 200 && playgroundResponse.status < 300
-                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                        : "bg-rose-50 text-rose-700 border border-rose-200"
+              {/* Language Switcher Strip */}
+              <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-2xl">
+                {REST_LANGUAGES.map((l) => (
+                  <button
+                    key={l.id}
+                    type="button"
+                    onClick={() => setCodeLanguage(l.id)}
+                    className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all cursor-pointer ${
+                      codeLanguage === l.id
+                        ? "bg-white text-slate-900 shadow-2xs"
+                        : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
-                    {playgroundResponse.status} {playgroundResponse.statusText}
-                  </span>
-                  <span className="text-[10px] font-mono text-slate-400">{playgroundResponse.durationMs}ms</span>
-                </div>
-              )}
+                    {l.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="relative mt-2">
+                <pre className="p-4 bg-slate-900 text-slate-100 rounded-2xl text-[11px] font-mono overflow-x-auto max-h-80 border border-slate-800 leading-relaxed">
+                  {restCodeSnippets[codeLanguage] || restCodeSnippets.curl}
+                </pre>
+                <button
+                  type="button"
+                  onClick={() => handleCopy(restCodeSnippets[codeLanguage] || restCodeSnippets.curl, "restCode")}
+                  className="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer backdrop-blur-md"
+                >
+                  {copiedKey === "restCode" ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                  <span>{copiedKey === "restCode" ? "Copied!" : "Copy"}</span>
+                </button>
+              </div>
             </div>
 
-            {!playgroundResponse ? (
-              <div className="p-16 text-center space-y-2 text-slate-400">
-                <Play size={28} className="mx-auto opacity-30" />
-                <p className="text-xs font-semibold">Click &ldquo;Execute Test Request&rdquo; to send a live call.</p>
+            {/* Right: Live Interactive Runner (5 Cols) */}
+            <div className="lg:col-span-5 bg-white p-6 sm:p-7 rounded-3xl border border-slate-150 shadow-xs space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900">API Playground</h3>
+                  <p className="text-xs text-slate-500">Execute live requests directly against your event.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRunPlaygroundRequest}
+                  disabled={playgroundLoading}
+                  className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer disabled:opacity-50"
+                >
+                  <Play size={13} />
+                  <span>{playgroundLoading ? "Sending..." : "Execute"}</span>
+                </button>
               </div>
-            ) : (
-              <div className="space-y-3">
-                <pre className="p-4 bg-slate-900 text-emerald-400 rounded-2xl text-[11px] font-mono overflow-x-auto max-h-[460px] border border-slate-800 leading-relaxed">
-                  {JSON.stringify(playgroundResponse.data, null, 2)}
+
+              {/* Editable payload if POST */}
+              {selectedEndpoint === "register_attendee" && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700">Request Body (JSON)</label>
+                  <textarea
+                    rows={6}
+                    value={JSON.stringify(playgroundPayload, null, 2)}
+                    onChange={(e) => {
+                      try {
+                        setPlaygroundPayload(JSON.parse(e.target.value));
+                      } catch (err) {}
+                    }}
+                    className="w-full p-3 font-mono text-[11px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 leading-relaxed"
+                  />
+                </div>
+              )}
+
+              {/* Response Viewer */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-700">Response Payload</label>
+                  {playgroundResponse && (
+                    <div className="flex items-center gap-2 text-[10px] font-bold">
+                      <span className={`px-2 py-0.5 rounded-md ${playgroundResponse.status < 300 ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
+                        HTTP {playgroundResponse.status}
+                      </span>
+                      <span className="text-slate-400">{playgroundResponse.durationMs}ms</span>
+                    </div>
+                  )}
+                </div>
+
+                <pre className="p-3.5 bg-slate-900 text-emerald-400 rounded-2xl text-[11px] font-mono overflow-x-auto max-h-64 border border-slate-800 leading-relaxed">
+                  {playgroundLoading ? "Sending request..." : playgroundResponse ? JSON.stringify(playgroundResponse.data, null, 2) : "// Click 'Execute' to send request"}
                 </pre>
               </div>
-            )}
+            </div>
           </div>
         </div>
       )}
 
-      {/* ──────────────────────────────────────────────────────────────────────── */}
       {/* TAB 5: WEBHOOKS */}
-      {/* ──────────────────────────────────────────────────────────────────────── */}
       {activeTab === "webhooks" && (
         <div className="space-y-6 animate-fade-in">
-          {/* Top Action Card */}
-          <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h3 className="text-base font-extrabold text-slate-900">Webhook Subscriptions</h3>
-              <p className="text-xs text-slate-500 max-w-xl">
-                Configure HTTP POST endpoints to receive instant notifications when attendees register, require approval, or check in.
-              </p>
-            </div>
-            <button
-              onClick={() => setIsNewWebhookModalOpen(true)}
-              className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer shrink-0"
-            >
-              <Plus size={15} />
-              <span>Add Webhook Endpoint</span>
-            </button>
+          {/* Search bar */}
+          <div className="bg-white p-4 rounded-2xl border border-slate-150 shadow-xs flex items-center gap-3">
+            <Search size={16} className="text-slate-400 shrink-0 ml-1" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search webhooks by URL or events..."
+              className="w-full bg-transparent text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none"
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery("")} className="text-slate-400 hover:text-slate-600 p-1">
+                <X size={14} />
+              </button>
+            )}
           </div>
 
-          {/* Webhook Test Result Notice */}
+          {/* Webhook Test Alert */}
           {webhookTestResult && (
-            <div className={`p-4 rounded-2xl border flex items-center justify-between gap-3 text-xs font-semibold animate-slide-down ${
+            <div className={`p-4 rounded-2xl border text-xs flex items-start justify-between gap-3 animate-slide-down ${
               webhookTestResult.success ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-rose-50 border-rose-200 text-rose-800"
             }`}>
               <div className="flex items-center gap-2">
                 {webhookTestResult.success ? <CheckCircle2 size={16} className="text-emerald-600" /> : <AlertCircle size={16} className="text-rose-600" />}
-                <span>{webhookTestResult.message || (webhookTestResult.success ? "Test ping delivered successfully!" : webhookTestResult.error)}</span>
+                <span>{webhookTestResult.message || (webhookTestResult.success ? "Test ping delivered successfully (HTTP 200 OK)" : "Test ping delivery failed")}</span>
               </div>
-              <button
-                onClick={() => setWebhookTestResult(null)}
-                className="text-xs font-bold opacity-60 hover:opacity-100 cursor-pointer"
-              >
+              <button onClick={() => setWebhookTestResult(null)} className="font-bold hover:underline cursor-pointer">
                 Dismiss
               </button>
             </div>
           )}
 
           {/* Webhooks List */}
-          <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs">
+          <div className="bg-white rounded-3xl border border-slate-150 overflow-hidden shadow-xs">
             <div className="p-5 border-b border-slate-150 flex items-center justify-between">
-              <span className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">Registered Endpoints</span>
-              <span className="text-xs font-bold text-slate-400">{webhooks.length} configured</span>
+              <span className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">Configured Webhook Endpoints</span>
+              <span className="text-xs font-bold text-slate-400">{filteredWebhooks.length} endpoints</span>
             </div>
 
             {loadingWebhooks ? (
               <div className="p-8 text-center text-slate-400 text-xs animate-pulse">Loading webhooks...</div>
-            ) : webhooks.length === 0 ? (
+            ) : filteredWebhooks.length === 0 ? (
               <div className="p-12 text-center space-y-3">
                 <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
                   <Webhook size={22} />
                 </div>
                 <h4 className="text-sm font-bold text-slate-700">No Webhook Endpoints Configured</h4>
                 <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                  Add an endpoint URL (e.g. from Zapier, Make.com, or your server) to receive real-time payload alerts.
+                  Subscribe to live registration and check-in events to sync attendees automatically to your CRM or custom backend.
                 </p>
                 <button
                   onClick={() => setIsNewWebhookModalOpen(true)}
                   className="px-4 py-2 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-bold transition-colors cursor-pointer"
                 >
-                  Add Webhook URL
+                  Add Your First Webhook
                 </button>
               </div>
             ) : (
               <div className="divide-y divide-slate-150">
-                {webhooks.map((w) => (
-                  <div key={w.id} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/60 transition-colors">
-                    <div className="space-y-1.5">
+                {filteredWebhooks.map((wh) => (
+                  <div key={wh.id} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/60 transition-colors">
+                    <div className="space-y-2">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-extrabold text-slate-900">{w.url}</span>
+                        <span className="font-mono text-xs font-bold text-slate-900 truncate max-w-md">{wh.url}</span>
                         <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                           Active
                         </span>
                       </div>
                       <div className="flex flex-wrap gap-1.5">
-                        {(w.events || []).map((ev, i) => (
-                          <span key={i} className="px-2 py-0.5 rounded-md text-[9px] font-bold bg-slate-100 text-slate-600">
+                        {(wh.events || ["registration.created"]).map((ev) => (
+                          <span key={ev} className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-mono font-medium">
                             {ev}
                           </span>
                         ))}
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        disabled={testingWebhookId === w.id}
-                        onClick={() => handleTestWebhook(w)}
-                        className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                        onClick={() => handleTestWebhook(wh)}
+                        disabled={testingWebhookId === wh.id}
+                        className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
                       >
-                        {testingWebhookId === w.id ? (
-                          <>
-                            <RefreshCw size={12} className="animate-spin" />
-                            <span>Testing...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Send size={12} />
-                            <span>Test Ping</span>
-                          </>
-                        )}
+                        <Send size={12} />
+                        <span>{testingWebhookId === wh.id ? "Pinging..." : "Test Ping"}</span>
                       </button>
-
                       <button
                         type="button"
-                        onClick={() => handleDeleteWebhook(w.id)}
-                        className="p-2 rounded-xl hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                        onClick={() => handleDeleteWebhook(wh.id)}
+                        className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
                         title="Delete Webhook"
                       >
                         <Trash2 size={15} />
@@ -1340,44 +2086,57 @@ fetchAttendees();`,
         </div>
       )}
 
-      {/* ──────────────────────────────────────────────────────────────────────── */}
-      {/* TAB 6: LIVE INGESTION ACTIVITY LOGS */}
-      {/* ──────────────────────────────────────────────────────────────────────── */}
+      {/* TAB 6: LIVE INGESTION LOGS */}
       {activeTab === "logs" && (
         <div className="space-y-6 animate-fade-in">
-          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs flex items-center justify-between">
-            <div>
-              <h3 className="text-base font-extrabold text-slate-900">Ingested Registrations</h3>
-              <p className="text-xs text-slate-500">Live stream of attendee entries received via Embed Widgets and the Public REST API.</p>
-            </div>
-            <span className="px-3 py-1 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-extrabold border border-emerald-200 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-              <span>Live Real-time Feed</span>
-            </span>
+          {/* Search bar */}
+          <div className="bg-white p-4 rounded-2xl border border-slate-150 shadow-xs flex items-center gap-3">
+            <Search size={16} className="text-slate-400 shrink-0 ml-1" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search incoming registrations by name, email, ticket tier, or source..."
+              className="w-full bg-transparent text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none"
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery("")} className="text-slate-400 hover:text-slate-600 p-1">
+                <X size={14} />
+              </button>
+            )}
           </div>
 
-          <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs">
-            {externalRegistrations.length === 0 ? (
-              <div className="p-12 text-center space-y-2 text-slate-400">
-                <Activity size={28} className="mx-auto opacity-30" />
-                <p className="text-xs font-bold text-slate-600">No Registrations Recorded Yet</p>
-                <p className="text-xs">Use the Embed Builder or API Playground to submit a test ticket pass.</p>
+          <div className="bg-white rounded-3xl border border-slate-150 overflow-hidden shadow-xs">
+            <div className="p-5 border-b border-slate-150 flex items-center justify-between">
+              <span className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">Real-time Ingested Registrations</span>
+              <span className="text-xs font-bold text-slate-400">{filteredRegistrations.length} events logged</span>
+            </div>
+
+            {filteredRegistrations.length === 0 ? (
+              <div className="p-12 text-center space-y-3">
+                <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                  <Activity size={22} />
+                </div>
+                <h4 className="text-sm font-bold text-slate-700">No Registrations Ingested Yet</h4>
+                <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                  When attendees submit tickets via your embedded widget or API calls, their full JSON payloads will appear here in real-time.
+                </p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 border-b border-slate-150 text-slate-400 font-extrabold uppercase text-[10px]">
+                  <thead className="bg-slate-50 border-b border-slate-150 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
                     <tr>
                       <th className="p-4 pl-6">Attendee</th>
-                      <th className="p-4">Ticket Tier</th>
-                      <th className="p-4">Source</th>
+                      <th className="p-4">Ticket Pass</th>
+                      <th className="p-4">Origin / Source</th>
                       <th className="p-4">Status</th>
-                      <th className="p-4">Time</th>
+                      <th className="p-4">Timestamp</th>
                       <th className="p-4 pr-6 text-right">Payload</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-slate-700 font-semibold">
-                    {externalRegistrations.map((item) => (
+                    {filteredRegistrations.map((item) => (
                       <tr key={item.id} className="hover:bg-slate-50/60 transition-colors">
                         <td className="p-4 pl-6">
                           <div className="font-extrabold text-slate-900">{item.name}</div>
@@ -1422,9 +2181,11 @@ fetchAttendees();`,
         </div>
       )}
 
-      {/* ──────────────────────────────────────────────────────────────────────── */}
+      {/* ─────────────────────────────────────────────
+          5. MODALS
+      ───────────────────────────────────────────── */}
+
       {/* MODAL: CREATE API KEY */}
-      {/* ──────────────────────────────────────────────────────────────────────── */}
       {isNewKeyModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
           <div className="bg-white rounded-3xl border border-slate-200 max-w-md w-full p-6 sm:p-7 shadow-2xl space-y-5 animate-scale-up">
@@ -1490,9 +2251,7 @@ fetchAttendees();`,
         </div>
       )}
 
-      {/* ──────────────────────────────────────────────────────────────────────── */}
       {/* MODAL: ADD WEBHOOK */}
-      {/* ──────────────────────────────────────────────────────────────────────── */}
       {isNewWebhookModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
           <div className="bg-white rounded-3xl border border-slate-200 max-w-md w-full p-6 sm:p-7 shadow-2xl space-y-5 animate-scale-up">
@@ -1573,9 +2332,7 @@ fetchAttendees();`,
         </div>
       )}
 
-      {/* ──────────────────────────────────────────────────────────────────────── */}
       {/* MODAL: INSPECT RAW JSON PAYLOAD */}
-      {/* ──────────────────────────────────────────────────────────────────────── */}
       {selectedLogPayload && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
           <div className="bg-white rounded-3xl border border-slate-200 max-w-xl w-full p-6 sm:p-7 shadow-2xl space-y-4 animate-scale-up">

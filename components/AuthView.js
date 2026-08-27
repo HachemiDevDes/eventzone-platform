@@ -19,10 +19,50 @@ export default function AuthView({
   const { t, lang, setLang, isRTL, languages } = useLanguage();
   const [langMenuOpen, setLangMenuOpen] = useState(false);
   const [authMode, setAuthMode] = useState(initialMode); // "signin" | "signup" | "forgot-password" | "check-email"
-  const [email, setEmail] = useState("");
+  
+  const [pendingEventTitle, setPendingEventTitle] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = sessionStorage.getItem("eventzone_pending_event_creation");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          return parsed.title || "your event";
+        }
+      } catch (e) {}
+    }
+    return null;
+  });
+
+  const [email, setEmail] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = sessionStorage.getItem("eventzone_pending_event_creation");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.hostEmail && parsed.hostEmail !== "organizer@eventzone.io") {
+            return parsed.hostEmail;
+          }
+        }
+      } catch (e) {}
+    }
+    return "";
+  });
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [fullName, setFullName] = useState("");
+  const [fullName, setFullName] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = sessionStorage.getItem("eventzone_pending_event_creation");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.hostName && parsed.hostName !== "Event Organizer") {
+            return parsed.hostName;
+          }
+        }
+      } catch (e) {}
+    }
+    return "";
+  });
   const [selectedRole, setSelectedRole] = useState("organizer"); // "organizer" | "attendee"
   const [showPassword, setShowPassword] = useState(false);
   

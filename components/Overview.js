@@ -58,7 +58,7 @@ export default function Overview({
   // 2. Calculations & KPIs
   const totalAttendees = attendees.length;
   const pendingCount = pending.length;
-  const checkedInCount = attendees.filter(a => a.status === 'checked-in').length;
+  const checkedInCount = attendees.filter(a => a.status === 'checked-in' || a.status === 'checked_in' || a.checkedIn || a.checked_in).length;
   const checkinPct = totalAttendees > 0 ? (checkedInCount / totalAttendees) * 100 : 0;
   const capacityPct = capacity > 0 ? Math.min(100, Math.round((totalAttendees / capacity) * 100)) : 0;
 
@@ -161,7 +161,7 @@ export default function Overview({
     return tickets.map(t => {
       const tierName = t.name || t.tier || "General";
       const tierAttendees = attendees.filter(a => (a.ticketType || a.ticket_type || "").trim().toLowerCase() === tierName.trim().toLowerCase());
-      const tierCheckedIn = tierAttendees.filter(a => a.status === 'checked-in').length;
+      const tierCheckedIn = tierAttendees.filter(a => a.status === 'checked-in' || a.status === 'checked_in' || a.checkedIn || a.checked_in).length;
       const count = tierAttendees.length;
       const pct = count > 0 ? Math.round((tierCheckedIn / count) * 100) : 0;
       return {
@@ -388,6 +388,14 @@ export default function Overview({
         icon: MapPin
       },
       {
+        id: "forms",
+        label: "Custom Forms & Survey",
+        completed: forms.length > 0,
+        view: "forms",
+        detail: `${forms.length} questionnaire${forms.length === 1 ? '' : 's'}`,
+        icon: FileText
+      },
+      {
         id: "tickets",
         label: "Ticket Tiers",
         completed: tickets.length > 0,
@@ -407,7 +415,7 @@ export default function Overview({
         id: "badges",
         label: "Badges & QR Pass",
         completed: totalAttendees > 0 || (tickets.some(t => t.badgeUrl) || eventDetails?.badgeUrl),
-        view: "attendees",
+        view: "tickets",
         detail: "A4 4-Fold & Mobile QR Active",
         icon: QrCode
       },
@@ -426,14 +434,6 @@ export default function Overview({
         view: "sponsors",
         detail: `${sponsors.length + exhibitors.length} partners active`,
         icon: Award
-      },
-      {
-        id: "forms",
-        label: "Custom Forms & Survey",
-        completed: forms.length > 0,
-        view: "forms",
-        detail: `${forms.length} questionnaire${forms.length === 1 ? '' : 's'}`,
-        icon: FileText
       }
     ];
   }, [title, startDate, location, tickets, sessions.length, floorPlans.length, sponsors.length, exhibitors.length, totalAttendees, eventDetails?.badgeUrl, forms.length]);
@@ -1343,7 +1343,7 @@ export default function Overview({
             ) : (
               recentAttendees.map((attendee, idx) => {
                 const photo = getAttendeePhoto(attendee);
-                const isCheckedIn = attendee.status === "checked-in";
+                const isCheckedIn = Boolean(attendee.status === "checked-in" || attendee.status === "checked_in" || attendee.checkedIn || attendee.checked_in);
                 return (
                   <div 
                     key={attendee.id || idx}
@@ -1373,8 +1373,8 @@ export default function Overview({
 
                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold shrink-0 ${
                       isCheckedIn
-                        ? "bg-purple-50 text-purple-700 border border-purple-200"
-                        : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                        : "bg-blue-50 text-blue-700 border border-blue-200"
                     }`}>
                       {isCheckedIn ? "Checked In" : "Confirmed"}
                     </span>
