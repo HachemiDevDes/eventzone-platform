@@ -560,16 +560,9 @@ export default function CalendarView({
           {/* Speakers */}
           <div className="flex flex-col gap-2 pt-1 border-t border-slate-100">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  Speakers
-                </label>
-                {allEventSpeakers.length > 0 && (
-                  <span className="text-[9px] font-extrabold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full border border-blue-100">
-                    {allEventSpeakers.length} in directory
-                  </span>
-                )}
-              </div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                Speakers
+              </label>
 
               <div className="flex items-center gap-2">
                 {speakerImg && speakerMode === "manual" && (
@@ -689,38 +682,6 @@ export default function CalendarView({
               </div>
             )}
 
-            {/* Quick add pill suggestions from event directory */}
-            {allEventSpeakers.filter(s => !speakersList.some(item => item.name.toLowerCase() === s.name.toLowerCase())).length > 0 && (
-              <div className="flex flex-col gap-1 pt-0.5">
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
-                  Quick add from speaker list:
-                </span>
-                <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto pr-1">
-                  {allEventSpeakers
-                    .filter(s => !speakersList.some(item => item.name.toLowerCase() === s.name.toLowerCase()))
-                    .slice(0, 10)
-                    .map((s, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => handleAddExistingSpeaker(s)}
-                        className="flex items-center gap-1.5 pl-1 pr-2 py-0.5 bg-blue-50/70 hover:bg-blue-100/90 border border-blue-200/80 rounded-full text-[10px] font-bold text-blue-800 transition-all cursor-pointer group shadow-2xs"
-                        title={`Click to add ${s.name} to this session`}
-                      >
-                        {s.image ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={s.image} className="w-3.5 h-3.5 rounded-full object-cover border border-blue-200" alt="" />
-                        ) : (
-                          <span className="w-3.5 h-3.5 rounded-full bg-blue-200 text-blue-700 text-[8px] flex items-center justify-center font-black">+</span>
-                        )}
-                        <span className="truncate max-w-[100px]">{s.name}</span>
-                        <Plus size={10} className="text-blue-500 group-hover:text-blue-800 shrink-0" />
-                      </button>
-                    ))}
-                </div>
-              </div>
-            )}
-
             {/* Current Session Speakers List */}
             {speakersList.length > 0 && (
               <div className="flex flex-wrap gap-1.5 pt-1">
@@ -751,16 +712,9 @@ export default function CalendarView({
           {/* Moderators */}
           <div className="flex flex-col gap-2 pt-1 border-t border-slate-100">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  Moderators
-                </label>
-                {(allEventModerators.length > 0 || allEventSpeakers.length > 0) && (
-                  <span className="text-[9px] font-extrabold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-full border border-indigo-100">
-                    {allEventModerators.length || allEventSpeakers.length} in directory
-                  </span>
-                )}
-              </div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                Moderators
+              </label>
 
               <div className="flex items-center gap-2">
                 {moderatorImg && moderatorMode === "manual" && (
@@ -879,38 +833,6 @@ export default function CalendarView({
                 >
                   Add
                 </button>
-              </div>
-            )}
-
-            {/* Quick add pill suggestions from event directory */}
-            {(allEventModerators.length > 0 ? allEventModerators : allEventSpeakers).filter(m => !moderatorsList.some(item => item.name.toLowerCase() === m.name.toLowerCase())).length > 0 && (
-              <div className="flex flex-col gap-1 pt-0.5">
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
-                  Quick add from list:
-                </span>
-                <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto pr-1">
-                  {(allEventModerators.length > 0 ? allEventModerators : allEventSpeakers)
-                    .filter(m => !moderatorsList.some(item => item.name.toLowerCase() === m.name.toLowerCase()))
-                    .slice(0, 10)
-                    .map((m, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => handleAddExistingModerator(m)}
-                        className="flex items-center gap-1.5 pl-1 pr-2 py-0.5 bg-indigo-50/70 hover:bg-indigo-100/90 border border-indigo-200/80 rounded-full text-[10px] font-bold text-indigo-800 transition-all cursor-pointer group shadow-2xs"
-                        title={`Click to add ${m.name} to this session`}
-                      >
-                        {m.image ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={m.image} className="w-3.5 h-3.5 rounded-full object-cover border border-indigo-200" alt="" />
-                        ) : (
-                          <span className="w-3.5 h-3.5 rounded-full bg-indigo-200 text-indigo-700 text-[8px] flex items-center justify-center font-black">+</span>
-                        )}
-                        <span className="truncate max-w-[100px]">{m.name}</span>
-                        <Plus size={10} className="text-indigo-500 group-hover:text-indigo-800 shrink-0" />
-                      </button>
-                    ))}
-                </div>
               </div>
             )}
 
