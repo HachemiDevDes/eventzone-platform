@@ -4,6 +4,7 @@
 import React, { useState, useEffect, use } from "react";
 import { useParams, useRouter } from "next/navigation";
 import EventPublicLandingPage from "../../components/EventPublicLandingPage";
+import AttendeePortalView from "../../components/AttendeePortalView";
 import { LandingPageSkeleton } from "../../components/SkeletonLoaders";
 import { 
   fetchEventDetails, 
@@ -16,12 +17,15 @@ import {
   fetchForms, 
   fetchFormSubmissions, 
   fetchRSVPs, 
-  fetchRSVPSettings, 
+  fetchRSVPSettings,
+  fetchFloorPlans,
+  fetchDocuments,
   registerVisitorForEvent, 
   submitGuestRSVP as submitRSVP, 
   submitFormResponse, 
   recordInfluencerClick 
 } from "../../lib/db";
+import { supabase, sanitizeUserForStorage } from "../../lib/supabase";
 import { useLanguage } from "../../lib/i18n";
 import { Calendar, ArrowLeft, Home, Sparkles, AlertCircle } from "lucide-react";
 
@@ -38,6 +42,8 @@ export default function DynamicEventLandingPage({ params }) {
   const [sponsors, setSponsors] = useState([]);
   const [exhibitors, setExhibitors] = useState([]);
   const [attendees, setAttendees] = useState([]);
+  const [floorPlans, setFloorPlans] = useState([]);
+  const [documents, setDocuments] = useState([]);
   const [influencers, setInfluencers] = useState([]);
   const [forms, setForms] = useState([]);
   const [formSubmissions, setFormSubmissions] = useState([]);
@@ -46,6 +52,33 @@ export default function DynamicEventLandingPage({ params }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [viewParam, setViewParam] = useState(() => {
+    if (typeof window !== "undefined") {
+      return new URLSearchParams(window.location.search).get("view") || "";
+    }
+    return "";
+  });
+
+  useEffect(() => {
+    // Check initial auth session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setCurrentUser(sanitizeUserForStorage(session.user));
+      }
+    }).catch(() => {});
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setCurrentUser(sanitizeUserForStorage(session.user));
+      } else {
+        setCurrentUser(null);
+      }
+    });
+
+    return () => {
+      subscription?.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     if (!slug) return;
@@ -93,6 +126,8 @@ export default function DynamicEventLandingPage({ params }) {
           loadedSponsors,
           loadedExhibitors,
           loadedAttendees,
+          loadedFloorPlans,
+          loadedDocuments,
           loadedInfluencers,
           loadedForms,
           loadedSubmissions,
@@ -104,6 +139,8 @@ export default function DynamicEventLandingPage({ params }) {
           fetchSponsors(eventId).catch(() => []),
           fetchExhibitors(eventId).catch(() => []),
           fetchAttendees(eventId).catch(() => []),
+          fetchFloorPlans(eventId).catch(() => []),
+          fetchDocuments(eventId).catch(() => []),
           fetchInfluencers(eventId).catch(() => []),
           fetchForms(eventId).catch(() => []),
           fetchFormSubmissions(eventId).catch(() => []),
@@ -118,6 +155,8 @@ export default function DynamicEventLandingPage({ params }) {
         setSponsors(loadedSponsors || []);
         setExhibitors(loadedExhibitors || []);
         setAttendees(loadedAttendees || []);
+        setFloorPlans(loadedFloorPlans || []);
+        setDocuments(loadedDocuments || []);
         setInfluencers(loadedInfluencers || []);
         setForms(loadedForms || []);
         setFormSubmissions(loadedSubmissions || []);
@@ -197,6 +236,31 @@ export default function DynamicEventLandingPage({ params }) {
           <span>Browse All Events</span>
         </button>
       </div>
+    );
+  }
+
+  if (viewParam === "attendee-portal") {
+    return (
+      <AttendeePortalView
+        eventDetails={eventDetails}
+        attendees={attendees}
+        sessions={sessions}
+        sponsors={sponsors}
+        exhibitors={exhibitors}
+        floorPlans={floorPlans}
+        documents={documents}
+        tickets={tickets}
+        currentUser={currentUser}
+        onGoToHome={() => router.push("/")}
+        onOpenAuth={(mode) => router.push(`/?view=auth&mode=${mode || "signin"}`)}
+        onOpenProfile={() => router.push("/?view=profile")}
+        onSignOut={async () => {
+          await supabase.auth.signOut();
+          setCurrentUser(null);
+        }}
+        onOpenEventsHub={() => router.push("/?view=events-hub")}
+        onViewLivePage={() => setViewParam("")}
+      />
     );
   }
 

@@ -645,7 +645,21 @@ export default function ProfileModal({
                     <h5 className="text-sm font-extrabold text-white truncate">
                       {fullName || "Your Full Name"}
                     </h5>
-                    <ShieldCheck size={14} className="text-blue-400 shrink-0" />
+                    <svg 
+                      viewBox="0 0 24 24" 
+                      className="w-3.5 h-3.5 shrink-0 inline-block" 
+                      title="Verified Account"
+                      aria-label="Verified Account"
+                    >
+                      <path 
+                        fill="#0095F6" 
+                        d="M12.001 2.002c-.85 0-1.68.32-2.31.91l-1.39 1.28c-.46.42-1.04.66-1.66.67l-1.89.04c-.87.02-1.69.46-2.2 1.18-.51.72-.65 1.62-.38 2.45l.6 1.83c.2.6.2 1.25 0 1.85l-.6 1.83c-.27.83-.13 1.73.38 2.45.51.72 1.33 1.16 2.2 1.18l1.89.04c.62.01 1.2.25 1.66.67l1.39 1.28c.63.59 1.46.91 2.31.91s1.68-.32 2.31-.91l1.39-1.28c.46-.42 1.04-.66 1.66-.67l1.89-.04c.87-.02 1.69-.46 2.2-1.18.51-.72.65-1.62.38-2.45l-.6-1.83c-.2-.6-.2-1.25 0-1.85l.6-1.83c.27-.83.13-1.73-.38-2.45-.51-.72-1.33-1.16-2.2-1.18l-1.89-.04c-.62-.01-1.2-.25-1.66-.67l-1.39-1.28c-.63-.59-1.46-.91-2.31-.91z"
+                      />
+                      <path 
+                        fill="#ffffff" 
+                        d="M10.4 15.6l-3.2-3.2 1.4-1.4 1.8 1.8 4.8-4.8 1.4 1.4-6.2 6.2z"
+                      />
+                    </svg>
                   </div>
                   <p className="text-xs text-blue-300 font-semibold truncate">
                     {jobTitle || "Job Title / Role"}

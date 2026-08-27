@@ -85,9 +85,9 @@ export default function UniversalTopBar({
   const curLang = languages.find(l => l.code === lang) || languages[0];
 
   return (
-    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-xl border-b border-slate-200 px-6 sm:px-8 py-3.5 flex items-center justify-between shadow-xs">
+    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-xl border-b border-slate-200 px-3.5 sm:px-8 py-2.5 sm:py-3.5 flex items-center justify-between shadow-xs">
       {/* Left: Eventzone Original Blue Logo Alone */}
-      <div className="flex items-center">
+      <div className="flex items-center shrink-0">
         <div 
           onClick={handleBrandClick}
           className="flex items-center cursor-pointer select-none group"
@@ -96,8 +96,8 @@ export default function UniversalTopBar({
           <img 
             src="https://i.imgur.com/jFDrQbM.png" 
             alt="eventzone" 
-            style={{ height: '28px', width: 'auto', maxWidth: '160px' }}
-            className="h-7 w-auto object-contain transition-transform group-hover:scale-105" 
+            style={{ height: '26px', width: 'auto' }}
+            className="h-6 sm:h-7 w-auto max-w-[115px] sm:max-w-[160px] object-contain transition-transform group-hover:scale-105 shrink-0" 
           />
         </div>
       </div>
@@ -141,22 +141,22 @@ export default function UniversalTopBar({
       </nav>
 
       {/* Right: Actions, Language Toggle & Auth / Profile Controls */}
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
         {rightExtra}
 
         {/* Language Selector */}
-        <div className="relative">
+        <div className="relative shrink-0">
           <button
             onClick={() => {
               setLangMenuOpen(o => !o);
               setProfileOpen(false);
             }}
-            className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer shadow-xs"
+            className="flex items-center gap-1 sm:gap-2 px-2 sm:px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer shadow-xs shrink-0"
             title="Change Language"
           >
-            <img src={curLang?.icon || "https://i.imgur.com/NXtMImD.png"} alt={lang} className="w-5 h-5 object-contain shrink-0" />
-            <span className="uppercase tracking-wide font-extrabold text-[11px]">{lang}</span>
-            <ChevronDown size={11} className={`text-slate-400 transition-transform ${langMenuOpen ? "rotate-180" : ""}`} />
+            <img src={curLang?.icon || "https://i.imgur.com/NXtMImD.png"} alt={lang} className="w-4 h-4 sm:w-5 sm:h-5 object-contain shrink-0" />
+            <span className="uppercase tracking-wide font-extrabold text-[10px] sm:text-[11px]">{lang}</span>
+            <ChevronDown size={10} className={`text-slate-400 transition-transform ${langMenuOpen ? "rotate-180" : ""}`} />
           </button>
 
           {langMenuOpen && (
@@ -186,13 +186,13 @@ export default function UniversalTopBar({
         </div>
 
         {currentUser ? (
-          <div className="relative">
+          <div className="relative shrink-0">
             <button
               onClick={() => {
                 setProfileOpen(o => !o);
                 setLangMenuOpen(false);
               }}
-              className="flex items-center gap-2.5 p-1.5 pr-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-full transition-all cursor-pointer shadow-xs"
+              className="flex items-center gap-1.5 sm:gap-2.5 p-1 sm:p-1.5 sm:pr-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-full transition-all cursor-pointer shadow-xs shrink-0"
             >
               <img 
                 src={currentUser.avatar || currentUser.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.fullName || currentUser.full_name || "User")}&background=0b5cdb&color=fff`} 
@@ -201,7 +201,7 @@ export default function UniversalTopBar({
                   e.currentTarget.onerror = null;
                   e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.fullName || currentUser.full_name || "User")}&background=0b5cdb&color=fff`;
                 }}
-                className="w-7 h-7 rounded-full object-cover border border-blue-500/40"
+                className="w-6 h-6 sm:w-7 sm:h-7 rounded-full object-cover border border-blue-500/40 shrink-0"
               />
               <div className="hidden sm:flex flex-col text-left">
                 <span className="text-xs font-bold text-slate-800 leading-tight truncate max-w-[120px]">{currentUser.fullName || currentUser.full_name || currentUser.email?.split("@")[0] || "User"}</span>
@@ -209,7 +209,7 @@ export default function UniversalTopBar({
                   {currentUser.role === "organizer" ? "Organizer" : "Visitor"}
                 </span>
               </div>
-              <ChevronDown size={13} className={`text-slate-400 transition-transform ${profileOpen ? "rotate-180" : ""}`} />
+              <ChevronDown size={11} className={`text-slate-400 transition-transform ${profileOpen ? "rotate-180" : ""}`} />
             </button>
 
             {/* Profile Dropdown */}

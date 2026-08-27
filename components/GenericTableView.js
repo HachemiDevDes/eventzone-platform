@@ -885,7 +885,7 @@ function SubmissionDetailsModal({ item, type = "attendee", forms = [], tickets =
 
 // 2. ALL ATTENDEES VIEW (Dynamic Form Columns + Ticket-Type Switcher)
 function AttendeesView({ state, onUpdateState, onOpenModal }) {
-  const { attendees = [], tickets = [], forms = [] } = state;
+  const { attendees = [], tickets = [], forms = [], organizations = [], sponsors = [], exhibitors = [] } = state;
   const [search, setSearch] = useState("");
   const [selectedTicketType, setSelectedTicketType] = useState("all");
   const [selectedSubmissionModal, setSelectedSubmissionModal] = useState(null);
@@ -893,6 +893,20 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
   const [selectedBadgeAttendee, setSelectedBadgeAttendee] = useState(null);
   const [emailAttendees, setEmailAttendees] = useState(null);
   const [activeActionsMenu, setActiveActionsMenu] = useState(null);
+
+  // Helper to detect company sponsor/exhibitor role for an attendee
+  const getAttendeeRoleInfo = (a) => {
+    const org = organizations.find(o => o.id === a.orgId || o.id === a.org_id || (a.company && o.name && a.company.trim().toLowerCase() === o.name.trim().toLowerCase()));
+    const sponsor = sponsors.find(s => !s.isArchived && s.status !== 'archived' && (
+      (org && (s.orgId === org.id || s.org_id === org.id)) ||
+      (a.company && s.name && a.company.trim().toLowerCase() === s.name.trim().toLowerCase())
+    ));
+    const exhibitor = exhibitors.find(e => !e.isArchived && e.status !== 'archived' && (
+      (org && (e.orgId === org.id || e.org_id === org.id)) ||
+      (a.company && e.name && a.company.trim().toLowerCase() === e.name.trim().toLowerCase())
+    ));
+    return { org, sponsor, exhibitor };
+  };
 
   const handleOpenActionsMenu = (e, attendee, attendeeKey) => {
     e.stopPropagation();
@@ -945,6 +959,17 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
   const isAttendeeInTicketTier = (item, targetTicketName) => {
     if (!targetTicketName || targetTicketName === "all") return true;
     
+    // Role filter tabs
+    if (targetTicketName === "sponsors") {
+      return Boolean(getAttendeeRoleInfo(item).sponsor);
+    }
+    if (targetTicketName === "exhibitors") {
+      return Boolean(getAttendeeRoleInfo(item).exhibitor);
+    }
+    if (targetTicketName === "speakers") {
+      return Boolean(item.isSpeaker || (item.ticketType || item.ticket_type || "").toLowerCase().includes("speaker"));
+    }
+
     // If only 1 ticket tier configured for this event, all attendees belong to it
     if ((tickets || []).length === 1) {
       const singleTicketName = tickets[0].name || tickets[0].tier;
@@ -988,11 +1013,20 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
       });
     }
 
+    // Check if there are sponsors, exhibitors, or speakers to show quick role tabs
+    const hasSponsors = attendees.some(a => !a.isArchived && a.status !== 'archived' && getAttendeeRoleInfo(a).sponsor);
+    const hasExhibitors = attendees.some(a => !a.isArchived && a.status !== 'archived' && getAttendeeRoleInfo(a).exhibitor);
+    const hasSpeakers = attendees.some(a => !a.isArchived && a.status !== 'archived' && (a.isSpeaker || (a.ticketType || a.ticket_type || "").toLowerCase().includes("speaker")));
+
+    if (hasSponsors) list.push({ id: "sponsors", label: "Sponsors" });
+    if (hasExhibitors) list.push({ id: "exhibitors", label: "Exhibitors" });
+    if (hasSpeakers) list.push({ id: "speakers", label: "Speakers" });
+
     // Add Archived tab to top switcher pills
     list.push({ id: "archived", label: "Archived" });
 
     return list;
-  }, [tickets, attendees]);
+  }, [tickets, attendees, organizations, sponsors, exhibitors]);
 
   const activeAttendees = useMemo(() => attendees.filter(a => a.status !== 'archived' && !a.isArchived), [attendees]);
   const archivedAttendees = useMemo(() => attendees.filter(a => a.status === 'archived' || a.isArchived), [attendees]);
@@ -1018,15 +1052,16 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
       const nameMatch = (a.name || "").toLowerCase().includes(searchLower);
       const emailMatch = (a.email || "").toLowerCase().includes(searchLower);
       const compMatch = (a.company || "").toLowerCase().includes(searchLower);
+      const jobMatch = (a.jobTitle || "").toLowerCase().includes(searchLower);
       const phoneMatch = (a.phone || a.answers?.phone || a.answers?.f_core_phone || a.answers?.phoneNumber || a.customAnswers?.phone || a.customAnswers?.f_core_phone || a.customAnswers?.phoneNumber || "").toLowerCase().includes(searchLower);
       
       // Also search through answer values
       const ansValues = Object.values(a.answers || a.customAnswers || {}).join(" ").toLowerCase();
       const ansMatch = ansValues.includes(searchLower);
 
-      return nameMatch || emailMatch || compMatch || phoneMatch || ansMatch;
+      return nameMatch || emailMatch || compMatch || jobMatch || phoneMatch || ansMatch;
     });
-  }, [attendees, selectedTicketType, search, tickets]);
+  }, [attendees, selectedTicketType, search, tickets, organizations, sponsors, exhibitors]);
 
   // Dynamic Form Columns for the selected ticket type & dataset
   const dynamicCols = useMemo(() => {
@@ -1459,12 +1494,39 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                             </div>
                           </div>
                         </button>
-                        <div>
-                          <div className="text-slate-850 font-bold leading-tight">{a.name}</div>
-                          <div className="text-[10px] text-slate-400 font-medium">
-                            {a.phone || a.answers?.phone || a.answers?.f_core_phone || a.answers?.phoneNumber || a.customAnswers?.phone || a.customAnswers?.f_core_phone || a.customAnswers?.phoneNumber || "—"}
-                          </div>
-                        </div>
+                        {(() => {
+                          const { sponsor, exhibitor } = getAttendeeRoleInfo(a);
+                          return (
+                            <div className="flex flex-col min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-slate-850 font-bold leading-tight truncate">{a.name}</span>
+                                {sponsor && (
+                                  <span className="px-1.5 py-0.2 rounded-md text-[9px] font-black uppercase bg-amber-50 text-amber-800 border border-amber-200 inline-flex items-center gap-0.5" title={`${sponsor.name || 'Sponsor'} (${sponsor.tier || 'Official'})`}>
+                                    <Award size={9} className="text-amber-600 shrink-0" />
+                                    <span>{sponsor.tier ? `${sponsor.tier.toUpperCase()} SPONSOR` : 'SPONSOR'}</span>
+                                  </span>
+                                )}
+                                {exhibitor && (
+                                  <span className="px-1.5 py-0.2 rounded-md text-[9px] font-black uppercase bg-blue-50 text-blue-800 border border-blue-200 inline-flex items-center gap-0.5" title={`${exhibitor.name || 'Exhibitor'} (${exhibitor.booth || 'Booth'})`}>
+                                    <Store size={9} className="text-blue-600 shrink-0" />
+                                    <span>{exhibitor.booth ? `EXHIBITOR (${exhibitor.booth})` : 'EXHIBITOR'}</span>
+                                  </span>
+                                )}
+                                {a.isSpeaker && (
+                                  <span className="px-1.5 py-0.2 rounded-md text-[9px] font-black uppercase bg-purple-50 text-purple-800 border border-purple-200 inline-flex items-center gap-0.5">
+                                    <Mic size={9} className="text-purple-600 shrink-0" />
+                                    <span>SPEAKER</span>
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-[10px] text-slate-400 font-medium mt-0.5 flex items-center gap-1.5 truncate">
+                                {a.company && <span className="font-bold text-slate-600 truncate">{a.company}</span>}
+                                {a.company && (a.phone || a.answers?.phone || a.customAnswers?.phone) && <span className="text-slate-300">•</span>}
+                                <span>{a.phone || a.answers?.phone || a.answers?.f_core_phone || a.answers?.phoneNumber || a.customAnswers?.phone || a.customAnswers?.f_core_phone || a.customAnswers?.phoneNumber || "—"}</span>
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="py-4 px-6 text-slate-500 whitespace-nowrap">{a.email}</td>
                       {selectedTicketType === "all" && (

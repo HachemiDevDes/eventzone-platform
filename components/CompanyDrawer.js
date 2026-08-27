@@ -8,6 +8,9 @@ import {
   Sparkles,
   Store,
   Users,
+  User,
+  UserPlus,
+  UserCheck,
   Mail,
   Phone,
   Globe,
@@ -104,9 +107,13 @@ export default function CompanyDrawer({
   sponsors = [],
   exhibitors = [],
   floorPlans = [],
+  attendees = [],
   onSaveOrganization,
   onSaveSponsor,
   onSaveExhibitor,
+  onAssignAttendeeToCompany,
+  onRemoveAttendeeFromCompany,
+  onRegisterNewPersonnel,
   onUploadFile,
   activeEventId,
   eventTitle = "Eventzone Summit"
@@ -130,6 +137,17 @@ export default function CompanyDrawer({
   const [orgNotes, setOrgNotes] = useState("");
   const [orgStatus, setOrgStatus] = useState("active");
 
+  // Personnel management state
+  const [selectedAttendeeIdToAssign, setSelectedAttendeeIdToAssign] = useState("");
+  const [assignPersonnelRole, setAssignPersonnelRole] = useState("");
+  const [newStaffName, setNewStaffName] = useState("");
+  const [newStaffEmail, setNewStaffEmail] = useState("");
+  const [newStaffJobTitle, setNewStaffJobTitle] = useState("");
+  const [newStaffPhone, setNewStaffPhone] = useState("");
+  const [isAddingNewStaff, setIsAddingNewStaff] = useState(false);
+  const [isAssigning, setIsAssigning] = useState(false);
+  const [personnelSuccessMsg, setPersonnelSuccessMsg] = useState("");
+
   // Optional 1-click linkage flags when creating/editing an Organization
   const [alsoCreateSponsor, setAlsoCreateSponsor] = useState(false);
   const [alsoCreateExhibitor, setAlsoCreateExhibitor] = useState(false);
@@ -152,7 +170,7 @@ export default function CompanyDrawer({
   const [exhibitorStaffCount, setExhibitorStaffCount] = useState(2);
   const [exhibitorProducts, setExhibitorProducts] = useState("");
 
-  // Sub-tabs in Org mode: "profile" | "contact" | "roles"
+  // Sub-tabs in Org mode: "profile" | "contact" | "roles" | "personnel"
   const [orgActiveTab, setOrgActiveTab] = useState("profile");
 
   // Loading & error states
@@ -190,6 +208,125 @@ export default function CompanyDrawer({
       )
     }));
   }, [organizations]);
+
+  // Linked Sponsor & Exhibitor info for current organization
+  const linkedSponsor = useMemo(() => {
+    if (!item && !orgName) return null;
+    const targetId = item?.id;
+    const targetName = (item?.name || orgName || '').trim().toLowerCase();
+    return sponsors.find(s => !s.isArchived && s.status !== 'archived' && (
+      (targetId && (s.orgId === targetId || s.org_id === targetId)) ||
+      (targetName && s.name && s.name.trim().toLowerCase() === targetName)
+    ));
+  }, [sponsors, item, orgName]);
+
+  const linkedExhibitor = useMemo(() => {
+    if (!item && !orgName) return null;
+    const targetId = item?.id;
+    const targetName = (item?.name || orgName || '').trim().toLowerCase();
+    return exhibitors.find(e => !e.isArchived && e.status !== 'archived' && (
+      (targetId && (e.orgId === targetId || e.org_id === targetId)) ||
+      (targetName && e.name && e.name.trim().toLowerCase() === targetName)
+    ));
+  }, [exhibitors, item, orgName]);
+
+  // List of attendees currently assigned to this company
+  const assignedPersonnel = useMemo(() => {
+    if (!item && !orgName) return [];
+    const targetId = item?.id;
+    const targetName = (item?.name || orgName || '').trim().toLowerCase();
+
+    return (attendees || []).filter(a => {
+      if (a.isArchived || a.status === 'archived') return false;
+      const isMatchId = targetId && (a.orgId === targetId || a.org_id === targetId);
+      const isMatchName = targetName && a.company && a.company.trim().toLowerCase() === targetName;
+      return isMatchId || isMatchName;
+    });
+  }, [attendees, item, orgName]);
+
+  // Dropdown options for unassigned attendees
+  const unassignedAttendeesOptions = useMemo(() => {
+    const assignedIds = new Set(assignedPersonnel.map(p => String(p.id)));
+    return (attendees || [])
+      .filter(a => !a.isArchived && a.status !== 'archived' && !assignedIds.has(String(a.id)))
+      .map(a => ({
+        value: String(a.id),
+        label: a.name || 'Unnamed Attendee',
+        description: `${a.email || 'No email'}${a.company ? ` • Current: ${a.company}` : ''} • Ticket: ${a.ticketType || a.ticket_type || 'Standard'}`,
+        icon: a.image || a.avatar ? (
+          <img src={a.image || a.avatar} alt="" className="w-4 h-4 rounded-full object-cover" />
+        ) : (
+          <User size={14} className="text-slate-400" />
+        )
+      }));
+  }, [attendees, assignedPersonnel]);
+
+  // Handlers for personnel assignment
+  const handleAssignSelectedAttendee = async () => {
+    if (!selectedAttendeeIdToAssign) return;
+    setIsAssigning(true);
+    setPersonnelSuccessMsg("");
+    try {
+      if (onAssignAttendeeToCompany) {
+        await onAssignAttendeeToCompany(
+          selectedAttendeeIdToAssign, 
+          item || { id: item?.id, name: orgName, industry: orgIndustry }, 
+          { jobTitle: assignPersonnelRole.trim() }
+        );
+      }
+      setSelectedAttendeeIdToAssign("");
+      setAssignPersonnelRole("");
+      setPersonnelSuccessMsg("Personnel successfully assigned to company!");
+      setTimeout(() => setPersonnelSuccessMsg(""), 4000);
+    } catch (err) {
+      setErrorMessage("Failed to assign personnel. Please try again.");
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
+  const handleRegisterPersonnel = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!newStaffName.trim() || !newStaffEmail.trim()) {
+      setErrorMessage("Please provide a full name and email for the new personnel.");
+      return;
+    }
+    setIsAssigning(true);
+    setPersonnelSuccessMsg("");
+    try {
+      if (onRegisterNewPersonnel) {
+        await onRegisterNewPersonnel({
+          name: newStaffName.trim(),
+          email: newStaffEmail.trim(),
+          jobTitle: newStaffJobTitle.trim() || 'Company Representative',
+          phone: newStaffPhone.trim()
+        }, item || { id: item?.id, name: orgName, industry: orgIndustry });
+      }
+      setNewStaffName("");
+      setNewStaffEmail("");
+      setNewStaffJobTitle("");
+      setNewStaffPhone("");
+      setIsAddingNewStaff(false);
+      setPersonnelSuccessMsg("New personnel registered and assigned to company!");
+      setTimeout(() => setPersonnelSuccessMsg(""), 4000);
+    } catch (err) {
+      setErrorMessage("Failed to register personnel. Please try again.");
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
+  const handleRemovePersonnel = async (attendeeId) => {
+    if (confirm("Remove this attendee from company personnel?")) {
+      try {
+        if (onRemoveAttendeeFromCompany) {
+          await onRemoveAttendeeFromCompany(attendeeId);
+        }
+      } catch (err) {
+        console.error("Failed to remove personnel:", err);
+      }
+    }
+  };
 
   // Initialize/reset form state whenever item or mode changes
   useEffect(() => {
@@ -576,14 +713,14 @@ export default function CompanyDrawer({
 
           {/* Sub-Navigation Tabs for Organization Mode */}
           {currentMode === "org" && (
-            <div className="px-6 border-b border-slate-100 bg-white flex items-center justify-between">
+            <div className="px-6 border-b border-slate-100 bg-white flex items-center justify-between overflow-x-auto scrollbar-none">
               <div className="flex gap-4">
                 <button
                   type="button"
                   onClick={() => setOrgActiveTab("profile")}
-                  className={`py-3 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 cursor-pointer ${
+                  className={`py-3 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                     orgActiveTab === "profile"
-                      ? "border-indigo-600 text-indigo-600 font-extrabold"
+                      ? "border-blue-600 text-blue-600 font-extrabold"
                       : "border-transparent text-slate-500 hover:text-slate-800"
                   }`}
                 >
@@ -594,9 +731,9 @@ export default function CompanyDrawer({
                 <button
                   type="button"
                   onClick={() => setOrgActiveTab("contact")}
-                  className={`py-3 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 cursor-pointer ${
+                  className={`py-3 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                     orgActiveTab === "contact"
-                      ? "border-indigo-600 text-indigo-600 font-extrabold"
+                      ? "border-blue-600 text-blue-600 font-extrabold"
                       : "border-transparent text-slate-500 hover:text-slate-800"
                   }`}
                 >
@@ -607,14 +744,32 @@ export default function CompanyDrawer({
                 <button
                   type="button"
                   onClick={() => setOrgActiveTab("roles")}
-                  className={`py-3 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 cursor-pointer ${
+                  className={`py-3 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                     orgActiveTab === "roles"
-                      ? "border-indigo-600 text-indigo-600 font-extrabold"
+                      ? "border-blue-600 text-blue-600 font-extrabold"
                       : "border-transparent text-slate-500 hover:text-slate-800"
                   }`}
                 >
                   <Sparkles size={14} />
                   <span>Sponsorship & Booth</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setOrgActiveTab("personnel")}
+                  className={`py-3 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                    orgActiveTab === "personnel"
+                      ? "border-blue-600 text-blue-600 font-extrabold"
+                      : "border-transparent text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  <UserCheck size={14} />
+                  <span>Company Personnel</span>
+                  {assignedPersonnel.length > 0 && (
+                    <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-blue-50 text-blue-700 font-black border border-blue-100">
+                      {assignedPersonnel.length}
+                    </span>
+                  )}
                 </button>
               </div>
             </div>
@@ -947,6 +1102,314 @@ export default function CompanyDrawer({
                       />
                     </div>
 
+                  </div>
+                )}
+
+                {/* TAB 4: COMPANY PERSONNEL & REPRESENTATIVES */}
+                {orgActiveTab === "personnel" && (
+                  <div className="flex flex-col gap-6">
+                    {/* Status & Credentialing Banner */}
+                    <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                      linkedSponsor 
+                        ? "bg-amber-50/50 border-amber-200 text-amber-900"
+                        : linkedExhibitor
+                        ? "bg-blue-50/50 border-blue-200 text-blue-900"
+                        : "bg-slate-50 border-slate-200 text-slate-800"
+                    }`}>
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold shrink-0 ${
+                          linkedSponsor 
+                            ? "bg-amber-100 text-amber-700" 
+                            : linkedExhibitor 
+                            ? "bg-blue-100 text-blue-700" 
+                            : "bg-slate-200 text-slate-700"
+                        }`}>
+                          {linkedSponsor ? <Award size={20} /> : linkedExhibitor ? <Store size={20} /> : <Building2 size={20} />}
+                        </div>
+                        <div>
+                          <div className="text-xs font-black flex items-center gap-2 flex-wrap">
+                            <span>{item?.name || orgName || "This Organization"}</span>
+                            {linkedSponsor && (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-100 text-amber-800 border border-amber-300">
+                                {linkedSponsor.tier || "Official"} Sponsor
+                              </span>
+                            )}
+                            {linkedExhibitor && (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-blue-100 text-blue-800 border border-blue-300">
+                                {linkedExhibitor.booth || "Booth Allocated"}
+                              </span>
+                            )}
+                            {!linkedSponsor && !linkedExhibitor && (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700">
+                                Partner Organization
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-slate-500 font-medium mt-1 leading-relaxed">
+                            {linkedSponsor && linkedExhibitor
+                              ? "Assigned personnel will automatically receive both Sponsor Representative and Exhibitor Staff credentials across badges, check-in, and attendee directories."
+                              : linkedSponsor
+                              ? `Assigned personnel will automatically appear as ${linkedSponsor.tier ? linkedSponsor.tier.toUpperCase() : ''} Sponsor Representatives across attendee lists, check-in, and badges.`
+                              : linkedExhibitor
+                              ? `Assigned personnel will automatically appear as Exhibitor Staff with booth credentials for ${linkedExhibitor.booth || 'the exhibition'}.`
+                              : "Assigned personnel will represent this company as official Partner Organization Delegates."}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <div className="text-xl font-black text-slate-900">{assignedPersonnel.length}</div>
+                        <div className="text-[10px] uppercase font-bold text-slate-400">Assigned Staff</div>
+                      </div>
+                    </div>
+
+                    {personnelSuccessMsg && (
+                      <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-800 flex items-center gap-2">
+                        <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+                        <span>{personnelSuccessMsg}</span>
+                      </div>
+                    )}
+
+                    {/* Section 1: Assign Existing Registered Attendee */}
+                    <div className="p-4 bg-white border border-slate-200/90 rounded-2xl shadow-xs flex flex-col gap-3.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-extrabold text-slate-800 flex items-center gap-2">
+                          <UserCheck size={15} className="text-blue-600" />
+                          <span>Assign Registered Attendee to this Company</span>
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-end">
+                        <div className="sm:col-span-7 flex flex-col gap-1">
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                            Select Event Attendee
+                          </label>
+                          <SearchableSelect
+                            value={selectedAttendeeIdToAssign}
+                            onChange={(val) => {
+                              setSelectedAttendeeIdToAssign(val);
+                              const att = (attendees || []).find(a => String(a.id) === String(val));
+                              if (att && !assignPersonnelRole) {
+                                setAssignPersonnelRole(att.jobTitle || "Company Representative");
+                              }
+                            }}
+                            options={unassignedAttendeesOptions}
+                            placeholder="-- Choose Attendee to Assign --"
+                            searchPlaceholder="Search attendee by name, email, company..."
+                            isClearable={false}
+                          />
+                        </div>
+
+                        <div className="sm:col-span-5 flex flex-col gap-1">
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                            Company Job Title / Role
+                          </label>
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="text"
+                              value={assignPersonnelRole}
+                              onChange={(e) => setAssignPersonnelRole(e.target.value)}
+                              placeholder="e.g. Lead Engineer, Booth Staff"
+                              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 bg-slate-50/50"
+                            />
+                            <button
+                              type="button"
+                              onClick={handleAssignSelectedAttendee}
+                              disabled={!selectedAttendeeIdToAssign || isAssigning}
+                              className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-extrabold px-3.5 py-2 rounded-xl text-xs whitespace-nowrap cursor-pointer transition-colors shrink-0 shadow-xs shadow-blue-100 flex items-center gap-1"
+                            >
+                              {isAssigning ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+                              <span>Assign</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section 2: Quick Register New Personnel */}
+                    <div className="p-4 bg-slate-50/70 border border-slate-200/80 rounded-2xl flex flex-col gap-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-700 flex items-center gap-2">
+                          <UserPlus size={15} className="text-blue-600" />
+                          <span>Need to add a staff member not yet registered?</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setIsAddingNewStaff(prev => !prev)}
+                          className="text-xs font-extrabold text-blue-600 hover:text-blue-700 cursor-pointer"
+                        >
+                          {isAddingNewStaff ? "Cancel" : "+ Register New Staff"}
+                        </button>
+                      </div>
+
+                      {isAddingNewStaff && (
+                        <div className="pt-3 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                              Full Name <span className="text-rose-500">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={newStaffName}
+                              onChange={(e) => setNewStaffName(e.target.value)}
+                              placeholder="e.g. Youcef Mansouri"
+                              className="w-full px-3 py-2 border border-slate-200 bg-white rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600"
+                            />
+                          </div>
+
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                              Email Address <span className="text-rose-500">*</span>
+                            </label>
+                            <input
+                              type="email"
+                              value={newStaffEmail}
+                              onChange={(e) => setNewStaffEmail(e.target.value)}
+                              placeholder="youcef@company.com"
+                              className="w-full px-3 py-2 border border-slate-200 bg-white rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600"
+                            />
+                          </div>
+
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                              Job Title / Position
+                            </label>
+                            <input
+                              type="text"
+                              value={newStaffJobTitle}
+                              onChange={(e) => setNewStaffJobTitle(e.target.value)}
+                              placeholder="e.g. Sales Executive, Booth Representative"
+                              className="w-full px-3 py-2 border border-slate-200 bg-white rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600"
+                            />
+                          </div>
+
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                              Phone (Optional)
+                            </label>
+                            <input
+                              type="tel"
+                              value={newStaffPhone}
+                              onChange={(e) => setNewStaffPhone(e.target.value)}
+                              placeholder="+213 550 12 34 56"
+                              className="w-full px-3 py-2 border border-slate-200 bg-white rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600"
+                            />
+                          </div>
+
+                          <div className="sm:col-span-2 flex justify-end mt-1">
+                            <button
+                              type="button"
+                              onClick={handleRegisterPersonnel}
+                              disabled={!newStaffName.trim() || !newStaffEmail.trim() || isAssigning}
+                              className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-extrabold px-4 py-2 rounded-xl text-xs cursor-pointer shadow-xs shadow-blue-100 flex items-center gap-1.5"
+                            >
+                              {isAssigning ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                              <span>Register & Assign to {item?.name || orgName || 'Company'}</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Section 3: Assigned Personnel List */}
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-black text-slate-900 tracking-tight flex items-center gap-2">
+                          <span>Assigned Company Personnel</span>
+                          <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-black border border-blue-100">
+                            {assignedPersonnel.length}
+                          </span>
+                        </h4>
+                      </div>
+
+                      {assignedPersonnel.length === 0 ? (
+                        <div className="p-8 bg-white border border-dashed border-slate-200 rounded-2xl text-center flex flex-col items-center justify-center gap-2">
+                          <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center">
+                            <Users size={20} />
+                          </div>
+                          <p className="text-xs font-bold text-slate-700">No personnel assigned yet</p>
+                          <p className="text-[11px] text-slate-400 max-w-xs">
+                            Select an event attendee from the dropdown above to link them to {item?.name || orgName || 'this company'}.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 gap-2.5">
+                          {assignedPersonnel.map(person => {
+                            const isCheckedIn = Boolean(person.status === 'checked-in' || person.status === 'checked_in' || person.checkedIn || person.checked_in);
+
+                            return (
+                              <div 
+                                key={person.id} 
+                                className="p-3.5 bg-white border border-slate-200/90 rounded-2xl shadow-2xs hover:shadow-xs transition-all flex items-center justify-between gap-3 group"
+                              >
+                                <div className="flex items-center gap-3 min-w-0">
+                                  {person.image || person.avatar ? (
+                                    <img 
+                                      src={person.image || person.avatar} 
+                                      alt="" 
+                                      className="w-10 h-10 rounded-xl object-cover border border-slate-100 shrink-0" 
+                                    />
+                                  ) : (
+                                    <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 font-black text-sm flex items-center justify-center shrink-0 border border-blue-100">
+                                      {person.name ? person.name.charAt(0).toUpperCase() : 'P'}
+                                    </div>
+                                  )}
+
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <h5 className="text-xs font-extrabold text-slate-900 truncate">{person.name}</h5>
+                                      
+                                      {/* Live role badges */}
+                                      {linkedSponsor && (
+                                        <span className="px-2 py-0.2 rounded-md text-[9px] font-black uppercase bg-amber-50 text-amber-800 border border-amber-200 shrink-0">
+                                          {linkedSponsor.tier || 'Sponsor'} Rep
+                                        </span>
+                                      )}
+                                      {linkedExhibitor && (
+                                        <span className="px-2 py-0.2 rounded-md text-[9px] font-black uppercase bg-blue-50 text-blue-800 border border-blue-200 shrink-0">
+                                          Exhibitor Staff
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    <div className="flex items-center gap-2 text-[11px] text-slate-500 font-medium truncate mt-0.5">
+                                      <span className="font-bold text-slate-700 truncate">{person.jobTitle || 'Representative'}</span>
+                                      {person.email && (
+                                        <>
+                                          <span className="text-slate-300">•</span>
+                                          <span className="truncate">{person.email}</span>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {isCheckedIn ? (
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                      Checked In
+                                    </span>
+                                  ) : (
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
+                                      Registered
+                                    </span>
+                                  )}
+
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemovePersonnel(person.id)}
+                                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                    title="Remove from Company Personnel"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </>

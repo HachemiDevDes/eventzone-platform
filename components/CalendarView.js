@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import { Calendar, Archive, RotateCcw, Camera, Upload, Check, Loader2, X, Trash2 } from "lucide-react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
+import { Calendar, Archive, RotateCcw, Camera, Upload, Check, Loader2, X, Trash2, Users, Plus, UserPlus } from "lucide-react";
 import CustomDatePicker from "./CustomDatePicker";
 import CustomTimePicker from "./CustomTimePicker";
+import SearchableSelect from "./SearchableSelect";
 import { generateUuid } from "../lib/db";
 import { CalendarSkeleton } from "./SkeletonLoaders";
 
@@ -27,11 +28,15 @@ export default function CalendarView({
   const [description, setDescription] = useState("");
   
   // Person input states
+  const [speakerMode, setSpeakerMode] = useState("manual"); // "manual" | "list"
+  const [selectedSpeakerFromList, setSelectedSpeakerFromList] = useState("");
   const [speakerName, setSpeakerName] = useState("");
   const [speakerImg, setSpeakerImg] = useState("");
   const [speakersList, setSpeakersList] = useState([]);
   const [isUploadingSpeaker, setIsUploadingSpeaker] = useState(false);
   
+  const [moderatorMode, setModeratorMode] = useState("manual"); // "manual" | "list"
+  const [selectedModeratorFromList, setSelectedModeratorFromList] = useState("");
   const [moderatorName, setModeratorName] = useState("");
   const [moderatorImg, setModeratorImg] = useState("");
   const [moderatorsList, setModeratorsList] = useState([]);
@@ -87,6 +92,94 @@ export default function CalendarView({
       document.removeEventListener("mouseup", handleMouseUp);
     };
   }, []);
+
+  // Extract all unique speakers across all sessions and attendees in the event
+  const allEventSpeakers = useMemo(() => {
+    const map = new Map();
+    // 1. From all sessions
+    sessions.forEach(sess => {
+      (sess.speakers || []).forEach(sp => {
+        if (sp && sp.name && sp.name.trim()) {
+          const key = sp.name.trim().toLowerCase();
+          if (!map.has(key)) {
+            map.set(key, {
+              id: sp.id || `spk-${key}`,
+              name: sp.name.trim(),
+              image: sp.image || ""
+            });
+          }
+        }
+      });
+    });
+    // 2. From attendees marked as isSpeaker or speaker ticket
+    attendees.forEach(att => {
+      if (att && (att.isSpeaker || (typeof att.ticketType === 'string' && att.ticketType.toLowerCase().includes("speaker"))) && att.name && att.name.trim()) {
+        const key = att.name.trim().toLowerCase();
+        if (!map.has(key)) {
+          map.set(key, {
+            id: att.id || `att-${key}`,
+            name: att.name.trim(),
+            image: att.image || ""
+          });
+        }
+      }
+    });
+    return Array.from(map.values());
+  }, [sessions, attendees]);
+
+  // Extract all unique moderators across all sessions in the event
+  const allEventModerators = useMemo(() => {
+    const map = new Map();
+    sessions.forEach(sess => {
+      (sess.moderators || []).forEach(mod => {
+        if (mod && mod.name && mod.name.trim()) {
+          const key = mod.name.trim().toLowerCase();
+          if (!map.has(key)) {
+            map.set(key, {
+              id: mod.id || `mod-${key}`,
+              name: mod.name.trim(),
+              image: mod.image || ""
+            });
+          }
+        }
+      });
+    });
+    return Array.from(map.values());
+  }, [sessions]);
+
+  // Add an existing speaker from event directory to current session
+  const handleAddExistingSpeaker = (speaker) => {
+    if (!speaker || !speaker.name) return;
+    const exists = speakersList.some(s => s.name.trim().toLowerCase() === speaker.name.trim().toLowerCase());
+    if (exists) {
+      alert(`"${speaker.name}" is already in this session's speaker list.`);
+      return;
+    }
+    const newSpeaker = {
+      id: Date.now(),
+      name: speaker.name.trim(),
+      image: speaker.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(speaker.name.trim())}&background=2563eb&color=fff`
+    };
+    setSpeakersList(prev => [...prev, newSpeaker]);
+    setSelectedSpeakerFromList("");
+  };
+
+  // Add an existing moderator from event directory to current session
+  const handleAddExistingModerator = (moderator) => {
+    if (!moderator || !moderator.name) return;
+    const exists = moderatorsList.some(m => m.name.trim().toLowerCase() === moderator.name.trim().toLowerCase());
+    if (exists) {
+      alert(`"${moderator.name}" is already in this session's moderator list.`);
+      return;
+    }
+    const newModerator = {
+      id: Date.now(),
+      name: moderator.name.trim(),
+      image: moderator.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(moderator.name.trim())}&background=4f46e5&color=fff`
+    };
+    setModeratorsList(prev => [...prev, newModerator]);
+    setSelectedModeratorFromList("");
+  };
 
   // Base64 file converter or storage uploader
   const handleImageUpload = async (e, type) => {
@@ -467,52 +560,168 @@ export default function CalendarView({
           {/* Speakers */}
           <div className="flex flex-col gap-2 pt-1 border-t border-slate-100">
             <div className="flex items-center justify-between">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                Speakers
-              </label>
-              {speakerImg && (
-                <button
-                  type="button"
-                  onClick={() => setSpeakerImg("")}
-                  className="text-[10px] text-rose-500 hover:text-rose-700 font-semibold cursor-pointer"
-                >
-                  Clear Photo
-                </button>
-              )}
-            </div>
-            <div className="flex gap-2 items-center">
-              <input 
-                type="text" 
-                value={speakerName}
-                onChange={(e) => setSpeakerName(e.target.value)}
-                placeholder="Speaker Name"
-                className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-600"
-              />
-              <label className={`px-3 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-all shrink-0 flex items-center gap-1.5 ${
-                speakerImg 
-                  ? "border-blue-300 bg-blue-50 text-blue-700 ring-2 ring-blue-100" 
-                  : "border-slate-200 bg-white hover:bg-slate-50 text-slate-600"
-              }`}>
-                {isUploadingSpeaker ? (
-                  <Loader2 size={13} className="animate-spin text-blue-600" />
-                ) : speakerImg ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={speakerImg} className="w-4 h-4 rounded-full object-cover border border-blue-200" alt="Preview" />
-                ) : (
-                  <Camera size={13} />
+              <div className="flex items-center gap-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  Speakers
+                </label>
+                {allEventSpeakers.length > 0 && (
+                  <span className="text-[9px] font-extrabold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full border border-blue-100">
+                    {allEventSpeakers.length} in directory
+                  </span>
                 )}
-                <span>{isUploadingSpeaker ? "Uploading..." : speakerImg ? "Photo Attached" : "Photo"}</span>
-                <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, "speaker")} className="hidden" />
-              </label>
-              <button 
-                type="button" 
-                onClick={() => addPerson("speaker")}
-                className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer"
-              >
-                Add
-              </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {speakerImg && speakerMode === "manual" && (
+                  <button
+                    type="button"
+                    onClick={() => setSpeakerImg("")}
+                    className="text-[10px] text-rose-500 hover:text-rose-700 font-semibold cursor-pointer"
+                  >
+                    Clear Photo
+                  </button>
+                )}
+
+                {allEventSpeakers.length > 0 && (
+                  <div className="flex items-center bg-slate-100 p-0.5 rounded-lg text-[10px] font-bold">
+                    <button
+                      type="button"
+                      onClick={() => setSpeakerMode("list")}
+                      className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+                        speakerMode === "list" ? "bg-white text-blue-700 shadow-2xs font-extrabold" : "text-slate-500 hover:text-slate-800"
+                      }`}
+                    >
+                      From List
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSpeakerMode("manual")}
+                      className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+                        speakerMode === "manual" ? "bg-white text-blue-700 shadow-2xs font-extrabold" : "text-slate-500 hover:text-slate-800"
+                      }`}
+                    >
+                      New Speaker
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
+            {/* From List Selector */}
+            {speakerMode === "list" && allEventSpeakers.length > 0 ? (
+              <div className="flex gap-2 items-center">
+                <div className="flex-1">
+                  <SearchableSelect
+                    value={selectedSpeakerFromList}
+                    onChange={(val) => {
+                      setSelectedSpeakerFromList(val);
+                      const found = allEventSpeakers.find(s => s.name === val);
+                      if (found) handleAddExistingSpeaker(found);
+                    }}
+                    options={allEventSpeakers.map(s => ({
+                      value: s.name,
+                      label: s.name,
+                      icon: s.image ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={s.image} className="w-5 h-5 rounded-full object-cover border border-slate-200" alt="" />
+                      ) : (
+                        <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-bold text-[9px] flex items-center justify-center">
+                          {s.name.charAt(0).toUpperCase()}
+                        </div>
+                      ),
+                      badge: speakersList.some(item => item.name.toLowerCase() === s.name.toLowerCase()) ? "Added" : undefined,
+                      description: "Event Speaker"
+                    }))}
+                    placeholder="-- Select speaker from list --"
+                    searchPlaceholder="Search event speakers..."
+                    buttonClassName="py-2 text-xs"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!selectedSpeakerFromList) {
+                      alert("Please select a speaker from the dropdown.");
+                      return;
+                    }
+                    const found = allEventSpeakers.find(s => s.name === selectedSpeakerFromList);
+                    if (found) handleAddExistingSpeaker(found);
+                  }}
+                  className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer flex items-center gap-1"
+                >
+                  <Plus size={13} />
+                  Add
+                </button>
+              </div>
+            ) : (
+              /* Manual Input */
+              <div className="flex gap-2 items-center">
+                <input 
+                  type="text" 
+                  value={speakerName}
+                  onChange={(e) => setSpeakerName(e.target.value)}
+                  placeholder="Speaker Name"
+                  className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-600"
+                />
+                <label className={`px-3 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-all shrink-0 flex items-center gap-1.5 ${
+                  speakerImg 
+                    ? "border-blue-300 bg-blue-50 text-blue-700 ring-2 ring-blue-100" 
+                    : "border-slate-200 bg-white hover:bg-slate-50 text-slate-600"
+                }`}>
+                  {isUploadingSpeaker ? (
+                    <Loader2 size={13} className="animate-spin text-blue-600" />
+                  ) : speakerImg ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={speakerImg} className="w-4 h-4 rounded-full object-cover border border-blue-200" alt="Preview" />
+                  ) : (
+                    <Camera size={13} />
+                  )}
+                  <span>{isUploadingSpeaker ? "Uploading..." : speakerImg ? "Photo Attached" : "Photo"}</span>
+                  <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, "speaker")} className="hidden" />
+                </label>
+                <button 
+                  type="button" 
+                  onClick={() => addPerson("speaker")}
+                  className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer"
+                >
+                  Add
+                </button>
+              </div>
+            )}
+
+            {/* Quick add pill suggestions from event directory */}
+            {allEventSpeakers.filter(s => !speakersList.some(item => item.name.toLowerCase() === s.name.toLowerCase())).length > 0 && (
+              <div className="flex flex-col gap-1 pt-0.5">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                  Quick add from speaker list:
+                </span>
+                <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto pr-1">
+                  {allEventSpeakers
+                    .filter(s => !speakersList.some(item => item.name.toLowerCase() === s.name.toLowerCase()))
+                    .slice(0, 10)
+                    .map((s, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleAddExistingSpeaker(s)}
+                        className="flex items-center gap-1.5 pl-1 pr-2 py-0.5 bg-blue-50/70 hover:bg-blue-100/90 border border-blue-200/80 rounded-full text-[10px] font-bold text-blue-800 transition-all cursor-pointer group shadow-2xs"
+                        title={`Click to add ${s.name} to this session`}
+                      >
+                        {s.image ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={s.image} className="w-3.5 h-3.5 rounded-full object-cover border border-blue-200" alt="" />
+                        ) : (
+                          <span className="w-3.5 h-3.5 rounded-full bg-blue-200 text-blue-700 text-[8px] flex items-center justify-center font-black">+</span>
+                        )}
+                        <span className="truncate max-w-[100px]">{s.name}</span>
+                        <Plus size={10} className="text-blue-500 group-hover:text-blue-800 shrink-0" />
+                      </button>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {/* Current Session Speakers List */}
             {speakersList.length > 0 && (
               <div className="flex flex-wrap gap-1.5 pt-1">
                 {speakersList.map(s => (
@@ -542,52 +751,170 @@ export default function CalendarView({
           {/* Moderators */}
           <div className="flex flex-col gap-2 pt-1 border-t border-slate-100">
             <div className="flex items-center justify-between">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                Moderators
-              </label>
-              {moderatorImg && (
-                <button
-                  type="button"
-                  onClick={() => setModeratorImg("")}
-                  className="text-[10px] text-rose-500 hover:text-rose-700 font-semibold cursor-pointer"
-                >
-                  Clear Photo
-                </button>
-              )}
-            </div>
-            <div className="flex gap-2 items-center">
-              <input 
-                type="text" 
-                value={moderatorName}
-                onChange={(e) => setModeratorName(e.target.value)}
-                placeholder="Moderator Name"
-                className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-600"
-              />
-              <label className={`px-3 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-all shrink-0 flex items-center gap-1.5 ${
-                moderatorImg 
-                  ? "border-indigo-300 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-100" 
-                  : "border-slate-200 bg-white hover:bg-slate-50 text-slate-600"
-              }`}>
-                {isUploadingModerator ? (
-                  <Loader2 size={13} className="animate-spin text-indigo-600" />
-                ) : moderatorImg ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={moderatorImg} className="w-4 h-4 rounded-full object-cover border border-indigo-200" alt="Preview" />
-                ) : (
-                  <Camera size={13} />
+              <div className="flex items-center gap-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  Moderators
+                </label>
+                {(allEventModerators.length > 0 || allEventSpeakers.length > 0) && (
+                  <span className="text-[9px] font-extrabold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-full border border-indigo-100">
+                    {allEventModerators.length || allEventSpeakers.length} in directory
+                  </span>
                 )}
-                <span>{isUploadingModerator ? "Uploading..." : moderatorImg ? "Photo Attached" : "Photo"}</span>
-                <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, "moderator")} className="hidden" />
-              </label>
-              <button 
-                type="button" 
-                onClick={() => addPerson("moderator")}
-                className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer"
-              >
-                Add
-              </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {moderatorImg && moderatorMode === "manual" && (
+                  <button
+                    type="button"
+                    onClick={() => setModeratorImg("")}
+                    className="text-[10px] text-rose-500 hover:text-rose-700 font-semibold cursor-pointer"
+                  >
+                    Clear Photo
+                  </button>
+                )}
+
+                {(allEventModerators.length > 0 || allEventSpeakers.length > 0) && (
+                  <div className="flex items-center bg-slate-100 p-0.5 rounded-lg text-[10px] font-bold">
+                    <button
+                      type="button"
+                      onClick={() => setModeratorMode("list")}
+                      className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+                        moderatorMode === "list" ? "bg-white text-indigo-700 shadow-2xs font-extrabold" : "text-slate-500 hover:text-slate-800"
+                      }`}
+                    >
+                      From List
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setModeratorMode("manual")}
+                      className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+                        moderatorMode === "manual" ? "bg-white text-indigo-700 shadow-2xs font-extrabold" : "text-slate-500 hover:text-slate-800"
+                      }`}
+                    >
+                      New Moderator
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
+            {/* From List Selector */}
+            {moderatorMode === "list" && (allEventModerators.length > 0 || allEventSpeakers.length > 0) ? (
+              <div className="flex gap-2 items-center">
+                <div className="flex-1">
+                  <SearchableSelect
+                    value={selectedModeratorFromList}
+                    onChange={(val) => {
+                      setSelectedModeratorFromList(val);
+                      const list = allEventModerators.length > 0 ? allEventModerators : allEventSpeakers;
+                      const found = list.find(m => m.name === val);
+                      if (found) handleAddExistingModerator(found);
+                    }}
+                    options={(allEventModerators.length > 0 ? allEventModerators : allEventSpeakers).map(m => ({
+                      value: m.name,
+                      label: m.name,
+                      icon: m.image ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={m.image} className="w-5 h-5 rounded-full object-cover border border-slate-200" alt="" />
+                      ) : (
+                        <div className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 font-bold text-[9px] flex items-center justify-center">
+                          {m.name.charAt(0).toUpperCase()}
+                        </div>
+                      ),
+                      badge: moderatorsList.some(item => item.name.toLowerCase() === m.name.toLowerCase()) ? "Added" : undefined,
+                      description: "Event Moderator / Speaker"
+                    }))}
+                    placeholder="-- Select moderator from list --"
+                    searchPlaceholder="Search event moderators..."
+                    buttonClassName="py-2 text-xs"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!selectedModeratorFromList) {
+                      alert("Please select a moderator from the dropdown.");
+                      return;
+                    }
+                    const list = allEventModerators.length > 0 ? allEventModerators : allEventSpeakers;
+                    const found = list.find(m => m.name === selectedModeratorFromList);
+                    if (found) handleAddExistingModerator(found);
+                  }}
+                  className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer flex items-center gap-1"
+                >
+                  <Plus size={13} />
+                  Add
+                </button>
+              </div>
+            ) : (
+              /* Manual Input */
+              <div className="flex gap-2 items-center">
+                <input 
+                  type="text" 
+                  value={moderatorName}
+                  onChange={(e) => setModeratorName(e.target.value)}
+                  placeholder="Moderator Name"
+                  className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-600"
+                />
+                <label className={`px-3 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-all shrink-0 flex items-center gap-1.5 ${
+                  moderatorImg 
+                    ? "border-indigo-300 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-100" 
+                    : "border-slate-200 bg-white hover:bg-slate-50 text-slate-600"
+                }`}>
+                  {isUploadingModerator ? (
+                    <Loader2 size={13} className="animate-spin text-indigo-600" />
+                  ) : moderatorImg ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={moderatorImg} className="w-4 h-4 rounded-full object-cover border border-indigo-200" alt="Preview" />
+                  ) : (
+                    <Camera size={13} />
+                  )}
+                  <span>{isUploadingModerator ? "Uploading..." : moderatorImg ? "Photo Attached" : "Photo"}</span>
+                  <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, "moderator")} className="hidden" />
+                </label>
+                <button 
+                  type="button" 
+                  onClick={() => addPerson("moderator")}
+                  className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer"
+                >
+                  Add
+                </button>
+              </div>
+            )}
+
+            {/* Quick add pill suggestions from event directory */}
+            {(allEventModerators.length > 0 ? allEventModerators : allEventSpeakers).filter(m => !moderatorsList.some(item => item.name.toLowerCase() === m.name.toLowerCase())).length > 0 && (
+              <div className="flex flex-col gap-1 pt-0.5">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                  Quick add from list:
+                </span>
+                <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto pr-1">
+                  {(allEventModerators.length > 0 ? allEventModerators : allEventSpeakers)
+                    .filter(m => !moderatorsList.some(item => item.name.toLowerCase() === m.name.toLowerCase()))
+                    .slice(0, 10)
+                    .map((m, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleAddExistingModerator(m)}
+                        className="flex items-center gap-1.5 pl-1 pr-2 py-0.5 bg-indigo-50/70 hover:bg-indigo-100/90 border border-indigo-200/80 rounded-full text-[10px] font-bold text-indigo-800 transition-all cursor-pointer group shadow-2xs"
+                        title={`Click to add ${m.name} to this session`}
+                      >
+                        {m.image ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={m.image} className="w-3.5 h-3.5 rounded-full object-cover border border-indigo-200" alt="" />
+                        ) : (
+                          <span className="w-3.5 h-3.5 rounded-full bg-indigo-200 text-indigo-700 text-[8px] flex items-center justify-center font-black">+</span>
+                        )}
+                        <span className="truncate max-w-[100px]">{m.name}</span>
+                        <Plus size={10} className="text-indigo-500 group-hover:text-indigo-800 shrink-0" />
+                      </button>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {/* Current Session Moderators List */}
             {moderatorsList.length > 0 && (
               <div className="flex flex-wrap gap-1.5 pt-1">
                 {moderatorsList.map(m => (

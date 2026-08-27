@@ -6,7 +6,7 @@ import {
   Ticket, Calendar, MapPin, QrCode, Download, 
   Printer, ArrowLeft, Search, Filter, Sparkles, 
   ExternalLink, Layers, CheckCircle2, Copy, Check, 
-  X, ShieldCheck, Share2, Eye, User, Clock, Building2, Lock
+  X, ShieldCheck, Share2, Eye, User, Clock, Building2, Lock, Globe
 } from "lucide-react";
 import QRCode from "qrcode";
 import { useLanguage } from "../lib/i18n";
@@ -24,7 +24,8 @@ export default function MyTicketsPage({
   onOpenEventsHub,
   onSignOut,
   onViewFloorPlan,
-  onViewLivePage
+  onViewLivePage,
+  onOpenAttendeePortal
 }) {
   const { t, lang, isRTL } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
@@ -452,6 +453,16 @@ export default function MyTicketsPage({
                     </div>
 
                     <div className="flex items-center gap-2">
+                      {/* Attendee Portal Shortcut */}
+                      <button
+                        onClick={() => onOpenAttendeePortal && onOpenAttendeePortal(reg.eventId)}
+                        className="px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs hover:border-blue-300"
+                        title="Access Interactive Attendee Portal"
+                      >
+                        <Globe size={13} className="text-blue-600" />
+                        <span>{t("dash.attendeePortal", "Attendee Portal")}</span>
+                      </button>
+
                       {/* View Event Details */}
                       <button
                         onClick={() => onViewLivePage && onViewLivePage(reg.eventId)}

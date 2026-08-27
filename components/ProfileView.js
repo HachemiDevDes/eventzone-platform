@@ -5,7 +5,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { 
   ArrowLeft, Check, Loader2, Plus, Trash2, Camera, 
   ShieldCheck, LogOut, Edit3, ExternalLink, Link as LinkIcon, 
-  AlertCircle, X, Upload, Globe, Mail
+  AlertCircle, X, Upload, Globe, Mail, MapPin, Phone
 } from "lucide-react";
 import { uploadProfileAvatar } from "../lib/db";
 import UniversalTopBar from "./UniversalTopBar";
@@ -700,38 +700,40 @@ export default function ProfileView({
         onOpenEventsHub={onGoToHome}
         onSignOut={onSignOut}
         rightExtra={
-          <div className="flex items-center gap-2 mr-1">
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm shadow-blue-600/20 hover:shadow transition-all cursor-pointer disabled:opacity-50"
-            >
-              {saving ? (
-                <>
-                  <Loader2 size={13} className="animate-spin" />
-                  <span>Saving...</span>
-                </>
-              ) : saveSuccess ? (
-                <>
-                  <Check size={13} />
-                  <span>Saved!</span>
-                </>
-              ) : (
-                <span>Save Profile</span>
-              )}
-            </button>
-          </div>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="px-2.5 sm:px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-1 sm:gap-1.5 shadow-sm shadow-blue-600/20 hover:shadow transition-all cursor-pointer disabled:opacity-50 shrink-0"
+          >
+            {saving ? (
+              <>
+                <Loader2 size={13} className="animate-spin" />
+                <span className="hidden xs:inline sm:inline">Saving...</span>
+              </>
+            ) : saveSuccess ? (
+              <>
+                <Check size={13} />
+                <span className="hidden xs:inline sm:inline">Saved!</span>
+              </>
+            ) : (
+              <>
+                <Check size={13} className="sm:hidden" />
+                <span className="hidden sm:inline">Save Profile</span>
+                <span className="sm:hidden text-[11px]">Save</span>
+              </>
+            )}
+          </button>
         }
       />
 
       {/* ==================================================================== */}
       {/* 2. MAIN PROFILE CONTAINER                                            */}
       {/* ==================================================================== */}
-      <main className="max-w-4xl w-full mx-auto px-6 sm:px-8 py-8 sm:py-10 space-y-6">
+      <main className="max-w-4xl w-full mx-auto px-3.5 sm:px-8 py-5 sm:py-10 space-y-4 sm:space-y-6">
         
         {/* CENTERED PROFILE IDENTITY CARD (NO COVER BANNER) */}
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden text-center">
-          <div className="p-8 sm:p-10 flex flex-col items-center justify-center space-y-4">
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-sm overflow-hidden text-center">
+          <div className="p-5 sm:p-10 flex flex-col items-center justify-center space-y-3.5 sm:space-y-4">
             
             {/* Centered Rounded Avatar with Camera Trigger */}
             <div 
@@ -742,65 +744,92 @@ export default function ProfileView({
               <img
                 src={avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName || "User")}&background=0b5cdb&color=fff`}
                 alt="Avatar"
-                className="w-28 h-28 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-slate-100 shadow-md bg-slate-100 group-hover:opacity-95 transition-all"
+                className="w-24 h-24 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-slate-100 shadow-md bg-slate-100 group-hover:opacity-95 transition-all"
               />
               
               {uploadingPhoto ? (
                 <div className="absolute inset-0 rounded-full bg-slate-900/60 flex items-center justify-center text-white border-4 border-white">
-                  <Loader2 size={24} className="animate-spin" />
+                  <Loader2 size={22} className="animate-spin" />
                 </div>
               ) : (
-                <div className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-blue-600 group-hover:bg-blue-700 text-white flex items-center justify-center shadow-md transition-transform group-hover:scale-110 border-2 border-white">
-                  <Camera size={14} />
+                <div className="absolute bottom-0 right-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-blue-600 group-hover:bg-blue-700 text-white flex items-center justify-center shadow-md transition-transform group-hover:scale-110 border-2 border-white">
+                  <Camera size={13} />
                 </div>
               )}
             </div>
 
             {/* Name, Headline & Metadata (Centered) */}
-            <div className="space-y-1.5 max-w-md mx-auto">
-              <div className="flex items-center justify-center gap-2">
-                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+            <div className="space-y-1 sm:space-y-1.5 max-w-md mx-auto w-full px-2">
+              <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+                <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight truncate">
                   {fullName || "Eventzone Member"}
                 </h1>
-                <ShieldCheck size={18} className="text-blue-600 shrink-0" title="Verified Member" />
+                <svg 
+                  viewBox="0 0 24 24" 
+                  className="w-5 h-5 shrink-0 inline-block" 
+                  title="Verified Account"
+                  aria-label="Verified Account"
+                >
+                  <path 
+                    fill="#0095F6" 
+                    d="M12.001 2.002c-.85 0-1.68.32-2.31.91l-1.39 1.28c-.46.42-1.04.66-1.66.67l-1.89.04c-.87.02-1.69.46-2.2 1.18-.51.72-.65 1.62-.38 2.45l.6 1.83c.2.6.2 1.25 0 1.85l-.6 1.83c-.27.83-.13 1.73.38 2.45.51.72 1.33 1.16 2.2 1.18l1.89.04c.62.01 1.2.25 1.66.67l1.39 1.28c.63.59 1.46.91 2.31.91s1.68-.32 2.31-.91l1.39-1.28c.46-.42 1.04-.66 1.66-.67l1.89-.04c.87-.02 1.69-.46 2.2-1.18.51-.72.65-1.62.38-2.45l-.6-1.83c-.2-.6-.2-1.25 0-1.85l.6-1.83c.27-.83.13-1.73-.38-2.45-.51-.72-1.33-1.16-2.2-1.18l-1.89-.04c-.62-.01-1.2-.25-1.66-.67l-1.39-1.28c-.63-.59-1.46-.91-2.31-.91z"
+                  />
+                  <path 
+                    fill="#ffffff" 
+                    d="M10.4 15.6l-3.2-3.2 1.4-1.4 1.8 1.8 4.8-4.8 1.4 1.4-6.2 6.2z"
+                  />
+                </svg>
               </div>
 
-              <p className="text-xs sm:text-sm text-slate-600 font-medium">
+              <p className="text-xs sm:text-sm text-slate-600 font-medium leading-normal">
                 {jobTitle || "Attendee & Participant"} 
                 {companyName ? ` at ${companyName}` : ""}
               </p>
 
-              <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-slate-500 pt-1">
-                {location && <span>{location}</span>}
-                {location && currentUser.email && <span className="text-slate-300">•</span>}
-                {currentUser.email && <span>{currentUser.email}</span>}
-                {phone && currentUser.email && <span className="text-slate-300">•</span>}
-                {phone && <span>{phone}</span>}
+              <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[11px] sm:text-xs text-slate-500 pt-1">
+                {location && (
+                  <span className="inline-flex items-center gap-1">
+                    <MapPin size={12} className="text-slate-400 shrink-0" />
+                    <span>{location}</span>
+                  </span>
+                )}
+                {currentUser.email && (
+                  <span className="inline-flex items-center gap-1 max-w-full truncate">
+                    <Mail size={12} className="text-slate-400 shrink-0" />
+                    <span className="truncate">{currentUser.email}</span>
+                  </span>
+                )}
+                {phone && (
+                  <span className="inline-flex items-center gap-1">
+                    <Phone size={12} className="text-slate-400 shrink-0" />
+                    <span>{phone}</span>
+                  </span>
+                )}
               </div>
             </div>
 
-            {/* Status Badges (Centered) */}
-            <div className="flex flex-wrap items-center justify-center gap-2 pt-2 text-xs text-slate-600">
-              <div className="px-3 py-1 rounded-xl bg-slate-100 border border-slate-200 font-medium">
+            {/* Status Badges (Clean 2x2 grid on mobile, flex row on desktop) */}
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center justify-center gap-2 pt-1.5 text-xs text-slate-600 w-full max-w-xs sm:max-w-none">
+              <div className="px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 font-medium text-center">
                 {registrations.length} Passes
               </div>
-              <div className="px-3 py-1 rounded-xl bg-slate-100 border border-slate-200 font-medium">
+              <div className="px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 font-medium text-center">
                 {selectedLookingFor.length} Looking For
               </div>
-              <div className="px-3 py-1 rounded-xl bg-slate-100 border border-slate-200 font-medium">
+              <div className="px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 font-medium text-center">
                 {interests.length} Interests
               </div>
-              <div className="px-3 py-1 rounded-xl bg-slate-100 border border-slate-200 font-medium">
+              <div className="px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 font-medium text-center">
                 {socialLinksList.length} Links
               </div>
             </div>
           </div>
 
-          {/* CLEAN NAVIGATION TABS (CENTERED) */}
-          <div className="border-t border-slate-200 px-4 sm:px-8 flex items-center justify-center gap-1 sm:gap-4 bg-slate-50/70 overflow-x-auto no-scrollbar">
+          {/* CLEAN NAVIGATION TABS (SCROLLABLE ON MOBILE) */}
+          <div className="border-t border-slate-200 px-3 sm:px-8 flex items-center justify-start sm:justify-center gap-1 sm:gap-4 bg-slate-50/70 overflow-x-auto scrollbar-none whitespace-nowrap">
             <button
               onClick={() => setActiveTab("general")}
-              className={`px-4 py-3.5 text-xs font-semibold border-b-2 transition-all cursor-pointer shrink-0 ${
+              className={`px-3.5 py-3 sm:px-4 sm:py-3.5 text-xs font-semibold border-b-2 transition-all cursor-pointer shrink-0 ${
                 activeTab === "general"
                   ? "border-blue-600 text-blue-600 bg-white"
                   : "border-transparent text-slate-600 hover:text-slate-900"
@@ -811,7 +840,7 @@ export default function ProfileView({
 
             <button
               onClick={() => setActiveTab("looking_for")}
-              className={`px-4 py-3.5 text-xs font-semibold border-b-2 transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
+              className={`px-3.5 py-3 sm:px-4 sm:py-3.5 text-xs font-semibold border-b-2 transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
                 activeTab === "looking_for"
                   ? "border-blue-600 text-blue-600 bg-white"
                   : "border-transparent text-slate-600 hover:text-slate-900"
@@ -827,7 +856,7 @@ export default function ProfileView({
 
             <button
               onClick={() => setActiveTab("interests")}
-              className={`px-4 py-3.5 text-xs font-semibold border-b-2 transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
+              className={`px-3.5 py-3 sm:px-4 sm:py-3.5 text-xs font-semibold border-b-2 transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
                 activeTab === "interests"
                   ? "border-blue-600 text-blue-600 bg-white"
                   : "border-transparent text-slate-600 hover:text-slate-900"
@@ -843,7 +872,7 @@ export default function ProfileView({
 
             <button
               onClick={() => setActiveTab("socials")}
-              className={`px-4 py-3.5 text-xs font-semibold border-b-2 transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
+              className={`px-3.5 py-3 sm:px-4 sm:py-3.5 text-xs font-semibold border-b-2 transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
                 activeTab === "socials"
                   ? "border-blue-600 text-blue-600 bg-white"
                   : "border-transparent text-slate-600 hover:text-slate-900"
@@ -863,15 +892,15 @@ export default function ProfileView({
         {/* TAB 1: GENERAL INFORMATION                                         */}
         {/* ================================================================== */}
         {activeTab === "general" && (
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6 text-left animate-fade-in">
-            <div className="border-b border-slate-100 pb-4">
+          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-4 sm:p-8 shadow-sm space-y-4 sm:space-y-6 text-left animate-fade-in">
+            <div className="border-b border-slate-100 pb-3 sm:pb-4">
               <h2 className="text-sm font-bold text-slate-900">Personal &amp; Organization Details</h2>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 leading-relaxed">
                 Appears on your event badges, delegate directory, and networking requests.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-5">
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-slate-700 flex items-center gap-1">
                   <span>Full Name</span>
@@ -941,7 +970,7 @@ export default function ProfileView({
               </div>
             </div>
 
-            <div className="space-y-1.5 pt-2">
+            <div className="space-y-1.5 pt-1 sm:pt-2">
               <label className="text-xs font-medium text-slate-700">Bio &amp; Networking Elevator Pitch</label>
               <textarea
                 rows={4}
@@ -958,24 +987,24 @@ export default function ProfileView({
         {/* TAB 2: WHAT I'M LOOKING FOR                                         */}
         {/* ================================================================== */}
         {activeTab === "looking_for" && (
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6 text-left animate-fade-in">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-4 sm:p-8 shadow-sm space-y-4 sm:space-y-6 text-left animate-fade-in">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 border-b border-slate-100 pb-3 sm:pb-4">
               <div>
                 <h2 className="text-sm font-bold text-slate-900">
                   What Are You Looking For?
                 </h2>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 leading-relaxed">
                   Select your primary objectives so attendees and matchmaking algorithms can connect with you.
                 </p>
               </div>
-              <span className="text-xs font-semibold px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 shrink-0 self-start sm:self-auto">
+              <span className="text-[11px] sm:text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 shrink-0 self-start sm:self-auto">
                 {selectedLookingFor.length} Selected
               </span>
             </div>
 
             {/* Selected Tags */}
             {selectedLookingFor.length > 0 && (
-              <div className="space-y-2 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+              <div className="space-y-2 p-3 sm:p-4 bg-slate-50 rounded-xl sm:rounded-2xl border border-slate-200">
                 <div className="flex items-center justify-between text-xs font-medium text-slate-700">
                   <span>Selected Objectives:</span>
                   <button
@@ -986,18 +1015,18 @@ export default function ProfileView({
                     Clear all
                   </button>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5 sm:gap-2">
                   {selectedLookingFor.map((item, idx) => (
                     <span
                       key={idx}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white text-slate-900 text-xs font-medium shadow-2xs border border-slate-200 animate-scale-up"
+                      className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-white text-slate-900 text-xs font-medium shadow-2xs border border-slate-200 animate-scale-up"
                     >
-                      <Check size={12} className="text-blue-600" />
-                      <span>{item}</span>
+                      <Check size={12} className="text-blue-600 shrink-0" />
+                      <span className="truncate">{item}</span>
                       <button
                         type="button"
                         onClick={() => removeLookingFor(item)}
-                        className="w-4 h-4 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                        className="w-4 h-4 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors cursor-pointer shrink-0"
                       >
                         ✕
                       </button>
@@ -1008,16 +1037,16 @@ export default function ProfileView({
             )}
 
             {/* Minimal Clean Selection Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
               {LOOKING_FOR_OPTIONS.map((opt) => {
                 const isSelected = selectedLookingFor.includes(opt.id);
                 return (
                   <div
                     key={opt.id}
                     onClick={() => toggleLookingFor(opt.id)}
-                    className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 text-left ${
+                    className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 text-left ${
                       isSelected
-                        ? "bg-blue-50/50 border-blue-500"
+                        ? "bg-blue-50/50 border-blue-500 ring-1 ring-blue-500/20"
                         : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/50"
                     }`}
                   >
@@ -1044,20 +1073,20 @@ export default function ProfileView({
 
             {/* Custom Objective Adder */}
             <div className="pt-2 border-t border-slate-100 space-y-2">
-              <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider block">
+              <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 uppercase tracking-wider block">
                 Add Custom Goal
               </span>
               <form onSubmit={handleAddCustomLookingFor} className="flex gap-2">
                 <input
                   type="text"
-                  placeholder="e.g. Beta Testers for AI Search, Advisory Board Members..."
+                  placeholder="e.g. Beta Testers, Advisory Board Members..."
                   value={customLookingForInput}
                   onChange={(e) => setCustomLookingForInput(e.target.value)}
-                  className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+                  className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white transition-all min-w-0"
                 />
                 <button
                   type="submit"
-                  className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+                  className="px-3.5 sm:px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
                 >
                   <Plus size={13} />
                   <span>Add</span>
@@ -1071,15 +1100,15 @@ export default function ProfileView({
         {/* TAB 3: INTERESTS & MATCHMAKING                                     */}
         {/* ================================================================== */}
         {activeTab === "interests" && (
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6 text-left animate-fade-in">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-4 sm:p-8 shadow-sm space-y-4 sm:space-y-6 text-left animate-fade-in">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 border-b border-slate-100 pb-3 sm:pb-4">
               <div>
                 <h2 className="text-sm font-bold text-slate-900">Networking &amp; Matchmaking Interests</h2>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 leading-relaxed">
                   Select keywords for AI matchmaking and domain-based recommendations.
                 </p>
               </div>
-              <span className="text-xs font-semibold px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+              <span className="text-[11px] sm:text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 shrink-0 self-start sm:self-auto">
                 {interests.length} / 12 Selected
               </span>
             </div>
@@ -1088,14 +1117,14 @@ export default function ProfileView({
             <form onSubmit={handleAddCustomTag} className="flex gap-2">
               <input
                 type="text"
-                placeholder="Type custom skill or interest keyword (e.g. Deep Learning)..."
+                placeholder="Type custom skill (e.g. Deep Learning)..."
                 value={customTagInput}
                 onChange={(e) => setCustomTagInput(e.target.value)}
-                className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+                className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white transition-all min-w-0"
               />
               <button
                 type="submit"
-                className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+                className="px-3.5 sm:px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
               >
                 <Plus size={13} />
                 <span>Add</span>
@@ -1115,17 +1144,17 @@ export default function ProfileView({
                     Clear all
                   </button>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5 sm:gap-2">
                   {interests.map((tag, idx) => (
                     <span
                       key={idx}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-medium shadow-2xs animate-scale-up"
+                      className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-slate-900 text-white text-xs font-medium shadow-2xs animate-scale-up"
                     >
                       <span>{tag}</span>
                       <button
                         type="button"
                         onClick={() => removeInterest(tag)}
-                        className="w-4 h-4 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center text-white transition-colors cursor-pointer"
+                        className="w-4 h-4 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center text-white transition-colors cursor-pointer shrink-0"
                       >
                         ✕
                       </button>
@@ -1136,11 +1165,11 @@ export default function ProfileView({
             )}
 
             {/* Suggested Domains */}
-            <div className="space-y-3 pt-4 border-t border-slate-100">
-              <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider block">
+            <div className="space-y-2.5 pt-3 sm:pt-4 border-t border-slate-100">
+              <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 uppercase tracking-wider block">
                 Suggested Domains
               </span>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
                 {CURATED_INTERESTS.map((tag, idx) => {
                   const isSelected = interests.includes(tag);
                   return (
@@ -1148,7 +1177,7 @@ export default function ProfileView({
                       key={idx}
                       type="button"
                       onClick={() => toggleInterest(tag)}
-                      className={`px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                      className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
                         isSelected
                           ? "bg-blue-600 text-white shadow-2xs"
                           : "bg-slate-100 hover:bg-slate-200 text-slate-700"
@@ -1167,11 +1196,11 @@ export default function ProfileView({
         {/* TAB 4: SOCIAL & WEB LINKS                                          */}
         {/* ================================================================== */}
         {activeTab === "socials" && (
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6 text-left animate-fade-in">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-4 sm:p-8 shadow-sm space-y-4 sm:space-y-6 text-left animate-fade-in">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-100 pb-3 sm:pb-4">
               <div>
                 <h2 className="text-sm font-bold text-slate-900">Social &amp; Web Links</h2>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 leading-relaxed">
                   Connect your social profiles and web links with summit attendees.
                 </p>
               </div>
@@ -1179,7 +1208,7 @@ export default function ProfileView({
               <button
                 type="button"
                 onClick={openAddSocialModal}
-                className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer shrink-0"
+                className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer shrink-0 self-start sm:self-auto"
               >
                 <Plus size={14} />
                 <span>Add Social Link</span>
@@ -1188,7 +1217,7 @@ export default function ProfileView({
 
             {/* List of Added Social Links */}
             {socialLinksList.length === 0 ? (
-              <div className="py-10 border border-dashed border-slate-200 rounded-2xl text-center space-y-2 bg-slate-50/50">
+              <div className="py-8 sm:py-10 border border-dashed border-slate-200 rounded-2xl text-center space-y-2 bg-slate-50/50 p-4">
                 <h3 className="text-xs font-semibold text-slate-700">No Social Links Added Yet</h3>
                 <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
                   Add LinkedIn, GitHub, X, or your website to display on your delegate pass.
@@ -1205,15 +1234,15 @@ export default function ProfileView({
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                 {socialLinksList.map((item) => {
                   const plat = SOCIAL_PLATFORMS.find(p => p.id === item.platform) || SOCIAL_PLATFORMS[3];
                   return (
                     <div
                       key={item.id}
-                      className="p-3.5 rounded-2xl border border-slate-200 hover:border-slate-300 bg-white transition-all flex items-center justify-between gap-3 shadow-2xs"
+                      className="p-3 sm:p-3.5 rounded-xl sm:rounded-2xl border border-slate-200 hover:border-slate-300 bg-white transition-all flex items-center justify-between gap-2.5 sm:gap-3 shadow-2xs"
                     >
-                      <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${plat.color}`}>
                           {plat.renderIcon({ size: 15 })}
                         </div>
@@ -1226,7 +1255,7 @@ export default function ProfileView({
                             href={item.url}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-[11px] text-slate-400 hover:text-blue-600 truncate flex items-center gap-1 transition-colors"
+                            className="text-[11px] text-slate-400 hover:text-blue-600 truncate flex items-center gap-1 transition-colors max-w-[150px] sm:max-w-[200px]"
                           >
                             <span className="truncate">{item.url}</span>
                             <ExternalLink size={10} className="shrink-0" />
@@ -1261,14 +1290,14 @@ export default function ProfileView({
         )}
 
         {/* BOTTOM SAVE BAR */}
-        <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm flex items-center justify-between gap-4">
-          <div className="text-left">
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 text-center sm:text-left">
+          <div className="text-center sm:text-left">
             {saveSuccess ? (
-              <span className="text-xs font-semibold text-emerald-600 animate-fade-in">
+              <span className="text-xs font-semibold text-emerald-600 animate-fade-in block">
                 Profile updated &amp; synced across platform &amp; mobile app.
               </span>
             ) : (
-              <span className="text-xs text-slate-400">
+              <span className="text-xs text-slate-400 block">
                 Changes persist instantly to your shared account.
               </span>
             )}
@@ -1278,7 +1307,7 @@ export default function ProfileView({
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold flex items-center gap-2 shadow-sm shadow-blue-600/20 hover:shadow transition-all cursor-pointer disabled:opacity-50"
+            className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 shadow-sm shadow-blue-600/20 hover:shadow transition-all cursor-pointer disabled:opacity-50"
           >
             {saving ? (
               <>
@@ -1296,8 +1325,8 @@ export default function ProfileView({
       {/* 3. ADD / EDIT SOCIAL LINK MODAL                                      */}
       {/* ==================================================================== */}
       {isSocialModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 max-w-md w-full shadow-2xl space-y-5 text-left animate-scale-up">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-3.5 sm:p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-5 sm:p-6 max-w-md w-full shadow-2xl space-y-4 sm:space-y-5 text-left animate-scale-up">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-sm font-bold text-slate-900">
                 {editingSocialId ? "Edit Social Link" : "Add Social Link"}

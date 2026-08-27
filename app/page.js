@@ -62,6 +62,8 @@ import AttendeeDrawer from "../components/AttendeeDrawer";
 import TeamMemberDrawer from "../components/TeamMemberDrawer";
 import CompanyDrawer from "../components/CompanyDrawer";
 import SearchableSelect from "../components/SearchableSelect";
+import OrganizerAttendeePortalSettings from "../components/OrganizerAttendeePortalSettings";
+import AttendeePortalView from "../components/AttendeePortalView";
 import { getEffectivePermissions, canViewModule, canEditModule, getModulePermission } from "../lib/permissions";
 import { LanguageProvider, useLanguage } from "../lib/i18n";
 
@@ -196,10 +198,10 @@ export function HomeContent() {
       }
 
       const validViews = [
-        "home", "auth", "profile", "my-tickets", "events-hub", "create-event", "event-landing", "register", "visitor-portal", "overview", "page-builder", "calendar", "event-details", 
+        "home", "auth", "profile", "my-tickets", "events-hub", "create-event", "event-landing", "register", "visitor-portal", "attendee-portal", "overview", "page-builder", "calendar", "event-details", 
         "attendees", "pending", "organizations", "sponsors", 
         "exhibitors", "speakers", "opportunities", "influencers", "tickets", "forms", "rsvp", "logistics", "documents", "check-in", 
-        "my-team", "developers", "analytics", "communications", "floor-plan"
+        "my-team", "developers", "analytics", "communications", "floor-plan", "portal-settings"
       ];
       if (viewParam && validViews.includes(viewParam)) {
         return viewParam;
@@ -705,7 +707,7 @@ export function HomeContent() {
         fetchAndSet(fetchTickets(activeEventId), setTickets, "tickets");
         fetchAndSet(fetchInfluencers(activeEventId), setInfluencers, "influencers");
         fetchAndSet(fetchOpportunities(activeEventId), setOpportunities, "opportunities");
-        fetchAndSet(fetchOrganizations(), setOrganizations, "organizations");
+        fetchAndSet(fetchOrganizations(activeEventId), setOrganizations, "organizations");
         fetchAndSet(fetchSponsors(activeEventId), setSponsors, "sponsors");
         fetchAndSet(fetchExhibitors(activeEventId), setExhibitors, "exhibitors");
         fetchAndSet(fetchSessions(activeEventId), setSessions, "sessions");
@@ -1518,7 +1520,7 @@ export function HomeContent() {
         safeLocalStorageSet(`eventzone_cache_pending_${activeEventId}`, val);
         break;
       case "organizations":
-        syncArrayToDb(organizations, val, upsertOrganization, deleteOrganization);
+        syncArrayToDb(organizations, val, (item) => upsertOrganization(item, activeEventId), deleteOrganization);
         setOrganizations(val);
         safeLocalStorageSet(`eventzone_cache_organizations_${activeEventId}`, val);
         break;
@@ -1607,7 +1609,7 @@ export function HomeContent() {
         case "org": {
           const updated = { ...editingItem, name: modalName, industry: modalSector, contact: modalContact, website: modalWebsite || "https://", logo: modalLogo };
           setOrganizations(organizations.map(o => o.id === editingItem.id ? updated : o));
-          upsertOrganization(updated).catch(console.error);
+          upsertOrganization(updated, activeEventId).catch(console.error);
           break;
         }
         case "sponsor": {
@@ -1661,7 +1663,7 @@ export function HomeContent() {
             const saved = await upsertOrganization({
               name: modalName, industry: modalSector, contact: modalContact,
               website: modalWebsite || "https://", logo: modalLogo,
-            });
+            }, activeEventId);
             setOrganizations(prev => [...prev, saved]);
             break;
           }
@@ -1834,7 +1836,7 @@ export function HomeContent() {
 
   const handleSaveOrganization = async (orgData, linkOptions = {}) => {
     try {
-      const saved = await upsertOrganization(orgData);
+      const saved = await upsertOrganization(orgData, activeEventId);
       setOrganizations(prev => {
         const exists = prev.some(o => o.id === saved.id);
         return exists ? prev.map(o => o.id === saved.id ? saved : o) : [...prev, saved];
@@ -1913,6 +1915,118 @@ export function HomeContent() {
       return saved;
     } catch (err) {
       console.error("Failed to save exhibitor:", err);
+      throw err;
+    }
+  };
+
+  const handleAssignAttendeeToCompany = async (attendeeId, org, roleData = {}) => {
+    try {
+      const targetAttendee = attendees.find(a => String(a.id) === String(attendeeId));
+      if (!targetAttendee) return;
+
+      const updatedAttendee = {
+        ...targetAttendee,
+        orgId: org.id || null,
+        org_id: org.id || null,
+        company: org.name || '',
+        jobTitle: roleData.jobTitle || targetAttendee.jobTitle || 'Company Representative',
+        answers: {
+          ...(targetAttendee.answers || {}),
+          company: org.name || '',
+          f_company: org.name || '',
+          orgId: org.id || null,
+          org_id: org.id || null,
+          jobTitle: roleData.jobTitle || targetAttendee.jobTitle || 'Company Representative',
+          f_job_title: roleData.jobTitle || targetAttendee.jobTitle || 'Company Representative'
+        }
+      };
+
+      const saved = await upsertAttendee(updatedAttendee, activeEventId);
+      setAttendees(prev => prev.map(a => String(a.id) === String(attendeeId) ? saved : a));
+      safeLocalStorageSet(`eventzone_cache_attendees_${activeEventId}`, attendees.map(a => String(a.id) === String(attendeeId) ? saved : a));
+      return saved;
+    } catch (err) {
+      console.error("Failed to assign attendee to company:", err);
+      throw err;
+    }
+  };
+
+  const handleRemoveAttendeeFromCompany = async (attendeeId) => {
+    try {
+      const targetAttendee = attendees.find(a => String(a.id) === String(attendeeId));
+      if (!targetAttendee) return;
+
+      const updatedAttendee = {
+        ...targetAttendee,
+        orgId: null,
+        org_id: null,
+        company: '',
+        answers: {
+          ...(targetAttendee.answers || {}),
+          company: '',
+          f_company: '',
+          orgId: null,
+          org_id: null
+        }
+      };
+
+      const saved = await upsertAttendee(updatedAttendee, activeEventId);
+      setAttendees(prev => prev.map(a => String(a.id) === String(attendeeId) ? saved : a));
+      safeLocalStorageSet(`eventzone_cache_attendees_${activeEventId}`, attendees.map(a => String(a.id) === String(attendeeId) ? saved : a));
+      return saved;
+    } catch (err) {
+      console.error("Failed to remove attendee from company:", err);
+      throw err;
+    }
+  };
+
+  const handleRegisterNewPersonnel = async (personnelData, org) => {
+    try {
+      const isSponsor = sponsors.find(s => !s.isArchived && s.status !== 'archived' && (
+        (org.id && (s.orgId === org.id || s.org_id === org.id)) ||
+        (org.name && s.name && s.name.trim().toLowerCase() === org.name.trim().toLowerCase())
+      ));
+
+      const isExhibitor = exhibitors.find(e => !e.isArchived && e.status !== 'archived' && (
+        (org.id && (e.orgId === org.id || e.org_id === org.id)) ||
+        (org.name && e.name && e.name.trim().toLowerCase() === org.name.trim().toLowerCase())
+      ));
+
+      let tierName = "Partner Pass";
+      if (isSponsor) {
+        tierName = isSponsor.tier ? `${isSponsor.tier.toUpperCase()} Sponsor Pass` : "Sponsor Pass";
+      } else if (isExhibitor) {
+        tierName = "Exhibitor Pass";
+      }
+
+      const newAttendee = {
+        name: personnelData.name.trim(),
+        email: personnelData.email.trim(),
+        phone: personnelData.phone || '',
+        company: org.name || '',
+        orgId: org.id || null,
+        org_id: org.id || null,
+        jobTitle: personnelData.jobTitle || 'Company Representative',
+        ticketType: tierName,
+        ticket_type: tierName,
+        status: 'registered',
+        registeredDate: new Date().toISOString().split('T')[0],
+        answers: {
+          company: org.name || '',
+          f_company: org.name || '',
+          orgId: org.id || null,
+          org_id: org.id || null,
+          jobTitle: personnelData.jobTitle || 'Company Representative',
+          f_job_title: personnelData.jobTitle || 'Company Representative'
+        }
+      };
+
+      const saved = await upsertAttendee(newAttendee, activeEventId);
+      setAttendees(prev => [...prev, saved]);
+      safeLocalStorageSet(`eventzone_cache_attendees_${activeEventId}`, [...attendees, saved]);
+      return saved;
+    } catch (err) {
+      console.error("Failed to register new personnel:", err);
       throw err;
     }
   };
@@ -2156,6 +2270,10 @@ export function HomeContent() {
           setActiveEventStateId(eventId);
           setCurrentView("event-landing");
         }}
+        onOpenAttendeePortal={(eventId) => {
+          setActiveEventStateId(eventId);
+          setCurrentView("attendee-portal");
+        }}
       />
     );
   }
@@ -2275,6 +2393,48 @@ export function HomeContent() {
   }
 
   // ==========================================================================
+  // 1.8. DEDICATED ATTENDEE PORTAL (DELEGATE ACCESS & ORGANIZER PREVIEW)
+  // ==========================================================================
+  if (currentView === "attendee-portal") {
+    const rawPortal = publicEvents.find(e => String(e.id) === String(activeEventId)) || userEvents.find(e => String(e.id) === String(activeEventId)) || null;
+    const portalEventDetails = (eventDetails && eventDetails.title)
+      ? { ...(rawPortal || {}), ...eventDetails }
+      : (rawPortal || eventDetails || {});
+
+    return (
+      <AttendeePortalView
+        eventDetails={portalEventDetails}
+        attendees={attendees}
+        sessions={sessions}
+        sponsors={sponsors}
+        exhibitors={exhibitors.map(ex => {
+          const org = organizations.find(o => String(o.id) === String(ex.org_id));
+          return {
+            ...ex,
+            logo: ex.logo || org?.logo || '',
+          };
+        })}
+        floorPlans={floorPlans}
+        documents={documents}
+        tickets={tickets}
+        currentUser={currentUser}
+        onGoToHome={() => setCurrentView("home")}
+        onOpenAuth={(mode) => {
+          setAuthModalInitialMode(mode || "signin");
+          setCurrentView("auth");
+        }}
+        onOpenProfile={() => setCurrentView("profile")}
+        onSignOut={handleSignOut}
+        onOpenEventsHub={() => setCurrentView("events-hub")}
+        onViewLivePage={(eventId) => {
+          setActiveEventStateId(eventId || activeEventId);
+          setCurrentView("event-landing");
+        }}
+      />
+    );
+  }
+
+  // ==========================================================================
   // 2. ORGANIZER EVENTS HUB VIEW
   // ==========================================================================
   if (currentView === "events-hub") {
@@ -2363,6 +2523,10 @@ export function HomeContent() {
         onViewLivePage={(eventId) => {
           setActiveEventStateId(eventId);
           setCurrentView("event-landing");
+        }}
+        onOpenAttendeePortal={(eventId) => {
+          setActiveEventStateId(eventId);
+          setCurrentView("attendee-portal");
         }}
         onSwitchToOrganizer={() => setCurrentView("events-hub")}
         onGoToHome={() => setCurrentView("home")}
@@ -2691,6 +2855,23 @@ export function HomeContent() {
             >
               <Ticket size={14} className={`shrink-0 ${currentView === "tickets" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
               <span>{t("dash.tickets", "Tickets")}</span>
+            </button>
+
+            <button 
+              onClick={() => setCurrentView("portal-settings")}
+              className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-left group ${currentView === "portal-settings" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+            >
+              <div className="flex items-center gap-2">
+                <Globe size={14} className={`shrink-0 ${currentView === "portal-settings" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
+                <span>{t("dash.attendeePortal", "Attendee Portal")}</span>
+              </div>
+              <span className={`text-[8.5px] font-extrabold py-0.5 px-2 rounded-full uppercase tracking-wider ${
+                currentView === "portal-settings" 
+                  ? "bg-white/25 text-white" 
+                  : (eventDetails?.portalStatus === "closed" ? "bg-rose-100 text-rose-700" : (eventDetails?.portalStatus === "scheduled" ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"))
+              }`}>
+                {eventDetails?.portalStatus || "open"}
+              </span>
             </button>
 
             <button 
@@ -3230,7 +3411,45 @@ export function HomeContent() {
             />
           )}
 
-          {!["overview", "calendar", "page-builder", "event-details", "forms", "rsvp", "logistics", "documents", "developers"].includes(currentView) && currentView !== "floor-plan" && (
+          {currentView === "portal-settings" && (
+            <OrganizerAttendeePortalSettings
+              eventDetails={eventDetails}
+              attendees={attendees}
+              sessions={sessions}
+              sponsors={sponsors}
+              exhibitors={exhibitors}
+              floorPlans={floorPlans}
+              documents={documents}
+              activeEventId={activeEventId}
+              onUpdateEventDetails={(val) => handleUpdateState("eventDetails", val)}
+              onSendBroadcastEmail={async ({ subject, message, portalUrl, recipientCount }) => {
+                if (activeEventId) {
+                  try {
+                    await fetch('/api/email/broadcast', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        eventId: activeEventId,
+                        eventTitle: eventDetails?.title,
+                        subject,
+                        message,
+                        link: portalUrl,
+                        recipients: attendees.map(a => a.email).filter(Boolean)
+                      })
+                    }).catch(e => console.log('Broadcast API dispatched:', e));
+                  } catch (e) {
+                    console.log('Broadcast error:', e);
+                  }
+                }
+              }}
+              onPreviewAttendeePortal={() => {
+                setCurrentView("attendee-portal");
+              }}
+              currentUser={currentUser}
+            />
+          )}
+
+          {!["overview", "calendar", "page-builder", "event-details", "forms", "rsvp", "logistics", "documents", "developers", "portal-settings", "attendee-portal"].includes(currentView) && currentView !== "floor-plan" && (
             <GenericTableView 
               viewName={currentView}
               state={{
@@ -3329,9 +3548,13 @@ export function HomeContent() {
         sponsors={sponsors}
         exhibitors={exhibitors}
         floorPlans={floorPlans}
+        attendees={attendees}
         onSaveOrganization={handleSaveOrganization}
         onSaveSponsor={handleSaveSponsor}
         onSaveExhibitor={handleSaveExhibitor}
+        onAssignAttendeeToCompany={handleAssignAttendeeToCompany}
+        onRemoveAttendeeFromCompany={handleRemoveAttendeeFromCompany}
+        onRegisterNewPersonnel={handleRegisterNewPersonnel}
         onUploadFile={uploadFileToBucket}
         activeEventId={activeEventId}
         eventTitle={eventDetails?.title || "Eventzone Summit"}
