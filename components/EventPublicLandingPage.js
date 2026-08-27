@@ -531,7 +531,8 @@ export default function EventPublicLandingPage({
 
   const handleShare = () => {
     if (typeof window !== "undefined") {
-      navigator.clipboard.writeText(window.location.href);
+      const cleanUrl = `${window.location.origin}/${eventDetails?.slug || eventDetails?.id || eventId}`;
+      navigator.clipboard.writeText(cleanUrl);
       setCopiedUrl(true);
       setTimeout(() => setCopiedUrl(false), 3000);
     }

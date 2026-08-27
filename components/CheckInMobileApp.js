@@ -34,12 +34,11 @@ const SESSION_STORAGE_KEY = "ez_checkin_session";
 
 export default function CheckInMobileApp({
   initialEventId = "",
-  initialPasscode = "",
 }) {
   // Session / Auth state
   const [session, setSession] = useState(null);
   const [authEmail, setAuthEmail] = useState("");
-  const [authPasscode, setAuthPasscode] = useState(initialPasscode || "");
+  const [authPasscode, setAuthPasscode] = useState("");
   const [showPasscode, setShowPasscode] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState("");
@@ -63,8 +62,7 @@ export default function CheckInMobileApp({
         const parsed = JSON.parse(saved);
         if (parsed && parsed.email && parsed.eventId) {
           setSession(parsed);
-          setAuthEmail(parsed.email);
-          setAuthPasscode(parsed.passcode || "");
+          setAuthEmail(parsed.email || "");
         }
       }
     } catch {}
@@ -358,7 +356,7 @@ export default function CheckInMobileApp({
                   required
                   autoCapitalize="characters"
                   autoCorrect="off"
-                  placeholder="e.g. 202688"
+                  placeholder="Enter event passcode"
                   value={authPasscode}
                   onChange={(e) => setAuthPasscode(e.target.value.toUpperCase())}
                   className="w-full pl-10 pr-11 py-3.5 bg-slate-950 border border-white/10 rounded-2xl text-sm font-mono font-bold tracking-widest text-white placeholder-slate-500 uppercase focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
@@ -482,7 +480,11 @@ export default function CheckInMobileApp({
             eventId={session.eventId}
             eventTitle={session.eventTitle}
             staffEmail={session.email}
+            staffName={session.staffName}
+            checkedInCount={checkedInCount}
+            totalCount={totalCount}
             onScanResult={handleScannerResult}
+            onSwitchToList={() => setActiveTab("list")}
           />
         )}
 

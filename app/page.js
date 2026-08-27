@@ -943,12 +943,29 @@ export function HomeContent() {
   useEffect(() => {
     if (isLoading || typeof window === "undefined" || !isInitializedRef.current) return;
 
+    // If viewing the public event landing page, sync to clean domain/[slug] URL
+    if (currentView === "event-landing" && (eventDetails?.slug || activeEventId)) {
+      const targetSlug = eventDetails?.slug || activeEventId;
+      const currentSearchParams = new URLSearchParams(window.location.search);
+      const refVal = currentSearchParams.get("ref") || currentSearchParams.get("referral") || currentSearchParams.get("influencer");
+      const rsvpVal = currentSearchParams.get("rsvp");
+      const cleanParams = new URLSearchParams();
+      if (refVal) cleanParams.set("ref", refVal);
+      if (rsvpVal === "true") cleanParams.set("rsvp", "true");
+      const qs = cleanParams.toString();
+      const newUrl = qs ? `/${targetSlug}?${qs}` : `/${targetSlug}`;
+      if (window.location.pathname !== `/${targetSlug}` || window.location.search.includes("view=event-landing")) {
+        window.history.pushState({}, "", newUrl);
+      }
+      return;
+    }
+
     const params = new URLSearchParams();
     if (currentView !== "home") {
       params.set("view", currentView);
     }
     if (activeEventId) {
-      if (activeEventId !== DEFAULT_EVENT_ID || currentView === "event-landing" || currentView === "register" || currentView === "rsvp") {
+      if (activeEventId !== DEFAULT_EVENT_ID || currentView === "register" || currentView === "rsvp") {
         params.set("eventId", activeEventId);
       }
     }
@@ -982,7 +999,7 @@ export function HomeContent() {
     if (window.location.search !== `?${queryString}` && (window.location.search !== "" || queryString !== "")) {
       window.history.pushState({}, "", newUrl);
     }
-  }, [currentView, activeFloorPlanId, initialPreviewMode, activeEventId, isLoading]);
+  }, [currentView, activeFloorPlanId, initialPreviewMode, activeEventId, eventDetails?.slug, isLoading]);
 
   // Parse URL query parameters on initial load & on browser Back/Forward (popstate)
   useEffect(() => {

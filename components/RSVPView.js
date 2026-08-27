@@ -107,12 +107,13 @@ export default function RSVPView({
   // Generate Share QR code
   useEffect(() => {
     if (isShareModalOpen && typeof window !== 'undefined') {
-      const publicUrl = `${window.location.origin}/?eventId=${activeEventId}&view=event-landing&rsvp=true`;
+      const slugOrId = eventDetails?.slug || activeEventId || "";
+      const publicUrl = `${window.location.origin}/${slugOrId}?rsvp=true`;
       QRCode.toDataURL(publicUrl, { width: 260, margin: 1, color: { dark: '#0b5cdb', light: '#ffffff' } })
         .then(url => setShareQrUrl(url))
         .catch(e => console.error("Share QR Error:", e));
     }
-  }, [isShareModalOpen, activeEventId]);
+  }, [isShareModalOpen, activeEventId, eventDetails?.slug]);
 
   // ─────────────────────────────────────────────
   //  KPI & Analytics Calculations
@@ -398,7 +399,8 @@ export default function RSVPView({
 
   const getPublicRsvpUrl = () => {
     if (typeof window === "undefined") return "";
-    return `${window.location.origin}/?eventId=${activeEventId}&view=event-landing&rsvp=true`;
+    const slugOrId = eventDetails?.slug || activeEventId || "";
+    return `${window.location.origin}/${slugOrId}?rsvp=true`;
   };
 
   const handleCopyShareLink = () => {

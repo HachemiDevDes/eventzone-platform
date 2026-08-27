@@ -266,8 +266,8 @@ export default function InfluencersView({
   const getReferralUrl = (code) => {
     if (typeof window === "undefined") return "";
     const origin = window.location.origin;
-    const targetEventId = activeEventId || eventDetails?.id || "";
-    return `${origin}/?view=event-landing&eventId=${targetEventId}&ref=${encodeURIComponent(code)}`;
+    const slugOrId = eventDetails?.slug || activeEventId || eventDetails?.id || "";
+    return `${origin}/${slugOrId}?ref=${encodeURIComponent(code)}`;
   };
 
   // 1-Click Copy Link

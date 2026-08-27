@@ -949,7 +949,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
                   </div>
                 </div>
                 <p className="text-[11px] text-slate-400 font-medium mt-2">
-                  Direct Guest Link: <span className="text-blue-600 font-bold">https://eventzone.pro/{formData.slug || "my-event"}</span>
+                  Direct Guest Link: <span className="text-blue-600 font-bold">{typeof window !== "undefined" ? `${window.location.origin}/${formData.slug || "my-event"}` : `https://eventzone.pro/${formData.slug || "my-event"}`}</span>
                 </p>
               </div>
 
@@ -1080,7 +1080,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
                     </div>
                     <div className="flex items-center gap-1.5 text-blue-600 font-semibold truncate pt-1">
                       <LinkIcon size={12} className="shrink-0" />
-                      <span className="truncate">eventzone.pro/{formData.slug}</span>
+                      <span className="truncate">{typeof window !== "undefined" ? `${window.location.host}/${formData.slug}` : `eventzone.pro/${formData.slug}`}</span>
                     </div>
                   </div>
                 </div>

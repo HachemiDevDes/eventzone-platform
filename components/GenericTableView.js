@@ -4542,7 +4542,7 @@ function CheckInView({ state, onUpdateState }) {
         const eventId = eventDetails.id || state.activeEventId || "";
         const eventPasscode = eventDetails.checkinPasscode || eventDetails.checkin_passcode || (eventId ? String(eventId).slice(0, 6).toUpperCase() : "202688");
         const checkinUrl = `https://ci.eventzone.pro`;
-        const localCheckinUrl = `/checkin?eventId=${eventId}&passcode=${eventPasscode}`;
+        const localCheckinUrl = eventId ? `/checkin?eventId=${eventId}` : `/checkin`;
 
         return (
           <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 border border-indigo-500/30 rounded-3xl p-6 shadow-xl text-white relative overflow-hidden">

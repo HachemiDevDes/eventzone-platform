@@ -12,3 +12,10 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 - **Searchable Selects**: Whenever rendering a dropdown selector with multiple choices (such as industries/categories, countries, wilayas/cities, partner organizations, tiers, or custom form question dropdowns), ALWAYS use `<SearchableSelect>` from `components/SearchableSelect.js` instead of native `<select>` elements.
 - **Search Behavior**: Dropdowns with more than 4 items must automatically provide a sticky search bar with real-time filtering, keyboard navigation support (Enter, Space, Up/Down arrows), clear selection button (`X`), and focus ring styling.
+
+# Version Control & Git Operations
+
+- **No Unsolicited Remote Pushes**: NEVER execute `git push` or modify remote repositories automatically.
+- **Explicit User Request Only**: Only push to GitHub / remote repositories when the user explicitly provides a command/instruction to push (e.g., "push to github", "git push").
+- **Local Commits Permitted**: Creating local commits or staging changes is acceptable, but remote synchronization must strictly await direct user consent.
+
