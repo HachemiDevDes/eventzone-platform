@@ -13,18 +13,13 @@ import {
   XCircle,
   QrCode,
   ArrowRight,
-  ShieldCheck,
-  UserCheck,
-  Clock,
   Sparkles,
-  Search,
-  Upload,
-  X,
   Building,
   Mail,
   Ticket,
-  User,
-  Check
+  Clock,
+  Check,
+  X
 } from "lucide-react";
 
 /**
@@ -121,7 +116,6 @@ export default function CheckInScanner({
 }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
-  const fileInputRef = useRef(null);
   const streamRef = useRef(null);
   const animFrameIdRef = useRef(null);
   const isScanningRef = useRef(true);
@@ -449,7 +443,7 @@ export default function CheckInScanner({
         setErrorMessage(err.message || "Could not access camera.");
       }
     }
-  }, [facingMode, stopCamera, scanVideoFrame]);
+  }, [facingMode]);
 
   // Toggle Torch/Flashlight
   const toggleTorch = async () => {
@@ -473,40 +467,6 @@ export default function CheckInScanner({
     setFacingMode((prev) => (prev === "environment" ? "user" : "environment"));
   };
 
-  // Decode QR from uploaded image file
-  const handleFileUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0);
-        const imageData = ctx.getImageData(0, 0, img.width, img.height);
-        const code = jsQR(imageData.data, imageData.width, imageData.height);
-
-        if (code && code.data) {
-          handleScannedPayload(code.data);
-        } else {
-          playAudioFeedback("invalid");
-          setActiveResult({
-            status: "invalid",
-            attendee: null,
-            message: "No QR code could be detected in the uploaded image.",
-          });
-        }
-      };
-      img.src = event.target.result;
-    };
-    reader.readAsDataURL(file);
-    e.target.value = "";
-  };
-
   // Lifecycle
   useEffect(() => {
     startCamera();
@@ -516,19 +476,12 @@ export default function CheckInScanner({
         clearInterval(autoNextTimerRef.current);
       }
     };
-  }, [startCamera, stopCamera]);
+  }, [facingMode]);
 
   return (
     <div className="relative w-full h-full flex flex-col bg-black text-white overflow-hidden select-none font-sans">
-      {/* Hidden processing canvas & file input */}
+      {/* Hidden processing canvas */}
       <canvas ref={canvasRef} className="hidden" />
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        onChange={handleFileUpload}
-        className="hidden"
-      />
 
       {/* Main Viewfinder Area */}
       <div className="relative flex-1 w-full h-full flex items-center justify-center overflow-hidden bg-black">
@@ -853,20 +806,6 @@ export default function CheckInScanner({
           </div>
         )}
       </div>
-
-      {/* Bottom Floating Quick Actions Toolbar */}
-      {!activeResult && cameraPermission === "granted" && (
-        <div className="p-3 bg-slate-950/90 border-t border-white/10 flex items-center justify-center shrink-0">
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="w-full max-w-xs py-2.5 px-4 bg-white/5 hover:bg-white/10 active:scale-98 text-slate-300 hover:text-white border border-white/10 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
-            title="Scan QR code from photo"
-          >
-            <Upload size={14} className="text-emerald-400" />
-            <span>Scan QR from Photo</span>
-          </button>
-        </div>
-      )}
     </div>
   );
 }
