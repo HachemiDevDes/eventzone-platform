@@ -133,7 +133,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
     capacity: 800,
     hostName: currentUser?.fullName || "",
     hostEmail: currentUser?.email || "",
-    organization: currentUser?.companyName || "Eventzone Host Organization",
+    organization: currentUser?.companyName || "",
   });
 
   useEffect(() => {
@@ -142,7 +142,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
         ...prev,
         hostName: prev.hostName || currentUser.fullName || "",
         hostEmail: prev.hostEmail || currentUser.email || "",
-        organization: prev.organization === "Eventzone Host Organization" ? (currentUser.companyName || prev.organization) : prev.organization
+        organization: prev.organization || currentUser.companyName || ""
       }));
     }
   }, [currentUser]);
@@ -1028,6 +1028,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
                     type="text"
                     value={formData.organization}
                     onChange={(e) => handleChange("organization", e.target.value)}
+                    placeholder="e.g. Acme Corp, Tech Events Co. (Optional)"
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-xl text-xs font-semibold text-slate-900 outline-none"
                   />
                 </div>
