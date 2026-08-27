@@ -2905,58 +2905,7 @@ export function HomeContent() {
               <span className={`text-[9px] font-extrabold py-0.5 px-2 rounded-full ${currentView === "opportunities" ? "bg-white/25 text-white" : "bg-slate-100 text-slate-500"}`}>{opportunities.filter(o => !o.isArchived).length}</span>
             </button>
 
-            {/* 1. Expandable Companies Submenu */}
-            <div className="flex flex-col">
-              <button 
-                onClick={() => setCompaniesOpen(!companiesOpen)}
-                className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-left group ${["organizations", "sponsors", "exhibitors"].includes(currentView) ? "text-blue-700 bg-blue-50/50 font-extrabold" : "text-slate-600 hover:bg-slate-50"}`}
-              >
-                <div className="flex items-center gap-2">
-                  <Building2 size={14} className={`shrink-0 ${["organizations", "sponsors", "exhibitors"].includes(currentView) ? "text-blue-600" : "text-slate-400 group-hover:text-blue-600"}`} />
-                  <span>{t("dash.allCompanies", "Companies")}</span>
-                </div>
-                <ChevronDown size={11} className={`text-slate-400 transition-transform ${companiesOpen ? "rotate-180" : ""}`} />
-              </button>
-
-              {companiesOpen && (
-                <div className="flex flex-col gap-0.5 pl-3 mt-1 border-l border-slate-100 ml-4">
-                  <button 
-                    onClick={() => setCurrentView("organizations")}
-                    className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-left transition-all ${currentView === "organizations" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
-                  >
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <Building2 size={12} className="shrink-0" />
-                      <span className="truncate">{t("dash.organizations", "Organizations")}</span>
-                    </div>
-                    <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "organizations" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{organizations.length}</span>
-                  </button>
-
-                  <button 
-                    onClick={() => setCurrentView("sponsors")}
-                    className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-left transition-all ${currentView === "sponsors" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
-                  >
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <Sparkles size={12} className="shrink-0" />
-                      <span className="truncate">{t("dash.sponsors", "Sponsors")}</span>
-                    </div>
-                    <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "sponsors" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{sponsors.length}</span>
-                  </button>
-
-                  <button 
-                    onClick={() => setCurrentView("exhibitors")}
-                    className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-left transition-all ${currentView === "exhibitors" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
-                  >
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <Store size={12} className="shrink-0" />
-                      <span className="truncate">{t("dash.exhibitors", "Exhibitors")}</span>
-                    </div>
-                    <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "exhibitors" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{exhibitors.length}</span>
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* 2. Expandable Participants Submenu */}
+            {/* 1. Expandable Participants Submenu */}
             <div className="flex flex-col">
               <button 
                 onClick={() => setParticipantsOpen(!participantsOpen)}
@@ -3002,6 +2951,57 @@ export function HomeContent() {
                       <span className="truncate">{t("dash.speakers", "Speakers")}</span>
                     </div>
                     <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "speakers" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{getUniqueSpeakersCount()}</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* 2. Expandable Companies Submenu */}
+            <div className="flex flex-col">
+              <button 
+                onClick={() => setCompaniesOpen(!companiesOpen)}
+                className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-left group ${["organizations", "sponsors", "exhibitors"].includes(currentView) ? "text-blue-700 bg-blue-50/50 font-extrabold" : "text-slate-600 hover:bg-slate-50"}`}
+              >
+                <div className="flex items-center gap-2">
+                  <Building2 size={14} className={`shrink-0 ${["organizations", "sponsors", "exhibitors"].includes(currentView) ? "text-blue-600" : "text-slate-400 group-hover:text-blue-600"}`} />
+                  <span>{t("dash.allCompanies", "Companies")}</span>
+                </div>
+                <ChevronDown size={11} className={`text-slate-400 transition-transform ${companiesOpen ? "rotate-180" : ""}`} />
+              </button>
+
+              {companiesOpen && (
+                <div className="flex flex-col gap-0.5 pl-3 mt-1 border-l border-slate-100 ml-4">
+                  <button 
+                    onClick={() => setCurrentView("organizations")}
+                    className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-left transition-all ${currentView === "organizations" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
+                  >
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <Building2 size={12} className="shrink-0" />
+                      <span className="truncate">{t("dash.organizations", "Organizations")}</span>
+                    </div>
+                    <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "organizations" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{organizations.length}</span>
+                  </button>
+
+                  <button 
+                    onClick={() => setCurrentView("sponsors")}
+                    className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-left transition-all ${currentView === "sponsors" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
+                  >
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <Sparkles size={12} className="shrink-0" />
+                      <span className="truncate">{t("dash.sponsors", "Sponsors")}</span>
+                    </div>
+                    <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "sponsors" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{sponsors.length}</span>
+                  </button>
+
+                  <button 
+                    onClick={() => setCurrentView("exhibitors")}
+                    className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-left transition-all ${currentView === "exhibitors" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
+                  >
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <Store size={12} className="shrink-0" />
+                      <span className="truncate">{t("dash.exhibitors", "Exhibitors")}</span>
+                    </div>
+                    <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "exhibitors" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{exhibitors.length}</span>
                   </button>
                 </div>
               )}
