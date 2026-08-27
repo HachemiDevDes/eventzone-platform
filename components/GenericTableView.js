@@ -729,31 +729,24 @@ function SubmissionDetailsModal({ item, type = "attendee", forms = [], tickets =
         <div className="w-screen max-w-2xl lg:max-w-3xl bg-white shadow-2xl flex flex-col border-l border-slate-100 transform transition-transform ease-in-out duration-300">
           {/* Top Header */}
           <header className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70 shrink-0">
-            <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black text-lg shrink-0 ${
-                type === "pending" ? "bg-amber-50 text-amber-600 border border-amber-200" : "bg-blue-50 text-blue-600 border border-blue-200"
-              }`}>
-                {type === "pending" ? <Clock size={20} /> : <FileText size={20} />}
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-extrabold text-slate-900 leading-tight">
+                  {type === "pending" ? "Pending Registration Intake" : "Attendee Registration Details"}
+                </h3>
+                {type === "pending" ? (
+                  <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-extrabold border border-amber-200 uppercase tracking-wider">
+                    Pending Review
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-extrabold border border-emerald-200 uppercase tracking-wider">
+                    Approved
+                  </span>
+                )}
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-base font-extrabold text-slate-900 leading-tight">
-                    {type === "pending" ? "Pending Registration Intake" : "Attendee Registration Details"}
-                  </h3>
-                  {type === "pending" ? (
-                    <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-extrabold border border-amber-200 uppercase tracking-wider">
-                      Pending Review
-                    </span>
-                  ) : (
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-extrabold border border-emerald-200 uppercase tracking-wider">
-                      Approved
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-slate-500 font-medium mt-0.5">
-                  Full registration questionnaire responses and contact details
-                </p>
-              </div>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">
+                Full registration questionnaire responses and contact details
+              </p>
             </div>
 
             <button 
@@ -844,9 +837,8 @@ function SubmissionDetailsModal({ item, type = "attendee", forms = [], tickets =
             {/* Questionnaire & Dynamic Form Answers */}
             <div className="space-y-4">
               <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                <h5 className="text-xs font-extrabold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                  <Sparkles size={14} className="text-blue-600" />
-                  <span>Ticket Form Questionnaire Responses</span>
+                <h5 className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">
+                  Ticket Form Questionnaire Responses
                 </h5>
                 {matchedForm && (
                   <span className="text-[10px] font-extrabold text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full">
@@ -2451,7 +2443,7 @@ function PendingView({ state, onUpdateState }) {
                         <div className="flex items-center justify-center gap-1.5">
                           <button
                             onClick={() => setSelectedSubmissionModal(p)}
-                            className="p-1.5 hover:text-indigo-600 text-slate-400 hover:bg-indigo-50 border border-transparent hover:border-indigo-100 rounded-lg transition-all cursor-pointer"
+                            className="p-1.5 hover:text-blue-600 text-slate-400 hover:bg-blue-50 border border-transparent hover:border-blue-100 rounded-lg transition-all cursor-pointer"
                             title="View Full Questionnaire & Answers"
                           >
                             <Eye size={15} />
@@ -2794,13 +2786,14 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
       ) : viewMode === "grid" ? (
         /* ────────── GRID VIEW ────────── */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredOrganizations.map(o => {
+          {filteredOrganizations.map((o, index) => {
             const isArchived = o.isArchived || o.status === 'archived';
             const { isSponsor, isExhibitor } = getOrgRoles(o);
+            const itemKey = o.id ? `org-grid-${o.id}` : `org-grid-idx-${index}-${o.name || 'unnamed'}`;
 
             return (
               <div 
-                key={o.id} 
+                key={itemKey} 
                 className={`bg-white border ${isArchived ? 'border-slate-200 bg-slate-50/50 opacity-75' : 'border-slate-200/90'} rounded-3xl p-5 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between relative group`}
               >
                 <div>
@@ -2991,13 +2984,14 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredOrganizations.map(o => {
+                {filteredOrganizations.map((o, index) => {
                   const isArchived = o.isArchived || o.status === 'archived';
                   const { isSponsor, isExhibitor } = getOrgRoles(o);
+                  const itemKey = o.id ? `org-row-${o.id}` : `org-row-idx-${index}-${o.name || 'unnamed'}`;
 
                   return (
                     <tr 
-                      key={o.id}
+                      key={itemKey}
                       className={`hover:bg-slate-50/60 transition-colors ${isArchived ? 'opacity-65 bg-slate-50/30' : ''}`}
                     >
                       {/* Company & Sector */}
@@ -3987,14 +3981,15 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredTickets.map((t) => {
+          {filteredTickets.map((t, idx) => {
             const isArchived = t.isArchived || t.status === 'Archived';
             const tierSold = attendees.filter(a => a.ticketType === t.name).length;
             const linkedForm = forms.find(f => f.id === t.formId);
             const badgeType = t.badgeType || "thermal_qr";
+            const itemKey = t.id ? `ticket-${t.id}` : `ticket-idx-${idx}-${t.name || 'unnamed'}`;
 
             return (
-              <div key={t.id} className={`bg-white border-2 rounded-3xl p-6 sm:p-7 flex flex-col gap-4 relative shadow-xs hover:shadow-lg transition-all duration-300 ${isArchived ? 'border-slate-300 bg-slate-50/50 opacity-75' : t.isPopular ? 'border-amber-400 bg-gradient-to-b from-white to-amber-50/15 ring-2 ring-amber-400/20' : 'border-slate-200'}`}>
+              <div key={itemKey} className={`bg-white border-2 rounded-3xl p-6 sm:p-7 flex flex-col gap-4 relative shadow-xs hover:shadow-lg transition-all duration-300 ${isArchived ? 'border-slate-300 bg-slate-50/50 opacity-75' : t.isPopular ? 'border-amber-400 bg-gradient-to-b from-white to-amber-50/15 ring-2 ring-amber-400/20' : 'border-slate-200'}`}>
                 {/* Top Badge Strip */}
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5 flex-wrap">
