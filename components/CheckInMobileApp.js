@@ -289,11 +289,17 @@ export default function CheckInMobileApp({
   // ─────────────────────────────────────────────
   if (!session) {
     return (
-      <div className="min-h-[100dvh] w-full bg-slate-950 text-slate-100 flex flex-col justify-between p-5 select-none">
+      <div className="min-h-[100dvh] w-full bg-slate-950 text-slate-100 flex flex-col justify-between p-5 select-none font-sans">
         {/* Top Branding */}
         <div className="pt-8 pb-4 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-blue-600/15 border border-blue-500/30 text-blue-400 mb-4 shadow-xl shadow-blue-500/10">
-            <QrCode size={34} />
+          <div className="flex justify-center mb-4">
+            <div className="px-5 py-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md shadow-2xl flex items-center justify-center">
+              <img
+                src="/eventzone-logo.png"
+                alt="Eventzone"
+                className="h-7 sm:h-8 w-auto object-contain brightness-110"
+              />
+            </div>
           </div>
           <h1 className="text-2xl font-black tracking-tight text-white">Eventzone Check-In</h1>
           <p className="text-xs text-slate-400 mt-1 font-medium">
@@ -302,16 +308,16 @@ export default function CheckInMobileApp({
         </div>
 
         {/* Login Form Card */}
-        <div className="w-full max-w-sm mx-auto bg-slate-900/90 border border-white/10 rounded-3xl p-6 shadow-2xl backdrop-blur-md">
-          <div className="mb-6">
-            <h2 className="text-lg font-bold text-white">Staff Sign In</h2>
-            <p className="text-xs text-slate-400 mt-0.5">
+        <div className="w-full max-w-sm mx-auto bg-slate-900/90 border border-white/10 rounded-3xl p-6 sm:p-7 shadow-2xl backdrop-blur-xl">
+          <div className="mb-6 text-center sm:text-left">
+            <h2 className="text-lg font-black text-white tracking-tight">Staff Sign In</h2>
+            <p className="text-xs text-slate-400 mt-1 leading-relaxed">
               Enter your email and the passcode provided by the organizer.
             </p>
           </div>
 
           {authError && (
-            <div className="mb-4 p-3.5 rounded-2xl bg-red-500/15 border border-red-500/30 flex items-start gap-2.5 text-xs text-red-300">
+            <div className="mb-4 p-3.5 rounded-2xl bg-red-500/15 border border-red-500/30 flex items-start gap-2.5 text-xs text-red-300 animate-in fade-in">
               <AlertCircle size={16} className="shrink-0 text-red-400 mt-0.5" />
               <span>{authError}</span>
             </div>
@@ -375,18 +381,15 @@ export default function CheckInMobileApp({
             <button
               type="submit"
               disabled={authLoading}
-              className="w-full py-4 mt-2 bg-blue-600 hover:bg-blue-700 active:scale-98 disabled:opacity-50 text-white rounded-2xl font-bold text-sm shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-4 mt-2 bg-blue-600 hover:bg-blue-500 active:scale-98 disabled:opacity-50 text-white rounded-2xl font-black text-sm shadow-xl shadow-blue-600/30 transition-all flex items-center justify-center cursor-pointer tracking-wide"
             >
               {authLoading ? (
-                <>
+                <div className="flex items-center gap-2">
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   <span>Connecting...</span>
-                </>
+                </div>
               ) : (
-                <>
-                  <ShieldCheck size={18} />
-                  <span>Open Check-In Desk</span>
-                </>
+                <span>Let&apos;s Scan</span>
               )}
             </button>
           </form>

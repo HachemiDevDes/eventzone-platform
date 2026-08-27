@@ -19,7 +19,6 @@ import {
   Sparkles,
   Search,
   Upload,
-  Keyboard,
   X,
   Building,
   Mail,
@@ -86,7 +85,7 @@ function playAudioFeedback(type = "success") {
       osc.stop(now + 0.38);
     }
   } catch (err) {
-    // Audio autoplay or permission restriction
+    // Audio autoplay restriction
   }
 }
 
@@ -137,8 +136,6 @@ export default function CheckInScanner({
   const [torchOn, setTorchOn] = useState(false);
   const [activeResult, setActiveResult] = useState(null); // { status: "success" | "already_checked_in" | "invalid", attendee, message, checkedInAt, rawScanned }
   const [isProcessing, setIsProcessing] = useState(false);
-  const [showManualInput, setShowManualInput] = useState(false);
-  const [manualCode, setManualCode] = useState("");
   const [countdownPct, setCountdownPct] = useState(100);
 
   // Stop camera helper
@@ -157,7 +154,7 @@ export default function CheckInScanner({
     }
   }, []);
 
-  // Initialize camera
+  // Initialize camera with iOS Safari compatibility & graceful fallbacks
   const startCamera = useCallback(async () => {
     stopCamera();
     setErrorMessage("");
@@ -171,47 +168,85 @@ export default function CheckInScanner({
         return;
       }
 
-      const constraints = {
-        video: {
-          facingMode: { ideal: facingMode },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-        audio: false,
-      };
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      streamRef.current = stream;
-      setCameraPermission("granted");
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.setAttribute("playsinline", "true");
-        await videoRef.current.play();
-      }
-
-      const videoTrack = stream.getVideoTracks()[0];
-      if (videoTrack && videoTrack.getCapabilities) {
-        const capabilities = videoTrack.getCapabilities();
-        if (capabilities.torch) {
-          setTorchAvailable(true);
+      let stream = null;
+      // 1. Try with preferred ideal facing mode
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: facingMode === "user" ? "user" : { ideal: "environment" },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+          audio: false,
+        });
+      } catch (err1) {
+        // 2. Fallback for iOS Safari exact constraints
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: facingMode === "user" ? "user" : "environment" },
+            audio: false,
+          });
+        } catch (err2) {
+          // 3. Final fallback with generic video constraint
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: false,
+          });
         }
       }
 
+      streamRef.current = stream;
+      setCameraPermission("granted");
+
+      const video = videoRef.current;
+      if (video) {
+        video.srcObject = stream;
+        video.muted = true;
+        video.playsInline = true;
+        video.autoplay = true;
+        video.setAttribute("playsinline", "true");
+        video.setAttribute("webkit-playsinline", "true");
+        video.setAttribute("muted", "true");
+        video.setAttribute("autoplay", "true");
+
+        // Handle iOS autoplay resolution
+        video.onloadedmetadata = () => {
+          video.play().catch((e) => console.warn("Video play error:", e));
+        };
+
+        try {
+          await video.play();
+        } catch (e) {
+          // Play will succeed on loadedmetadata
+        }
+      }
+
+      // Check for torch capability
+      try {
+        const videoTrack = stream.getVideoTracks()[0];
+        if (videoTrack && videoTrack.getCapabilities) {
+          const capabilities = videoTrack.getCapabilities();
+          if (capabilities.torch) {
+            setTorchAvailable(true);
+          }
+        }
+      } catch (tErr) {}
+
+      // Start frame scanning loop
       isScanningRef.current = true;
       requestAnimationFrame(scanVideoFrame);
     } catch (err) {
       console.warn("Camera init error:", err);
       setCameraPermission("denied");
       if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
-        setErrorMessage("Camera permission was denied. Please allow camera access in your browser address bar or settings.");
+        setErrorMessage("Camera permission was denied. Please allow camera access in your browser settings to scan QR passes.");
       } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
         setErrorMessage("No camera device was detected on this device.");
       } else {
         setErrorMessage(err.message || "Could not access camera.");
       }
     }
-  }, [facingMode, stopCamera]);
+  }, [facingMode, stopCamera, scanVideoFrame]);
 
   // Toggle Torch/Flashlight
   const toggleTorch = async () => {
@@ -348,7 +383,7 @@ export default function CheckInScanner({
     const video = videoRef.current;
     const canvas = canvasRef.current;
 
-    if (video && video.readyState === video.HAVE_ENOUGH_DATA && canvas) {
+    if (video && video.readyState >= 2 && canvas) {
       const ctx = canvas.getContext("2d", { willReadFrequently: true });
       if (ctx) {
         const videoWidth = video.videoWidth;
@@ -377,10 +412,11 @@ export default function CheckInScanner({
                 });
               return;
             } catch {
-              // BarcodeDetector failed, fallback to jsQR
+              // BarcodeDetector fallback
             }
           }
 
+          // Universal jsQR fallback
           runJsQrFallback(ctx, videoWidth, videoHeight);
           return;
         }
@@ -457,15 +493,6 @@ export default function CheckInScanner({
     requestAnimationFrame(scanVideoFrame);
   };
 
-  // Manual code submission (e.g. typing badge code or USB scanner gun)
-  const handleManualSubmit = (e) => {
-    e.preventDefault();
-    if (!manualCode.trim()) return;
-    handleScannedPayload(manualCode.trim());
-    setManualCode("");
-    setShowManualInput(false);
-  };
-
   // Lifecycle
   useEffect(() => {
     startCamera();
@@ -478,7 +505,7 @@ export default function CheckInScanner({
   }, [startCamera, stopCamera]);
 
   return (
-    <div className="relative w-full h-full flex flex-col bg-slate-950 text-white overflow-hidden select-none font-sans">
+    <div className="relative w-full h-full flex flex-col bg-black text-white overflow-hidden select-none font-sans">
       {/* Hidden processing canvas & file input */}
       <canvas ref={canvasRef} className="hidden" />
       <input
@@ -489,87 +516,84 @@ export default function CheckInScanner({
         className="hidden"
       />
 
-      {/* Top Floating Controls Bar */}
-      <div className="absolute top-0 inset-x-0 z-20 p-3 sm:p-4 flex items-center justify-between pointer-events-auto bg-gradient-to-b from-slate-950/90 via-slate-950/50 to-transparent">
-        {/* Status Pill */}
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/90 border border-white/10 backdrop-blur-md shadow-lg">
-          <div className={`w-2.5 h-2.5 rounded-full ${cameraPermission === "granted" ? "bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]" : "bg-amber-400"}`} />
-          <span className="text-[11px] font-black tracking-wide uppercase text-white">
-            {cameraPermission === "granted" ? "Camera Active" : "Scanner Ready"}
-          </span>
-          {totalCount > 0 && (
-            <>
-              <span className="text-white/30">&bull;</span>
-              <span className="text-[11px] font-bold text-emerald-400 font-mono">
-                {checkedInCount}/{totalCount}
-              </span>
-            </>
-          )}
-        </div>
-
-        {/* Right Tools: Flashlight & Camera Switch */}
-        <div className="flex items-center gap-2">
-          {torchAvailable && (
-            <button
-              onClick={toggleTorch}
-              type="button"
-              aria-label="Toggle Flashlight"
-              className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all cursor-pointer ${
-                torchOn
-                  ? "bg-amber-400 text-slate-950 shadow-lg shadow-amber-400/50 scale-105"
-                  : "bg-slate-900/80 text-white border border-white/10 hover:bg-slate-800 backdrop-blur-md"
-              }`}
-            >
-              {torchOn ? <Zap size={18} className="fill-current" /> : <ZapOff size={18} />}
-            </button>
-          )}
-
-          <button
-            onClick={switchCamera}
-            type="button"
-            aria-label="Switch Camera"
-            className="w-10 h-10 rounded-2xl bg-slate-900/80 text-white border border-white/10 flex items-center justify-center hover:bg-slate-800 backdrop-blur-md transition-all cursor-pointer active:scale-95"
-          >
-            <RefreshCw size={17} />
-          </button>
-        </div>
-      </div>
-
       {/* Main Viewfinder Area */}
-      <div className="relative flex-1 w-full flex items-center justify-center overflow-hidden bg-slate-950">
+      <div className="relative flex-1 w-full h-full flex items-center justify-center overflow-hidden bg-black">
         {/* Live video feed */}
         <video
           ref={videoRef}
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-cover z-0"
           muted
           playsInline
           autoPlay
         />
 
-        {/* Cinematic Vignette & Targeting Reticle */}
-        {cameraPermission === "granted" && !activeResult && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            {/* Darkened surround mask */}
-            <div className="absolute inset-0 bg-slate-950/40 backdrop-contrast-125" />
+        {/* Top Controls Floating Bar */}
+        <div className="absolute top-0 inset-x-0 z-20 p-3 sm:p-4 flex items-center justify-between pointer-events-auto bg-gradient-to-b from-black/80 via-black/40 to-transparent">
+          {/* Status Pill */}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/90 border border-white/10 backdrop-blur-md shadow-lg">
+            <div className={`w-2.5 h-2.5 rounded-full ${cameraPermission === "granted" ? "bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]" : "bg-amber-400"}`} />
+            <span className="text-[11px] font-black tracking-wide uppercase text-white">
+              {cameraPermission === "granted" ? "Live Scanner" : "Camera Ready"}
+            </span>
+            {totalCount > 0 && (
+              <>
+                <span className="text-white/30">&bull;</span>
+                <span className="text-[11px] font-bold text-emerald-400 font-mono">
+                  {checkedInCount}/{totalCount}
+                </span>
+              </>
+            )}
+          </div>
 
+          {/* Right Tools: Flashlight & Camera Switch */}
+          <div className="flex items-center gap-2">
+            {torchAvailable && (
+              <button
+                onClick={toggleTorch}
+                type="button"
+                aria-label="Toggle Flashlight"
+                className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+                  torchOn
+                    ? "bg-amber-400 text-slate-950 shadow-lg shadow-amber-400/50 scale-105"
+                    : "bg-slate-900/80 text-white border border-white/10 hover:bg-slate-800 backdrop-blur-md"
+                }`}
+              >
+                {torchOn ? <Zap size={16} className="fill-current" /> : <ZapOff size={16} />}
+              </button>
+            )}
+
+            <button
+              onClick={switchCamera}
+              type="button"
+              aria-label="Switch Camera"
+              className="w-9 h-9 rounded-xl bg-slate-900/80 text-white border border-white/10 flex items-center justify-center hover:bg-slate-800 backdrop-blur-md transition-all cursor-pointer active:scale-95"
+            >
+              <RefreshCw size={15} />
+            </button>
+          </div>
+        </div>
+
+        {/* Viewfinder Reticle Overlay */}
+        {cameraPermission === "granted" && !activeResult && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10">
             {/* Target Reticle Box */}
-            <div className="relative z-10 w-64 h-64 sm:w-72 sm:h-72 max-w-[78vw] max-h-[78vw] flex items-center justify-center shadow-[0_0_0_9999px_rgba(2,6,23,0.55)] rounded-3xl overflow-hidden">
+            <div className="relative w-64 h-64 sm:w-72 sm:h-72 max-w-[76vw] max-h-[76vw] flex items-center justify-center rounded-3xl">
               {/* Neon Corner Brackets */}
-              <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-emerald-400 rounded-tl-2xl shadow-[0_0_12px_#34d399]" />
-              <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-emerald-400 rounded-tr-2xl shadow-[0_0_12px_#34d399]" />
-              <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-emerald-400 rounded-bl-2xl shadow-[0_0_12px_#34d399]" />
-              <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-emerald-400 rounded-br-2xl shadow-[0_0_12px_#34d399]" />
+              <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-emerald-400 rounded-tl-2xl shadow-[0_0_15px_#34d399]" />
+              <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-emerald-400 rounded-tr-2xl shadow-[0_0_15px_#34d399]" />
+              <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-emerald-400 rounded-bl-2xl shadow-[0_0_15px_#34d399]" />
+              <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-emerald-400 rounded-br-2xl shadow-[0_0_15px_#34d399]" />
 
               {/* Glowing Animated Laser Scan Beam */}
-              <div className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_15px_#34d399] animate-bounce duration-1000" />
+              <div className="absolute inset-x-2 h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_15px_#34d399] animate-pulse" />
 
               {/* Center Watermark Guide */}
-              <QrCode className="text-white/20 w-24 h-24" />
+              <QrCode className="text-white/20 w-20 h-20" />
             </div>
 
             {/* Hint below target */}
-            <div className="relative z-10 mt-6 px-4 py-1.5 rounded-full bg-slate-950/80 border border-white/10 backdrop-blur-md text-[11px] font-semibold text-slate-300 shadow-md">
-              Point camera directly at the QR Code on delegate badge
+            <div className="mt-6 px-4 py-1.5 rounded-full bg-slate-950/75 border border-white/10 text-[11px] font-semibold text-slate-300 backdrop-blur-md shadow-lg">
+              Point camera at delegate QR code
             </div>
           </div>
         )}
@@ -582,7 +606,7 @@ export default function CheckInScanner({
             </div>
             <h3 className="text-base font-black text-white mb-2">Camera Access Required</h3>
             <p className="text-xs text-slate-300 mb-5 leading-relaxed">
-              {errorMessage || "Please enable camera access in your browser or enter badge codes manually below."}
+              {errorMessage || "Please enable camera access in your browser settings to scan QR passes."}
             </p>
 
             <div className="space-y-2.5">
@@ -595,16 +619,8 @@ export default function CheckInScanner({
               </button>
 
               <button
-                onClick={() => setShowManualInput(true)}
-                className="w-full py-3.5 bg-white/10 hover:bg-white/15 text-white rounded-2xl font-bold text-xs border border-white/10 transition-all cursor-pointer flex items-center justify-center gap-2"
-              >
-                <Keyboard size={15} />
-                Enter Badge Code / Use Scanner Gun
-              </button>
-
-              <button
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full py-3.5 bg-white/5 hover:bg-white/10 text-slate-300 rounded-2xl font-semibold text-xs transition-all cursor-pointer flex items-center justify-center gap-2"
+                className="w-full py-3.5 bg-white/10 hover:bg-white/15 text-white rounded-2xl font-semibold text-xs border border-white/10 transition-all cursor-pointer flex items-center justify-center gap-2"
               >
                 <Upload size={15} />
                 Upload QR Code Photo
@@ -825,72 +841,16 @@ export default function CheckInScanner({
       </div>
 
       {/* Bottom Floating Quick Actions Toolbar */}
-      {!activeResult && (
-        <div className="p-3 bg-slate-950 border-t border-white/10 flex items-center justify-between gap-2 shrink-0">
-          <button
-            onClick={() => setShowManualInput(true)}
-            className="flex-1 py-2.5 px-3 bg-white/5 hover:bg-white/10 active:scale-98 text-slate-200 border border-white/10 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
-          >
-            <Keyboard size={15} className="text-blue-400" />
-            <span>Type Badge / Gun</span>
-          </button>
-
+      {!activeResult && cameraPermission === "granted" && (
+        <div className="p-3 bg-slate-950/90 border-t border-white/10 flex items-center justify-center shrink-0">
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="py-2.5 px-3 bg-white/5 hover:bg-white/10 active:scale-98 text-slate-200 border border-white/10 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+            className="w-full max-w-xs py-2.5 px-4 bg-white/5 hover:bg-white/10 active:scale-98 text-slate-300 hover:text-white border border-white/10 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
             title="Scan QR code from photo"
           >
-            <Upload size={15} className="text-emerald-400" />
-            <span>Photo</span>
+            <Upload size={14} className="text-emerald-400" />
+            <span>Scan QR from Photo</span>
           </button>
-        </div>
-      )}
-
-      {/* Manual Code Input Modal / Drawer */}
-      {showManualInput && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-slate-900 border border-white/15 rounded-3xl p-6 w-full max-w-sm shadow-2xl text-white relative animate-in zoom-in-95">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center">
-                  <Keyboard size={16} />
-                </div>
-                <h4 className="font-black text-sm">Manual Badge / Gun Entry</h4>
-              </div>
-              <button
-                onClick={() => setShowManualInput(false)}
-                className="p-1 text-slate-400 hover:text-white cursor-pointer"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <p className="text-xs text-slate-400 mb-4 leading-relaxed">
-              Type the delegate badge code (e.g. <span className="font-mono text-emerald-400">EZ-4821</span>) or scan with a USB/Bluetooth barcode gun.
-            </p>
-
-            <form onSubmit={handleManualSubmit} className="space-y-3">
-              <div className="relative">
-                <input
-                  type="text"
-                  autoFocus
-                  required
-                  placeholder="e.g. EZ-9042 or email@domain.com"
-                  value={manualCode}
-                  onChange={(e) => setManualCode(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-950 border border-white/15 rounded-2xl font-mono text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 active:scale-98 text-white rounded-2xl font-bold text-xs shadow-lg shadow-blue-600/30 transition-all cursor-pointer flex items-center justify-center gap-2"
-              >
-                <CheckCircle2 size={16} />
-                Verify & Check In
-              </button>
-            </form>
-          </div>
         </div>
       )}
     </div>
