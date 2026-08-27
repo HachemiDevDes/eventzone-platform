@@ -291,15 +291,13 @@ export default function CheckInMobileApp({
     return (
       <div className="min-h-[100dvh] w-full bg-slate-950 text-slate-100 flex flex-col justify-between p-5 select-none font-sans">
         {/* Top Branding */}
-        <div className="pt-8 pb-4 text-center">
-          <div className="flex justify-center mb-4">
-            <div className="px-5 py-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md shadow-2xl flex items-center justify-center">
-              <img
-                src="/eventzone-logo.png"
-                alt="Eventzone"
-                className="h-7 sm:h-8 w-auto object-contain brightness-110"
-              />
-            </div>
+        <div className="pt-10 pb-4 text-center">
+          <div className="flex items-center justify-center mb-4">
+            <img
+              src="/eventzone-logo-white.png"
+              alt="Eventzone"
+              className="h-10 sm:h-12 w-auto object-contain drop-shadow-sm select-none"
+            />
           </div>
           <h1 className="text-2xl font-black tracking-tight text-white">Eventzone Check-In</h1>
           <p className="text-xs text-slate-400 mt-1 font-medium">
