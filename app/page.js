@@ -1862,11 +1862,21 @@ export function HomeContent() {
         return exists ? prev.map(o => o.id === saved.id ? saved : o) : [...prev, saved];
       });
 
-      // 1. Manage Sponsor Linkage
-      const existingSponsor = (sponsors || []).find(s => !s.isArchived && (s.orgId === saved.id || s.org_id === saved.id));
-      if (linkOptions.createSponsor) {
+      // 1. Manage Sponsor Linkage (Sync if existing, create if requested)
+      const existingSponsor = (sponsors || []).find(s => !s.isArchived && s.status !== 'archived' && (s.orgId === saved.id || s.org_id === saved.id));
+      if (existingSponsor) {
+        const updatedSponsor = {
+          ...existingSponsor,
+          name: saved.name,
+          image: saved.logo || existingSponsor.image || existingSponsor.logo || '',
+          industry: saved.industry || existingSponsor.industry || '',
+          contact: saved.contact || existingSponsor.contact || '',
+          website: saved.website || existingSponsor.website || '#'
+        };
+        const savedSponsor = await upsertSponsor(updatedSponsor, activeEventId);
+        setSponsors(prev => prev.map(s => s.id === savedSponsor.id ? savedSponsor : s));
+      } else if (linkOptions.createSponsor) {
         const sponsorPayload = {
-          id: existingSponsor?.id,
           name: saved.name,
           orgId: saved.id,
           tier: linkOptions.sponsorTier || 'silver',
@@ -1882,21 +1892,26 @@ export function HomeContent() {
           status: 'active'
         };
         const savedSponsor = await upsertSponsor(sponsorPayload, activeEventId);
-        setSponsors(prev => {
-          const exists = prev.some(s => s.id === savedSponsor.id || (s.orgId && s.orgId === saved.id));
-          return exists ? prev.map(s => (s.id === savedSponsor.id || s.orgId === saved.id) ? savedSponsor : s) : [...prev, savedSponsor];
-        });
-      } else if (existingSponsor) {
-        // User unchecked sponsor checkbox for an organization that was previously a sponsor
-        await deleteSponsor(existingSponsor.id, activeEventId);
-        setSponsors(prev => prev.filter(s => s.id !== existingSponsor.id));
+        setSponsors(prev => [...prev, savedSponsor]);
       }
 
-      // 2. Manage Exhibitor Linkage
-      const existingExhibitor = (exhibitors || []).find(e => !e.isArchived && (e.orgId === saved.id || e.org_id === saved.id));
-      if (linkOptions.createExhibitor) {
+      // 2. Manage Exhibitor Linkage (Sync if existing, create if requested)
+      const existingExhibitor = (exhibitors || []).find(e => !e.isArchived && e.status !== 'archived' && (e.orgId === saved.id || e.org_id === saved.id));
+      if (existingExhibitor) {
+        const updatedExhibitor = {
+          ...existingExhibitor,
+          name: saved.name,
+          logo: saved.logo || existingExhibitor.logo || '',
+          industry: saved.industry || existingExhibitor.industry || '',
+          contact: saved.contact || existingExhibitor.contact || '',
+          contactPerson: saved.contact || existingExhibitor.contact || '',
+          email: saved.email || existingExhibitor.email || '',
+          phone: saved.phone || existingExhibitor.phone || ''
+        };
+        const savedExhibitor = await upsertExhibitor(updatedExhibitor, activeEventId);
+        setExhibitors(prev => prev.map(e => e.id === savedExhibitor.id ? savedExhibitor : e));
+      } else if (linkOptions.createExhibitor) {
         const exhibitorPayload = {
-          id: existingExhibitor?.id,
           name: saved.name,
           orgId: saved.id,
           booth: linkOptions.exhibitorBooth || 'Not Assigned',
@@ -1912,14 +1927,7 @@ export function HomeContent() {
           status: 'active'
         };
         const savedExhibitor = await upsertExhibitor(exhibitorPayload, activeEventId);
-        setExhibitors(prev => {
-          const exists = prev.some(e => e.id === savedExhibitor.id || (e.orgId && e.orgId === saved.id));
-          return exists ? prev.map(e => (e.id === savedExhibitor.id || e.orgId === saved.id) ? savedExhibitor : e) : [...prev, savedExhibitor];
-        });
-      } else if (existingExhibitor) {
-        // User unchecked exhibitor checkbox for an organization that was previously an exhibitor
-        await deleteExhibitor(existingExhibitor.id, activeEventId);
-        setExhibitors(prev => prev.filter(e => e.id !== existingExhibitor.id));
+        setExhibitors(prev => [...prev, savedExhibitor]);
       }
 
       return saved;
@@ -1936,6 +1944,32 @@ export function HomeContent() {
         const exists = prev.some(s => s.id === saved.id);
         return exists ? prev.map(s => s.id === saved.id ? saved : s) : [...prev, saved];
       });
+
+      // If linked with an organization, sync contact & details to organization as well
+      const targetOrgId = sponsorData.orgId || sponsorData.org_id || saved.orgId || saved.org_id;
+      if (targetOrgId) {
+        const existingOrg = organizations.find(o => String(o.id) === String(targetOrgId));
+        if (existingOrg) {
+          const updatedOrg = {
+            ...existingOrg,
+            name: sponsorData.name || existingOrg.name,
+            logo: sponsorData.image || sponsorData.logo || existingOrg.logo,
+            industry: sponsorData.industry || existingOrg.industry,
+            contact: sponsorData.contact || sponsorData.contactPerson || existingOrg.contact,
+            jobTitle: sponsorData.jobTitle || existingOrg.jobTitle,
+            email: sponsorData.email || sponsorData.contactEmail || existingOrg.email,
+            phone: sponsorData.phone || sponsorData.contactPhone || existingOrg.phone,
+            notes: sponsorData.notes || existingOrg.notes
+          };
+          try {
+            const savedOrg = await upsertOrganization(updatedOrg, activeEventId);
+            setOrganizations(prev => prev.map(o => String(o.id) === String(savedOrg.id) ? savedOrg : o));
+          } catch (orgErr) {
+            console.warn("Could not sync sponsor to linked organization:", orgErr);
+          }
+        }
+      }
+
       return saved;
     } catch (err) {
       console.error("Failed to save sponsor:", err);
@@ -1950,9 +1984,119 @@ export function HomeContent() {
         const exists = prev.some(e => e.id === saved.id);
         return exists ? prev.map(e => e.id === saved.id ? saved : e) : [...prev, saved];
       });
+
+      // If linked with an organization, sync contact & details to organization as well
+      const targetOrgId = exhibitorData.orgId || exhibitorData.org_id || saved.orgId || saved.org_id;
+      if (targetOrgId) {
+        const existingOrg = organizations.find(o => String(o.id) === String(targetOrgId));
+        if (existingOrg) {
+          const updatedOrg = {
+            ...existingOrg,
+            name: exhibitorData.name || existingOrg.name,
+            logo: exhibitorData.logo || existingOrg.logo,
+            industry: exhibitorData.industry || existingOrg.industry,
+            contact: exhibitorData.contact || exhibitorData.contactPerson || existingOrg.contact,
+            jobTitle: exhibitorData.jobTitle || existingOrg.jobTitle,
+            email: exhibitorData.email || exhibitorData.contactEmail || existingOrg.email,
+            phone: exhibitorData.phone || exhibitorData.contactPhone || existingOrg.phone,
+            notes: exhibitorData.notes || existingOrg.notes
+          };
+          try {
+            const savedOrg = await upsertOrganization(updatedOrg, activeEventId);
+            setOrganizations(prev => prev.map(o => String(o.id) === String(savedOrg.id) ? savedOrg : o));
+          } catch (orgErr) {
+            console.warn("Could not sync exhibitor to linked organization:", orgErr);
+          }
+        }
+      }
+
       return saved;
     } catch (err) {
       console.error("Failed to save exhibitor:", err);
+      throw err;
+    }
+  };
+
+  const handleDeleteSponsor = async (sponsorId) => {
+    try {
+      if (!sponsorId) return;
+      await deleteSponsor(sponsorId);
+      setSponsors(prev => {
+        const next = prev.filter(s => String(s.id) !== String(sponsorId));
+        safeLocalStorageSet(`eventzone_cache_sponsors_${activeEventId}`, next);
+        return next;
+      });
+    } catch (err) {
+      console.error("Failed to delete sponsor:", err);
+      throw err;
+    }
+  };
+
+  const handleDeleteExhibitor = async (exhibitorId) => {
+    try {
+      if (!exhibitorId) return;
+      await deleteExhibitor(exhibitorId);
+      setExhibitors(prev => {
+        const next = prev.filter(e => String(e.id) !== String(exhibitorId));
+        safeLocalStorageSet(`eventzone_cache_exhibitors_${activeEventId}`, next);
+        return next;
+      });
+      // Also unassign this exhibitor from any floor plan booth
+      setFloorPlans(prev => prev.map(fp => {
+        let changed = false;
+        const newElements = (fp.elements || []).map(el => {
+          if (String(el.exhibitorId) === String(exhibitorId)) {
+            changed = true;
+            return { ...el, exhibitorId: null, status: 'available' };
+          }
+          return el;
+        });
+        if (changed) {
+          const updatedFp = { ...fp, elements: newElements };
+          saveFloorPlanWithStatus(updatedFp);
+          return updatedFp;
+        }
+        return fp;
+      }));
+    } catch (err) {
+      console.error("Failed to delete exhibitor:", err);
+      throw err;
+    }
+  };
+
+  const handleDeleteOrganization = async (orgId) => {
+    try {
+      if (!orgId) return;
+      await deleteOrganization(orgId);
+      setOrganizations(prev => {
+        const next = prev.filter(o => String(o.id) !== String(orgId));
+        safeLocalStorageSet(`eventzone_cache_organizations_${activeEventId}`, next);
+        return next;
+      });
+
+      // Automatically cascade delete any linked sponsors
+      const linkedSponsors = (sponsors || []).filter(s => String(s.orgId) === String(orgId) || String(s.org_id) === String(orgId));
+      for (const ls of linkedSponsors) {
+        await deleteSponsor(ls.id).catch(console.error);
+      }
+      setSponsors(prev => {
+        const next = prev.filter(s => String(s.orgId) !== String(orgId) && String(s.org_id) !== String(orgId));
+        safeLocalStorageSet(`eventzone_cache_sponsors_${activeEventId}`, next);
+        return next;
+      });
+
+      // Automatically cascade delete any linked exhibitors
+      const linkedExhibitors = (exhibitors || []).filter(e => String(e.orgId) === String(orgId) || String(e.org_id) === String(orgId));
+      for (const le of linkedExhibitors) {
+        await deleteExhibitor(le.id).catch(console.error);
+      }
+      setExhibitors(prev => {
+        const next = prev.filter(e => String(e.orgId) !== String(orgId) && String(e.org_id) !== String(orgId));
+        safeLocalStorageSet(`eventzone_cache_exhibitors_${activeEventId}`, next);
+        return next;
+      });
+    } catch (err) {
+      console.error("Failed to delete organization:", err);
       throw err;
     }
   };
@@ -1962,18 +2106,21 @@ export function HomeContent() {
       const targetAttendee = attendees.find(a => String(a.id) === String(attendeeId));
       if (!targetAttendee) return;
 
+      const orgId = org?.id || org?.orgId || org?.org_id || null;
+      const orgName = org?.name || '';
+
       const updatedAttendee = {
         ...targetAttendee,
-        orgId: org.id || null,
-        org_id: org.id || null,
-        company: org.name || '',
+        orgId: orgId,
+        org_id: orgId,
+        company: orgName,
         jobTitle: roleData.jobTitle || targetAttendee.jobTitle || 'Company Representative',
         answers: {
           ...(targetAttendee.answers || {}),
-          company: org.name || '',
-          f_company: org.name || '',
-          orgId: org.id || null,
-          org_id: org.id || null,
+          company: orgName,
+          f_company: orgName,
+          orgId: orgId,
+          org_id: orgId,
           jobTitle: roleData.jobTitle || targetAttendee.jobTitle || 'Company Representative',
           f_job_title: roleData.jobTitle || targetAttendee.jobTitle || 'Company Representative'
         }
@@ -2020,8 +2167,11 @@ export function HomeContent() {
 
   const handleRegisterNewPersonnel = async (personnelData, org) => {
     try {
-      const isSponsor = org?.id ? sponsors.find(s => !s.isArchived && s.status !== 'archived' && (s.orgId === org.id || s.org_id === org.id)) : null;
-      const isExhibitor = org?.id ? exhibitors.find(e => !e.isArchived && e.status !== 'archived' && (e.orgId === org.id || e.org_id === org.id)) : null;
+      const orgId = org?.id || org?.orgId || org?.org_id || null;
+      const orgName = org?.name || '';
+
+      const isSponsor = orgId ? sponsors.find(s => !s.isArchived && s.status !== 'archived' && (s.orgId === orgId || s.org_id === orgId || s.id === orgId)) : sponsors.find(s => s.name?.toLowerCase() === orgName.toLowerCase());
+      const isExhibitor = orgId ? exhibitors.find(e => !e.isArchived && e.status !== 'archived' && (e.orgId === orgId || e.org_id === orgId || e.id === orgId)) : exhibitors.find(e => e.name?.toLowerCase() === orgName.toLowerCase());
 
       let tierName = "Partner Pass";
       if (isSponsor) {
@@ -2034,19 +2184,19 @@ export function HomeContent() {
         name: personnelData.name.trim(),
         email: personnelData.email.trim(),
         phone: personnelData.phone || '',
-        company: org.name || '',
-        orgId: org.id || null,
-        org_id: org.id || null,
+        company: orgName,
+        orgId: orgId,
+        org_id: orgId,
         jobTitle: personnelData.jobTitle || 'Company Representative',
         ticketType: tierName,
         ticket_type: tierName,
         status: 'registered',
         registeredDate: new Date().toISOString().split('T')[0],
         answers: {
-          company: org.name || '',
-          f_company: org.name || '',
-          orgId: org.id || null,
-          org_id: org.id || null,
+          company: orgName,
+          f_company: orgName,
+          orgId: orgId,
+          org_id: orgId,
           jobTitle: personnelData.jobTitle || 'Company Representative',
           f_job_title: personnelData.jobTitle || 'Company Representative'
         }
@@ -2755,18 +2905,6 @@ export function HomeContent() {
               <span className={`text-[9px] font-extrabold py-0.5 px-2 rounded-full ${currentView === "opportunities" ? "bg-white/25 text-white" : "bg-slate-100 text-slate-500"}`}>{opportunities.filter(o => !o.isArchived).length}</span>
             </button>
 
-            {/* Standalone Influencers Tab */}
-            <button 
-              onClick={() => setCurrentView("influencers")}
-              className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-left group ${currentView === "influencers" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
-            >
-              <div className="flex items-center gap-2">
-                <Share2 size={14} className={`shrink-0 ${currentView === "influencers" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
-                <span>{t("dash.influencers", "Influencers")}</span>
-              </div>
-              <span className={`text-[9px] font-extrabold py-0.5 px-2 rounded-full ${currentView === "influencers" ? "bg-white/25 text-white" : "bg-slate-100 text-slate-500"}`}>{influencers.filter(i => !i.isArchived).length}</span>
-            </button>
-
             {/* 1. Expandable Companies Submenu */}
             <div className="flex flex-col">
               <button 
@@ -2938,6 +3076,18 @@ export function HomeContent() {
               <span className={`text-[9px] font-extrabold py-0.5 px-2 rounded-full ${currentView === "logistics" ? "bg-white/25 text-white" : "bg-slate-100 text-slate-500"}`}>
                 {(logisticsData.inventory?.length || 0) + (logisticsData.vendors?.length || 0)}
               </span>
+            </button>
+
+            {/* Standalone Influencers Tab */}
+            <button 
+              onClick={() => setCurrentView("influencers")}
+              className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-left group ${currentView === "influencers" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+            >
+              <div className="flex items-center gap-2">
+                <Share2 size={14} className={`shrink-0 ${currentView === "influencers" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
+                <span>{t("dash.influencers", "Influencers")}</span>
+              </div>
+              <span className={`text-[9px] font-extrabold py-0.5 px-2 rounded-full ${currentView === "influencers" ? "bg-white/25 text-white" : "bg-slate-100 text-slate-500"}`}>{influencers.filter(i => !i.isArchived).length}</span>
             </button>
 
             <button 
@@ -3273,10 +3423,20 @@ export function HomeContent() {
             <FloorPlanModifier 
               key={activeFloorPlanId}
               exhibitors={exhibitors.map(ex => {
-                const org = organizations.find(o => String(o.id) === String(ex.org_id));
+                const org = organizations.find(o => String(o.id) === String(ex.org_id || ex.orgId));
                 return {
                   ...ex,
                   logo: ex.logo || org?.logo || '',
+                  description: ex.description || org?.description || org?.about || '',
+                  about: ex.about || ex.description || org?.about || org?.description || '',
+                  website: ex.website || org?.website || '',
+                  contact: ex.contact || ex.contactPerson || org?.contact || '',
+                  contactPerson: ex.contactPerson || ex.contact || org?.contact || '',
+                  contactEmail: ex.contactEmail || ex.email || org?.email || '',
+                  contactPhone: ex.contactPhone || ex.phone || org?.phone || '',
+                  contactPosition: ex.contactPosition || ex.position || ex.jobTitle || org?.jobTitle || 'Representative',
+                  contactPhoto: ex.contactPhoto || ex.contactAvatar || ex.photo || ex.avatar || '',
+                  personnel: ex.personnel || [],
                 };
               })}
               attendees={attendees}
@@ -3343,8 +3503,20 @@ export function HomeContent() {
                 setForms(prev => prev.map(f => f.id === formId ? { ...f, status: 'archived', isArchived: true } : f));
               }}
               onDeleteForm={async (formId) => {
-                await archiveForm(formId);
-                setForms(prev => prev.map(f => f.id === formId ? { ...f, status: 'archived', isArchived: true } : f));
+                await deleteForm(formId);
+                setForms(prev => prev.filter(f => f.id !== formId));
+              }}
+              onPermanentDeleteForm={async (formId) => {
+                await deleteForm(formId);
+                setForms(prev => prev.filter(f => f.id !== formId));
+              }}
+              onRestoreForm={async (formId) => {
+                const formToRestore = forms.find(f => f.id === formId);
+                if (formToRestore) {
+                  const updated = { ...formToRestore, status: 'active', isArchived: false };
+                  await upsertForm(updated, activeEventId);
+                  setForms(prev => prev.map(f => f.id === formId ? updated : f));
+                }
               }}
               onSubmitResponse={async (sub) => {
                 const saved = await submitFormResponse(sub, activeEventId);
@@ -3513,6 +3685,9 @@ export function HomeContent() {
                 onSaveDocument: handleSaveDocument,
                 onDeleteDocument: handleDeleteDocument,
                 onTogglePinDocument: handleTogglePinDocument,
+                onDeleteOrganization: handleDeleteOrganization,
+                onDeleteSponsor: handleDeleteSponsor,
+                onDeleteExhibitor: handleDeleteExhibitor,
                 onRefreshDocuments: async () => {
                   const fresh = await fetchDocuments(activeEventId);
                   if (fresh) setDocuments(fresh);
@@ -3586,6 +3761,9 @@ export function HomeContent() {
         onSaveOrganization={handleSaveOrganization}
         onSaveSponsor={handleSaveSponsor}
         onSaveExhibitor={handleSaveExhibitor}
+        onDeleteOrganization={handleDeleteOrganization}
+        onDeleteSponsor={handleDeleteSponsor}
+        onDeleteExhibitor={handleDeleteExhibitor}
         onAssignAttendeeToCompany={handleAssignAttendeeToCompany}
         onRemoveAttendeeFromCompany={handleRemoveAttendeeFromCompany}
         onRegisterNewPersonnel={handleRegisterNewPersonnel}
