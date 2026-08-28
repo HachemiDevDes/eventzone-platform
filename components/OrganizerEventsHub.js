@@ -280,23 +280,23 @@ export default function OrganizerEventsHub({
                     </div>
 
                     {/* Actions Footer */}
-                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500">
-                        <Users size={13} className="text-slate-400" />
-                        <span>{ev.attendeeCount || 4} Registered</span>
+                    <div className="pt-3.5 border-t border-slate-100 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium shrink-0 whitespace-nowrap">
+                        <Users size={14} className="text-slate-400 shrink-0" />
+                        <span><strong className="font-bold text-slate-800">{ev.attendeeCount ?? 0}</strong> Registered</span>
                       </div>
 
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-2 shrink-0">
                         {isArchived ? (
                           <button
                             onClick={() => {
                               if (onUnarchiveEvent) onUnarchiveEvent(ev.id);
                               else if (onArchiveEvent) onArchiveEvent(ev.id, 'published');
                             }}
-                            className="px-2.5 py-1.5 text-emerald-600 hover:text-emerald-700 rounded-lg hover:bg-emerald-50 font-bold text-xs transition-colors cursor-pointer flex items-center gap-1"
+                            className="h-8 px-2.5 text-emerald-600 hover:text-emerald-700 rounded-xl hover:bg-emerald-50 font-bold text-xs transition-colors cursor-pointer flex items-center gap-1.5 border border-emerald-200"
                             title="Restore Event"
                           >
-                            <RotateCcw size={12} />
+                            <RotateCcw size={13} />
                             <span>Restore</span>
                           </button>
                         ) : (
@@ -306,10 +306,10 @@ export default function OrganizerEventsHub({
                                 if (onArchiveEvent) onArchiveEvent(ev.id);
                                 else if (onDeleteEvent) onDeleteEvent(ev.id);
                               }}
-                              className="px-2.5 py-1.5 text-slate-400 hover:text-amber-600 rounded-lg hover:bg-amber-50 font-bold text-xs transition-colors cursor-pointer flex items-center gap-1"
-                              title="Archive Event (Soft delete - data is safe in archive)"
+                              className="h-8 px-2.5 text-slate-400 hover:text-amber-600 rounded-xl hover:bg-amber-50 font-bold text-xs transition-colors cursor-pointer flex items-center gap-1.5"
+                              title="Archive Event"
                             >
-                              <Archive size={12} />
+                              <Archive size={13} />
                               <span>Archive</span>
                             </button>
                           )
@@ -319,15 +319,15 @@ export default function OrganizerEventsHub({
                           href={`/${ev.slug || ev.id}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-blue-600 rounded-xl transition-all cursor-pointer"
+                          className="h-8 w-8 flex items-center justify-center bg-slate-100 hover:bg-blue-50 text-slate-500 hover:text-blue-600 rounded-xl transition-all cursor-pointer border border-slate-200/60"
                           title="View Public Landing Page"
                         >
-                          <ExternalLink size={14} />
+                          <ExternalLink size={13} />
                         </a>
 
                         <button
                           onClick={() => onSelectEvent(ev.id)}
-                          className="px-3.5 py-2 bg-blue-50 hover:bg-blue-600 text-blue-700 hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
+                          className="h-8 px-3.5 bg-blue-50 hover:bg-blue-600 text-blue-700 hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer border border-blue-200/80 hover:border-blue-600 shadow-xs"
                         >
                           Open Dashboard
                         </button>
