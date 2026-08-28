@@ -1923,23 +1923,21 @@ export function HomeContent() {
       const cleanTargetId = String(saved.id);
       const cleanName = (saved.name || '').trim().toLowerCase();
 
+      const liaisonContact = saved.contact || orgData.contact || '';
+      const liaisonTitle = saved.jobTitle || orgData.jobTitle || orgData.contactTitle || '';
+      const liaisonEmail = saved.email || orgData.email || orgData.contactEmail || '';
+      const liaisonPhone = saved.phone || orgData.phone || orgData.contactPhone || '';
+
       setOrganizations(prev => {
-        const exists = prev.some(o => 
-          String(o.id) === cleanTargetId || 
-          (orgData.id && String(o.id) === String(orgData.id)) ||
-          (o.name && cleanName && o.name.trim().toLowerCase() === cleanName)
+        const withoutTarget = prev.filter(o => 
+          String(o.id) !== cleanTargetId && 
+          (!orgData.id || String(o.id) !== String(orgData.id)) &&
+          (!cleanName || (o.name || '').trim().toLowerCase() !== cleanName)
         );
-        if (exists) {
-          return prev.map(o => 
-            (String(o.id) === cleanTargetId || (orgData.id && String(o.id) === String(orgData.id)) || (o.name && cleanName && o.name.trim().toLowerCase() === cleanName))
-              ? { ...o, ...saved, id: saved.id }
-              : o
-          );
-        }
-        return [...prev, saved];
+        return [...withoutTarget, { ...saved, id: saved.id, contact: liaisonContact, jobTitle: liaisonTitle, email: liaisonEmail, phone: liaisonPhone }];
       });
 
-      // 1. Manage Sponsor Linkage (Sync if existing, create if requested)
+      // 1. Manage Sponsor Linkage (Sync Contact Liaison if existing, create if requested)
       const existingSponsor = (sponsors || []).find(s => !s.isArchived && s.status !== 'archived' && (
         String(s.orgId) === cleanTargetId || 
         String(s.org_id) === cleanTargetId ||
@@ -1952,11 +1950,38 @@ export function HomeContent() {
           name: saved.name,
           image: saved.logo || existingSponsor.image || existingSponsor.logo || '',
           industry: saved.industry || existingSponsor.industry || '',
-          contact: saved.contact || existingSponsor.contact || '',
+          contact: liaisonContact || existingSponsor.contact || '',
+          contactPerson: liaisonContact || existingSponsor.contactPerson || '',
+          jobTitle: liaisonTitle || existingSponsor.jobTitle || '',
+          contactPosition: liaisonTitle || existingSponsor.contactPosition || '',
+          email: liaisonEmail || existingSponsor.email || '',
+          contactEmail: liaisonEmail || existingSponsor.contactEmail || '',
+          phone: liaisonPhone || existingSponsor.phone || '',
+          contactPhone: liaisonPhone || existingSponsor.contactPhone || '',
           website: saved.website || existingSponsor.website || '#'
         };
-        const savedSponsor = await upsertSponsor(updatedSponsor, activeEventId);
-        setSponsors(prev => prev.map(s => s.id === savedSponsor.id ? savedSponsor : s));
+        try {
+          const savedSponsor = await upsertSponsor(updatedSponsor, activeEventId);
+          setSponsors(prev => {
+            const cleanSpName = (savedSponsor.name || '').trim().toLowerCase();
+            const withoutSp = prev.filter(s => 
+              String(s.id) !== String(savedSponsor.id) && 
+              String(s.id) !== String(existingSponsor.id) && 
+              (!cleanSpName || (s.name || '').trim().toLowerCase() !== cleanSpName)
+            );
+            return [...withoutSp, savedSponsor];
+          });
+        } catch (spErr) {
+          console.warn("Could not sync organization liaison to sponsor DB:", spErr);
+          setSponsors(prev => {
+            const cleanSpName = (updatedSponsor.name || '').trim().toLowerCase();
+            const withoutSp = prev.filter(s => 
+              String(s.id) !== String(existingSponsor.id) && 
+              (!cleanSpName || (s.name || '').trim().toLowerCase() !== cleanSpName)
+            );
+            return [...withoutSp, updatedSponsor];
+          });
+        }
       } else if (linkOptions.createSponsor) {
         const sponsorPayload = {
           name: saved.name,
@@ -1967,17 +1992,31 @@ export function HomeContent() {
           website: saved.website || '#',
           image: saved.logo || '',
           industry: saved.industry || '',
-          contact: saved.contact || '',
+          contact: liaisonContact,
+          contactPerson: liaisonContact,
+          jobTitle: liaisonTitle,
+          contactPosition: liaisonTitle,
+          email: liaisonEmail,
+          contactEmail: liaisonEmail,
+          phone: liaisonPhone,
+          contactPhone: liaisonPhone,
           booth: linkOptions.sponsorBooth || '',
           perks: linkOptions.sponsorPerks || ['vip_passes', 'main_stage_branding'],
           notes: linkOptions.sponsorNotes || '',
           status: 'active'
         };
         const savedSponsor = await upsertSponsor(sponsorPayload, activeEventId);
-        setSponsors(prev => [...prev, savedSponsor]);
+        setSponsors(prev => {
+          const cleanSpName = (savedSponsor.name || '').trim().toLowerCase();
+          const withoutSp = prev.filter(s => 
+            String(s.id) !== String(savedSponsor.id) && 
+            (!cleanSpName || (s.name || '').trim().toLowerCase() !== cleanSpName)
+          );
+          return [...withoutSp, savedSponsor];
+        });
       }
 
-      // 2. Manage Exhibitor Linkage (Sync if existing, create if requested)
+      // 2. Manage Exhibitor Linkage (Sync Contact Liaison if existing, create if requested)
       const existingExhibitor = (exhibitors || []).find(e => !e.isArchived && e.status !== 'archived' && (
         String(e.orgId) === cleanTargetId || 
         String(e.org_id) === cleanTargetId ||
@@ -1990,13 +2029,37 @@ export function HomeContent() {
           name: saved.name,
           logo: saved.logo || existingExhibitor.logo || '',
           industry: saved.industry || existingExhibitor.industry || '',
-          contact: saved.contact || existingExhibitor.contact || '',
-          contactPerson: saved.contact || existingExhibitor.contact || '',
-          email: saved.email || existingExhibitor.email || '',
-          phone: saved.phone || existingExhibitor.phone || ''
+          contact: liaisonContact || existingExhibitor.contact || '',
+          contactPerson: liaisonContact || existingExhibitor.contactPerson || '',
+          jobTitle: liaisonTitle || existingExhibitor.jobTitle || '',
+          contactPosition: liaisonTitle || existingExhibitor.contactPosition || '',
+          email: liaisonEmail || existingExhibitor.email || '',
+          contactEmail: liaisonEmail || existingExhibitor.contactEmail || '',
+          phone: liaisonPhone || existingExhibitor.phone || '',
+          contactPhone: liaisonPhone || existingExhibitor.contactPhone || ''
         };
-        const savedExhibitor = await upsertExhibitor(updatedExhibitor, activeEventId);
-        setExhibitors(prev => prev.map(e => e.id === savedExhibitor.id ? savedExhibitor : e));
+        try {
+          const savedExhibitor = await upsertExhibitor(updatedExhibitor, activeEventId);
+          setExhibitors(prev => {
+            const cleanExName = (savedExhibitor.name || '').trim().toLowerCase();
+            const withoutEx = prev.filter(e => 
+              String(e.id) !== String(savedExhibitor.id) && 
+              String(e.id) !== String(existingExhibitor.id) && 
+              (!cleanExName || (e.name || '').trim().toLowerCase() !== cleanExName)
+            );
+            return [...withoutEx, savedExhibitor];
+          });
+        } catch (exErr) {
+          console.warn("Could not sync organization liaison to exhibitor DB:", exErr);
+          setExhibitors(prev => {
+            const cleanExName = (updatedExhibitor.name || '').trim().toLowerCase();
+            const withoutEx = prev.filter(e => 
+              String(e.id) !== String(existingExhibitor.id) && 
+              (!cleanExName || (e.name || '').trim().toLowerCase() !== cleanExName)
+            );
+            return [...withoutEx, updatedExhibitor];
+          });
+        }
       } else if (linkOptions.createExhibitor) {
         const exhibitorPayload = {
           name: saved.name,
@@ -2007,14 +2070,26 @@ export function HomeContent() {
           staffCount: linkOptions.exhibitorStaffCount || 2,
           description: linkOptions.exhibitorProducts || '',
           industry: saved.industry || '',
-          contact: saved.contact || '',
-          email: saved.email || '',
-          phone: saved.phone || '',
+          contact: liaisonContact,
+          contactPerson: liaisonContact,
+          jobTitle: liaisonTitle,
+          contactPosition: liaisonTitle,
+          email: liaisonEmail,
+          contactEmail: liaisonEmail,
+          phone: liaisonPhone,
+          contactPhone: liaisonPhone,
           logo: saved.logo || '',
           status: 'active'
         };
         const savedExhibitor = await upsertExhibitor(exhibitorPayload, activeEventId);
-        setExhibitors(prev => [...prev, savedExhibitor]);
+        setExhibitors(prev => {
+          const cleanExName = (savedExhibitor.name || '').trim().toLowerCase();
+          const withoutEx = prev.filter(e => 
+            String(e.id) !== String(savedExhibitor.id) && 
+            (!cleanExName || (e.name || '').trim().toLowerCase() !== cleanExName)
+          );
+          return [...withoutEx, savedExhibitor];
+        });
       }
 
       return saved;
@@ -2031,42 +2106,110 @@ export function HomeContent() {
       const cleanName = (saved.name || '').trim().toLowerCase();
       const targetOrgId = sponsorData.orgId || sponsorData.org_id || saved.orgId || saved.org_id;
 
-      setSponsors(prev => {
-        const exists = prev.some(s => 
-          String(s.id) === cleanTargetId ||
-          (sponsorData.id && String(s.id) === String(sponsorData.id)) ||
-          (targetOrgId && (String(s.orgId) === String(targetOrgId) || String(s.org_id) === String(targetOrgId))) ||
-          (s.name && cleanName && s.name.trim().toLowerCase() === cleanName)
-        );
+      const liaisonContact = saved.contact || saved.contactPerson || sponsorData.contact || sponsorData.contactPerson || '';
+      const liaisonTitle = saved.jobTitle || saved.contactPosition || sponsorData.jobTitle || sponsorData.contactPosition || '';
+      const liaisonEmail = saved.email || saved.contactEmail || sponsorData.email || sponsorData.contactEmail || '';
+      const liaisonPhone = saved.phone || saved.contactPhone || sponsorData.phone || sponsorData.contactPhone || '';
 
-        if (exists) {
-          return prev.map(s => 
-            (String(s.id) === cleanTargetId || (sponsorData.id && String(s.id) === String(sponsorData.id)) || (targetOrgId && (String(s.orgId) === String(targetOrgId) || String(s.org_id) === String(targetOrgId))) || (s.name && cleanName && s.name.trim().toLowerCase() === cleanName))
-              ? { ...s, ...saved, id: saved.id }
-              : s
-          );
-        }
-        return [...prev, saved];
+      setSponsors(prev => {
+        const withoutTarget = prev.filter(s => 
+          String(s.id) !== cleanTargetId &&
+          (!sponsorData.id || String(s.id) !== String(sponsorData.id)) &&
+          (!targetOrgId || (String(s.orgId) !== String(targetOrgId) && String(s.org_id) !== String(targetOrgId))) &&
+          (!cleanName || (s.name || '').trim().toLowerCase() !== cleanName)
+        );
+        return [...withoutTarget, { ...saved, id: saved.id, contact: liaisonContact, contactPerson: liaisonContact, jobTitle: liaisonTitle, contactPosition: liaisonTitle, email: liaisonEmail, contactEmail: liaisonEmail, phone: liaisonPhone, contactPhone: liaisonPhone }];
       });
 
-      // If linked with an organization, sync contact & details in state cleanly
-      if (targetOrgId || cleanName) {
-        setOrganizations(prev => prev.map(o => {
-          if ((targetOrgId && (String(o.id) === String(targetOrgId) || String(o.orgId) === String(targetOrgId))) || (o.name && cleanName && o.name.trim().toLowerCase() === cleanName)) {
-            return {
-              ...o,
-              name: sponsorData.name || o.name,
-              logo: sponsorData.image || sponsorData.logo || o.logo,
-              industry: sponsorData.industry || o.industry,
-              contact: sponsorData.contact || sponsorData.contactPerson || o.contact,
-              jobTitle: sponsorData.jobTitle || o.jobTitle,
-              email: sponsorData.email || sponsorData.contactEmail || o.email,
-              phone: sponsorData.phone || sponsorData.contactPhone || o.phone,
-              notes: sponsorData.notes || o.notes
-            };
-          }
-          return o;
-        }));
+      // 1. Sync Contact Liaison to Organization (both in DB and state)
+      const existingOrg = organizations.find(o => 
+        (targetOrgId && (String(o.id) === String(targetOrgId) || String(o.orgId) === String(targetOrgId))) || 
+        (o.name && cleanName && o.name.trim().toLowerCase() === cleanName)
+      );
+
+      let savedOrgId = targetOrgId;
+      if (existingOrg) {
+        const updatedOrg = {
+          ...existingOrg,
+          name: sponsorData.name || existingOrg.name,
+          logo: sponsorData.image || sponsorData.logo || existingOrg.logo,
+          industry: sponsorData.industry || existingOrg.industry,
+          contact: liaisonContact || existingOrg.contact || '',
+          contactPerson: liaisonContact || existingOrg.contactPerson || '',
+          jobTitle: liaisonTitle || existingOrg.jobTitle || '',
+          contactPosition: liaisonTitle || existingOrg.contactPosition || '',
+          email: liaisonEmail || existingOrg.email || '',
+          contactEmail: liaisonEmail || existingOrg.contactEmail || '',
+          phone: liaisonPhone || existingOrg.phone || '',
+          contactPhone: liaisonPhone || existingOrg.contactPhone || '',
+          notes: sponsorData.notes || existingOrg.notes
+        };
+        try {
+          const savedOrg = await upsertOrganization(updatedOrg, activeEventId);
+          savedOrgId = savedOrg.id;
+          setOrganizations(prev => {
+            const cleanOrgName = (savedOrg.name || '').trim().toLowerCase();
+            const withoutOrg = prev.filter(o => 
+              String(o.id) !== String(savedOrg.id) && 
+              String(o.id) !== String(existingOrg.id) && 
+              (!cleanOrgName || (o.name || '').trim().toLowerCase() !== cleanOrgName)
+            );
+            return [...withoutOrg, savedOrg];
+          });
+        } catch (orgErr) {
+          console.warn("Could not sync sponsor liaison to organization DB:", orgErr);
+          setOrganizations(prev => {
+            const cleanOrgName = (updatedOrg.name || '').trim().toLowerCase();
+            const withoutOrg = prev.filter(o => 
+              String(o.id) !== String(existingOrg.id) && 
+              (!cleanOrgName || (o.name || '').trim().toLowerCase() !== cleanOrgName)
+            );
+            return [...withoutOrg, updatedOrg];
+          });
+        }
+      }
+
+      // 2. Sync Contact Liaison to linked Exhibitor (both in DB and state)
+      const linkedExhibitor = exhibitors.find(e => !e.isArchived && e.status !== 'archived' && (
+        (savedOrgId && (String(e.orgId) === String(savedOrgId) || String(e.org_id) === String(savedOrgId))) ||
+        (targetOrgId && (String(e.orgId) === String(targetOrgId) || String(e.org_id) === String(targetOrgId))) ||
+        (e.name && cleanName && e.name.trim().toLowerCase() === cleanName)
+      ));
+
+      if (linkedExhibitor) {
+        const updatedExhibitor = {
+          ...linkedExhibitor,
+          contact: liaisonContact || linkedExhibitor.contact,
+          contactPerson: liaisonContact || linkedExhibitor.contactPerson,
+          jobTitle: liaisonTitle || linkedExhibitor.jobTitle,
+          contactPosition: liaisonTitle || linkedExhibitor.contactPosition,
+          email: liaisonEmail || linkedExhibitor.email,
+          contactEmail: liaisonEmail || linkedExhibitor.contactEmail,
+          phone: liaisonPhone || linkedExhibitor.phone,
+          contactPhone: liaisonPhone || linkedExhibitor.contactPhone
+        };
+        try {
+          const savedEx = await upsertExhibitor(updatedExhibitor, activeEventId);
+          setExhibitors(prev => {
+            const cleanExName = (savedEx.name || '').trim().toLowerCase();
+            const withoutEx = prev.filter(e => 
+              String(e.id) !== String(savedEx.id) && 
+              String(e.id) !== String(linkedExhibitor.id) && 
+              (!cleanExName || (e.name || '').trim().toLowerCase() !== cleanExName)
+            );
+            return [...withoutEx, savedEx];
+          });
+        } catch (exErr) {
+          console.warn("Could not sync sponsor liaison to exhibitor DB:", exErr);
+          setExhibitors(prev => {
+            const cleanExName = (updatedExhibitor.name || '').trim().toLowerCase();
+            const withoutEx = prev.filter(e => 
+              String(e.id) !== String(linkedExhibitor.id) && 
+              (!cleanExName || (e.name || '').trim().toLowerCase() !== cleanExName)
+            );
+            return [...withoutEx, updatedExhibitor];
+          });
+        }
       }
 
       return saved;
@@ -2083,42 +2226,110 @@ export function HomeContent() {
       const cleanName = (saved.name || '').trim().toLowerCase();
       const targetOrgId = exhibitorData.orgId || exhibitorData.org_id || saved.orgId || saved.org_id;
 
-      setExhibitors(prev => {
-        const exists = prev.some(e => 
-          String(e.id) === cleanTargetId ||
-          (exhibitorData.id && String(e.id) === String(exhibitorData.id)) ||
-          (targetOrgId && (String(e.orgId) === String(targetOrgId) || String(e.org_id) === String(targetOrgId))) ||
-          (e.name && cleanName && e.name.trim().toLowerCase() === cleanName)
-        );
+      const liaisonContact = saved.contact || saved.contactPerson || exhibitorData.contact || exhibitorData.contactPerson || '';
+      const liaisonTitle = saved.jobTitle || saved.contactPosition || exhibitorData.jobTitle || exhibitorData.contactPosition || '';
+      const liaisonEmail = saved.email || saved.contactEmail || exhibitorData.email || exhibitorData.contactEmail || '';
+      const liaisonPhone = saved.phone || saved.contactPhone || exhibitorData.phone || exhibitorData.contactPhone || '';
 
-        if (exists) {
-          return prev.map(e => 
-            (String(e.id) === cleanTargetId || (exhibitorData.id && String(e.id) === String(exhibitorData.id)) || (targetOrgId && (String(e.orgId) === String(targetOrgId) || String(e.org_id) === String(targetOrgId))) || (e.name && cleanName && e.name.trim().toLowerCase() === cleanName))
-              ? { ...e, ...saved, id: saved.id }
-              : e
-          );
-        }
-        return [...prev, saved];
+      setExhibitors(prev => {
+        const withoutTarget = prev.filter(e => 
+          String(e.id) !== cleanTargetId &&
+          (!exhibitorData.id || String(e.id) !== String(exhibitorData.id)) &&
+          (!targetOrgId || (String(e.orgId) !== String(targetOrgId) && String(e.org_id) !== String(targetOrgId))) &&
+          (!cleanName || (e.name || '').trim().toLowerCase() !== cleanName)
+        );
+        return [...withoutTarget, { ...saved, id: saved.id, contact: liaisonContact, contactPerson: liaisonContact, jobTitle: liaisonTitle, contactPosition: liaisonTitle, email: liaisonEmail, contactEmail: liaisonEmail, phone: liaisonPhone, contactPhone: liaisonPhone }];
       });
 
-      // If linked with an organization, sync contact & details in state cleanly
-      if (targetOrgId || cleanName) {
-        setOrganizations(prev => prev.map(o => {
-          if ((targetOrgId && (String(o.id) === String(targetOrgId) || String(o.orgId) === String(targetOrgId))) || (o.name && cleanName && o.name.trim().toLowerCase() === cleanName)) {
-            return {
-              ...o,
-              name: exhibitorData.name || o.name,
-              logo: exhibitorData.logo || o.logo,
-              industry: exhibitorData.industry || o.industry,
-              contact: exhibitorData.contact || exhibitorData.contactPerson || o.contact,
-              jobTitle: exhibitorData.jobTitle || o.jobTitle,
-              email: exhibitorData.email || exhibitorData.contactEmail || o.email,
-              phone: exhibitorData.phone || exhibitorData.contactPhone || o.phone,
-              notes: exhibitorData.notes || o.notes
-            };
-          }
-          return o;
-        }));
+      // 1. Sync Contact Liaison to Organization (both in DB and state)
+      const existingOrg = organizations.find(o => 
+        (targetOrgId && (String(o.id) === String(targetOrgId) || String(o.orgId) === String(targetOrgId))) || 
+        (o.name && cleanName && o.name.trim().toLowerCase() === cleanName)
+      );
+
+      let savedOrgId = targetOrgId;
+      if (existingOrg) {
+        const updatedOrg = {
+          ...existingOrg,
+          name: exhibitorData.name || existingOrg.name,
+          logo: exhibitorData.logo || existingOrg.logo,
+          industry: exhibitorData.industry || existingOrg.industry,
+          contact: liaisonContact || existingOrg.contact || '',
+          contactPerson: liaisonContact || existingOrg.contactPerson || '',
+          jobTitle: liaisonTitle || existingOrg.jobTitle || '',
+          contactPosition: liaisonTitle || existingOrg.contactPosition || '',
+          email: liaisonEmail || existingOrg.email || '',
+          contactEmail: liaisonEmail || existingOrg.contactEmail || '',
+          phone: liaisonPhone || existingOrg.phone || '',
+          contactPhone: liaisonPhone || existingOrg.contactPhone || '',
+          notes: exhibitorData.notes || existingOrg.notes
+        };
+        try {
+          const savedOrg = await upsertOrganization(updatedOrg, activeEventId);
+          savedOrgId = savedOrg.id;
+          setOrganizations(prev => {
+            const cleanOrgName = (savedOrg.name || '').trim().toLowerCase();
+            const withoutOrg = prev.filter(o => 
+              String(o.id) !== String(savedOrg.id) && 
+              String(o.id) !== String(existingOrg.id) && 
+              (!cleanOrgName || (o.name || '').trim().toLowerCase() !== cleanOrgName)
+            );
+            return [...withoutOrg, savedOrg];
+          });
+        } catch (orgErr) {
+          console.warn("Could not sync exhibitor liaison to organization DB:", orgErr);
+          setOrganizations(prev => {
+            const cleanOrgName = (updatedOrg.name || '').trim().toLowerCase();
+            const withoutOrg = prev.filter(o => 
+              String(o.id) !== String(existingOrg.id) && 
+              (!cleanOrgName || (o.name || '').trim().toLowerCase() !== cleanOrgName)
+            );
+            return [...withoutOrg, updatedOrg];
+          });
+        }
+      }
+
+      // 2. Sync Contact Liaison to linked Sponsor (both in DB and state)
+      const linkedSponsor = sponsors.find(s => !s.isArchived && s.status !== 'archived' && (
+        (savedOrgId && (String(s.orgId) === String(savedOrgId) || String(s.org_id) === String(savedOrgId))) ||
+        (targetOrgId && (String(s.orgId) === String(targetOrgId) || String(s.org_id) === String(targetOrgId))) ||
+        (s.name && cleanName && s.name.trim().toLowerCase() === cleanName)
+      ));
+
+      if (linkedSponsor) {
+        const updatedSponsor = {
+          ...linkedSponsor,
+          contact: liaisonContact || linkedSponsor.contact,
+          contactPerson: liaisonContact || linkedSponsor.contactPerson,
+          jobTitle: liaisonTitle || linkedSponsor.jobTitle,
+          contactPosition: liaisonTitle || linkedSponsor.contactPosition,
+          email: liaisonEmail || linkedSponsor.email,
+          contactEmail: liaisonEmail || linkedSponsor.contactEmail,
+          phone: liaisonPhone || linkedSponsor.phone,
+          contactPhone: liaisonPhone || linkedSponsor.contactPhone
+        };
+        try {
+          const savedSp = await upsertSponsor(updatedSponsor, activeEventId);
+          setSponsors(prev => {
+            const cleanSpName = (savedSp.name || '').trim().toLowerCase();
+            const withoutSp = prev.filter(s => 
+              String(s.id) !== String(savedSp.id) && 
+              String(s.id) !== String(linkedSponsor.id) && 
+              (!cleanSpName || (s.name || '').trim().toLowerCase() !== cleanSpName)
+            );
+            return [...withoutSp, savedSp];
+          });
+        } catch (spErr) {
+          console.warn("Could not sync exhibitor liaison to sponsor DB:", spErr);
+          setSponsors(prev => {
+            const cleanSpName = (updatedSponsor.name || '').trim().toLowerCase();
+            const withoutSp = prev.filter(s => 
+              String(s.id) !== String(linkedSponsor.id) && 
+              (!cleanSpName || (s.name || '').trim().toLowerCase() !== cleanSpName)
+            );
+            return [...withoutSp, updatedSponsor];
+          });
+        }
       }
 
       return saved;
@@ -2131,7 +2342,9 @@ export function HomeContent() {
   const handleDeleteSponsor = async (sponsorId) => {
     try {
       if (!sponsorId) return;
-      await deleteSponsor(sponsorId);
+
+      // 1. Delete sponsor from DB and State only (do not delete organization)
+      await deleteSponsor(sponsorId).catch(console.warn);
       setSponsors(prev => {
         const next = prev.filter(s => String(s.id) !== String(sponsorId));
         safeLocalStorageSet(`eventzone_cache_sponsors_${activeEventId}`, next);
@@ -2146,13 +2359,16 @@ export function HomeContent() {
   const handleDeleteExhibitor = async (exhibitorId) => {
     try {
       if (!exhibitorId) return;
-      await deleteExhibitor(exhibitorId);
+
+      // 1. Delete exhibitor from DB and State only (do not delete organization)
+      await deleteExhibitor(exhibitorId).catch(console.warn);
       setExhibitors(prev => {
         const next = prev.filter(e => String(e.id) !== String(exhibitorId));
         safeLocalStorageSet(`eventzone_cache_exhibitors_${activeEventId}`, next);
         return next;
       });
-      // Also unassign this exhibitor from any floor plan booth
+
+      // 2. Unassign this exhibitor from floor plans
       setFloorPlans(prev => prev.map(fp => {
         let changed = false;
         const newElements = (fp.elements || []).map(el => {
@@ -2178,34 +2394,82 @@ export function HomeContent() {
   const handleDeleteOrganization = async (orgId) => {
     try {
       if (!orgId) return;
-      await deleteOrganization(orgId);
+      const targetOrg = (organizations || []).find(o => String(o.id) === String(orgId));
+      const cleanName = (targetOrg?.name || '').trim().toLowerCase();
+
+      // 1. Delete organization in DB and State
+      await deleteOrganization(orgId).catch(console.warn);
       setOrganizations(prev => {
         const next = prev.filter(o => String(o.id) !== String(orgId));
         safeLocalStorageSet(`eventzone_cache_organizations_${activeEventId}`, next);
         return next;
       });
 
-      // Automatically cascade delete any linked sponsors
-      const linkedSponsors = (sponsors || []).filter(s => String(s.orgId) === String(orgId) || String(s.org_id) === String(orgId));
+      // 2. Cascade delete any linked sponsors
+      const linkedSponsors = (sponsors || []).filter(s => 
+        String(s.orgId) === String(orgId) || 
+        String(s.org_id) === String(orgId) ||
+        (cleanName && s.name && s.name.trim().toLowerCase() === cleanName)
+      );
       for (const ls of linkedSponsors) {
-        await deleteSponsor(ls.id).catch(console.error);
+        await deleteSponsor(ls.id).catch(console.warn);
       }
       setSponsors(prev => {
-        const next = prev.filter(s => String(s.orgId) !== String(orgId) && String(s.org_id) !== String(orgId));
+        const next = prev.filter(s => 
+          String(s.orgId) !== String(orgId) && 
+          String(s.org_id) !== String(orgId) &&
+          (cleanName ? (s.name || '').trim().toLowerCase() !== cleanName : true)
+        );
         safeLocalStorageSet(`eventzone_cache_sponsors_${activeEventId}`, next);
         return next;
       });
 
-      // Automatically cascade delete any linked exhibitors
-      const linkedExhibitors = (exhibitors || []).filter(e => String(e.orgId) === String(orgId) || String(e.org_id) === String(orgId));
+      // 3. Cascade delete any linked exhibitors
+      const linkedExhibitors = (exhibitors || []).filter(e => 
+        String(e.orgId) === String(orgId) || 
+        String(e.org_id) === String(orgId) ||
+        (cleanName && e.name && e.name.trim().toLowerCase() === cleanName)
+      );
       for (const le of linkedExhibitors) {
-        await deleteExhibitor(le.id).catch(console.error);
+        await deleteExhibitor(le.id).catch(console.warn);
       }
       setExhibitors(prev => {
-        const next = prev.filter(e => String(e.orgId) !== String(orgId) && String(e.org_id) !== String(orgId));
+        const next = prev.filter(e => 
+          String(e.orgId) !== String(orgId) && 
+          String(e.org_id) !== String(orgId) &&
+          (cleanName ? (e.name || '').trim().toLowerCase() !== cleanName : true)
+        );
         safeLocalStorageSet(`eventzone_cache_exhibitors_${activeEventId}`, next);
         return next;
       });
+
+      // 4. Unassign from floor plans
+      if (linkedExhibitors.length > 0) {
+        setFloorPlans(prev => prev.map(fp => {
+          let changed = false;
+          const newElements = (fp.elements || []).map(el => {
+            if (linkedExhibitors.some(le => String(el.exhibitorId) === String(le.id))) {
+              changed = true;
+              return { ...el, exhibitorId: null, status: 'available' };
+            }
+            return el;
+          });
+          if (changed) {
+            const updatedFp = { ...fp, elements: newElements };
+            saveFloorPlanWithStatus(updatedFp);
+            return updatedFp;
+          }
+          return fp;
+        }));
+      }
+
+      // 5. Unassign linked attendees from this company
+      setAttendees(prev => prev.map(a => {
+        if (String(a.orgId) === String(orgId) || String(a.org_id) === String(orgId) || (cleanName && a.company && a.company.trim().toLowerCase() === cleanName)) {
+          return { ...a, orgId: null, org_id: null, company: '' };
+        }
+        return a;
+      }));
     } catch (err) {
       console.error("Failed to delete organization:", err);
       throw err;
@@ -3254,109 +3518,6 @@ export function HomeContent() {
               <span>{t("dash.developers", "Developers & API")}</span>
             </button>
           </nav>
-        </div>
-
-
-
-        {/* Sidebar Footer: User Profile Pill & Role Switcher */}
-        <div className="pt-3 border-t border-slate-150 relative">
-          <div 
-            onClick={() => setProfileDropdownOpen(o => !o)}
-            className="flex items-center justify-between p-2 rounded-2xl hover:bg-slate-50 cursor-pointer transition-colors"
-          >
-            <div className="flex items-center gap-2.5 overflow-hidden">
-              <img 
-                src={currentUser?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80"} 
-                alt="Avatar" 
-                className="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0" 
-              />
-              <div className="flex flex-col text-left overflow-hidden">
-                <span className="text-xs font-bold text-slate-800 truncate leading-tight">{currentUser?.fullName || "Organizer"}</span>
-                <span className="text-[9px] font-semibold text-blue-600">Organizer Mode</span>
-              </div>
-            </div>
-            <ChevronDown size={13} className="text-slate-400 shrink-0" />
-          </div>
-
-          {/* Profile Dropdown */}
-          {profileDropdownOpen && (
-            <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-slate-200 rounded-2xl shadow-xl p-2 space-y-1 z-50 animate-scale-up">
-              {/* 1. My Profile */}
-              <button
-                onClick={() => {
-                  setProfileDropdownOpen(false);
-                  setCurrentView("profile");
-                }}
-                className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:bg-slate-50 flex items-center gap-2.5 transition-colors cursor-pointer"
-              >
-                <User size={14} className="text-slate-500 shrink-0" />
-                <span>{t("nav.myProfile", "My Profile")}</span>
-              </button>
-
-              {/* 2. My Tickets */}
-              <button
-                onClick={() => {
-                  setProfileDropdownOpen(false);
-                  setCurrentView("visitor-portal");
-                }}
-                className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-emerald-700 hover:bg-emerald-50 flex items-center justify-between transition-colors cursor-pointer"
-              >
-                <div className="flex items-center gap-2.5">
-                  <Ticket size={14} className="text-emerald-600 shrink-0" />
-                  <span>{t("nav.myTickets", "My Tickets")}</span>
-                </div>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-white font-black text-[10px]">
-                  {visitorRegistrations.length}
-                </span>
-              </button>
-
-              {/* 3. Add an Event in Menu */}
-              <button
-                onClick={() => {
-                  setProfileDropdownOpen(false);
-                  setCurrentView("create-event");
-                }}
-                className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-blue-600 hover:bg-blue-50 flex items-center gap-2.5 transition-colors cursor-pointer"
-              >
-                <Plus size={14} className="text-blue-600 shrink-0 stroke-[2.5]" />
-                <span>{t("nav.addEvent", "Add an Event")}</span>
-              </button>
-
-              {/* 4. Organizer Center */}
-              <button
-                onClick={() => {
-                  setProfileDropdownOpen(false);
-                  setCurrentView("events-hub");
-                }}
-                className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 transition-colors cursor-pointer"
-              >
-                <Building2 size={14} className="text-slate-500 shrink-0" />
-                <span>{t("nav.organizerCenter", "Organizer Center")}</span>
-              </button>
-
-              {/* 5. Public Home */}
-              <button
-                onClick={() => {
-                  setProfileDropdownOpen(false);
-                  setCurrentView("home");
-                }}
-                className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 transition-colors cursor-pointer"
-              >
-                <HomeIcon size={14} className="text-slate-400 shrink-0" />
-                <span>{t("nav.publicHome", "Public Home")}</span>
-              </button>
-
-              <div className="h-px bg-slate-100 my-1" />
-
-              <button
-                onClick={handleSignOut}
-                className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-2.5 transition-colors cursor-pointer"
-              >
-                <LogOut size={14} className="text-rose-500 shrink-0" />
-                <span>{t("nav.signOut", "Sign Out")}</span>
-              </button>
-            </div>
-          )}
         </div>
       </aside>
       )}
