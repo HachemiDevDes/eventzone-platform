@@ -698,60 +698,7 @@ export function HomeContent() {
       };
 
       try {
-        // 1. High-Performance Bundle Fetch (returns event, tickets, sessions, sponsors, exhibitors, orgs, forms, floor plans, rsvp settings, influencers, opportunities, team in 1 fast query)
-        fetchEventBundle(activeEventId).then((bundle) => {
-          if (bundle) {
-            if (bundle.event) {
-              setEventDetails(bundle.event);
-              safeLocalStorageSet(`eventzone_cached_event_${activeEventId}`, bundle.event);
-            }
-            if (bundle.tickets) {
-              setTickets(bundle.tickets);
-              safeLocalStorageSet(`eventzone_cache_tickets_${activeEventId}`, bundle.tickets);
-            }
-            if (bundle.sessions) {
-              setSessions(bundle.sessions);
-              safeLocalStorageSet(`eventzone_cache_sessions_${activeEventId}`, bundle.sessions);
-            }
-            if (bundle.sponsors) {
-              setSponsors(bundle.sponsors);
-              safeLocalStorageSet(`eventzone_cache_sponsors_${activeEventId}`, bundle.sponsors);
-            }
-            if (bundle.exhibitors) {
-              setExhibitors(bundle.exhibitors);
-              safeLocalStorageSet(`eventzone_cache_exhibitors_${activeEventId}`, bundle.exhibitors);
-            }
-            if (bundle.organizations) {
-              setOrganizations(bundle.organizations);
-              safeLocalStorageSet(`eventzone_cache_organizations_${activeEventId}`, bundle.organizations);
-            }
-            if (bundle.forms) {
-              setForms(bundle.forms);
-              safeLocalStorageSet(`eventzone_cache_forms_${activeEventId}`, bundle.forms);
-            }
-            if (bundle.floorPlans) {
-              setFloorPlans(bundle.floorPlans);
-              safeLocalStorageSet(`eventzone_cache_floorPlans_${activeEventId}`, bundle.floorPlans);
-            }
-            if (bundle.rsvpSettings) {
-              setRsvpSettings(bundle.rsvpSettings);
-              safeLocalStorageSet(`eventzone_cache_rsvpSettings_${activeEventId}`, bundle.rsvpSettings);
-            }
-            if (bundle.influencers) {
-              setInfluencers(bundle.influencers);
-              safeLocalStorageSet(`eventzone_cache_influencers_${activeEventId}`, bundle.influencers);
-            }
-            if (bundle.opportunities) {
-              setOpportunities(bundle.opportunities);
-              safeLocalStorageSet(`eventzone_cache_opportunities_${activeEventId}`, bundle.opportunities);
-            }
-            if (bundle.team) {
-              setTeam(bundle.team);
-              safeLocalStorageSet(`eventzone_cache_team_${activeEventId}`, bundle.team);
-            }
-          }
-        }).catch((err) => {
-          console.warn("Bundle fetch fallback to granular calls:", err);
+        const triggerGranularFetches = () => {
           fetchAndSet(fetchEventDetails(activeEventId), (val) => {
             setEventDetails(val);
             safeLocalStorageSet(`eventzone_cached_event_${activeEventId}`, val);
@@ -767,7 +714,68 @@ export function HomeContent() {
           fetchAndSet(fetchFloorPlans(activeEventId), setFloorPlans, "floorPlans");
           fetchAndSet(fetchForms(activeEventId), setForms, "forms");
           fetchAndSet(fetchRSVPSettings(activeEventId), setRsvpSettings, "rsvpSettings");
-        });
+        };
+
+        // 1. High-Performance Bundle Fetch with immediate fallback
+        fetchEventBundle(activeEventId)
+          .then((bundle) => {
+            if (bundle && bundle.event) {
+              if (bundle.event) {
+                setEventDetails(bundle.event);
+                safeLocalStorageSet(`eventzone_cached_event_${activeEventId}`, bundle.event);
+              }
+              if (bundle.tickets) {
+                setTickets(bundle.tickets);
+                safeLocalStorageSet(`eventzone_cache_tickets_${activeEventId}`, bundle.tickets);
+              }
+              if (bundle.sessions) {
+                setSessions(bundle.sessions);
+                safeLocalStorageSet(`eventzone_cache_sessions_${activeEventId}`, bundle.sessions);
+              }
+              if (bundle.sponsors) {
+                setSponsors(bundle.sponsors);
+                safeLocalStorageSet(`eventzone_cache_sponsors_${activeEventId}`, bundle.sponsors);
+              }
+              if (bundle.exhibitors) {
+                setExhibitors(bundle.exhibitors);
+                safeLocalStorageSet(`eventzone_cache_exhibitors_${activeEventId}`, bundle.exhibitors);
+              }
+              if (bundle.organizations) {
+                setOrganizations(bundle.organizations);
+                safeLocalStorageSet(`eventzone_cache_organizations_${activeEventId}`, bundle.organizations);
+              }
+              if (bundle.forms) {
+                setForms(bundle.forms);
+                safeLocalStorageSet(`eventzone_cache_forms_${activeEventId}`, bundle.forms);
+              }
+              if (bundle.floorPlans) {
+                setFloorPlans(bundle.floorPlans);
+                safeLocalStorageSet(`eventzone_cache_floorPlans_${activeEventId}`, bundle.floorPlans);
+              }
+              if (bundle.rsvpSettings) {
+                setRsvpSettings(bundle.rsvpSettings);
+                safeLocalStorageSet(`eventzone_cache_rsvpSettings_${activeEventId}`, bundle.rsvpSettings);
+              }
+              if (bundle.influencers) {
+                setInfluencers(bundle.influencers);
+                safeLocalStorageSet(`eventzone_cache_influencers_${activeEventId}`, bundle.influencers);
+              }
+              if (bundle.opportunities) {
+                setOpportunities(bundle.opportunities);
+                safeLocalStorageSet(`eventzone_cache_opportunities_${activeEventId}`, bundle.opportunities);
+              }
+              if (bundle.team) {
+                setTeam(bundle.team);
+                safeLocalStorageSet(`eventzone_cache_team_${activeEventId}`, bundle.team);
+              }
+            } else {
+              triggerGranularFetches();
+            }
+          })
+          .catch((err) => {
+            console.warn("Bundle fetch notice, falling back:", err);
+            triggerGranularFetches();
+          });
 
         // 2. Parallel non-blocking fetches for rsvps, logistics & documents
         fetchAndSet(fetchRSVPs(activeEventId), setRsvps, "rsvps");
