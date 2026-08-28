@@ -701,50 +701,7 @@ export default function CompanyDrawer({
             </button>
           </header>
 
-          {/* Mode Switcher Pills (If adding a new record) */}
-          {!item && (
-            <div className="px-6 py-3 bg-slate-50/80 border-b border-slate-100 flex items-center gap-2">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1">Record Type:</span>
-              <button
-                type="button"
-                onClick={() => setCurrentMode("org")}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  currentMode === "org"
-                    ? "bg-indigo-600 text-white shadow-xs"
-                    : "bg-white text-slate-600 border border-slate-200 hover:border-slate-300"
-                }`}
-              >
-                <Building2 size={13} />
-                <span>Organization</span>
-              </button>
 
-              <button
-                type="button"
-                onClick={() => setCurrentMode("sponsor")}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  currentMode === "sponsor"
-                    ? "bg-amber-500 text-white shadow-xs"
-                    : "bg-white text-slate-600 border border-slate-200 hover:border-slate-300"
-                }`}
-              >
-                <Sparkles size={13} />
-                <span>Sponsor</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setCurrentMode("exhibitor")}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  currentMode === "exhibitor"
-                    ? "bg-blue-600 text-white shadow-xs"
-                    : "bg-white text-slate-600 border border-slate-200 hover:border-slate-300"
-                }`}
-              >
-                <Store size={13} />
-                <span>Exhibitor</span>
-              </button>
-            </div>
-          )}
 
           {/* Sub-Navigation Tabs for Organization Mode */}
           {currentMode === "org" && (
@@ -1537,59 +1494,7 @@ export default function CompanyDrawer({
             {currentMode === "sponsor" && (
               <div className="flex flex-col gap-6">
 
-                {/* 1. Link from Existing Organization vs New */}
-                {!item && (
-                  <div className="p-4 bg-amber-50/50 border border-amber-200/80 rounded-2xl flex flex-col gap-3">
-                    <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
-                      <Sparkles size={14} className="text-amber-600" />
-                      <span>Company Source</span>
-                    </span>
 
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setSponsorSourceType("existing")}
-                        className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col gap-1 ${
-                          sponsorSourceType === "existing"
-                            ? "border-amber-500 bg-white ring-2 ring-amber-500/20 shadow-xs"
-                            : "border-slate-200 bg-white/60 hover:bg-white"
-                        }`}
-                      >
-                        <span className="text-xs font-bold text-slate-800">Select Registered Org</span>
-                        <span className="text-[10px] text-slate-500">Pick from existing partner organizations</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setSponsorSourceType("new")}
-                        className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col gap-1 ${
-                          sponsorSourceType === "new"
-                            ? "border-amber-500 bg-white ring-2 ring-amber-500/20 shadow-xs"
-                            : "border-slate-200 bg-white/60 hover:bg-white"
-                        }`}
-                      >
-                        <span className="text-xs font-bold text-slate-800">Create New Brand</span>
-                        <span className="text-[10px] text-slate-500">Add a brand new sponsor company</span>
-                      </button>
-                    </div>
-
-                    {sponsorSourceType === "existing" && (
-                      <div className="mt-2 flex flex-col gap-1.5">
-                        <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">
-                          Choose Existing Organization <span className="text-rose-500">*</span>
-                        </label>
-                        <SearchableSelect
-                          value={selectedOrgIdForSponsor}
-                          onChange={(val) => handleSelectOrgForSponsor(val)}
-                          options={existingOrgOptions}
-                          placeholder="-- Choose Organization --"
-                          searchPlaceholder="Search registered organization..."
-                          required
-                        />
-                      </div>
-                    )}
-                  </div>
-                )}
 
                 {/* Company Details (Pre-filled if existing org selected, or editable) */}
                 <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col gap-4">
@@ -1773,59 +1678,7 @@ export default function CompanyDrawer({
             {currentMode === "exhibitor" && (
               <div className="flex flex-col gap-6">
 
-                {/* 1. Link from Existing Organization vs New */}
-                {!item && (
-                  <div className="p-4 bg-blue-50/50 border border-blue-200/80 rounded-2xl flex flex-col gap-3">
-                    <span className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
-                      <Store size={14} className="text-blue-600" />
-                      <span>Exhibitor Organization Source</span>
-                    </span>
 
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setExhibitorSourceType("existing")}
-                        className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col gap-1 ${
-                          exhibitorSourceType === "existing"
-                            ? "border-blue-500 bg-white ring-2 ring-blue-500/20 shadow-xs"
-                            : "border-slate-200 bg-white/60 hover:bg-white"
-                        }`}
-                      >
-                        <span className="text-xs font-bold text-slate-800">Select Registered Org</span>
-                        <span className="text-[10px] text-slate-500">Pick from existing partner organizations</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setExhibitorSourceType("new")}
-                        className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col gap-1 ${
-                          exhibitorSourceType === "new"
-                            ? "border-blue-500 bg-white ring-2 ring-blue-500/20 shadow-xs"
-                            : "border-slate-200 bg-white/60 hover:bg-white"
-                        }`}
-                      >
-                        <span className="text-xs font-bold text-slate-800">Create New Exhibitor</span>
-                        <span className="text-[10px] text-slate-500">Register new exhibitor company</span>
-                      </button>
-                    </div>
-
-                    {exhibitorSourceType === "existing" && (
-                      <div className="mt-2 flex flex-col gap-1.5">
-                        <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">
-                          Choose Existing Organization <span className="text-rose-500">*</span>
-                        </label>
-                        <SearchableSelect
-                          value={selectedOrgIdForExhibitor}
-                          onChange={(val) => handleSelectOrgForExhibitor(val)}
-                          options={existingOrgOptions}
-                          placeholder="-- Choose Organization --"
-                          searchPlaceholder="Search registered organization..."
-                          required
-                        />
-                      </div>
-                    )}
-                  </div>
-                )}
 
                 {/* Exhibitor Branding & Profile */}
                 <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col gap-4">
