@@ -280,13 +280,8 @@ export default function OrganizerEventsHub({
                     </div>
 
                     {/* Actions Footer */}
-                    <div className="pt-3.5 border-t border-slate-100 flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium shrink-0 whitespace-nowrap">
-                        <Users size={14} className="text-slate-400 shrink-0" />
-                        <span><strong className="font-bold text-slate-800">{ev.attendeeCount ?? 0}</strong> Registered</span>
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0">
+                    <div className="pt-3.5 border-t border-slate-100 flex items-center justify-between gap-2">
+                      <div>
                         {isArchived ? (
                           <button
                             onClick={() => {
@@ -314,7 +309,9 @@ export default function OrganizerEventsHub({
                             </button>
                           )
                         )}
+                      </div>
 
+                      <div className="flex items-center gap-2 shrink-0">
                         <a
                           href={`/${ev.slug || ev.id}`}
                           target="_blank"
