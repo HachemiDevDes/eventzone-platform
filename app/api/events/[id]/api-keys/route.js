@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://awkreadldqmidcrrqukm.supabase.co";
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "sb_publishable_MluMrwkWs5-YedITa6ggNw_imK2nv8z";
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { 
+  getServiceSupabase, 
+  verifyOrganizerSession, 
+  generateSecureApiKey, 
+  hashApiKey 
+} from "@/lib/apiAuth";
 
 function isValidUuid(str) {
   if (!str || typeof str !== "string") return false;
@@ -32,15 +33,23 @@ export async function GET(request, context) {
       return NextResponse.json({ success: true, apiKeys: [] }, { status: 200, headers: CORS_HEADERS });
     }
 
+    // Must be authenticated organizer
+    const authResult = await verifyOrganizerSession(request, eventId);
+    if (!authResult.authorized) {
+      return NextResponse.json(
+        { success: false, error: authResult.error || "Unauthorized" },
+        { status: authResult.status || 401, headers: CORS_HEADERS }
+      );
+    }
+
+    const supabase = getServiceSupabase();
     const { data, error } = await supabase
       .from("developer_api_keys")
       .select("id, event_id, name, key_prefix, permissions, created_at, last_used_at, is_active")
       .eq("event_id", eventId)
       .order("created_at", { ascending: false });
 
-    if (error) {
-      throw error;
-    }
+    if (error) throw error;
 
     return NextResponse.json(
       { success: true, apiKeys: data || [] },
@@ -49,7 +58,7 @@ export async function GET(request, context) {
   } catch (err) {
     console.error("GET /api/events/[id]/api-keys error:", err);
     return NextResponse.json(
-      { success: false, error: err.message },
+      { success: false, error: err.message || "Failed to fetch API keys." },
       { status: 500, headers: CORS_HEADERS }
     );
   }
@@ -60,10 +69,19 @@ export async function POST(request, context) {
     const params = await context.params;
     const eventId = params?.id;
 
-    if (!eventId) {
+    if (!eventId || !isValidUuid(eventId)) {
       return NextResponse.json(
-        { success: false, error: "Event ID is required" },
+        { success: false, error: "Valid Event ID is required" },
         { status: 400, headers: CORS_HEADERS }
+      );
+    }
+
+    // Must be authenticated organizer
+    const authResult = await verifyOrganizerSession(request, eventId);
+    if (!authResult.authorized) {
+      return NextResponse.json(
+        { success: false, error: authResult.error || "Unauthorized" },
+        { status: authResult.status || 401, headers: CORS_HEADERS }
       );
     }
 
@@ -71,38 +89,36 @@ export async function POST(request, context) {
     const name = (body.name || "Main Website Integration").trim();
     const permissions = body.permissions || "read_write";
 
-    const secretRandom = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-    const fullKey = `ez_live_${secretRandom}`;
+    // Generate cryptographically secure API key
+    const fullKey = generateSecureApiKey("ez_live_");
+    const keyHash = hashApiKey(fullKey);
     const keyPrefix = fullKey.substring(0, 12) + "..." + fullKey.substring(fullKey.length - 4);
 
+    const supabase = getServiceSupabase();
     const row = {
-      event_id: isValidUuid(eventId) ? eventId : null,
+      event_id: eventId,
       name,
       key: fullKey,
+      key_hash: keyHash,
       key_prefix: keyPrefix,
       permissions,
       is_active: true,
       created_at: new Date().toISOString(),
     };
 
-    let createdRecord = { ...row, id: `key-${Date.now()}` };
+    const { data: createdRecord, error } = await supabase
+      .from("developer_api_keys")
+      .insert(row)
+      .select()
+      .single();
 
-    if (isValidUuid(eventId)) {
-      const { data, error } = await supabase
-        .from("developer_api_keys")
-        .insert(row)
-        .select()
-        .single();
-
-      if (error) throw error;
-      if (data) createdRecord = data;
-    }
+    if (error) throw error;
 
     return NextResponse.json(
       {
         success: true,
         apiKey: createdRecord,
-        rawKey: fullKey, // returned once upon creation
+        rawKey: fullKey, // Returned once upon creation
         message: "API key created successfully. Store this key safely as it will not be shown again in full.",
       },
       { status: 201, headers: CORS_HEADERS }
@@ -110,7 +126,7 @@ export async function POST(request, context) {
   } catch (err) {
     console.error("POST /api/events/[id]/api-keys error:", err);
     return NextResponse.json(
-      { success: false, error: err.message },
+      { success: false, error: err.message || "Failed to create API key." },
       { status: 500, headers: CORS_HEADERS }
     );
   }
@@ -123,21 +139,30 @@ export async function DELETE(request, context) {
     const { searchParams } = new URL(request.url);
     const keyId = searchParams.get("keyId");
 
-    if (!keyId) {
+    if (!eventId || !keyId || !isValidUuid(keyId)) {
       return NextResponse.json(
-        { success: false, error: "Key ID is required" },
+        { success: false, error: "Valid Event ID and Key ID are required." },
         { status: 400, headers: CORS_HEADERS }
       );
     }
 
-    if (isValidUuid(keyId)) {
-      const { error } = await supabase
-        .from("developer_api_keys")
-        .delete()
-        .eq("id", keyId);
-
-      if (error) throw error;
+    // Must be authenticated organizer
+    const authResult = await verifyOrganizerSession(request, eventId);
+    if (!authResult.authorized) {
+      return NextResponse.json(
+        { success: false, error: authResult.error || "Unauthorized" },
+        { status: authResult.status || 401, headers: CORS_HEADERS }
+      );
     }
+
+    const supabase = getServiceSupabase();
+    const { error } = await supabase
+      .from("developer_api_keys")
+      .delete()
+      .eq("id", keyId)
+      .eq("event_id", eventId);
+
+    if (error) throw error;
 
     return NextResponse.json(
       { success: true, message: "API key revoked successfully" },
@@ -146,7 +171,7 @@ export async function DELETE(request, context) {
   } catch (err) {
     console.error("DELETE /api/events/[id]/api-keys error:", err);
     return NextResponse.json(
-      { success: false, error: err.message },
+      { success: false, error: err.message || "Failed to revoke API key." },
       { status: 500, headers: CORS_HEADERS }
     );
   }

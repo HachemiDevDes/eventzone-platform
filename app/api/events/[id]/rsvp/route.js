@@ -1,11 +1,8 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { getServiceSupabase } from "@/lib/apiAuth";
 import { sendRSVPConfirmationEmail } from "@/lib/mailer";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://awkreadldqmidcrrqukm.supabase.co";
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "sb_publishable_MluMrwkWs5-YedITa6ggNw_imK2nv8z";
-
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = getServiceSupabase();
 
 function isValidUuid(str) {
   if (!str || typeof str !== 'string') return false;

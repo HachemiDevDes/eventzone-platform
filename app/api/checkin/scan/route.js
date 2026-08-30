@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { performQrCheckin } from "@/lib/db";
+import { verifyApiKeyOrOrganizer } from "@/lib/apiAuth";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -21,6 +22,16 @@ export async function POST(request) {
         { status: "invalid", message: "No QR code data provided." },
         { status: 400, headers: CORS_HEADERS }
       );
+    }
+
+    if (eventId) {
+      const authResult = await verifyApiKeyOrOrganizer(request, eventId);
+      if (!authResult.authorized) {
+        return NextResponse.json(
+          { status: "invalid", message: authResult.error || "Unauthorized gate session." },
+          { status: authResult.status || 401, headers: CORS_HEADERS }
+        );
+      }
     }
 
     const result = await performQrCheckin({

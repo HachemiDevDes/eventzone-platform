@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { getServiceSupabase, isSafeWebhookUrl } from "@/lib/apiAuth";
 import QRCode from "qrcode";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://awkreadldqmidcrrqukm.supabase.co";
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "sb_publishable_MluMrwkWs5-YedITa6ggNw_imK2nv8z";
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = getServiceSupabase();
 
 function isValidUuid(str) {
   if (!str || typeof str !== "string") return false;
@@ -326,6 +324,15 @@ export async function POST(request, context) {
         requiresApproval: false,
         source: source,
       };
+
+      // Atomically increment ticket sold quantity in PostgreSQL
+      if (matchedTicket?.id && isValidUuid(matchedTicket.id)) {
+        try {
+          await supabase.rpc("reserve_ticket", { p_ticket_id: matchedTicket.id, p_quantity: 1 });
+        } catch (reserveErr) {
+          console.warn("Atomic ticket reservation notice:", reserveErr);
+        }
+      }
     }
 
     // 7. Insert Custom Form Responses if provided
@@ -358,7 +365,7 @@ export async function POST(request, context) {
       }
     }
 
-    // 8. Trigger Webhooks for external listeners
+    // 8. Trigger Webhooks for external listeners with SSRF protection
     if (isValidUuid(eventId)) {
       try {
         const { data: webhooks } = await supabase
@@ -379,15 +386,17 @@ export async function POST(request, context) {
 
           for (const wh of webhooks) {
             const subscribedEvents = Array.isArray(wh.events) ? wh.events : ["registration.created", "registration.pending"];
-            if (subscribedEvents.includes(webhookEventName)) {
+            if (subscribedEvents.includes(webhookEventName) && isSafeWebhookUrl(wh.url)) {
               fetch(wh.url, {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
                   "X-Eventzone-Event": webhookEventName,
                   "X-Eventzone-Secret": wh.secret || "",
+                  "User-Agent": "Eventzone-Webhooks/1.0",
                 },
                 body: JSON.stringify(webhookPayload),
+                signal: AbortSignal.timeout(5000),
               }).catch((e) => console.warn("Webhook dispatch error:", wh.url, e.message));
             }
           }

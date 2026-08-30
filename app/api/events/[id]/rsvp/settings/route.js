@@ -1,10 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://awkreadldqmidcrrqukm.supabase.co";
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "sb_publishable_MluMrwkWs5-YedITa6ggNw_imK2nv8z";
-
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { getServiceSupabase, verifyOrganizerSession } from "@/lib/apiAuth";
 
 function isValidUuid(str) {
   if (!str || typeof str !== 'string') return false;
@@ -36,6 +31,7 @@ export async function GET(request, context) {
       confirmation_message: "Thank you for your RSVP! We look forward to seeing you at the event."
     };
 
+    const supabase = getServiceSupabase();
     if (isValidUuid(eventId)) {
       const { data, error } = await supabase
         .from('rsvp_settings')
@@ -71,8 +67,17 @@ async function handleSaveSettings(request, context) {
     const params = await context.params;
     const eventId = params?.id;
 
-    if (!eventId) {
-      return NextResponse.json({ success: false, error: "Event ID is required" }, { status: 400 });
+    if (!eventId || !isValidUuid(eventId)) {
+      return NextResponse.json({ success: false, error: "Valid Event ID is required" }, { status: 400 });
+    }
+
+    // MANDATORY AUTHENTICATION: Only organizer can modify RSVP settings
+    const authResult = await verifyOrganizerSession(request, eventId);
+    if (!authResult.authorized) {
+      return NextResponse.json(
+        { success: false, error: authResult.error || "Unauthorized" },
+        { status: authResult.status || 401 }
+      );
     }
 
     const body = await request.json();
@@ -90,7 +95,7 @@ async function handleSaveSettings(request, context) {
     } = body;
 
     const row = {
-      event_id: isValidUuid(eventId) ? eventId : undefined,
+      event_id: eventId,
       is_enabled: !!isEnabled,
       capacity_limit: Math.max(1, parseInt(capacityLimit || 150, 10)),
       allow_plus_ones: !!allowPlusOnes,
@@ -104,18 +109,15 @@ async function handleSaveSettings(request, context) {
       updated_at: new Date().toISOString()
     };
 
-    if (isValidUuid(eventId)) {
-      const { data, error } = await supabase
-        .from('rsvp_settings')
-        .upsert(row, { onConflict: 'event_id' })
-        .select()
-        .single();
+    const supabase = getServiceSupabase();
+    const { data, error } = await supabase
+      .from('rsvp_settings')
+      .upsert(row, { onConflict: 'event_id' })
+      .select()
+      .single();
 
-      if (error) throw error;
-      return NextResponse.json({ success: true, settings: data });
-    }
-
-    return NextResponse.json({ success: true, settings: { id: `settings-${eventId}`, ...row } });
+    if (error) throw error;
+    return NextResponse.json({ success: true, settings: data });
   } catch (err) {
     console.error("Save /api/events/[id]/rsvp/settings error:", err);
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });

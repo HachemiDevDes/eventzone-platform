@@ -1,9 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://awkreadldqmidcrrqukm.supabase.co";
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "sb_publishable_MluMrwkWs5-YedITa6ggNw_imK2nv8z";
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { getServiceSupabase, verifyApiKeyOrOrganizer } from "@/lib/apiAuth";
 
 function isValidUuid(str) {
   if (!str || typeof str !== "string") return false;
@@ -28,45 +24,26 @@ export async function GET(request, context) {
     const params = await context.params;
     const eventId = params?.id;
 
-    if (!eventId) {
+    if (!eventId || !isValidUuid(eventId)) {
       return NextResponse.json(
-        { success: false, error: "Event ID is required" },
+        { success: false, error: "Valid Event ID is required." },
         { status: 400, headers: CORS_HEADERS }
       );
     }
 
-    // Check optional API Key in header
-    const apiKey = request.headers.get("x-api-key") || request.headers.get("authorization")?.replace("Bearer ", "");
-    if (apiKey && isValidUuid(eventId)) {
-      // Validate key
-      const { data: keyMatch } = await supabase
-        .from("developer_api_keys")
-        .select("id, is_active")
-        .eq("key", apiKey)
-        .eq("event_id", eventId)
-        .maybeSingle();
-
-      if (!keyMatch || keyMatch.is_active === false) {
-        return NextResponse.json(
-          { success: false, error: "Invalid or inactive API Key for this event." },
-          { status: 401, headers: CORS_HEADERS }
-        );
-      }
-
-      // Update last_used_at
-      await supabase.from("developer_api_keys").update({ last_used_at: new Date().toISOString() }).eq("id", keyMatch.id);
-    }
-
-    if (!isValidUuid(eventId)) {
+    // MANDATORY AUTHENTICATION: Must have valid API Key or Organizer Session
+    const authResult = await verifyApiKeyOrOrganizer(request, eventId);
+    if (!authResult.authorized) {
       return NextResponse.json(
-        { success: true, count: 0, attendees: [] },
-        { status: 200, headers: CORS_HEADERS }
+        { success: false, error: authResult.error || "Unauthorized: Valid API Key or Organizer session required." },
+        { status: authResult.status || 401, headers: CORS_HEADERS }
       );
     }
 
+    const supabase = getServiceSupabase();
     const { data: attendees, error } = await supabase
       .from("participants")
-      .select("id, first_name, last_name, email, phone, ticket_type, status_participation, registered_at, checked_in_at")
+      .select("id, first_name, last_name, email, phone, ticket_type, status_participation, registered_at, checked_in_at, checked_in")
       .eq("event_id", eventId)
       .neq("status_participation", "archived")
       .order("registered_at", { ascending: false });
@@ -82,6 +59,7 @@ export async function GET(request, context) {
       status: a.status_participation,
       registeredAt: a.registered_at,
       checkedInAt: a.checked_in_at,
+      checkedIn: Boolean(a.checked_in || a.checked_in_at),
     }));
 
     return NextResponse.json(
@@ -95,7 +73,7 @@ export async function GET(request, context) {
   } catch (err) {
     console.error("GET /api/events/[id]/attendees error:", err);
     return NextResponse.json(
-      { success: false, error: err.message },
+      { success: false, error: err.message || "Failed to fetch attendees." },
       { status: 500, headers: CORS_HEADERS }
     );
   }

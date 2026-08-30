@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://awkreadldqmidcrrqukm.supabase.co";
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "sb_publishable_MluMrwkWs5-YedITa6ggNw_imK2nv8z";
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { 
+  getServiceSupabase, 
+  verifyOrganizerSession, 
+  isSafeWebhookUrl, 
+  generateSecureApiKey 
+} from "@/lib/apiAuth";
 
 function isValidUuid(str) {
   if (!str || typeof str !== "string") return false;
@@ -32,6 +33,15 @@ export async function GET(request, context) {
       return NextResponse.json({ success: true, webhooks: [] }, { status: 200, headers: CORS_HEADERS });
     }
 
+    const authResult = await verifyOrganizerSession(request, eventId);
+    if (!authResult.authorized) {
+      return NextResponse.json(
+        { success: false, error: authResult.error || "Unauthorized" },
+        { status: authResult.status || 401, headers: CORS_HEADERS }
+      );
+    }
+
+    const supabase = getServiceSupabase();
     const { data, error } = await supabase
       .from("developer_webhooks")
       .select("*")
@@ -47,7 +57,7 @@ export async function GET(request, context) {
   } catch (err) {
     console.error("GET /api/events/[id]/webhooks error:", err);
     return NextResponse.json(
-      { success: false, error: err.message },
+      { success: false, error: err.message || "Failed to fetch webhooks." },
       { status: 500, headers: CORS_HEADERS }
     );
   }
@@ -58,24 +68,32 @@ export async function POST(request, context) {
     const params = await context.params;
     const eventId = params?.id;
 
-    if (!eventId) {
+    if (!eventId || !isValidUuid(eventId)) {
       return NextResponse.json(
-        { success: false, error: "Event ID is required" },
+        { success: false, error: "Valid Event ID is required" },
         { status: 400, headers: CORS_HEADERS }
+      );
+    }
+
+    const authResult = await verifyOrganizerSession(request, eventId);
+    if (!authResult.authorized) {
+      return NextResponse.json(
+        { success: false, error: authResult.error || "Unauthorized" },
+        { status: authResult.status || 401, headers: CORS_HEADERS }
       );
     }
 
     const body = await request.json().catch(() => ({}));
-    if (!body.url) {
+    if (!body.url || !isSafeWebhookUrl(body.url)) {
       return NextResponse.json(
-        { success: false, error: "Webhook endpoint URL is required" },
+        { success: false, error: "A valid, public HTTPS/HTTP webhook URL is required." },
         { status: 400, headers: CORS_HEADERS }
       );
     }
 
-    const secret = body.secret || `whsec_${Math.random().toString(36).substring(2, 15)}`;
+    const secret = body.secret || generateSecureApiKey("whsec_");
     const row = {
-      event_id: isValidUuid(eventId) ? eventId : null,
+      event_id: eventId,
       url: body.url,
       secret,
       events: body.events || ["registration.created", "registration.pending"],
@@ -83,18 +101,14 @@ export async function POST(request, context) {
       created_at: new Date().toISOString(),
     };
 
-    let createdRecord = { ...row, id: `wh-${Date.now()}` };
+    const supabase = getServiceSupabase();
+    const { data: createdRecord, error } = await supabase
+      .from("developer_webhooks")
+      .insert(row)
+      .select()
+      .single();
 
-    if (isValidUuid(eventId)) {
-      const { data, error } = await supabase
-        .from("developer_webhooks")
-        .insert(row)
-        .select()
-        .single();
-
-      if (error) throw error;
-      if (data) createdRecord = data;
-    }
+    if (error) throw error;
 
     return NextResponse.json(
       {
@@ -107,7 +121,7 @@ export async function POST(request, context) {
   } catch (err) {
     console.error("POST /api/events/[id]/webhooks error:", err);
     return NextResponse.json(
-      { success: false, error: err.message },
+      { success: false, error: err.message || "Failed to register webhook." },
       { status: 500, headers: CORS_HEADERS }
     );
   }
@@ -118,12 +132,28 @@ export async function PUT(request, context) {
   try {
     const params = await context.params;
     const eventId = params?.id;
+
+    if (!eventId || !isValidUuid(eventId)) {
+      return NextResponse.json(
+        { success: false, error: "Valid Event ID is required" },
+        { status: 400, headers: CORS_HEADERS }
+      );
+    }
+
+    const authResult = await verifyOrganizerSession(request, eventId);
+    if (!authResult.authorized) {
+      return NextResponse.json(
+        { success: false, error: authResult.error || "Unauthorized" },
+        { status: authResult.status || 401, headers: CORS_HEADERS }
+      );
+    }
+
     const body = await request.json().catch(() => ({}));
     const webhookUrl = body.url;
 
-    if (!webhookUrl) {
+    if (!webhookUrl || !isSafeWebhookUrl(webhookUrl)) {
       return NextResponse.json(
-        { success: false, error: "Webhook URL is required" },
+        { success: false, error: "Invalid webhook URL: Must be a safe, public URL." },
         { status: 400, headers: CORS_HEADERS }
       );
     }
@@ -148,48 +178,39 @@ export async function PUT(request, context) {
     let responseText = "";
 
     try {
-      const res = await fetch(webhookUrl, {
+      const resp = await fetch(webhookUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "X-Eventzone-Event": "webhook.test",
-          "X-Eventzone-Delivery": `del-${Date.now()}`,
-          "User-Agent": "Eventzone-Webhook-Dispatcher/1.0",
+          "X-Eventzone-Secret": body.secret || "",
+          "User-Agent": "Eventzone-Webhooks/1.0",
         },
         body: JSON.stringify(testPayload),
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(6000), // 6 second max timeout
       });
-      responseStatus = res.status;
-      responseText = (await res.text()).substring(0, 300);
-    } catch (e) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: `Failed to reach webhook URL: ${e.message}`,
-          durationMs: Date.now() - startTime,
-        },
-        { status: 502, headers: CORS_HEADERS }
-      );
+      responseStatus = resp.status;
+      responseText = await resp.text().catch(() => "");
+    } catch (fetchErr) {
+      responseStatus = 500;
+      responseText = fetchErr.message;
     }
 
-    const durationMs = Date.now() - startTime;
+    const elapsed = Date.now() - startTime;
+
     return NextResponse.json(
       {
         success: responseStatus >= 200 && responseStatus < 300,
         statusCode: responseStatus,
-        durationMs,
-        responseBodySnippet: responseText,
-        message:
-          responseStatus >= 200 && responseStatus < 300
-            ? "Test ping delivered successfully!"
-            : `Remote endpoint returned HTTP status ${responseStatus}`,
+        durationMs: elapsed,
+        responseExcerpt: responseText.slice(0, 300),
       },
       { status: 200, headers: CORS_HEADERS }
     );
   } catch (err) {
-    console.error("PUT /api/events/[id]/webhooks error:", err);
+    console.error("PUT /api/events/[id]/webhooks test error:", err);
     return NextResponse.json(
-      { success: false, error: err.message },
+      { success: false, error: err.message || "Failed to test webhook." },
       { status: 500, headers: CORS_HEADERS }
     );
   }
@@ -197,33 +218,43 @@ export async function PUT(request, context) {
 
 export async function DELETE(request, context) {
   try {
+    const params = await context.params;
+    const eventId = params?.id;
     const { searchParams } = new URL(request.url);
     const webhookId = searchParams.get("webhookId");
 
-    if (!webhookId) {
+    if (!eventId || !webhookId || !isValidUuid(webhookId)) {
       return NextResponse.json(
-        { success: false, error: "Webhook ID is required" },
+        { success: false, error: "Valid Event ID and Webhook ID are required." },
         { status: 400, headers: CORS_HEADERS }
       );
     }
 
-    if (isValidUuid(webhookId)) {
-      const { error } = await supabase
-        .from("developer_webhooks")
-        .delete()
-        .eq("id", webhookId);
-
-      if (error) throw error;
+    const authResult = await verifyOrganizerSession(request, eventId);
+    if (!authResult.authorized) {
+      return NextResponse.json(
+        { success: false, error: authResult.error || "Unauthorized" },
+        { status: authResult.status || 401, headers: CORS_HEADERS }
+      );
     }
 
+    const supabase = getServiceSupabase();
+    const { error } = await supabase
+      .from("developer_webhooks")
+      .delete()
+      .eq("id", webhookId)
+      .eq("event_id", eventId);
+
+    if (error) throw error;
+
     return NextResponse.json(
-      { success: true, message: "Webhook removed successfully" },
+      { success: true, message: "Webhook deleted successfully." },
       { status: 200, headers: CORS_HEADERS }
     );
   } catch (err) {
     console.error("DELETE /api/events/[id]/webhooks error:", err);
     return NextResponse.json(
-      { success: false, error: err.message },
+      { success: false, error: err.message || "Failed to delete webhook." },
       { status: 500, headers: CORS_HEADERS }
     );
   }

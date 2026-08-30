@@ -1,17 +1,11 @@
 import { NextResponse } from "next/server";
 import { sendBroadcastEmail } from "@/lib/mailer";
-import { createClient } from "@supabase/supabase-js";
+import { getServiceSupabase } from "@/lib/apiAuth";
 import QRCode from "qrcode";
 
 export const dynamic = "force-dynamic";
 
-const SUPABASE_EDGE_TRACK_URL = "https://awkreadldqmidcrrqukm.supabase.co/functions/v1/track-email";
-
-function getSupabaseClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://awkreadldqmidcrrqukm.supabase.co";
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3a3JlYWRsZHFtaWRjcnJxdWttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEwNjg2MzgsImV4cCI6MjA2NjY0NDYzOH0.Z1iVvA983vKq37P2d_F7z27L3Rj3b-g4P-7e5yQk0z0";
-  return createClient(supabaseUrl, supabaseKey);
-}
+const SUPABASE_EDGE_TRACK_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/track-email` : "";
 
 function isValidUuid(id) {
   if (!id || typeof id !== "string") return false;
@@ -45,7 +39,7 @@ export async function POST(request) {
       return NextResponse.json({ error: "Missing subject line or message content." }, { status: 400 });
     }
 
-    const supabase = getSupabaseClient();
+    const supabase = getServiceSupabase();
     const validEventId = isValidUuid(eventId) ? eventId : null;
 
     const formatEventLevelVars = (str) => {

@@ -1,18 +1,11 @@
 import { NextResponse } from "next/server";
 import { 
-  sendEmail, 
   sendTicketConfirmationEmail, 
   sendRSVPConfirmationEmail, 
   sendBroadcastEmail, 
   sendExhibitorPacketEmail 
 } from "@/lib/mailer";
-import { createClient } from "@supabase/supabase-js";
-
-function getSupabaseClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://awkreadldqmidcrrqukm.supabase.co";
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3a3JlYWRsZHFtaWRjcnJxdWttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEwNjg2MzgsImV4cCI6MjA2NjY0NDYzOH0.Z1iVvA983vKq37P2d_F7z27L3Rj3b-g4P-7e5yQk0z0";
-  return createClient(supabaseUrl, supabaseKey);
-}
+import { getServiceSupabase, verifyOrganizerSession } from "@/lib/apiAuth";
 
 function isValidUuid(id) {
   if (!id || typeof id !== "string") return false;
@@ -23,7 +16,7 @@ function isValidUuid(id) {
 async function getTriggerTemplate(eventId, triggerId) {
   if (!isValidUuid(eventId) || !triggerId) return null;
   try {
-    const supabase = getSupabaseClient();
+    const supabase = getServiceSupabase();
     const { data } = await supabase
       .from("communication_templates")
       .select("*")
@@ -45,6 +38,20 @@ export async function POST(request) {
 
     if (!to) {
       return NextResponse.json({ error: "Missing 'to' recipient email." }, { status: 400 });
+    }
+
+    // If sending custom broadcast or exhibitor packet, require organizer session
+    if (type === "broadcast" || type === "exhibitor_packet") {
+      if (!eventId || !isValidUuid(eventId)) {
+        return NextResponse.json({ error: "Valid eventId is required." }, { status: 400 });
+      }
+      const authResult = await verifyOrganizerSession(request, eventId);
+      if (!authResult.authorized) {
+        return NextResponse.json(
+          { error: authResult.error || "Unauthorized" },
+          { status: authResult.status || 401 }
+        );
+      }
     }
 
     let result;
@@ -98,32 +105,19 @@ export async function POST(request) {
       case "exhibitor_packet":
         result = await sendExhibitorPacketEmail({ 
           to, 
-          subject: finalSubject,
+          subject: finalSubject, 
           eventId,
           ...rest 
         });
         break;
 
-      case "custom":
       default:
-        if (!finalSubject || (!html && !text)) {
-          return NextResponse.json({ error: "Missing subject or content." }, { status: 400 });
-        }
-        result = await sendEmail({ to, subject: finalSubject, html, text, ...rest });
-        break;
+        return NextResponse.json({ error: `Unknown email type: ${type}` }, { status: 400 });
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      messageId: result?.messageId, 
-      recipient: to,
-      type: type || "custom"
-    });
-  } catch (error) {
-    console.error("Email send API error:", error);
-    return NextResponse.json(
-      { success: false, error: error.message || "Failed to send email." },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: true, ...result });
+  } catch (err) {
+    console.error("POST /api/email/send error:", err);
+    return NextResponse.json({ error: err.message || "Failed to send email." }, { status: 500 });
   }
 }

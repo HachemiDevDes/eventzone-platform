@@ -1309,66 +1309,66 @@ export default function EventPublicLandingPage({
             <div className="lg:col-span-5 xl:col-span-4 w-full">
               <div className="sticky top-20 bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-lg shadow-slate-100/70 space-y-3.5 text-left">
                 
-                {/* Ticket Tier Selector Card (only rendered if event has tickets configured) */}
+                {/* Ticket Tier Selector (Direct list of up to 3 tickets, no dropdown menu) */}
                 {eventTickets.length > 0 && (
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (eventTickets.length > 1) {
-                          setTierDropdownOpen((prev) => !prev);
-                        } else {
-                          openRegistration(selectedTicket?.name || selectedTicket?.tier || eventTickets[0]?.name || "General Admission");
-                        }
-                      }}
-                      className="w-full border border-slate-200/90 hover:border-blue-400 bg-white hover:bg-slate-50/50 rounded-xl p-3.5 flex items-center justify-between text-left transition-all cursor-pointer group shadow-2xs"
-                    >
-                      <div className="space-y-0.5">
-                        <h4 className="text-sm sm:text-base font-bold text-slate-900 leading-tight">
-                          {selectedTicket?.name || selectedTicket?.tier || eventTickets[0]?.name || eventTickets[0]?.tier || "General Admission"}
-                        </h4>
-                        <p className="text-xs sm:text-sm font-semibold text-blue-600">
-                          {selectedTicket?.price && Number(selectedTicket.price) > 0 
-                            ? `${Number(selectedTicket.price).toLocaleString()} DZD` 
-                            : (lang === "fr" ? "Gratuit" : (lang === "ar" ? "مجاني" : "Free"))}
-                        </p>
-                      </div>
+                  <div className="space-y-2">
+                    {eventTickets.slice(0, 3).map((t, idx) => {
+                      const tName = t.name || t.tier || `Ticket ${idx + 1}`;
+                      const isSelected = (selectedTicket?.name === tName || selectedTicket?.id === t.id || selectedTier === tName);
+                      const isFree = !t.price || Number(t.price) === 0;
+                      const priceText = isFree 
+                        ? (lang === "fr" ? "Gratuit" : (lang === "ar" ? "مجاني" : "Free"))
+                        : `${Number(t.price).toLocaleString()} DZD`;
 
-                      {eventTickets.length > 1 && (
-                        <div className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 group-hover:text-blue-600 transition-colors">
-                          <ChevronRight size={18} className="transition-transform group-hover:translate-x-0.5" />
-                        </div>
-                      )}
-                    </button>
-
-                    {/* Multiple Tiers Dropdown Menu */}
-                    {tierDropdownOpen && eventTickets.length > 1 && (
-                      <div className="absolute top-full left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl p-1.5 z-40 space-y-1 animate-scale-up">
-                        {eventTickets.map((t, idx) => (
-                          <button
-                            key={t.id || idx}
-                            type="button"
-                            onClick={() => {
-                              setSelectedTier(t.name || t.tier);
-                              setTierDropdownOpen(false);
-                            }}
-                            className={`w-full text-left px-3 py-2.5 rounded-lg text-xs flex items-center justify-between transition-colors cursor-pointer ${
-                              (selectedTicket?.name === t.name || selectedTicket?.id === t.id)
-                                ? "bg-blue-50 text-blue-700 font-bold border border-blue-200/60"
-                                : "hover:bg-slate-50 text-slate-700 font-medium"
-                            }`}
-                          >
-                            <div>
-                              <span className="block font-bold text-slate-900">{t.name || t.tier}</span>
-                              <span className="text-[11px] text-blue-600 font-semibold">
-                                {t.price && Number(t.price) > 0 ? `${Number(t.price).toLocaleString()} DZD` : (lang === "fr" ? "Gratuit" : "Free")}
-                              </span>
+                      return (
+                        <button
+                          key={t.id || idx}
+                          type="button"
+                          onClick={() => {
+                            setSelectedTier(tName);
+                          }}
+                          className={`w-full border rounded-xl p-3 sm:p-3.5 flex items-center justify-between text-left transition-colors cursor-pointer group ${
+                            isSelected 
+                              ? "border-blue-600 bg-blue-50/30" 
+                              : "border-slate-200 hover:border-slate-300 bg-white"
+                          }`}
+                        >
+                          <div className="space-y-0.5 min-w-0 pr-2">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <h4 className={`text-sm font-bold leading-tight truncate ${isSelected ? "text-slate-900" : "text-slate-900"}`}>
+                                {tName}
+                              </h4>
+                              {(t.isPopular || t.popular) && (
+                                <span className="px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[9px] font-bold uppercase tracking-wide">
+                                  Popular
+                                </span>
+                              )}
                             </div>
-                            {(selectedTicket?.name === t.name || selectedTicket?.id === t.id) && (
-                              <Check size={14} className="text-blue-600 shrink-0" />
-                            )}
-                          </button>
-                        ))}
+                            <p className="text-xs font-semibold text-blue-600">
+                              {priceText}
+                            </p>
+                          </div>
+
+                          <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-colors ${
+                            isSelected 
+                              ? "bg-blue-600 text-white" 
+                              : "border border-slate-300 group-hover:border-slate-400"
+                          }`}>
+                            {isSelected && <Check size={11} strokeWidth={2.5} />}
+                          </div>
+                        </button>
+                      );
+                    })}
+
+                    {eventTickets.length > 3 && (
+                      <div className="pt-0.5 text-center">
+                        <a
+                          href="#tickets"
+                          className="text-[11px] font-bold text-blue-600 hover:text-blue-700 hover:underline transition-colors inline-flex items-center gap-1"
+                        >
+                          <span>View all {eventTickets.length} ticket options</span>
+                          <ChevronRight size={12} />
+                        </a>
                       </div>
                     )}
                   </div>
@@ -1436,7 +1436,15 @@ export default function EventPublicLandingPage({
               eventDetails.description.includes("<") && eventDetails.description.includes(">") ? (
                 <div 
                   className="text-slate-600 text-sm sm:text-base leading-relaxed font-normal space-y-2.5 [&_h1]:text-2xl [&_h1]:font-black [&_h1]:text-slate-900 [&_h1]:my-2 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-slate-900 [&_h2]:my-2 [&_h3]:text-base [&_h3]:font-bold [&_h3]:text-slate-900 [&_h3]:my-1.5 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-1.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-1.5 [&_blockquote]:border-l-4 [&_blockquote]:border-blue-500 [&_blockquote]:pl-3 [&_blockquote]:italic [&_blockquote]:my-2 [&_blockquote]:text-slate-600"
-                  dangerouslySetInnerHTML={{ __html: eventDetails.description }}
+                  dangerouslySetInnerHTML={{ 
+                    __html: eventDetails.description
+                      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+                      .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, "")
+                      .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, "")
+                      .replace(/<embed\b[^<]*(?:(?!<\/embed>)<[^<]*)*<\/embed>/gi, "")
+                      .replace(/\bon\w+\s*=\s*(?:'[^']*'|"[^"]*"|[^\s>]+)/gi, "")
+                      .replace(/javascript\s*:/gi, "blocked:")
+                  }}
                 />
               ) : (
                 <p className="text-slate-600 text-sm sm:text-base leading-relaxed font-normal whitespace-pre-line">

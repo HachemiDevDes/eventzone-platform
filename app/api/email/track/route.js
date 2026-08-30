@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { getServiceSupabase } from "@/lib/apiAuth";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -9,12 +9,6 @@ const TRANSPARENT_1X1_GIF = Buffer.from(
   "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
   "base64"
 );
-
-function getSupabaseClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://awkreadldqmidcrrqukm.supabase.co";
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3a3JlYWRsZHFtaWRjcnJxdWttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEwNjg2MzgsImV4cCI6MjA2NjY0NDYzOH0.Z1iVvA983vKq37P2d_F7z27L3Rj3b-g4P-7e5yQk0z0";
-  return createClient(supabaseUrl, supabaseKey);
-}
 
 function isValidUuid(id) {
   if (!id || typeof id !== "string") return false;
@@ -47,7 +41,7 @@ export async function GET(request) {
     const hasValidRecipientId = isValidUuid(recipientId);
 
     if (hasValidCommId || hasValidRecipientId || recipientEmail) {
-      const supabase = getSupabaseClient();
+      const supabase = getServiceSupabase();
       let matchedRecLog = null;
 
       // 1. Try finding recipient log by UUID

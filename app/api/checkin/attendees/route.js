@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchCheckinAttendees } from "@/lib/db";
+import { verifyApiKeyOrOrganizer } from "@/lib/apiAuth";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -16,8 +17,23 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const eventId = searchParams.get("eventId");
 
-    const attendees = await fetchCheckinAttendees(eventId);
+    if (!eventId) {
+      return NextResponse.json(
+        { success: false, error: "Event ID is required." },
+        { status: 400, headers: CORS_HEADERS }
+      );
+    }
 
+    // MANDATORY AUTHENTICATION: Require staff API key or organizer session
+    const authResult = await verifyApiKeyOrOrganizer(request, eventId);
+    if (!authResult.authorized) {
+      return NextResponse.json(
+        { success: false, error: authResult.error || "Unauthorized" },
+        { status: authResult.status || 401, headers: CORS_HEADERS }
+      );
+    }
+
+    const attendees = await fetchCheckinAttendees(eventId);
     const checkedInCount = attendees.filter((a) => a.checkedIn || a.checked_in).length;
     const totalCount = attendees.length;
 

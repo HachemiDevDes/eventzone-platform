@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { updateEventCheckinPasscode } from "@/lib/db";
+import { verifyOrganizerSession } from "@/lib/apiAuth";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -20,6 +21,15 @@ export async function POST(request) {
       return NextResponse.json(
         { success: false, error: "Event ID and passcode are required." },
         { status: 400, headers: CORS_HEADERS }
+      );
+    }
+
+    // MANDATORY AUTHENTICATION: Only authenticated organizer can set or update gate passcodes
+    const authResult = await verifyOrganizerSession(request, eventId);
+    if (!authResult.authorized) {
+      return NextResponse.json(
+        { success: false, error: authResult.error || "Unauthorized" },
+        { status: authResult.status || 401, headers: CORS_HEADERS }
       );
     }
 

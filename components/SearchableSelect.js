@@ -60,6 +60,7 @@ export default function SearchableSelect({
           icon: opt.icon,
           badge: opt.badge,
           description: opt.description,
+          disabled: Boolean(opt.disabled),
           original: opt,
         };
       }
@@ -144,7 +145,10 @@ export default function SearchableSelect({
     } else if (e.key === "Enter") {
       e.preventDefault();
       if (highlightedIndex >= 0 && highlightedIndex < filteredOptions.length) {
-        handleSelect(filteredOptions[highlightedIndex]);
+        const targetOpt = filteredOptions[highlightedIndex];
+        if (!targetOpt.disabled) {
+          handleSelect(targetOpt);
+        }
       }
     }
   };
@@ -160,6 +164,7 @@ export default function SearchableSelect({
   }, [highlightedIndex]);
 
   const handleSelect = (option) => {
+    if (option && option.disabled) return;
     if (onChange) {
       onChange(option.value, option);
     }
@@ -292,28 +297,32 @@ export default function SearchableSelect({
               filteredOptions.map((opt, idx) => {
                 const isSelected = String(value) === opt.value;
                 const isHighlighted = idx === highlightedIndex;
+                const isDisabled = Boolean(opt.disabled);
 
                 return (
                   <div
                     key={opt.value + "-" + idx}
                     role="option"
                     aria-selected={isSelected}
-                    onClick={() => handleSelect(opt)}
-                    onMouseEnter={() => setHighlightedIndex(idx)}
-                    className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs cursor-pointer transition-colors ${
-                      isSelected
-                        ? "bg-blue-50 text-blue-700 font-bold"
+                    aria-disabled={isDisabled}
+                    onClick={() => !isDisabled && handleSelect(opt)}
+                    onMouseEnter={() => !isDisabled && setHighlightedIndex(idx)}
+                    className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors ${
+                      isDisabled
+                        ? "opacity-50 cursor-not-allowed bg-slate-50/70 text-slate-400 select-none"
+                        : isSelected
+                        ? "bg-blue-50 text-blue-700 font-bold cursor-pointer"
                         : isHighlighted
-                        ? "bg-slate-100 text-slate-900 font-semibold"
-                        : "text-slate-700 hover:bg-slate-50 font-medium"
+                        ? "bg-slate-100 text-slate-900 font-semibold cursor-pointer"
+                        : "text-slate-700 hover:bg-slate-50 font-medium cursor-pointer"
                     }`}
                   >
                     <div className="flex items-center gap-2 min-w-0 pr-2">
-                      {opt.icon && <span className="shrink-0">{opt.icon}</span>}
+                      {opt.icon && <span className={`shrink-0 ${isDisabled ? "opacity-40" : ""}`}>{opt.icon}</span>}
                       <div className="flex flex-col min-w-0">
                         <span className="truncate">{opt.label}</span>
                         {opt.description && (
-                          <span className="text-[10px] text-slate-400 font-normal truncate">
+                          <span className={`text-[10px] truncate ${isDisabled ? "text-slate-400 italic" : "text-slate-400 font-normal"}`}>
                             {opt.description}
                           </span>
                         )}

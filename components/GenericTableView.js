@@ -358,8 +358,13 @@ export function getAttendeeDisplayImage(item) {
   if (!item) return "";
   if (item.image && typeof item.image === "string" && item.image.trim() && !item.image.includes("ui-avatars.com")) return item.image.trim();
   if (item.avatar && typeof item.avatar === "string" && item.avatar.trim() && !item.avatar.includes("ui-avatars.com")) return item.avatar.trim();
-  if (item.photo && typeof item.photo === "string" && item.photo.trim()) return item.photo.trim();
-  if (item.badgePicture && typeof item.badgePicture === "string" && item.badgePicture.trim()) return item.badgePicture.trim();
+  if (item.photo && typeof item.photo === "string" && item.photo.trim() && !item.photo.includes("ui-avatars.com")) return item.photo.trim();
+  if (item.badgePicture && typeof item.badgePicture === "string" && item.badgePicture.trim() && !item.badgePicture.includes("ui-avatars.com")) return item.badgePicture.trim();
+  if (item.badge_picture && typeof item.badge_picture === "string" && item.badge_picture.trim() && !item.badge_picture.includes("ui-avatars.com")) return item.badge_picture.trim();
+  if (item.profilePicture && typeof item.profilePicture === "string" && item.profilePicture.trim() && !item.profilePicture.includes("ui-avatars.com")) return item.profilePicture.trim();
+  if (item.profile_picture && typeof item.profile_picture === "string" && item.profile_picture.trim() && !item.profile_picture.includes("ui-avatars.com")) return item.profile_picture.trim();
+  if (item.avatar_url && typeof item.avatar_url === "string" && item.avatar_url.trim() && !item.avatar_url.includes("ui-avatars.com")) return item.avatar_url.trim();
+  if (item.avatarUrl && typeof item.avatarUrl === "string" && item.avatarUrl.trim() && !item.avatarUrl.includes("ui-avatars.com")) return item.avatarUrl.trim();
   
   const answers = item.answers || item.customAnswers || item.formAnswers || {};
   const extracted = extractImageFromAnswers(answers);
@@ -701,7 +706,6 @@ function SubmissionDetailsModal({ item, type = "attendee", forms = [], tickets =
     : null;
 
   const answers = item.answers || item.customAnswers || item.formAnswers || {};
-  const answerEntries = Object.entries(answers);
   const displayImg = getAttendeeDisplayImage(item);
 
   // Helper to detect if a form response value is image data (base64 or image url)
@@ -717,201 +721,192 @@ function SubmissionDetailsModal({ item, type = "attendee", forms = [], tickets =
     return (clean.startsWith("http://") || clean.startsWith("https://")) && !isImageValue(clean);
   };
 
+  // Filter out internal system keys from questionnaire list
+  const filteredAnswers = Object.entries(answers).filter(([k, val]) => {
+    if (!val && val !== 0 && val !== false) return false;
+    const kLower = k.toLowerCase();
+    if (kLower.startsWith("_")) return false;
+    if (kLower === "f_core_name" || kLower === "name") return false;
+    if (kLower === "f_core_email" || kLower === "email") return false;
+    return true;
+  });
+
   return (
     <div className="fixed inset-0 z-50 overflow-hidden select-none animate-fade-in font-sans">
-      {/* Blurry Backdrop */}
+      {/* Backdrop */}
       <div
         onClick={onClose}
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-300 cursor-pointer"
+        className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-200 cursor-pointer"
       />
 
       <div className="fixed inset-y-0 right-0 max-w-full flex pl-6 sm:pl-10">
-        <div className="w-screen max-w-2xl lg:max-w-3xl bg-white shadow-2xl flex flex-col border-l border-slate-100 transform transition-transform ease-in-out duration-300">
-          {/* Top Header */}
-          <header className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70 shrink-0">
+        <div className="w-screen max-w-xl lg:max-w-2xl bg-white shadow-2xl flex flex-col border-l border-slate-200 transform transition-transform ease-in-out duration-200">
+          
+          {/* Header */}
+          <header className="px-6 py-4 border-b border-slate-150 flex items-center justify-between bg-white shrink-0">
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-extrabold text-slate-900 leading-tight">
-                  {type === "pending" ? "Pending Registration Intake" : "Attendee Registration Details"}
-                </h3>
-                {type === "pending" ? (
-                  <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-extrabold border border-amber-200 uppercase tracking-wider">
-                    Pending Review
-                  </span>
-                ) : (
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-extrabold border border-emerald-200 uppercase tracking-wider">
-                    Approved
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">
-                Full registration questionnaire responses and contact details
+              <h3 className="text-base font-bold text-slate-900 leading-tight">
+                {type === "pending" ? "Registration Application" : "Attendee Details"}
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                {type === "pending" ? "Review intake responses for this registration request" : "Confirmed attendee profile and form responses"}
               </p>
             </div>
 
             <button 
               type="button"
               onClick={onClose}
-              className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
             >
               <X size={18} />
             </button>
           </header>
 
-          {/* Drawer Content Body */}
-          <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6">
-            {/* Identity & Ticket Summary Card */}
-            <div className="bg-gradient-to-br from-indigo-50/60 via-slate-50 to-blue-50/30 border border-slate-200/80 rounded-2xl p-5 sm:p-6 shadow-2xs">
-              <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
-                <div className="flex items-center gap-3.5">
+          {/* Body */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            
+            {/* Primary Profile Summary Card */}
+            <div className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-5 space-y-4">
+              
+              {/* Header row with Avatar, Name, Email, Badges */}
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex items-center gap-3.5 min-w-0">
                   <button
                     type="button"
                     onClick={() => setPreviewPhoto(true)}
-                    className="relative group/modalavatar cursor-zoom-in shrink-0 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-                    title="Click to view full photo"
+                    className="relative group shrink-0 rounded-xl overflow-hidden cursor-zoom-in focus:outline-none border border-slate-200 shadow-2xs"
+                    title="Click to zoom photo"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img 
                       src={displayImg} 
-                      className="w-16 h-16 rounded-2xl object-cover border-2 border-white shadow-sm ring-1 ring-slate-200 group-hover/modalavatar:ring-blue-500 transition-all" 
+                      className="w-13 h-13 rounded-xl object-cover" 
                       alt="" 
                     />
-                    <div className="absolute inset-0 bg-slate-900/35 rounded-2xl opacity-0 group-hover/modalavatar:opacity-100 flex items-center justify-center transition-opacity text-white">
-                      <Maximize2 size={18} className="drop-shadow" />
+                    <div className="absolute inset-0 bg-slate-900/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
+                      <Maximize2 size={14} />
                     </div>
                   </button>
 
-                  <div>
-                    <h4 className="text-lg font-black text-slate-900 leading-tight">
+                  <div className="min-w-0">
+                    <h4 className="text-base font-bold text-slate-900 truncate leading-snug">
                       {item.name || "Guest Attendee"}
                     </h4>
-                    <span className="text-xs font-semibold text-slate-500 block mt-0.5">
+                    <span className="text-xs text-slate-500 truncate block">
                       {item.email || "No email provided"}
                     </span>
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="px-3 py-1 rounded-full bg-blue-600 text-white font-extrabold text-xs shadow-xs">
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200/80 font-bold text-xs">
                     {ticketName}
                   </span>
                   {type === "pending" ? (
-                    <span className="px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold flex items-center gap-1">
-                      <Clock size={12} /> Pending Review
+                    <span className="px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-xs font-semibold flex items-center gap-1">
+                      <Clock size={11} /> Pending Review
                     </span>
                   ) : (
-                    <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold flex items-center gap-1">
-                      <CheckCircle2 size={12} /> Registered
+                    <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-semibold flex items-center gap-1">
+                      <CheckCircle2 size={11} /> Registered
                     </span>
                   )}
                 </div>
               </div>
 
-              {/* Core Info Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-slate-200/80 text-xs">
-                <div className="bg-white/80 p-3 rounded-xl border border-slate-150 shadow-2xs">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Company / Org</span>
-                  <span className="font-bold text-slate-800 break-words">{item.company || "—"}</span>
+              {/* Core Details 2-Column Grid */}
+              <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-200/70 text-xs">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Company / Organization</span>
+                  <span className="font-semibold text-slate-800 mt-0.5 block">{item.company || "—"}</span>
                 </div>
-                <div className="bg-white/80 p-3 rounded-xl border border-slate-150 shadow-2xs">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Job Title</span>
-                  <span className="font-bold text-slate-800 break-words">{item.jobTitle || item.job_title || "—"}</span>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Job Function / Role</span>
+                  <span className="font-semibold text-slate-800 mt-0.5 block">{item.jobTitle || item.job_title || "—"}</span>
                 </div>
-                <div className="bg-white/80 p-3 rounded-xl border border-slate-150 shadow-2xs">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Phone Number</span>
-                  <span className="font-bold text-slate-800 break-words">{item.phone || "—"}</span>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Phone Number</span>
+                  <span className="font-semibold text-slate-800 mt-0.5 block">{item.phone || "—"}</span>
                 </div>
-                <div className="bg-white/80 p-3 rounded-xl border border-slate-150 shadow-2xs">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Submitted Date</span>
-                  <span className="font-bold text-slate-800">{item.date || item.registeredDate || "—"}</span>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Submitted Date</span>
+                  <span className="font-semibold text-slate-800 mt-0.5 block">{item.date || item.registeredDate || "—"}</span>
                 </div>
-                {item.note && (
-                  <div className="col-span-2 sm:col-span-4 bg-white/80 p-3 rounded-xl border border-slate-150 shadow-2xs">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Application Note</span>
-                    <span className="font-medium text-slate-700 italic break-words">{item.note}</span>
-                  </div>
-                )}
               </div>
+
+              {/* Application note if available */}
+              {item.note && !item.note.startsWith("{") && (
+                <div className="pt-2.5 border-t border-slate-200/70 text-xs">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Application Note</span>
+                  <p className="text-slate-600 italic leading-relaxed m-0">{item.note}</p>
+                </div>
+              )}
             </div>
 
-            {/* Questionnaire & Dynamic Form Answers */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                <h5 className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">
-                  Ticket Form Questionnaire Responses
-                </h5>
-                {matchedForm && (
-                  <span className="text-[10px] font-extrabold text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full">
-                    Form: {matchedForm.title}
-                  </span>
-                )}
-              </div>
-
-              {answerEntries.length === 0 ? (
-                <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-8 text-center text-xs text-slate-400 font-medium">
-                  No custom ticket form questions were attached or answered for this registration.
+            {/* Custom Questionnaire Answers Section */}
+            {filteredAnswers.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    Form Questionnaire Responses
+                  </h5>
+                  {matchedForm && (
+                    <span className="text-[11px] font-semibold text-slate-500">
+                      {matchedForm.title}
+                    </span>
+                  )}
                 </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  {answerEntries.map(([key, val]) => {
-                    // Resolve friendly label from matched form if available
-                    const fieldDef = matchedForm?.fields?.find(f => f.id === key);
-                    const label = fieldDef?.label || key.replace(/^f_/, "").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 
+                <div className="space-y-2.5">
+                  {filteredAnswers.map(([key, val]) => {
+                    const fieldDef = matchedForm?.fields?.find(f => f.id === key);
+                    const label = fieldDef?.label || key.replace(/^f_core_/, "").replace(/^f_/, "").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
                     const isImg = isImageValue(val);
                     const isFile = isFileUrl(val);
 
                     return (
                       <div 
                         key={key} 
-                        className={`bg-slate-50/80 border border-slate-200/80 rounded-2xl p-4 flex flex-col justify-between gap-2 shadow-2xs ${
-                          isImg ? "sm:col-span-2" : ""
-                        }`}
+                        className="bg-white border border-slate-200/80 rounded-xl p-3.5 flex flex-col gap-1.5 shadow-2xs text-xs"
                       >
-                        <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                           {label}
                         </span>
 
                         {isImg ? (
-                          <div className="flex items-center gap-4 pt-1">
+                          <div className="flex items-center gap-3 pt-0.5">
                             <button
                               type="button"
                               onClick={() => setActiveLightboxImg({ url: val, label })}
-                              className="relative group cursor-zoom-in shrink-0 rounded-xl overflow-hidden border border-slate-200 shadow-xs focus:outline-none"
+                              className="relative group cursor-zoom-in shrink-0 rounded-lg overflow-hidden border border-slate-200 focus:outline-none"
                               title="Click to view full image"
                             >
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img 
                                 src={val} 
                                 alt={label} 
-                                className="w-20 h-20 object-cover group-hover:scale-105 transition-transform" 
+                                className="w-16 h-16 object-cover group-hover:scale-105 transition-transform" 
                               />
                               <div className="absolute inset-0 bg-slate-900/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
-                                <Maximize2 size={16} />
+                                <Maximize2 size={13} />
                               </div>
                             </button>
-
-                            <div className="text-xs space-y-1">
-                              <span className="font-bold text-slate-800 block">Uploaded Photo</span>
-                              <span className="text-[11px] text-slate-500 font-medium block">
-                                Click photo thumbnail to inspect in full resolution
-                              </span>
-                            </div>
+                            <span className="text-slate-500 text-xs">Click photo to zoom</span>
                           </div>
                         ) : isFile ? (
-                          <div className="pt-1">
+                          <div className="pt-0.5">
                             <a
                               href={val}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 text-blue-600 border border-slate-200 rounded-xl text-xs font-bold transition-colors"
+                              className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-700 font-semibold"
                             >
-                              <ExternalLink size={13} />
+                              <ExternalLink size={12} />
                               <span>View Attachment File</span>
                             </a>
                           </div>
                         ) : (
-                          <div className="text-xs font-bold text-slate-900 leading-snug break-words">
+                          <div className="text-xs font-semibold text-slate-900 leading-normal break-words">
                             {Array.isArray(val) ? val.join(", ") : (typeof val === "boolean" ? (val ? "Yes" : "No") : (String(val) || "—"))}
                           </div>
                         )}
@@ -919,35 +914,36 @@ function SubmissionDetailsModal({ item, type = "attendee", forms = [], tickets =
                     );
                   })}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+
           </div>
 
           {/* Sticky Drawer Footer */}
-          <footer className="px-6 py-4 border-t border-slate-100 bg-slate-50/80 backdrop-blur-xs flex items-center justify-between gap-3 shrink-0">
+          <footer className="px-6 py-4 border-t border-slate-150 bg-white flex items-center justify-between gap-3 shrink-0">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs"
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
             >
               Close
             </button>
 
             {type === "pending" && (
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => onDecline && onDecline(item.id)}
-                  className="px-4 py-2.5 bg-rose-50 hover:bg-rose-600 border border-rose-200 hover:border-rose-600 text-rose-700 hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs"
+                  className="px-4 py-2 bg-white hover:bg-rose-50 border border-rose-200 text-rose-600 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
                 >
                   Decline Application
                 </button>
                 <button
                   type="button"
                   onClick={() => onApprove && onApprove(item)}
-                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold transition-all cursor-pointer shadow-md hover:shadow-lg flex items-center gap-1.5"
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
                 >
-                  <Check size={14} className="stroke-[3]" />
+                  <Check size={14} className="stroke-[2.5]" />
                   <span>Approve & Issue Pass</span>
                 </button>
               </div>
@@ -2508,7 +2504,7 @@ function PendingView({ state, onUpdateState }) {
 
 // 4. PARTNER ORGANIZATIONS VIEW
 function OrganizationsView({ state, onUpdateState, onOpenModal }) {
-  const { organizations = [], sponsors = [], exhibitors = [] } = state;
+  const { organizations = [], sponsors = [], exhibitors = [], attendees = [] } = state;
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedIndustry, setSelectedIndustry] = useState("all");
   const [statusTab, setStatusTab] = useState("all"); // "all" | "active" | "sponsors" | "exhibitors" | "archived"
@@ -2538,8 +2534,16 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
 
   // Helper to check linked sponsor/exhibitor roles
   const getOrgRoles = (org) => {
-    const isSponsor = org?.id ? sponsors.find(s => !s.isArchived && s.status !== 'archived' && (s.orgId === org.id || s.org_id === org.id)) : null;
-    const isExhibitor = org?.id ? exhibitors.find(e => !e.isArchived && e.status !== 'archived' && (e.orgId === org.id || e.org_id === org.id)) : null;
+    if (!org) return { isSponsor: null, isExhibitor: null };
+    const cleanOrgName = (org.name || '').trim().toLowerCase();
+    const isSponsor = sponsors.find(s => !s.isArchived && s.status !== 'archived' && (
+      (org.id && (String(s.orgId) === String(org.id) || String(s.org_id) === String(org.id))) ||
+      (cleanOrgName && s.name && s.name.trim().toLowerCase() === cleanOrgName)
+    )) || null;
+    const isExhibitor = exhibitors.find(e => !e.isArchived && e.status !== 'archived' && (
+      (org.id && (String(e.orgId) === String(org.id) || String(e.org_id) === String(org.id))) ||
+      (cleanOrgName && e.name && e.name.trim().toLowerCase() === cleanOrgName)
+    )) || null;
     return { isSponsor, isExhibitor };
   };
 
@@ -2649,11 +2653,11 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
         </div>
 
         <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-3.5">
-          <div className="w-11 h-11 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold shrink-0">
+          <div className="w-11 h-11 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center font-bold shrink-0">
             <Layers size={20} />
           </div>
           <div>
-            <div className="text-xl font-black text-purple-700 leading-tight">{Math.max(1, industryOptions.length - 1)}</div>
+            <div className="text-xl font-black text-sky-700 leading-tight">{Math.max(1, industryOptions.length - 1)}</div>
             <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Sectors Represented</div>
           </div>
         </div>
@@ -2790,6 +2794,13 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
             const isArchived = o.isArchived || o.status === 'archived';
             const { isSponsor, isExhibitor } = getOrgRoles(o);
             const itemKey = o.id ? `org-grid-${o.id}` : `org-grid-idx-${index}-${o.name || 'unnamed'}`;
+            const matchingAtt = (attendees || []).find(a => 
+              !a.isArchived && a.status !== 'archived' && (
+                (o.email && a.email && a.email.trim().toLowerCase() === o.email.trim().toLowerCase()) ||
+                (o.contact && a.name && a.name.trim().toLowerCase() === o.contact.trim().toLowerCase())
+              )
+            );
+            const liaisonPhoto = matchingAtt ? getAttendeeDisplayImage(matchingAtt) : '';
 
             return (
               <div 
@@ -2891,10 +2902,19 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
                   {/* Contact Info & Details */}
                   <div className="border-t border-slate-100 pt-3 flex flex-col gap-1.5 text-xs text-slate-600 font-medium">
                     {o.contact && (
-                      <span className="flex items-center gap-2 truncate">
-                        <Users size={12} className="text-slate-400 shrink-0" />
-                        <span className="truncate">{o.contact} {o.jobTitle ? `(${o.jobTitle})` : ''}</span>
-                      </span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        {liaisonPhoto ? (
+                          <img 
+                            src={liaisonPhoto} 
+                            alt={o.contact} 
+                            className="w-5 h-5 rounded-full object-cover border border-slate-200 shrink-0" 
+                            onError={(e) => { e.target.style.display = 'none'; }}
+                          />
+                        ) : (
+                          <Users size={12} className="text-slate-400 shrink-0" />
+                        )}
+                        <span className="truncate font-semibold text-slate-800">{o.contact} {o.jobTitle ? `(${o.jobTitle})` : ''}</span>
+                      </div>
                     )}
 
                     {o.email && (
@@ -2988,6 +3008,13 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
                   const isArchived = o.isArchived || o.status === 'archived';
                   const { isSponsor, isExhibitor } = getOrgRoles(o);
                   const itemKey = o.id ? `org-row-${o.id}` : `org-row-idx-${index}-${o.name || 'unnamed'}`;
+                  const matchingAtt = (attendees || []).find(a => 
+                    !a.isArchived && a.status !== 'archived' && (
+                      (o.email && a.email && a.email.trim().toLowerCase() === o.email.trim().toLowerCase()) ||
+                      (o.contact && a.name && a.name.trim().toLowerCase() === o.contact.trim().toLowerCase())
+                    )
+                  );
+                  const liaisonPhoto = matchingAtt ? getAttendeeDisplayImage(matchingAtt) : '';
 
                   return (
                     <tr 
@@ -3015,17 +3042,35 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
 
                       {/* Primary Contact */}
                       <td className="py-4 px-6">
-                        <div className="space-y-0.5">
-                          <div className="font-bold text-slate-900 truncate">{o.contact || "—"}</div>
-                          {o.email && (
-                            <a href={`mailto:${o.email}`} className="text-slate-500 hover:text-blue-600 block truncate text-[11px]">
-                              {o.email}
-                            </a>
-                          )}
-                          {o.phone && (
-                            <span className="text-slate-400 block text-[11px] font-medium">{o.phone}</span>
-                          )}
-                        </div>
+                        {o.contact ? (
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            {liaisonPhoto ? (
+                              <img 
+                                src={liaisonPhoto} 
+                                alt={o.contact} 
+                                className="w-8 h-8 rounded-full object-cover border border-slate-200 shadow-2xs shrink-0" 
+                                onError={(e) => { e.target.style.display = 'none'; }}
+                              />
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-700 font-black text-xs flex items-center justify-center shrink-0 border border-blue-100">
+                                {o.contact.split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2)}
+                              </div>
+                            )}
+                            <div className="space-y-0.5 min-w-0">
+                              <div className="font-bold text-slate-900 truncate">{o.contact}</div>
+                              {o.email && (
+                                <a href={`mailto:${o.email}`} className="text-slate-500 hover:text-blue-600 block truncate text-[11px]">
+                                  {o.email}
+                                </a>
+                              )}
+                              {o.phone && (
+                                <span className="text-slate-400 block text-[11px] font-medium truncate">{o.phone}</span>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
                       </td>
 
                       {/* Event Roles */}
@@ -3178,7 +3223,7 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
 
 // 5. EVENT SPONSORS VIEW
 function SponsorsView({ state, onUpdateState, onOpenModal }) {
-  const { sponsors = [], organizations = [] } = state;
+  const { sponsors = [], organizations = [], attendees = [] } = state;
   const [searchQuery, setSearchQuery] = useState("");
   const [tierFilter, setTierFilter] = useState("all");
   const [viewMode, setViewMode] = useState("grid"); // "grid" | "table"
@@ -3194,7 +3239,7 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
   };
 
   const handleDeletePermanent = async (id) => {
-    if (confirm("Permanently delete this sponsor? This action cannot be undone.")) {
+    if (confirm("Remove this sponsor from the event? (Organization profile will remain preserved).")) {
       if (state.onDeleteSponsor) {
         await state.onDeleteSponsor(id);
       } else {
@@ -3203,15 +3248,139 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
     }
   };
 
-  const TIERS_CONFIG = [
-    { key: "diamond", name: "Diamond Tier", color: "text-sky-600 border-sky-100 bg-sky-50/40" },
-    { key: "gold", name: "Gold Tier", color: "text-amber-600 border-amber-100 bg-amber-50/40" },
-    { key: "silver", name: "Silver Tier", color: "text-slate-600 border-slate-200 bg-slate-50/50" },
-    { key: "bronze", name: "Bronze Tier", color: "text-amber-800 border-orange-100 bg-orange-50/30" },
-    { key: "title", name: "Title / Presenting", color: "text-purple-700 border-purple-100 bg-purple-50/40" },
-    { key: "partner", name: "Strategic Partners", color: "text-blue-700 border-blue-100 bg-blue-50/40" },
-    { key: "custom", name: "Custom Packages", color: "text-indigo-700 border-indigo-100 bg-indigo-50/40" }
-  ];
+  const [editingTierKey, setEditingTierKey] = useState(null);
+  const [tempTierName, setTempTierName] = useState("");
+  const [showManageTiersModal, setShowManageTiersModal] = useState(false);
+  const [modalTierNames, setModalTierNames] = useState({});
+
+  const eventIdKey = state.eventDetails?.id || "default";
+
+  // Tier names map from eventDetails or localStorage
+  const tierNamesMap = useMemo(() => {
+    let cached = {};
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem(`eventzone_cache_tier_names_${eventIdKey}`);
+        if (raw) cached = JSON.parse(raw);
+      } catch (e) {}
+    }
+    return {
+      ...cached,
+      ...(state.eventDetails?.sponsorTierNames || state.eventDetails?.sponsor_tier_names || {})
+    };
+  }, [state.eventDetails, eventIdKey]);
+
+  const DEFAULT_TIERS = useMemo(() => [
+    { key: "diamond", defaultName: "Diamond Tier", color: "text-sky-600 border-sky-100 bg-sky-50/40" },
+    { key: "gold", defaultName: "Gold Tier", color: "text-amber-600 border-amber-100 bg-amber-50/40" },
+    { key: "silver", defaultName: "Silver Tier", color: "text-slate-600 border-slate-200 bg-slate-50/50" },
+    { key: "bronze", defaultName: "Bronze Tier", color: "text-amber-800 border-orange-100 bg-orange-50/30" },
+    { key: "title", defaultName: "Title / Presenting", color: "text-purple-700 border-purple-100 bg-purple-50/40" },
+    { key: "partner", defaultName: "Strategic Partners", color: "text-blue-700 border-blue-100 bg-blue-50/40" },
+    { key: "custom", defaultName: "Custom Packages", color: "text-blue-700 border-blue-100 bg-blue-50/40" }
+  ], []);
+
+  const TIERS_CONFIG = useMemo(() => {
+    return DEFAULT_TIERS.map(tier => ({
+      ...tier,
+      name: tierNamesMap[tier.key] || tier.defaultName
+    }));
+  }, [DEFAULT_TIERS, tierNamesMap]);
+
+  const handleStartEditTier = (tierKey, currentName) => {
+    setEditingTierKey(tierKey);
+    setTempTierName(currentName);
+  };
+
+  const handleCancelEditTier = () => {
+    setEditingTierKey(null);
+    setTempTierName("");
+  };
+
+  const handleSaveTierName = (tierKey) => {
+    const trimmed = tempTierName.trim();
+    if (!trimmed) return;
+    const nextTierNames = {
+      ...tierNamesMap,
+      [tierKey]: trimmed
+    };
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem(`eventzone_cache_tier_names_${eventIdKey}`, JSON.stringify(nextTierNames));
+      } catch (e) {}
+    }
+    if (onUpdateState) {
+      onUpdateState("eventDetails", {
+        ...(state.eventDetails || {}),
+        sponsorTierNames: nextTierNames
+      });
+    }
+    setEditingTierKey(null);
+    setTempTierName("");
+  };
+
+  const handleResetTierName = (tierKey) => {
+    const defaultTier = DEFAULT_TIERS.find(t => t.key === tierKey);
+    if (!defaultTier) return;
+    const nextTierNames = { ...tierNamesMap };
+    delete nextTierNames[tierKey];
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem(`eventzone_cache_tier_names_${eventIdKey}`, JSON.stringify(nextTierNames));
+      } catch (e) {}
+    }
+    if (onUpdateState) {
+      onUpdateState("eventDetails", {
+        ...(state.eventDetails || {}),
+        sponsorTierNames: nextTierNames
+      });
+    }
+    setEditingTierKey(null);
+    setTempTierName("");
+  };
+
+  const handleOpenManageTiersModal = () => {
+    const initial = {};
+    DEFAULT_TIERS.forEach(t => {
+      initial[t.key] = tierNamesMap[t.key] || t.defaultName;
+    });
+    setModalTierNames(initial);
+    setShowManageTiersModal(true);
+  };
+
+  const handleSaveAllTiersFromModal = () => {
+    const nextTierNames = { ...modalTierNames };
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem(`eventzone_cache_tier_names_${eventIdKey}`, JSON.stringify(nextTierNames));
+      } catch (e) {}
+    }
+    if (onUpdateState) {
+      onUpdateState("eventDetails", {
+        ...(state.eventDetails || {}),
+        sponsorTierNames: nextTierNames
+      });
+    }
+    setShowManageTiersModal(false);
+  };
+
+  const handleResetAllTiersToDefault = () => {
+    const initial = {};
+    DEFAULT_TIERS.forEach(t => {
+      initial[t.key] = t.defaultName;
+    });
+    setModalTierNames(initial);
+  };
+
+  const tierFilterOptions = useMemo(() => {
+    return [
+      { value: "all", label: "All Tiers" },
+      ...TIERS_CONFIG.map(t => ({
+        value: t.key,
+        label: t.name
+      }))
+    ];
+  }, [TIERS_CONFIG]);
 
   const filteredSponsors = useMemo(() => {
     return sponsors.filter(s => {
@@ -3243,13 +3412,23 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
           </p>
         </div>
 
-        <button 
-          onClick={() => onOpenModal("sponsor")}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-4 rounded-xl text-xs transition-all hover:shadow-md hover:-translate-y-0.5 flex items-center gap-2 cursor-pointer shadow-xs shadow-blue-100 shrink-0"
-        >
-          <Plus size={16} />
-          <span>Add Sponsor</span>
-        </button>
+        <div className="flex items-center gap-2.5">
+          <button 
+            type="button"
+            onClick={handleOpenManageTiersModal}
+            className="bg-white hover:bg-slate-50 text-slate-700 font-bold py-2.5 px-3.5 rounded-xl text-xs border border-slate-200 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs hover:border-slate-300 shrink-0"
+          >
+            <Pencil size={13} className="text-slate-500" />
+            <span>Edit Tiers</span>
+          </button>
+          <button 
+            onClick={() => onOpenModal("sponsor")}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-4 rounded-xl text-xs transition-all hover:shadow-md hover:-translate-y-0.5 flex items-center gap-2 cursor-pointer shadow-xs shadow-blue-100 shrink-0"
+          >
+            <Plus size={16} />
+            <span>Add Sponsor</span>
+          </button>
+        </div>
       </header>
 
       {/* Toolbar */}
@@ -3266,20 +3445,12 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
         </div>
 
         <div className="flex items-center gap-2.5 w-full sm:w-auto">
-          <div className="w-full sm:w-48">
+          <div className="w-full sm:w-56">
             <SearchableSelect
               value={tierFilter}
               onChange={(val) => setTierFilter(val || "all")}
-              options={[
-                { value: "all", label: "All Tiers" },
-                { value: "diamond", label: "Diamond" },
-                { value: "gold", label: "Gold" },
-                { value: "silver", label: "Silver" },
-                { value: "bronze", label: "Bronze" },
-                { value: "title", label: "Title" },
-                { value: "partner", label: "Strategic" },
-                { value: "custom", label: "Custom" }
-              ]}
+              options={tierFilterOptions}
+              placeholder="Filter by tier..."
               isClearable={false}
             />
           </div>
@@ -3335,13 +3506,78 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
 
             return (
               <div key={tier.key} className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-xs flex flex-col gap-5">
-                <div className="flex justify-between items-center pb-3.5 border-b border-slate-100">
-                  <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
-                    <span>{tier.name}</span>
-                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
-                      {list.length}
-                    </span>
-                  </h3>
+                <div className="flex justify-between items-center pb-3.5 border-b border-slate-100 min-h-[42px]">
+                  {editingTierKey === tier.key ? (
+                    <div className="flex items-center gap-2 w-full max-w-md animate-fade-in">
+                      <input
+                        type="text"
+                        value={tempTierName}
+                        onChange={(e) => setTempTierName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleSaveTierName(tier.key);
+                          if (e.key === "Escape") handleCancelEditTier();
+                        }}
+                        autoFocus
+                        className="flex-1 px-3 py-1.5 border border-blue-500 rounded-xl text-xs font-bold bg-white text-slate-900 focus:outline-none shadow-2xs"
+                        placeholder="Enter tier name..."
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleSaveTierName(tier.key)}
+                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shrink-0"
+                      >
+                        <Check size={13} />
+                        <span>Save</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCancelEditTier}
+                        className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0"
+                        title="Cancel"
+                      >
+                        <X size={13} />
+                      </button>
+                      {tierNamesMap[tier.key] && (
+                        <button
+                          type="button"
+                          onClick={() => handleResetTierName(tier.key)}
+                          className="px-2 py-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl text-[11px] font-semibold transition-all cursor-pointer shrink-0"
+                          title="Reset to default name"
+                        >
+                          Reset
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2 group/tier-header">
+                        <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                          <span>{tier.name}</span>
+                          <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+                            {list.length}
+                          </span>
+                        </h3>
+                        <button
+                          type="button"
+                          onClick={() => handleStartEditTier(tier.key, tier.name)}
+                          className="opacity-0 group-hover/tier-header:opacity-100 p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ml-1"
+                          title="Rename Tier"
+                        >
+                          <Pencil size={12} />
+                          <span className="text-[11px] font-semibold text-slate-500 hover:text-blue-600">Rename</span>
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleStartEditTier(tier.key, tier.name)}
+                        className="text-[11px] font-bold text-slate-400 hover:text-blue-600 flex items-center gap-1 transition-colors cursor-pointer px-2 py-1 rounded-lg hover:bg-slate-50"
+                      >
+                        <Pencil size={11} />
+                        <span>Edit Name</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {list.length === 0 ? (
@@ -3352,6 +3588,15 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
                       const isArchived = s.isArchived || s.status === 'archived';
                       const matchedOrg = organizations.find(o => o.id === s.orgId || o.id === s.org_id);
                       const itemKey = s.id ? `sponsor-${s.id}` : `sponsor-idx-${index}-${s.name || 'unnamed'}`;
+                      const liaisonName = s.contact || s.contactPerson || matchedOrg?.contact || matchedOrg?.contactPerson || '';
+                      const liaisonEmail = s.email || s.contactEmail || matchedOrg?.email || matchedOrg?.contactEmail || '';
+                      const matchingAtt = (attendees || []).find(a => 
+                        !a.isArchived && a.status !== 'archived' && (
+                          (liaisonEmail && a.email && a.email.trim().toLowerCase() === liaisonEmail.trim().toLowerCase()) ||
+                          (liaisonName && a.name && a.name.trim().toLowerCase() === liaisonName.trim().toLowerCase())
+                        )
+                      );
+                      const liaisonPhoto = matchingAtt ? getAttendeeDisplayImage(matchingAtt) : '';
 
                       return (
                         <div 
@@ -3432,6 +3677,22 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
                             )}
                           </div>
 
+                          {liaisonName && (
+                            <div className="text-[10px] text-slate-600 font-semibold truncate max-w-full mt-1 flex items-center justify-center gap-1.5">
+                              {liaisonPhoto ? (
+                                <img 
+                                  src={liaisonPhoto} 
+                                  alt={liaisonName} 
+                                  className="w-4 h-4 rounded-full object-cover border border-slate-200 shrink-0" 
+                                  onError={(e) => { e.target.style.display = 'none'; }}
+                                />
+                              ) : (
+                                <Users size={10} className="text-slate-400 shrink-0" />
+                              )}
+                              <span className="truncate">{liaisonName}</span>
+                            </div>
+                          )}
+
                           {s.website && s.website !== "#" && (
                             <a 
                               href={s.website.startsWith('http') ? s.website : `https://${s.website}`} 
@@ -3461,6 +3722,7 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
                   <th className="py-4 px-6">Sponsor</th>
                   <th className="py-4 px-6">Tier Level</th>
                   <th className="py-4 px-6">Linked Organization</th>
+                  <th className="py-4 px-6">Contact Liaison</th>
                   <th className="py-4 px-6">Contribution</th>
                   <th className="py-4 px-6">Booth</th>
                   <th className="py-4 px-6 text-right">Actions</th>
@@ -3471,6 +3733,15 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
                   const matchedOrg = organizations.find(o => o.id === s.orgId || o.id === s.org_id);
                   const isArchived = s.isArchived || s.status === 'archived';
                   const itemKey = s.id ? `sponsor-row-${s.id}` : `sponsor-row-idx-${index}-${s.name || 'unnamed'}`;
+                  const liaisonName = s.contact || s.contactPerson || matchedOrg?.contact || matchedOrg?.contactPerson || '';
+                  const liaisonEmail = s.email || s.contactEmail || matchedOrg?.email || matchedOrg?.contactEmail || '';
+                  const matchingAtt = (attendees || []).find(a => 
+                    !a.isArchived && a.status !== 'archived' && (
+                      (liaisonEmail && a.email && a.email.trim().toLowerCase() === liaisonEmail.trim().toLowerCase()) ||
+                      (liaisonName && a.name && a.name.trim().toLowerCase() === liaisonName.trim().toLowerCase())
+                    )
+                  );
+                  const liaisonPhoto = matchingAtt ? getAttendeeDisplayImage(matchingAtt) : '';
 
                   return (
                     <tr key={itemKey} className="hover:bg-slate-50/60 transition-colors">
@@ -3492,12 +3763,40 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
                         </div>
                       </td>
                       <td className="py-4 px-6">
-                        <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-xl bg-amber-50 text-amber-800 border border-amber-200">
-                          {s.tier || 'Silver'}
+                        <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-xl bg-blue-50 text-blue-800 border border-blue-200/80">
+                          {tierNamesMap[(s.tier || 'silver').toLowerCase()] || s.customTier || s.tier || 'Silver'}
                         </span>
                       </td>
                       <td className="py-4 px-6">
                         <span className="text-slate-600 font-bold">{matchedOrg ? matchedOrg.name : '—'}</span>
+                      </td>
+                      <td className="py-4 px-6">
+                        {liaisonName ? (
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            {liaisonPhoto ? (
+                              <img 
+                                src={liaisonPhoto} 
+                                alt={liaisonName} 
+                                className="w-8 h-8 rounded-full object-cover border border-slate-200 shadow-2xs shrink-0" 
+                                onError={(e) => { e.target.style.display = 'none'; }}
+                              />
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-700 font-black text-xs flex items-center justify-center shrink-0 border border-blue-100">
+                                {liaisonName.split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2)}
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <span className="font-bold text-slate-900 block truncate">{liaisonName}</span>
+                              {liaisonEmail && (
+                                <a href={`mailto:${liaisonEmail}`} className="text-[11px] text-slate-500 hover:text-blue-600 block truncate">
+                                  {liaisonEmail}
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
                       </td>
                       <td className="py-4 px-6">
                         {s.amount ? (
@@ -3546,18 +3845,96 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
         </div>
       )}
 
+      {/* Manage / Edit Tiers Modal */}
+      {showManageTiersModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-3xl p-6 sm:p-7 max-w-lg w-full shadow-2xl border border-slate-100 flex flex-col gap-5">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div>
+                <h3 className="text-base font-black text-slate-900">Edit Sponsorship Tiers</h3>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">
+                  Rename and customize the tier levels for your event sponsors.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowManageTiersModal(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-all cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-3 max-h-[60vh] overflow-y-auto pr-1">
+              {DEFAULT_TIERS.map(tier => (
+                <div key={tier.key} className="flex flex-col gap-1.5 p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      Default: {tier.defaultName}
+                    </span>
+                    {modalTierNames[tier.key] !== tier.defaultName && (
+                      <button
+                        type="button"
+                        onClick={() => setModalTierNames(prev => ({ ...prev, [tier.key]: tier.defaultName }))}
+                        className="text-[10px] font-bold text-slate-400 hover:text-blue-600 cursor-pointer"
+                      >
+                        Reset
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    value={modalTierNames[tier.key] || ""}
+                    onChange={(e) => setModalTierNames(prev => ({ ...prev, [tier.key]: e.target.value }))}
+                    placeholder={tier.defaultName}
+                    className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 bg-white"
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={handleResetAllTiersToDefault}
+                className="text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+              >
+                Reset All to Default
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowManageTiersModal(false)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveAllTiersFromModal}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
+                >
+                  Save Tier Names
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
 
 // 6. EVENT EXHIBITORS VIEW
 function ExhibitorsView({ state, onUpdateState, onOpenModal }) {
-  const { exhibitors = [], organizations = [] } = state;
+  const { exhibitors = [], organizations = [], attendees = [] } = state;
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState("grid"); // "grid" | "table"
 
   const handleDelete = async (id) => {
-    if (confirm("Permanently delete this exhibitor? This action cannot be undone.")) {
+    if (confirm("Remove this exhibitor from the event? (Organization profile will remain preserved).")) {
       if (state.onDeleteExhibitor) {
         await state.onDeleteExhibitor(id);
       } else {
@@ -3672,6 +4049,31 @@ function ExhibitorsView({ state, onUpdateState, onOpenModal }) {
             const matchedOrg = organizations.find(o => o.id === e.orgId || o.id === e.org_id);
             const boothDisplay = e.booth || e.boothNumber || "Unassigned";
             const itemKey = e.id ? `exhibitor-${e.id}` : `exhibitor-idx-${index}-${e.name || 'unnamed'}`;
+            const liaisonName = e.contact || e.contactPerson || matchedOrg?.contact || matchedOrg?.contactPerson || '';
+            const liaisonEmail = e.email || e.contactEmail || matchedOrg?.email || matchedOrg?.contactEmail || '';
+            const liaisonPhone = e.phone || e.contactPhone || matchedOrg?.phone || matchedOrg?.contactPhone || '';
+            const liaisonTitle = e.jobTitle || e.contactPosition || matchedOrg?.jobTitle || matchedOrg?.contactPosition || '';
+            const staffLimit = parseInt(e.staffCount || e.badgeCount) || 2;
+            const targetExId = e.id ? String(e.id) : null;
+            const targetOrgId = (e.orgId || e.org_id || matchedOrg?.id) ? String(e.orgId || e.org_id || matchedOrg?.id) : null;
+            const targetCompName = (e.name || matchedOrg?.name || '').trim().toLowerCase();
+
+            const matchingStaff = (attendees || []).filter(a => {
+              if (a.isArchived || a.status === 'archived') return false;
+              const aOrgId = a.orgId || a.org_id || a.answers?.orgId || a.answers?.org_id;
+              const matchId = (targetExId && aOrgId && String(aOrgId) === targetExId) ||
+                              (targetOrgId && aOrgId && String(aOrgId) === targetOrgId);
+              const matchName = targetCompName && a.company && a.company.trim().toLowerCase() === targetCompName;
+              return matchId || matchName;
+            });
+
+            const matchingAtt = (attendees || []).find(a => 
+              !a.isArchived && a.status !== 'archived' && (
+                (liaisonEmail && a.email && a.email.trim().toLowerCase() === liaisonEmail.trim().toLowerCase()) ||
+                (liaisonName && a.name && a.name.trim().toLowerCase() === liaisonName.trim().toLowerCase())
+              )
+            );
+            const liaisonPhoto = matchingAtt ? getAttendeeDisplayImage(matchingAtt) : (e.contactPhoto || e.photo || e.avatar || '');
 
             return (
               <div 
@@ -3728,32 +4130,54 @@ function ExhibitorsView({ state, onUpdateState, onOpenModal }) {
                     </span>
                   </div>
 
-                  <div className="border-t border-slate-100 pt-3 flex flex-col gap-1.5 text-xs text-slate-600 font-medium">
-                    {(e.contact || e.contactPerson) && (
-                      <span className="flex items-center gap-2 truncate">
-                        <Users size={12} className="text-slate-400 shrink-0" />
-                        <span className="truncate">{e.contact || e.contactPerson}</span>
-                      </span>
-                    )}
-                    {(e.email || e.contactEmail) && (
-                      <span className="flex items-center gap-2 truncate">
-                        <Mail size={12} className="text-slate-400 shrink-0" />
-                        <a href={`mailto:${e.email || e.contactEmail}`} className="truncate hover:text-blue-600">{e.email || e.contactEmail}</a>
-                      </span>
-                    )}
-                    {(e.phone || e.contactPhone) && (
-                      <span className="flex items-center gap-2 truncate">
-                        <Phone size={12} className="text-slate-400 shrink-0" />
-                        <span className="truncate">{e.phone || e.contactPhone}</span>
-                      </span>
-                    )}
-                  </div>
+                  {liaisonName ? (
+                    <div className="border-t border-slate-100 pt-3 flex flex-col gap-1.5 text-xs text-slate-600 font-medium">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        {liaisonPhoto ? (
+                          <img 
+                            src={liaisonPhoto} 
+                            alt={liaisonName} 
+                            className="w-7 h-7 rounded-full object-cover border border-slate-200 shadow-2xs shrink-0" 
+                            onError={(e) => { e.target.style.display = 'none'; }}
+                          />
+                        ) : (
+                          <div className="w-7 h-7 rounded-full bg-blue-50 text-blue-700 font-black text-[10px] flex items-center justify-center shrink-0 border border-blue-100">
+                            {liaisonName.split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2) || "CL"}
+                          </div>
+                        )}
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-bold text-slate-900 truncate">{liaisonName}</span>
+                          {liaisonTitle && (
+                            <span className="text-[10px] text-blue-700 font-semibold truncate">{liaisonTitle}</span>
+                          )}
+                        </div>
+                      </div>
+                      {liaisonEmail && (
+                        <span className="flex items-center gap-2 truncate text-[11px] text-slate-500 pl-0.5">
+                          <Mail size={11} className="text-slate-400 shrink-0" />
+                          <a href={`mailto:${liaisonEmail}`} className="truncate hover:text-blue-600">{liaisonEmail}</a>
+                        </span>
+                      )}
+                      {liaisonPhone && (
+                        <span className="flex items-center gap-2 truncate text-[11px] text-slate-500 pl-0.5">
+                          <Phone size={11} className="text-slate-400 shrink-0" />
+                          <span className="truncate">{liaisonPhone}</span>
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="border-t border-slate-100 pt-3 text-xs text-slate-400 italic">
+                      No contact liaison assigned
+                    </div>
+                  )}
                 </div>
 
                 <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] font-bold text-slate-500">
                   <span className="flex items-center gap-1 text-slate-600">
                     <Ticket size={12} className="text-blue-500" />
-                    <span>{e.staffCount || e.badgeCount || 2} Staff Passes</span>
+                    <span className={matchingStaff.length >= staffLimit ? "text-amber-700 font-extrabold" : "text-slate-600"}>
+                      {matchingStaff.length} / {staffLimit} Staff Badges
+                    </span>
                   </span>
                   <span className="text-[10px] text-slate-400 uppercase font-extrabold">{e.boothType || "Standard"}</span>
                 </div>
@@ -3780,6 +4204,28 @@ function ExhibitorsView({ state, onUpdateState, onOpenModal }) {
                 {filteredExhibitors.map((e, index) => {
                   const matchedOrg = organizations.find(o => o.id === e.orgId || o.id === e.org_id);
                   const itemKey = e.id ? `exhibitor-row-${e.id}` : `exhibitor-row-idx-${index}-${e.name || 'unnamed'}`;
+                  const liaisonName = e.contact || e.contactPerson || matchedOrg?.contact || matchedOrg?.contactPerson || '';
+                  const liaisonEmail = e.email || e.contactEmail || matchedOrg?.email || matchedOrg?.contactEmail || '';
+                  const staffLimit = parseInt(e.staffCount || e.badgeCount) || 2;
+                  const targetExId = e.id ? String(e.id) : null;
+                  const targetOrgId = (e.orgId || e.org_id || matchedOrg?.id) ? String(e.orgId || e.org_id || matchedOrg?.id) : null;
+                  const targetCompName = (e.name || matchedOrg?.name || '').trim().toLowerCase();
+
+                  const matchingStaff = (attendees || []).filter(a => {
+                    if (a.isArchived || a.status === 'archived') return false;
+                    const aOrgId = a.orgId || a.org_id || a.answers?.orgId || a.answers?.org_id;
+                    const matchId = (targetExId && aOrgId && String(aOrgId) === targetExId) ||
+                                    (targetOrgId && aOrgId && String(aOrgId) === targetOrgId);
+                    const matchName = targetCompName && a.company && a.company.trim().toLowerCase() === targetCompName;
+                    return matchId || matchName;
+                  });
+                  const matchingAtt = (attendees || []).find(a => 
+                    !a.isArchived && a.status !== 'archived' && (
+                      (liaisonEmail && a.email && a.email.trim().toLowerCase() === liaisonEmail.trim().toLowerCase()) ||
+                      (liaisonName && a.name && a.name.trim().toLowerCase() === liaisonName.trim().toLowerCase())
+                    )
+                  );
+                  const liaisonPhoto = matchingAtt ? getAttendeeDisplayImage(matchingAtt) : (e.contactPhoto || e.photo || e.avatar || '');
 
                   return (
                     <tr key={itemKey} className="hover:bg-slate-50/60 transition-colors">
@@ -3801,17 +4247,37 @@ function ExhibitorsView({ state, onUpdateState, onOpenModal }) {
                         </span>
                       </td>
                       <td className="py-4 px-6">
-                        <div className="space-y-0.5">
-                          <div className="font-bold text-slate-900">{e.contact || e.contactPerson || '—'}</div>
-                          {(e.email || e.contactEmail) && (
-                            <a href={`mailto:${e.email || e.contactEmail}`} className="text-slate-500 hover:text-blue-600 block text-[11px]">
-                              {e.email || e.contactEmail}
-                            </a>
-                          )}
-                        </div>
+                        {liaisonName ? (
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            {liaisonPhoto ? (
+                              <img 
+                                src={liaisonPhoto} 
+                                alt={liaisonName} 
+                                className="w-8 h-8 rounded-full object-cover border border-slate-200 shadow-2xs shrink-0" 
+                                onError={(e) => { e.target.style.display = 'none'; }}
+                              />
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-700 font-black text-xs flex items-center justify-center shrink-0 border border-blue-100">
+                                {liaisonName.split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2) || "—"}
+                              </div>
+                            )}
+                            <div className="space-y-0.5 min-w-0">
+                              <div className="font-bold text-slate-900 truncate">{liaisonName}</div>
+                              {liaisonEmail && (
+                                <a href={`mailto:${liaisonEmail}`} className="text-slate-500 hover:text-blue-600 block text-[11px] truncate">
+                                  {liaisonEmail}
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
                       </td>
                       <td className="py-4 px-6">
-                        <span className="font-bold text-slate-700">{e.staffCount || e.badgeCount || 2} Passes</span>
+                        <span className={`font-bold ${matchingStaff.length >= staffLimit ? "text-amber-700 font-extrabold" : "text-slate-700"}`}>
+                          {matchingStaff.length} / {staffLimit} Badges
+                        </span>
                       </td>
                       <td className="py-4 px-6">
                         <span className="text-slate-600 font-bold">{matchedOrg ? matchedOrg.name : '—'}</span>

@@ -716,66 +716,8 @@ export function HomeContent() {
           fetchAndSet(fetchRSVPSettings(activeEventId), setRsvpSettings, "rsvpSettings");
         };
 
-        // 1. High-Performance Bundle Fetch with immediate fallback
-        fetchEventBundle(activeEventId)
-          .then((bundle) => {
-            if (bundle && bundle.event) {
-              if (bundle.event) {
-                setEventDetails(bundle.event);
-                safeLocalStorageSet(`eventzone_cached_event_${activeEventId}`, bundle.event);
-              }
-              if (bundle.tickets) {
-                setTickets(bundle.tickets);
-                safeLocalStorageSet(`eventzone_cache_tickets_${activeEventId}`, bundle.tickets);
-              }
-              if (bundle.sessions) {
-                setSessions(bundle.sessions);
-                safeLocalStorageSet(`eventzone_cache_sessions_${activeEventId}`, bundle.sessions);
-              }
-              if (bundle.sponsors) {
-                setSponsors(bundle.sponsors);
-                safeLocalStorageSet(`eventzone_cache_sponsors_${activeEventId}`, bundle.sponsors);
-              }
-              if (bundle.exhibitors) {
-                setExhibitors(bundle.exhibitors);
-                safeLocalStorageSet(`eventzone_cache_exhibitors_${activeEventId}`, bundle.exhibitors);
-              }
-              if (bundle.organizations) {
-                setOrganizations(bundle.organizations);
-                safeLocalStorageSet(`eventzone_cache_organizations_${activeEventId}`, bundle.organizations);
-              }
-              if (bundle.forms) {
-                setForms(bundle.forms);
-                safeLocalStorageSet(`eventzone_cache_forms_${activeEventId}`, bundle.forms);
-              }
-              if (bundle.floorPlans) {
-                setFloorPlans(bundle.floorPlans);
-                safeLocalStorageSet(`eventzone_cache_floorPlans_${activeEventId}`, bundle.floorPlans);
-              }
-              if (bundle.rsvpSettings) {
-                setRsvpSettings(bundle.rsvpSettings);
-                safeLocalStorageSet(`eventzone_cache_rsvpSettings_${activeEventId}`, bundle.rsvpSettings);
-              }
-              if (bundle.influencers) {
-                setInfluencers(bundle.influencers);
-                safeLocalStorageSet(`eventzone_cache_influencers_${activeEventId}`, bundle.influencers);
-              }
-              if (bundle.opportunities) {
-                setOpportunities(bundle.opportunities);
-                safeLocalStorageSet(`eventzone_cache_opportunities_${activeEventId}`, bundle.opportunities);
-              }
-              if (bundle.team) {
-                setTeam(bundle.team);
-                safeLocalStorageSet(`eventzone_cache_team_${activeEventId}`, bundle.team);
-              }
-            } else {
-              triggerGranularFetches();
-            }
-          })
-          .catch((err) => {
-            console.warn("Bundle fetch notice, falling back:", err);
-            triggerGranularFetches();
-          });
+        // 1. Parallel coordinated entity fetches to guarantee accurate & complete data
+        triggerGranularFetches();
 
         // 2. Parallel non-blocking fetches for rsvps, logistics & documents
         fetchAndSet(fetchRSVPs(activeEventId), setRsvps, "rsvps");
@@ -1175,8 +1117,20 @@ export function HomeContent() {
       console.warn("Supabase signout exception:", e);
     }
     if (typeof window !== "undefined") {
-      localStorage.removeItem("eventzone_user");
+      try {
+        localStorage.removeItem("eventzone_user");
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && (k.startsWith("eventzone_cache_") || k.startsWith("eventzone_cached_event_"))) {
+            keysToRemove.push(k);
+          }
+        }
+        keysToRemove.forEach(k => localStorage.removeItem(k));
+      } catch (e) {}
     }
+    setUserEvents([]);
+    setVisitorRegistrations([]);
     setCurrentUser(null);
     setCurrentView("home");
   };
@@ -1934,7 +1888,9 @@ export function HomeContent() {
           (!orgData.id || String(o.id) !== String(orgData.id)) &&
           (!cleanName || (o.name || '').trim().toLowerCase() !== cleanName)
         );
-        return [...withoutTarget, { ...saved, id: saved.id, contact: liaisonContact, jobTitle: liaisonTitle, email: liaisonEmail, phone: liaisonPhone }];
+        const updated = [...withoutTarget, { ...saved, id: saved.id, contact: liaisonContact, jobTitle: liaisonTitle, email: liaisonEmail, phone: liaisonPhone }];
+        safeLocalStorageSet(`eventzone_cache_organizations_${activeEventId}`, updated);
+        return updated;
       });
 
       // 1. Manage Sponsor Linkage (Sync Contact Liaison if existing, create if requested)
@@ -2092,6 +2048,24 @@ export function HomeContent() {
         });
       }
 
+      // 3. Automatically link Contact Liaison to Company Personnel in DB and state
+      const matchingLiaisonAttendee = (attendees || []).find(a => 
+        !a.isArchived && a.status !== 'archived' && (
+          (orgData.selectedLiaisonAttendeeId && String(a.id) === String(orgData.selectedLiaisonAttendeeId)) ||
+          (liaisonEmail && a.email && a.email.trim().toLowerCase() === liaisonEmail.trim().toLowerCase()) ||
+          (liaisonContact && a.name && a.name.trim().toLowerCase() === liaisonContact.trim().toLowerCase())
+        )
+      );
+      if (matchingLiaisonAttendee) {
+        try {
+          await handleAssignAttendeeToCompany(matchingLiaisonAttendee.id, saved, {
+            jobTitle: liaisonTitle || matchingLiaisonAttendee.jobTitle || 'Contact Liaison'
+          });
+        } catch (e) {
+          console.warn("Auto-assign liaison to personnel on org save error:", e);
+        }
+      }
+
       return saved;
     } catch (err) {
       console.error("Failed to save organization:", err);
@@ -2212,6 +2186,25 @@ export function HomeContent() {
         }
       }
 
+      // 3. Automatically link Contact Liaison to Company Personnel in DB and state
+      const matchingLiaisonAttendee = (attendees || []).find(a => 
+        !a.isArchived && a.status !== 'archived' && (
+          (sponsorData.selectedLiaisonAttendeeId && String(a.id) === String(sponsorData.selectedLiaisonAttendeeId)) ||
+          (liaisonEmail && a.email && a.email.trim().toLowerCase() === liaisonEmail.trim().toLowerCase()) ||
+          (liaisonContact && a.name && a.name.trim().toLowerCase() === liaisonContact.trim().toLowerCase())
+        )
+      );
+      if (matchingLiaisonAttendee) {
+        const companyTarget = { id: targetOrgId || saved.id, orgId: targetOrgId || saved.id, name: saved.name };
+        try {
+          await handleAssignAttendeeToCompany(matchingLiaisonAttendee.id, companyTarget, {
+            jobTitle: liaisonTitle || matchingLiaisonAttendee.jobTitle || 'Contact Liaison'
+          });
+        } catch (e) {
+          console.warn("Auto-assign liaison to personnel on sponsor save error:", e);
+        }
+      }
+
       return saved;
     } catch (err) {
       console.error("Failed to save sponsor:", err);
@@ -2329,6 +2322,25 @@ export function HomeContent() {
             );
             return [...withoutSp, updatedSponsor];
           });
+        }
+      }
+
+      // 3. Automatically link Contact Liaison to Company Personnel in DB and state
+      const matchingLiaisonAttendee = (attendees || []).find(a => 
+        !a.isArchived && a.status !== 'archived' && (
+          (exhibitorData.selectedLiaisonAttendeeId && String(a.id) === String(exhibitorData.selectedLiaisonAttendeeId)) ||
+          (liaisonEmail && a.email && a.email.trim().toLowerCase() === liaisonEmail.trim().toLowerCase()) ||
+          (liaisonContact && a.name && a.name.trim().toLowerCase() === liaisonContact.trim().toLowerCase())
+        )
+      );
+      if (matchingLiaisonAttendee) {
+        const companyTarget = { id: targetOrgId || saved.id, orgId: targetOrgId || saved.id, name: saved.name };
+        try {
+          await handleAssignAttendeeToCompany(matchingLiaisonAttendee.id, companyTarget, {
+            jobTitle: liaisonTitle || matchingLiaisonAttendee.jobTitle || 'Contact Liaison'
+          });
+        } catch (e) {
+          console.warn("Auto-assign liaison to personnel on exhibitor save error:", e);
         }
       }
 
@@ -2465,7 +2477,10 @@ export function HomeContent() {
 
       // 5. Unassign linked attendees from this company
       setAttendees(prev => prev.map(a => {
-        if (String(a.orgId) === String(orgId) || String(a.org_id) === String(orgId) || (cleanName && a.company && a.company.trim().toLowerCase() === cleanName)) {
+        const aOrgId = a.orgId || a.org_id || a.answers?.orgId || a.answers?.org_id;
+        const matchId = orgId && aOrgId && String(aOrgId) === String(orgId);
+        const matchName = cleanName && a.company && a.company.trim().toLowerCase() === cleanName;
+        if (matchId || matchName) {
           return { ...a, orgId: null, org_id: null, company: '' };
         }
         return a;
@@ -4050,6 +4065,7 @@ export function HomeContent() {
         onUploadFile={uploadFileToBucket}
         activeEventId={activeEventId}
         eventTitle={eventDetails?.title || "Eventzone Summit"}
+        eventDetails={eventDetails}
       />
 
       {/* Global Public RSVP Modal (Preview & Direct Trigger) */}

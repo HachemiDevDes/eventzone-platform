@@ -4369,8 +4369,18 @@ export default function FloorPlanModifier({
                         <div className="mt-1 flex flex-col gap-1.5 bg-indigo-50/20 border border-indigo-100/30 p-3 rounded-xl">
                           <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">Exhibitor Contact</span>
                           <div className="flex justify-between items-center text-[10px]">
-                            <span className="font-bold text-slate-700">{mobileDetailsData.exhibitor.contact || "Representative"}</span>
-                            <span className="text-[9px] font-bold text-indigo-650 bg-indigo-50 px-2 py-0.5 rounded-md">Representative</span>
+                            <div className="flex items-center gap-2 min-w-0">
+                              {(mobileDetailsData.exhibitor.contactPhoto || mobileDetailsData.exhibitor.photo || mobileDetailsData.exhibitor.avatar) ? (
+                                <img
+                                  src={mobileDetailsData.exhibitor.contactPhoto || mobileDetailsData.exhibitor.photo || mobileDetailsData.exhibitor.avatar}
+                                  alt=""
+                                  className="w-5 h-5 rounded-full object-cover border border-indigo-200 shrink-0"
+                                  onError={(e) => { e.target.style.display = 'none'; }}
+                                />
+                              ) : null}
+                              <span className="font-bold text-slate-700 truncate">{mobileDetailsData.exhibitor.contact || "Representative"}</span>
+                            </div>
+                            <span className="text-[9px] font-bold text-indigo-650 bg-indigo-50 px-2 py-0.5 rounded-md shrink-0">Representative</span>
                           </div>
                         </div>
                       )}
@@ -4745,8 +4755,18 @@ export default function FloorPlanModifier({
                     <div className="mt-auto flex flex-col gap-2 bg-indigo-50/30 border border-indigo-100/40 p-4 rounded-2xl">
                       <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Exhibitor Contact</span>
                       <div className="flex justify-between items-center text-xs">
-                        <span className="font-bold text-slate-700">{exhibitor.contact || "Representative"}</span>
-                        <span className="text-[10px] font-bold text-indigo-650 bg-indigo-50 px-2.5 py-0.5 rounded-full">Representative</span>
+                        <div className="flex items-center gap-2 min-w-0">
+                          {(exhibitor.contactPhoto || exhibitor.photo || exhibitor.avatar) ? (
+                            <img
+                              src={exhibitor.contactPhoto || exhibitor.photo || exhibitor.avatar}
+                              alt=""
+                              className="w-5 h-5 rounded-full object-cover border border-indigo-200 shrink-0"
+                              onError={(e) => { e.target.style.display = 'none'; }}
+                            />
+                          ) : null}
+                          <span className="font-bold text-slate-700 truncate">{exhibitor.contact || "Representative"}</span>
+                        </div>
+                        <span className="text-[10px] font-bold text-indigo-650 bg-indigo-50 px-2.5 py-0.5 rounded-full shrink-0">Representative</span>
                       </div>
                     </div>
                   )}
@@ -5206,23 +5226,21 @@ export default function FloorPlanModifier({
 
                          <div className="flex flex-col gap-1.5">
                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Exhibitor Link</label>
-                           <select
-                             value={selectedIds.length > 1 ? "" : (selectedElement.exhibitorId || "")}
+                           <SearchableSelect
+                             value={selectedIds.length > 1 ? "" : (selectedElement.exhibitorId ? String(selectedElement.exhibitorId) : "")}
                              disabled={selectedElement.isLocked || selectedIds.length > 1}
-                             onChange={(e) => handlePropertyChange("exhibitorId", e.target.value || null)}
-                             className="px-3 py-2 border border-slate-200 rounded-xl text-slate-800 focus:outline-none text-xs font-semibold bg-white w-full disabled:opacity-50"
-                           >
-                             {selectedIds.length > 1 ? (
-                               <option value="">Multiple values selected</option>
-                             ) : (
-                               <>
-                                 <option value="">-- None --</option>
-                                 {exhibitors.map(ex => (
-                                   <option key={ex.id} value={ex.id}>{ex.name}</option>
-                                 ))}
-                               </>
-                             )}
-                           </select>
+                             onChange={(val) => handlePropertyChange("exhibitorId", val || null)}
+                             placeholder={selectedIds.length > 1 ? "Multiple values selected" : "-- None --"}
+                             searchPlaceholder="Search exhibitor..."
+                             options={exhibitors.map(ex => ({
+                               value: String(ex.id),
+                               label: ex.name || "Unnamed Exhibitor",
+                               description: ex.booth ? `Booth: ${ex.booth}` : (ex.industry ? `Industry: ${ex.industry}` : undefined)
+                             }))}
+                             isClearable={true}
+                             className="w-full"
+                             buttonClassName="!py-2 !px-3 !rounded-xl !text-xs !font-semibold border-slate-200"
+                           />
                          </div>
 
                         <div className="flex flex-col gap-3 pt-2 border-t border-slate-100">
@@ -5417,35 +5435,41 @@ export default function FloorPlanModifier({
                                   const currentAssignment = selectedElement.assignments ? selectedElement.assignments[idx] : "";
                                   return (
                                     <div key={idx} className="flex items-center gap-2">
-                                      <span className="text-[10px] font-bold text-slate-500 w-12 shrink-0">
+                                      <span className="text-[10px] font-bold text-slate-500 w-14 shrink-0">
                                         {selectedElement.type === "stage-podium" ? `Speaker ${idx + 1}:` : `Chair ${idx + 1}:`}
                                       </span>
-                                      <select
-                                        value={currentAssignment || ""}
-                                        disabled={selectedElement.isLocked}
-                                        onChange={(e) => {
-                                          const newAssignments = { ...(selectedElement.assignments || {}) };
-                                          if (e.target.value) {
-                                            newAssignments[idx] = e.target.value;
-                                          } else {
-                                            delete newAssignments[idx];
+                                      <div className="flex-1 min-w-0">
+                                        <SearchableSelect
+                                          value={currentAssignment ? String(currentAssignment) : ""}
+                                          disabled={selectedElement.isLocked}
+                                          onChange={(val) => {
+                                            const newAssignments = { ...(selectedElement.assignments || {}) };
+                                            if (val) {
+                                              newAssignments[idx] = val;
+                                            } else {
+                                              delete newAssignments[idx];
+                                            }
+                                            handlePropertyChange("assignments", newAssignments);
+                                          }}
+                                          placeholder="-- Unassigned --"
+                                          searchPlaceholder="Search attendee or speaker..."
+                                          options={sortedAttendees
+                                            .filter(att => !(localAssignedIds.has(String(att.id)) && String(att.id) !== String(currentAssignment)))
+                                            .map(att => {
+                                              const isSpeaker = (att.ticket_type || att.ticketType || "").toLowerCase().includes("speaker");
+                                              return {
+                                                value: String(att.id),
+                                                label: `${isSpeaker ? "★ " : ""}${att.name}`,
+                                                description: att.company || (isSpeaker ? "Speaker" : (att.ticketType || att.ticket_type)),
+                                                badge: isSpeaker ? "Speaker" : undefined
+                                              };
+                                            })
                                           }
-                                          handlePropertyChange("assignments", newAssignments);
-                                        }}
-                                        className="flex-1 px-3 py-1.5 border border-slate-200 hover:border-slate-350 focus:border-indigo-500 rounded-xl text-xs font-semibold bg-white focus:outline-none disabled:opacity-50 transition-colors"
-                                      >
-                                        <option value="">-- Unassigned --</option>
-                                        {sortedAttendees.map(att => {
-                                          const isAssignedElsewhere = localAssignedIds.has(String(att.id)) && String(att.id) !== String(currentAssignment);
-                                          if (isAssignedElsewhere) return null;
-                                          const isSpeaker = (att.ticket_type || att.ticketType || "").toLowerCase().includes("speaker");
-                                          return (
-                                            <option key={att.id} value={att.id}>
-                                              {isSpeaker ? "★ Speaker: " : ""}{att.name} {att.company ? `(${att.company})` : ""}
-                                            </option>
-                                          );
-                                        })}
-                                      </select>
+                                          isClearable={true}
+                                          className="w-full"
+                                          buttonClassName="!py-1.5 !px-2.5 !rounded-xl !text-xs !font-semibold border-slate-200"
+                                        />
+                                      </div>
                                     </div>
                                   );
                                 });
@@ -6797,25 +6821,31 @@ export default function FloorPlanModifier({
                                   <span className="text-[10px] font-semibold text-slate-500 w-16 shrink-0">
                                     {(selectedElement.podLabel ?? "Pod A") + (idx + 1)}:
                                   </span>
-                                  <select
-                                    value={currentEx || ""}
-                                    disabled={selectedElement.isLocked}
-                                    onChange={(e) => {
-                                      const updatedAssignments = { ...(selectedElement.podAssignments || {}) };
-                                      if (e.target.value) {
-                                        updatedAssignments[podKey] = parseInt(e.target.value);
-                                      } else {
-                                        delete updatedAssignments[podKey];
-                                      }
-                                      handlePropertyChange("podAssignments", updatedAssignments);
-                                    }}
-                                    className="flex-1 px-2.5 py-1.5 border border-slate-200 rounded-xl text-xs font-semibold bg-white focus:outline-none"
-                                  >
-                                    <option value="">-- Unassigned --</option>
-                                    {exhibitors.map(ex => (
-                                      <option key={ex.id} value={ex.id}>{ex.name}</option>
-                                    ))}
-                                  </select>
+                                  <div className="flex-1 min-w-0">
+                                    <SearchableSelect
+                                      value={currentEx ? String(currentEx) : ""}
+                                      disabled={selectedElement.isLocked}
+                                      onChange={(val) => {
+                                        const updatedAssignments = { ...(selectedElement.podAssignments || {}) };
+                                        if (val) {
+                                          updatedAssignments[podKey] = val;
+                                        } else {
+                                          delete updatedAssignments[podKey];
+                                        }
+                                        handlePropertyChange("podAssignments", updatedAssignments);
+                                      }}
+                                      placeholder="-- Unassigned --"
+                                      searchPlaceholder="Search exhibitor..."
+                                      options={exhibitors.map(ex => ({
+                                        value: String(ex.id),
+                                        label: ex.name || "Unnamed Exhibitor",
+                                        description: ex.booth ? `Booth: ${ex.booth}` : (ex.industry ? `Industry: ${ex.industry}` : undefined)
+                                      }))}
+                                      isClearable={true}
+                                      className="w-full"
+                                      buttonClassName="!py-1.5 !px-2.5 !rounded-xl !text-xs !font-semibold border-slate-200"
+                                    />
+                                  </div>
                                 </div>
                               );
                             })}
@@ -7691,10 +7721,10 @@ export default function FloorPlanModifier({
               <div className="flex flex-col gap-1.5 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Global Typography</span>
                 <div className="relative">
-                  <select
+                  <SearchableSelect
                     value={floorPlanFont}
-                    onChange={(e) => {
-                      const newFont = e.target.value;
+                    onChange={(newFont) => {
+                      if (!newFont) return;
                       setFloorPlanFont(newFont);
                       const updated = elements.map(el => ({ ...el, fontFamily: newFont }));
                       updateElementsAndHistory(updated);
@@ -7702,15 +7732,15 @@ export default function FloorPlanModifier({
                         onSaveFontFamily(newFont);
                       }
                     }}
-                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 rounded-xl font-semibold text-xs text-slate-700 outline-none transition-all cursor-pointer"
-                    style={{ fontFamily: floorPlanFont }}
-                  >
-                    {GOOGLE_FONTS.map(f => (
-                      <option key={f.value} value={f.value} style={{ fontFamily: f.value }}>
-                        {f.label}
-                      </option>
-                    ))}
-                  </select>
+                    options={GOOGLE_FONTS.map(f => ({
+                      value: f.value,
+                      label: f.label
+                    }))}
+                    isClearable={false}
+                    searchPlaceholder="Search Google Fonts..."
+                    className="w-full"
+                    buttonClassName="!py-2.5 !px-3.5 !rounded-xl !text-xs !font-semibold border-slate-200"
+                  />
                 </div>
               </div>
 

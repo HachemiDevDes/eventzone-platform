@@ -889,22 +889,29 @@ const FloorPlanCanvas = React.forwardRef(({
   const [marqueeStart, setMarqueeStart] = useState(null);
   const [marqueeEnd, setMarqueeEnd] = useState(null);
 
-  // Auto-resize stage
+  // Auto-resize stage with rAF throttling and threshold check to prevent infinite update depth
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
+    let frameId = null;
     const resizeObserver = new ResizeObserver((entries) => {
       if (!entries || entries.length === 0) return;
       const { width, height } = entries[0].contentRect;
-      if (width >= 10 && height >= 10) {
-        setStageWidth(width);
-        setStageHeight(height);
+      const roundedW = Math.floor(width);
+      const roundedH = Math.floor(height);
+      if (roundedW >= 10 && roundedH >= 10) {
+        if (frameId) cancelAnimationFrame(frameId);
+        frameId = requestAnimationFrame(() => {
+          setStageWidth(prev => (Math.abs(prev - roundedW) >= 2 ? roundedW : prev));
+          setStageHeight(prev => (Math.abs(prev - roundedH) >= 2 ? roundedH : prev));
+        });
       }
     });
 
     resizeObserver.observe(container);
     return () => {
+      if (frameId) cancelAnimationFrame(frameId);
       resizeObserver.disconnect();
     };
   }, []);
@@ -927,7 +934,7 @@ const FloorPlanCanvas = React.forwardRef(({
   }, [blueprintUrl]);
 
   const handleZoomToFit = React.useCallback(() => {
-    if (stageWidth <= 0 || stageHeight <= 0) return;
+    if (stageWidth <= 0 || stageHeight <= 0 || canvasWidth <= 0 || canvasHeight <= 0) return;
     const scaleX = stageWidth / canvasWidth;
     const scaleY = stageHeight / canvasHeight;
     const scale = Math.min(scaleX, scaleY) * 0.9; // 10% space on the edges
@@ -940,18 +947,26 @@ const FloorPlanCanvas = React.forwardRef(({
     }
   }, [stageWidth, stageHeight, canvasWidth, canvasHeight]);
 
-  // Reset initialization state and zoom to fit when preview mode changes to prevent visual layout jumps
-  useEffect(() => {
-    isInitializedRef.current = false;
-    handleZoomToFit();
-  }, [isPreviewMode, handleZoomToFit]);
+  // Keep a ref to handleZoomToFit to avoid re-triggering dependent effects on every resize
+  const zoomToFitRef = useRef(handleZoomToFit);
+  zoomToFitRef.current = handleZoomToFit;
 
-  // Centering the canvas area in the viewport initially
+  // Zoom to fit when preview mode toggles
+  const prevPreviewModeRef = useRef(isPreviewMode);
+  useEffect(() => {
+    if (prevPreviewModeRef.current !== isPreviewMode) {
+      prevPreviewModeRef.current = isPreviewMode;
+      isInitializedRef.current = false;
+      zoomToFitRef.current?.();
+    }
+  }, [isPreviewMode]);
+
+  // Centering the canvas area in the viewport once initially when stage dimensions are ready
   useEffect(() => {
     if (stageWidth <= 0 || stageHeight <= 0 || isInitializedRef.current) return;
-    handleZoomToFit();
     isInitializedRef.current = true;
-  }, [stageWidth, stageHeight, canvasWidth, canvasHeight, handleZoomToFit]);
+    zoomToFitRef.current?.();
+  }, [stageWidth, stageHeight]);
 
   // Update Konva transformer node selection
   useEffect(() => {
