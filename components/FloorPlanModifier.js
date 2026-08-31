@@ -1420,6 +1420,11 @@ export default function FloorPlanModifier({
     const file = e.target.files[0];
     if (!file) return;
 
+    if (file.size > 10 * 1024 * 1024) {
+      alert(`Blueprint file is too large (${(file.size / (1024 * 1024)).toFixed(1)} MB). Maximum allowed size is 10 MB.`);
+      return;
+    }
+
     try {
       const publicUrl = onUploadFile 
         ? await onUploadFile(file, 'floor-plans')
@@ -2491,6 +2496,11 @@ export default function FloorPlanModifier({
   const handlePictureUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert(`Picture file is too large (${(file.size / (1024 * 1024)).toFixed(1)} MB). Maximum allowed size is 10 MB.`);
+      return;
+    }
 
     try {
       const publicUrl = onUploadFile 
@@ -7934,7 +7944,7 @@ export default function FloorPlanModifier({
                     <Upload size={20} className="text-slate-400" />
                     <div className="flex flex-col gap-0.5 items-center">
                       <span className="text-xs font-bold text-slate-700">Upload Blueprint Background</span>
-                      <span className="text-[9px] font-semibold text-slate-400">Scale drawing as canvas backdrop</span>
+                      <span className="text-[9px] font-semibold text-slate-400">Scale drawing as backdrop (PNG, JPG up to 10MB)</span>
                     </div>
                     <input
                       ref={fileInputRef}

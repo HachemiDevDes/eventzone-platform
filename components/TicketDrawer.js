@@ -214,6 +214,12 @@ export default function TicketDrawer({
       return;
     }
 
+    if (file.size > 10 * 1024 * 1024) {
+      alert(`Badge template image is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Maximum allowed size is 10MB.`);
+      if (e.target) e.target.value = "";
+      return;
+    }
+
     try {
       setIsUploading(true);
       const publicUrl = await uploadMedia(file, "event-images", activeEventId);
@@ -1052,7 +1058,7 @@ export default function TicketDrawer({
                         <div className="flex items-center gap-2 text-xs">
                           <Upload size={16} className="text-blue-600" />
                           <span className="font-bold text-blue-600">Upload A4 background template</span>
-                          <span className="text-slate-400 font-medium">(PNG or JPEG only)</span>
+                          <span className="text-slate-400 font-medium">(PNG or JPEG up to 10MB)</span>
                         </div>
                       )}
                     </div>

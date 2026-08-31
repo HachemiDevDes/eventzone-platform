@@ -183,9 +183,15 @@ export default function CalendarView({
   };
 
   // Base64 file converter or storage uploader
-  const handleImageUpload = async (e, type) => {
+  const handlePhotoUpload = async (type, e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert(`Image file is too large (${(file.size / (1024 * 1024)).toFixed(1)} MB). Maximum allowed size is 10 MB.`);
+      e.target.value = "";
+      return;
+    }
 
     if (type === "speaker") setIsUploadingSpeaker(true);
     else if (type === "moderator") setIsUploadingModerator(true);
@@ -224,6 +230,12 @@ export default function CalendarView({
   const handleUpdateExistingPersonPhoto = async (id, type, e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert(`Image file is too large (${(file.size / (1024 * 1024)).toFixed(1)} MB). Maximum allowed size is 10 MB.`);
+      e.target.value = "";
+      return;
+    }
 
     try {
       let publicUrl = null;

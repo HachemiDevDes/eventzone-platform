@@ -19,6 +19,7 @@ import { CountrySelect, CitySelect } from "./LocationInputs";
 import CountryPhoneInput from "./CountryPhoneInput";
 import SearchableSelect from "./SearchableSelect";
 import { EventDetailsSkeleton } from "./SkeletonLoaders";
+import { uploadMedia } from "../lib/storage";
 
 const INDUSTRIES = [
   "Technology, AI & Software",
@@ -841,11 +842,11 @@ export default function EventDetailsView({
       return;
     }
 
-    // 5MB Limit: 5 * 1024 * 1024 bytes
-    const maxSizeBytes = 5 * 1024 * 1024;
+    // 10MB Limit: 10 * 1024 * 1024 bytes
+    const maxSizeBytes = 10 * 1024 * 1024;
     if (file.size > maxSizeBytes) {
       const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
-      alert(`File is too large (${sizeMb}MB). The maximum allowed image size is 5MB. Please choose a smaller image.`);
+      alert(`File is too large (${sizeMb}MB). The maximum allowed image size is 10MB. Please choose a smaller image.`);
       if (imageFileInputRef.current) imageFileInputRef.current.value = "";
       return;
     }
@@ -855,7 +856,10 @@ export default function EventDetailsView({
     try {
       let publicUrl = null;
       if (onUploadFile) {
-        publicUrl = await onUploadFile(file, "floor-plans");
+        publicUrl = await onUploadFile(file, "event-images");
+      }
+      if (!publicUrl) {
+        publicUrl = await uploadMedia(file, "event-images");
       }
 
       if (publicUrl) {
@@ -925,9 +929,9 @@ export default function EventDetailsView({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > 10 * 1024 * 1024) {
       const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
-      alert(`Event logo file is too large (${sizeMb}MB). Maximum allowed size is 5MB.`);
+      alert(`Event logo file is too large (${sizeMb}MB). Maximum allowed size is 10MB.`);
       if (eventLogoFileInputRef.current) eventLogoFileInputRef.current.value = "";
       return;
     }
@@ -937,7 +941,10 @@ export default function EventDetailsView({
     try {
       let publicUrl = null;
       if (onUploadFile) {
-        publicUrl = await onUploadFile(file, "floor-plans");
+        publicUrl = await onUploadFile(file, "event-images");
+      }
+      if (!publicUrl) {
+        publicUrl = await uploadMedia(file, "event-images");
       }
 
       if (publicUrl) {
@@ -962,9 +969,9 @@ export default function EventDetailsView({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > 10 * 1024 * 1024) {
       const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
-      alert(`Organizer logo file is too large (${sizeMb}MB). Maximum allowed size is 5MB.`);
+      alert(`Organizer logo file is too large (${sizeMb}MB). Maximum allowed size is 10MB.`);
       if (organizerLogoFileInputRef.current) organizerLogoFileInputRef.current.value = "";
       return;
     }
@@ -974,7 +981,10 @@ export default function EventDetailsView({
     try {
       let publicUrl = null;
       if (onUploadFile) {
-        publicUrl = await onUploadFile(file, "floor-plans");
+        publicUrl = await onUploadFile(file, "event-images");
+      }
+      if (!publicUrl) {
+        publicUrl = await uploadMedia(file, "event-images");
       }
 
       if (publicUrl) {
@@ -1142,7 +1152,7 @@ export default function EventDetailsView({
                 <label className="text-xs font-medium text-slate-700">
                   Event Logo / Brand Mark
                 </label>
-                <span className="text-[11px] text-slate-400 font-normal">PNG, SVG, JPG up to 5MB</span>
+                <span className="text-[11px] text-slate-400 font-normal">PNG, SVG, JPG up to 10MB</span>
               </div>
 
               {eventLogo ? (
@@ -1774,7 +1784,7 @@ export default function EventDetailsView({
             <div className="border-b border-slate-100 pb-3">
               <h2 className="text-base font-bold text-slate-900">Event Media, Photos &amp; Video</h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Upload up to 5 event images (max 5MB each) and provide an optional YouTube video for the hero player.
+                Upload up to 5 event images (max 10MB each) and provide an optional YouTube video for the hero player.
               </p>
             </div>
 
@@ -1847,7 +1857,7 @@ export default function EventDetailsView({
               ) : null}
             </div>
 
-            {/* 2. EVENT IMAGES & GALLERY (UP TO 5 IMAGES, MAX 5MB) */}
+            {/* 2. EVENT IMAGES & GALLERY (UP TO 5 IMAGES, MAX 10MB) */}
             <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
                 <div>
@@ -1862,7 +1872,7 @@ export default function EventDetailsView({
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-500 mt-0.5">
-                    Upload up to 5 images (max 5MB each). The first photo is used as the primary cover banner.
+                    Upload up to 5 images (max 10MB each). The first photo is used as the primary cover banner.
                   </p>
                 </div>
 
@@ -1878,7 +1888,7 @@ export default function EventDetailsView({
                     }`}
                   >
                     <Upload size={13} />
-                    <span>{uploadingImage ? "Uploading..." : "Upload Image (Max 5MB)"}</span>
+                    <span>{uploadingImage ? "Uploading..." : "Upload Image (Max 10MB)"}</span>
                   </button>
                 </div>
               </div>
@@ -1957,7 +1967,7 @@ export default function EventDetailsView({
                     <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
                       <Plus size={16} />
                     </div>
-                    <span className="text-xs font-semibold">Image Slot {galleryImages.length + slotIdx + 1} (Max 5MB)</span>
+                    <span className="text-xs font-semibold">Image Slot {galleryImages.length + slotIdx + 1} (Max 10MB)</span>
                   </button>
                 ))}
               </div>
@@ -1983,7 +1993,7 @@ export default function EventDetailsView({
                 <label className="text-xs font-medium text-slate-700">
                   Organizer / Host Entity Logo
                 </label>
-                <span className="text-[11px] text-slate-400 font-normal">PNG, SVG, JPG up to 5MB</span>
+                <span className="text-[11px] text-slate-400 font-normal">PNG, SVG, JPG up to 10MB</span>
               </div>
 
               {organizerLogo ? (

@@ -21,7 +21,7 @@ import { uploadMedia } from "@/lib/storage";
 // ─────────────────────────────────────────────
 
 export const MAX_ORGANIZER_STORAGE_BYTES = 100 * 1024 * 1024; // 100 MB total organizer storage quota
-export const MAX_SINGLE_FILE_BYTES = 100 * 1024 * 1024; // 100 MB individual file limit
+export const MAX_SINGLE_FILE_BYTES = 10 * 1024 * 1024; // 10 MB individual file limit
 
 export const DOCUMENT_CATEGORIES = [
   "Contracts & Legal",
@@ -261,7 +261,7 @@ export default function DocumentsView({
 
     if (file.size > MAX_SINGLE_FILE_BYTES) {
       setUploadError(
-        `File size (${formatBytes(file.size)}) exceeds the maximum 100 MB organizer storage quota.`
+        `File size (${formatBytes(file.size)}) exceeds the maximum 10 MB per-file limit. Please select a file under 10 MB.`
       );
       setUploadFileObj(null);
       return;
@@ -1096,7 +1096,7 @@ export default function DocumentsView({
                       Click to browse or drag and drop file here
                     </p>
                     <p className="text-[11px] text-slate-400 mt-1">
-                      PDF, Word, Excel, PPTX, CSV, Images, or ZIP (100 MB Storage Quota)
+                      PDF, Word, Excel, PPTX, CSV, Images, or ZIP (Max 10 MB per file)
                     </p>
                   </div>
                 )}

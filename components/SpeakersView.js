@@ -429,6 +429,10 @@ export default function SpeakersView({
   // ─────────────────────────────────────────────────────────
   const uploadImageFile = async (file) => {
     if (!file) return null;
+    if (file.size > 5 * 1024 * 1024) {
+      alert(`Speaker photo is too large (${(file.size / (1024 * 1024)).toFixed(1)} MB). Maximum allowed size is 5 MB.`);
+      return null;
+    }
     try {
       if (onUploadFile) {
         const customUrl = await onUploadFile(file, "avatars");
@@ -1811,8 +1815,9 @@ export default function SpeakersView({
 
               {/* Photo Upload & Preview */}
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  Speaker Photo
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                  <span>Speaker Photo</span>
+                  <span className="font-normal lowercase text-[10px] text-slate-400">PNG, JPG up to 5MB</span>
                 </label>
                 <div className="flex items-center gap-3">
                   {addPhoto ? (
