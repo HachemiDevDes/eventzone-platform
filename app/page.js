@@ -9,7 +9,7 @@ import {
   ChevronDown, LayoutDashboard, Calendar, Clock,
   Users2, UserCheck, BarChart3, X, Globe, Map, Sparkles, Upload, Mail,
   Building2, Plus, ArrowLeft, ArrowRight, Layers, LogOut, Compass, ExternalLink, ChevronRight, Home as HomeIcon, User,
-  FileText, ClipboardList, QrCode, Store, Mic2, Check, TrendingUp, Share2, Boxes, Truck, Package, Files, Code2
+  FileText, ClipboardList, QrCode, Store, Mic2, Check, TrendingUp, Share2, Boxes, Truck, Package, Files, Code2, Award, Eye
 } from "lucide-react";
 
 import MainHomePage from "../components/MainHomePage";
@@ -30,7 +30,8 @@ import {
   LandingPageSkeleton,
   HomePageSkeleton,
   ProfileSkeleton,
-  DevelopersSkeleton
+  DevelopersSkeleton,
+  CertificatesSkeleton
 } from "../components/SkeletonLoaders";
 
 const FloorPlanModifier = dynamic(() => import("../components/FloorPlanModifier"), { 
@@ -201,7 +202,7 @@ export function HomeContent() {
         "home", "auth", "profile", "my-tickets", "events-hub", "create-event", "event-landing", "register", "visitor-portal", "attendee-portal", "overview", "page-builder", "calendar", "event-details", 
         "attendees", "pending", "organizations", "sponsors", 
         "exhibitors", "speakers", "opportunities", "influencers", "tickets", "forms", "rsvp", "logistics", "documents", "check-in", 
-        "my-team", "developers", "analytics", "communications", "floor-plan", "portal-settings"
+        "my-team", "developers", "analytics", "communications", "certificates", "floor-plan", "portal-settings"
       ];
       if (viewParam && validViews.includes(viewParam)) {
         return viewParam;
@@ -3526,6 +3527,19 @@ export function HomeContent() {
             </button>
 
             <button 
+              onClick={() => setCurrentView("certificates")}
+              className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-left group ${currentView === "certificates" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+            >
+              <div className="flex items-center gap-2">
+                <Award size={14} className={`shrink-0 ${currentView === "certificates" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
+                <span>{t("dash.certificates", "Certificates")}</span>
+              </div>
+              <span className={`text-[9px] font-extrabold py-0.5 px-2 rounded-full ${currentView === "certificates" ? "bg-white/25 text-white" : "bg-slate-100 text-slate-500"}`}>
+                {attendees.length}
+              </span>
+            </button>
+
+            <button 
               onClick={() => setCurrentView("developers")}
               className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-left group ${currentView === "developers" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
             >
@@ -3646,6 +3660,8 @@ export function HomeContent() {
                 case "communications":
                 case "developers":
                   return <DevelopersSkeleton />;
+                case "certificates":
+                  return <CertificatesSkeleton />;
                 default:
                   return <TableViewSkeleton />;
               }
