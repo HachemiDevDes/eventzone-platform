@@ -5,6 +5,7 @@ import {
   FileText, UploadCloud, X, Check, AlertCircle, 
   Download, Eye, Trash2, FileSpreadsheet, Paperclip 
 } from "lucide-react";
+import { uploadMedia } from "@/lib/storage";
 
 // Configuration for file types, accepted MIME/extensions, and visual styling
 export const FILE_TYPE_CONFIGS = {
@@ -104,7 +105,7 @@ export default function FormFileUploader({
       ? { name: value.split("/").pop().split("#")[0].split("?")[0] || "Attached Document", url: value, size: null } 
       : null;
 
-  const handleProcessFile = (file) => {
+  const handleProcessFile = async (file) => {
     if (!file) return;
     setError(null);
 
@@ -124,27 +125,23 @@ export default function FormFileUploader({
     }
 
     setIsUploading(true);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const resultBase64 = e.target.result;
+    try {
+      const cdnUrl = await uploadMedia(file, "documents");
       const fileInfo = {
         name: file.name,
         size: file.size,
         type: file.type || config.extensions[0],
-        url: resultBase64,
+        url: cdnUrl,
         uploadedAt: new Date().toISOString()
       };
 
       if (onChange) onChange(fileInfo);
+    } catch (uploadErr) {
+      console.error("File upload error:", uploadErr);
+      setError("Failed to upload file to storage. Please try again.");
+    } finally {
       setIsUploading(false);
-    };
-
-    reader.onerror = () => {
-      setError("Failed to read file. Please try again.");
-      setIsUploading(false);
-    };
-
-    reader.readAsDataURL(file);
+    }
   };
 
   const handleDragOver = (e) => {

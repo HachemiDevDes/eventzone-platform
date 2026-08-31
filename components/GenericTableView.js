@@ -19,6 +19,7 @@ import A4BadgeSheet, { printA4BadgeDocument, printBulkA4BadgeDocuments } from ".
 import SearchableSelect from "./SearchableSelect";
 import AttendeeEmailDrawer from "./AttendeeEmailDrawer";
 import TablePagination from "./TablePagination";
+import { uploadMedia } from "../lib/storage";
 import OpportunitiesView from "./OpportunitiesView";
 import InfluencersView from "./InfluencersView";
 import LogisticsView from "./LogisticsView";
@@ -178,12 +179,8 @@ function EventDetailsView({ state, onUpdateState, onUploadFile }) {
 
     try {
       const publicUrl = onUploadFile 
-        ? await onUploadFile(file, 'floor-plans')
-        : await new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result);
-            reader.readAsDataURL(file);
-          });
+        ? await onUploadFile(file, 'event-images')
+        : await uploadMedia(file, 'event-images');
 
       if (publicUrl) {
         setBanner(publicUrl);

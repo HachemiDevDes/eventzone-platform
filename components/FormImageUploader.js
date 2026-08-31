@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { Camera, Upload, Trash2, CheckCircle2, Image as ImageIcon, Smartphone } from "lucide-react";
+import { Camera, Upload, Trash2, CheckCircle2, Image as ImageIcon, Smartphone, Loader2 } from "lucide-react";
+import { uploadMedia } from "@/lib/storage";
 
 export default function FormImageUploader({
   value = "",
@@ -10,36 +11,45 @@ export default function FormImageUploader({
   disabled = false,
   label = "Upload Picture",
   placeholder = "Upload your photo from phone or computer",
-  className = ""
+  className = "",
+  bucket = "event-images"
 }) {
   const fileInputRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
-  const handleFile = (file) => {
+  const handleFile = async (file) => {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
       alert("Please upload a valid image file (JPG, PNG, WebP).");
       return;
     }
 
-    // Limit to 5MB
-    if (file.size > 5 * 1024 * 1024) {
-      alert("Image size must be less than 5MB.");
+    // Limit to 10MB
+    if (file.size > 10 * 1024 * 1024) {
+      alert("Image size must be less than 10MB.");
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const dataUrl = e.target.result;
-      if (onChange) onChange(dataUrl);
-    };
-    reader.readAsDataURL(file);
+    try {
+      setIsUploading(true);
+      // Scenario B: Upload to Supabase Storage Bucket and return CDN URL
+      const cdnUrl = await uploadMedia(file, bucket);
+      if (cdnUrl && onChange) {
+        onChange(cdnUrl);
+      }
+    } catch (err) {
+      console.error("Image upload failed:", err);
+      alert("Failed to upload image. Please try again.");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleDrop = (e) => {
     e.preventDefault();
     setIsDragging(false);
-    if (disabled) return;
+    if (disabled || isUploading) return;
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleFile(e.dataTransfer.files[0]);
     }
@@ -51,7 +61,7 @@ export default function FormImageUploader({
         ref={fileInputRef}
         type="file"
         accept="image/*"
-        disabled={disabled}
+        disabled={disabled || isUploading}
         onChange={(e) => {
           if (e.target.files && e.target.files[0]) {
             handleFile(e.target.files[0]);
@@ -75,15 +85,15 @@ export default function FormImageUploader({
           <div className="flex items-center gap-2">
             <button
               type="button"
-              disabled={disabled}
+              disabled={disabled || isUploading}
               onClick={() => fileInputRef.current?.click()}
               className="px-2.5 py-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
             >
-              Change
+              {isUploading ? <Loader2 size={14} className="animate-spin" /> : "Change"}
             </button>
             <button
               type="button"
-              disabled={disabled}
+              disabled={disabled || isUploading}
               onClick={() => onChange && onChange("")}
               className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
               title="Remove photo"
@@ -97,23 +107,22 @@ export default function FormImageUploader({
           onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
           onDragLeave={() => setIsDragging(false)}
           onDrop={handleDrop}
-          onClick={() => !disabled && fileInputRef.current?.click()}
-          className={`flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-2xl cursor-pointer transition-all ${
-            isDragging
-              ? "border-blue-500 bg-blue-50/50"
-              : "border-slate-200 hover:border-blue-400 bg-slate-50/60 hover:bg-white"
-          }`}
+          onClick={() => !disabled && !isUploading && fileInputRef.current?.click()}
+          className={`
+            border-2 border-dashed rounded-2xl p-5 text-center transition-all cursor-pointer select-none
+            ${isDragging ? "border-blue-500 bg-blue-50/50 scale-[0.99]" : "border-slate-200 hover:border-blue-300 bg-white hover:bg-slate-50/70"}
+            ${disabled ? "opacity-60 cursor-not-allowed" : ""}
+          `}
         >
-          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-blue-50 text-blue-600 mb-2">
-            <Camera size={18} />
+          <div className="w-11 h-11 mx-auto mb-2.5 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 shadow-2xs">
+            {isUploading ? <Loader2 size={20} className="animate-spin text-blue-600" /> : <Camera size={20} />}
           </div>
-          <p className="text-xs font-bold text-slate-700 text-center">
-            {placeholder || "Take a photo or browse from computer"}
-          </p>
-          <p className="text-[11px] text-slate-400 mt-0.5 text-center flex items-center gap-1.5">
-            <Smartphone size={11} className="text-slate-400" />
-            <span>Mobile camera & Desktop file upload supported (JPG, PNG, Max 5MB)</span>
-          </p>
+          <div className="text-xs font-bold text-slate-800">
+            {isUploading ? "Uploading to Cloud Storage..." : placeholder}
+          </div>
+          <div className="text-[11px] text-slate-400 mt-1 flex items-center justify-center gap-2">
+            <span>PNG, JPG, WebP up to 10MB</span>
+          </div>
         </div>
       )}
     </div>

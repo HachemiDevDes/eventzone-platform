@@ -20,6 +20,7 @@ import ExportModal from "./ExportModal";
 import SendPlanModal from "./SendPlanModal";
 import SearchableSelect from "./SearchableSelect";
 import { supabase } from "../lib/supabase";
+import { uploadMedia } from "../lib/storage";
 import QRCode from "qrcode";
 
 const getSidesStatus = (openSides) => {
@@ -1422,11 +1423,7 @@ export default function FloorPlanModifier({
     try {
       const publicUrl = onUploadFile 
         ? await onUploadFile(file, 'floor-plans')
-        : await new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result);
-            reader.readAsDataURL(file);
-          });
+        : await uploadMedia(file, 'floor-plans');
 
       if (!publicUrl) return;
 
@@ -2498,11 +2495,7 @@ export default function FloorPlanModifier({
     try {
       const publicUrl = onUploadFile 
         ? await onUploadFile(file, 'floor-plans')
-        : await new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result);
-            reader.readAsDataURL(file);
-          });
+        : await uploadMedia(file, 'floor-plans');
 
       if (!publicUrl) return;
 

@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import A4BadgeSheet from "./A4BadgeSheet";
 import SearchableSelect from "./SearchableSelect";
+import { uploadMedia } from "@/lib/storage";
 
 // Standard preset tier name chips
 const TIER_NAME_SUGGESTIONS = [
@@ -215,41 +216,13 @@ export default function TicketDrawer({
 
     try {
       setIsUploading(true);
-
-      // 1. Immediately read file as Base64 Data URL so local preview is 100% reliable & never broken
-      const localDataUrl = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (event) => resolve(event.target?.result || "");
-        reader.onerror = () => resolve("");
-        reader.readAsDataURL(file);
-      });
-
-      if (localDataUrl) {
-        setBadgeUrl(localDataUrl);
-      }
-
-      // 2. Also try uploading to Supabase Storage if helper provided
-      if (onUploadFile) {
-        try {
-          const publicUrl = await onUploadFile(file, "floor-plans", activeEventId);
-          if (publicUrl) {
-            // Verify if publicUrl is reachable, if so store publicUrl, else keep localDataUrl
-            const testImg = new Image();
-            testImg.onload = () => {
-              setBadgeUrl(publicUrl);
-            };
-            testImg.onerror = () => {
-              console.warn("Uploaded storage URL not directly accessible via CORS/public URL, keeping high-res Base64 template:", publicUrl);
-              if (localDataUrl) setBadgeUrl(localDataUrl);
-            };
-            testImg.src = publicUrl;
-          }
-        } catch (uploadErr) {
-          console.warn("Storage upload failed, keeping base64 Data URL:", uploadErr);
-        }
+      const publicUrl = await uploadMedia(file, "event-images", activeEventId);
+      if (publicUrl) {
+        setBadgeUrl(publicUrl);
       }
     } catch (err) {
       console.error("Failed to upload badge template:", err);
+      alert("Failed to upload badge template. Please try again.");
     } finally {
       setIsUploading(false);
     }

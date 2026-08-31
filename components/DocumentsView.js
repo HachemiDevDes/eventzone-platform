@@ -14,6 +14,7 @@ import {
 import { useLanguage } from "../lib/i18n";
 import SearchableSelect from "./SearchableSelect";
 import { DocumentsSkeleton } from "./SkeletonLoaders";
+import { uploadMedia } from "@/lib/storage";
 
 // ─────────────────────────────────────────────
 //  CONSTANTS & CONFIGURATIONS
@@ -336,13 +337,9 @@ export default function DocumentsView({
 
       if (uploadFileObj) {
         if (onUploadFile) {
-          finalUrl = await onUploadFile(uploadFileObj, 'floor-plans', activeEventId);
+          finalUrl = await onUploadFile(uploadFileObj, 'documents', activeEventId);
         } else {
-          finalUrl = await new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result);
-            reader.readAsDataURL(uploadFileObj);
-          });
+          finalUrl = await uploadMedia(uploadFileObj, 'documents', activeEventId);
         }
         finalSize = uploadFileObj.size;
         finalName = uploadFileObj.name;

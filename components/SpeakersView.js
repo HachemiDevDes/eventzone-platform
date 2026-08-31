@@ -53,6 +53,7 @@ import {
 } from "lucide-react";
 import SearchableSelect from "./SearchableSelect";
 import { useLanguage } from "../lib/i18n";
+import { uploadMedia } from "@/lib/storage";
 
 // Custom SVG Icons for Social Networks
 const LinkedinIcon = ({ size = 14, className = "" }) => (
@@ -428,28 +429,15 @@ export default function SpeakersView({
   // ─────────────────────────────────────────────────────────
   const uploadImageFile = async (file) => {
     if (!file) return null;
-    let publicUrl = null;
     try {
       if (onUploadFile) {
-        publicUrl = await onUploadFile(file, "floor-plans");
+        const customUrl = await onUploadFile(file, "avatars");
+        if (customUrl) return customUrl;
       }
-      if (!publicUrl) {
-        publicUrl = await new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result);
-          reader.onerror = () => resolve(null);
-          reader.readAsDataURL(file);
-        });
-      }
-      return publicUrl;
+      return await uploadMedia(file, "avatars");
     } catch (err) {
       console.warn("Upload fallback to data url:", err);
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.onerror = () => resolve(null);
-        reader.readAsDataURL(file);
-      });
+      return null;
     }
   };
 

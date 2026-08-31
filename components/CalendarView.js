@@ -7,6 +7,7 @@ import CustomTimePicker from "./CustomTimePicker";
 import SearchableSelect from "./SearchableSelect";
 import { generateUuid } from "../lib/db";
 import { CalendarSkeleton } from "./SkeletonLoaders";
+import { uploadMedia } from "@/lib/storage";
 
 export default function CalendarView({
   sessions = [],
@@ -192,16 +193,12 @@ export default function CalendarView({
 
     try {
       let publicUrl = null;
+      const targetBucket = type === "logo" ? "event-images" : "avatars";
       if (onUploadFile) {
-        publicUrl = await onUploadFile(file, 'floor-plans');
+        publicUrl = await onUploadFile(file, targetBucket);
       }
       if (!publicUrl) {
-        publicUrl = await new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result);
-          reader.onerror = () => resolve(null);
-          reader.readAsDataURL(file);
-        });
+        publicUrl = await uploadMedia(file, targetBucket);
       }
 
       if (publicUrl) {
@@ -214,16 +211,7 @@ export default function CalendarView({
         }
       }
     } catch (err) {
-      console.warn("Storage upload notice, converting to local preview:", err);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (reader.result) {
-          if (type === "speaker") setSpeakerImg(reader.result);
-          else if (type === "moderator") setModeratorImg(reader.result);
-          else if (type === "logo") setLogoImg(reader.result);
-        }
-      };
-      reader.readAsDataURL(file);
+      console.warn("Storage upload notice:", err);
     } finally {
       if (type === "speaker") setIsUploadingSpeaker(false);
       else if (type === "moderator") setIsUploadingModerator(false);
@@ -240,15 +228,10 @@ export default function CalendarView({
     try {
       let publicUrl = null;
       if (onUploadFile) {
-        publicUrl = await onUploadFile(file, 'floor-plans');
+        publicUrl = await onUploadFile(file, "avatars");
       }
       if (!publicUrl) {
-        publicUrl = await new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result);
-          reader.onerror = () => resolve(null);
-          reader.readAsDataURL(file);
-        });
+        publicUrl = await uploadMedia(file, "avatars");
       }
 
       if (publicUrl) {
@@ -259,18 +242,7 @@ export default function CalendarView({
         }
       }
     } catch (err) {
-      console.warn("Photo replacement error, using local fallback:", err);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (reader.result) {
-          if (type === "speaker") {
-            setSpeakersList(prev => prev.map(s => s.id === id ? { ...s, image: reader.result } : s));
-          } else {
-            setModeratorsList(prev => prev.map(m => m.id === id ? { ...m, image: reader.result } : m));
-          }
-        }
-      };
-      reader.readAsDataURL(file);
+      console.warn("Photo replacement error:", err);
     } finally {
       e.target.value = "";
     }

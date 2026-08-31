@@ -169,17 +169,9 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
     try {
       let publicUrl = null;
       if (onUploadFile) {
-        publicUrl = await onUploadFile(file, 'floor-plans');
+        publicUrl = await onUploadFile(file, 'event-images');
       } else {
-        publicUrl = await uploadFileToBucket(file, 'floor-plans');
-      }
-
-      if (!publicUrl) {
-        publicUrl = await new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result);
-          reader.readAsDataURL(file);
-        });
+        publicUrl = await uploadFileToBucket(file, 'event-images');
       }
 
       if (publicUrl) {
@@ -188,16 +180,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
       }
     } catch (err) {
       console.error("Banner upload failed:", err);
-      try {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          handleChange("banner", reader.result);
-          setIsCustomBanner(true);
-        };
-        reader.readAsDataURL(file);
-      } catch (readErr) {
-        alert("Failed to process image upload.");
-      }
+      alert("Failed to upload image. Please try again.");
     } finally {
       setUploadingBanner(false);
     }
