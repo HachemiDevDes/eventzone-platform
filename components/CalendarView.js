@@ -182,49 +182,80 @@ export default function CalendarView({
     setSelectedModeratorFromList("");
   };
 
-  // Base64 file converter or storage uploader
-  const handlePhotoUpload = async (type, e) => {
-    const file = e.target.files?.[0];
+  // Resilient Image / Photo Uploader
+  const handleImageUpload = async (e, type) => {
+    let event = e;
+    let targetType = type;
+    // In case arguments were passed as (type, e)
+    if (typeof e === "string" && type && type.target) {
+      targetType = e;
+      event = type;
+    }
+
+    const file = event?.target?.files?.[0];
     if (!file) return;
 
     if (file.size > 10 * 1024 * 1024) {
       alert(`Image file is too large (${(file.size / (1024 * 1024)).toFixed(1)} MB). Maximum allowed size is 10 MB.`);
-      e.target.value = "";
+      if (event.target) event.target.value = "";
       return;
     }
 
-    if (type === "speaker") setIsUploadingSpeaker(true);
-    else if (type === "moderator") setIsUploadingModerator(true);
-    else if (type === "logo") setIsUploadingLogo(true);
+    if (targetType === "speaker") setIsUploadingSpeaker(true);
+    else if (targetType === "moderator") setIsUploadingModerator(true);
+    else if (targetType === "logo") setIsUploadingLogo(true);
 
     try {
       let publicUrl = null;
-      const targetBucket = type === "logo" ? "event-images" : "avatars";
+      const targetBucket = targetType === "logo" ? "event-images" : "avatars";
       if (onUploadFile) {
         publicUrl = await onUploadFile(file, targetBucket);
       }
       if (!publicUrl) {
-        publicUrl = await uploadMedia(file, targetBucket);
+        try {
+          publicUrl = await uploadMedia(file, targetBucket);
+        } catch (storageErr) {
+          console.warn("Storage upload notice:", storageErr);
+        }
+      }
+      if (!publicUrl) {
+        publicUrl = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.onerror = () => resolve(null);
+          reader.readAsDataURL(file);
+        });
       }
 
       if (publicUrl) {
-        if (type === "speaker") {
+        if (targetType === "speaker") {
           setSpeakerImg(publicUrl);
-        } else if (type === "moderator") {
+        } else if (targetType === "moderator") {
           setModeratorImg(publicUrl);
-        } else if (type === "logo") {
+        } else if (targetType === "logo") {
           setLogoImg(publicUrl);
         }
       }
     } catch (err) {
-      console.warn("Storage upload notice:", err);
+      console.warn("Image upload error, fallback to local preview:", err);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (reader.result) {
+          if (targetType === "speaker") setSpeakerImg(reader.result);
+          else if (targetType === "moderator") setModeratorImg(reader.result);
+          else if (targetType === "logo") setLogoImg(reader.result);
+        }
+      };
+      reader.readAsDataURL(file);
     } finally {
-      if (type === "speaker") setIsUploadingSpeaker(false);
-      else if (type === "moderator") setIsUploadingModerator(false);
-      else if (type === "logo") setIsUploadingLogo(false);
-      e.target.value = "";
+      if (targetType === "speaker") setIsUploadingSpeaker(false);
+      else if (targetType === "moderator") setIsUploadingModerator(false);
+      else if (targetType === "logo") setIsUploadingLogo(false);
+      if (event?.target) event.target.value = "";
     }
   };
+
+  const handlePhotoUpload = handleImageUpload;
 
   // Inline Photo Update for existing speaker / moderator in the list
   const handleUpdateExistingPersonPhoto = async (id, type, e) => {
@@ -243,7 +274,19 @@ export default function CalendarView({
         publicUrl = await onUploadFile(file, "avatars");
       }
       if (!publicUrl) {
-        publicUrl = await uploadMedia(file, "avatars");
+        try {
+          publicUrl = await uploadMedia(file, "avatars");
+        } catch (storageErr) {
+          console.warn("Storage upload notice:", storageErr);
+        }
+      }
+      if (!publicUrl) {
+        publicUrl = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.onerror = () => resolve(null);
+          reader.readAsDataURL(file);
+        });
       }
 
       if (publicUrl) {
@@ -254,7 +297,18 @@ export default function CalendarView({
         }
       }
     } catch (err) {
-      console.warn("Photo replacement error:", err);
+      console.warn("Photo replacement error, using local fallback:", err);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (reader.result) {
+          if (type === "speaker") {
+            setSpeakersList(prev => prev.map(s => s.id === id ? { ...s, image: reader.result } : s));
+          } else {
+            setModeratorsList(prev => prev.map(m => m.id === id ? { ...m, image: reader.result } : m));
+          }
+        }
+      };
+      reader.readAsDataURL(file);
     } finally {
       e.target.value = "";
     }

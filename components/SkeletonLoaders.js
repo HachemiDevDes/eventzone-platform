@@ -1144,3 +1144,50 @@ export function DevelopersSkeleton() {
   );
 }
 
+/**
+ * Certificates Skeleton
+ */
+export function CertificatesSkeleton() {
+  return (
+    <div className="space-y-6 animate-fade-in text-left">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-64 rounded-xl" />
+          <Skeleton className="h-4 w-96 rounded-lg" />
+        </div>
+        <div className="flex items-center gap-2.5">
+          <Skeleton className="h-10 w-28 rounded-xl" />
+          <Skeleton className="h-10 w-28 rounded-xl" />
+          <Skeleton className="h-10 w-36 rounded-xl" />
+        </div>
+      </div>
+
+      <div className="flex items-center flex-wrap gap-2.5">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <Skeleton key={i} className="h-9 w-32 rounded-xl" />
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-5 bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
+          <Skeleton className="h-9 w-full rounded-xl" />
+          <Skeleton className="h-10 w-full rounded-xl" />
+          <Skeleton className="h-10 w-full rounded-xl" />
+          <Skeleton className="h-28 w-full rounded-xl" />
+        </div>
+        <div className="lg:col-span-7 bg-slate-150 rounded-3xl p-6 border border-slate-200 shadow-inner flex items-center justify-center">
+          <Skeleton className="w-full aspect-[297/210] rounded-xl" />
+        </div>
+      </div>
+
+      <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
+        <Skeleton className="h-6 w-48 rounded-lg" />
+        <Skeleton className="h-12 w-full rounded-xl" />
+        <Skeleton className="h-12 w-full rounded-xl" />
+        <Skeleton className="h-12 w-full rounded-xl" />
+      </div>
+    </div>
+  );
+}
+
+

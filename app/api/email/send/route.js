@@ -3,7 +3,8 @@ import {
   sendTicketConfirmationEmail, 
   sendRSVPConfirmationEmail, 
   sendBroadcastEmail, 
-  sendExhibitorPacketEmail 
+  sendExhibitorPacketEmail,
+  sendCertificateEmail
 } from "@/lib/mailer";
 import { getServiceSupabase, verifyOrganizerSession } from "@/lib/apiAuth";
 
@@ -108,6 +109,15 @@ export async function POST(request) {
           subject: finalSubject, 
           eventId,
           ...rest 
+        });
+        break;
+
+      case "certificate":
+        result = await sendCertificateEmail({
+          to,
+          subject: finalSubject,
+          eventId,
+          ...rest
         });
         break;
 

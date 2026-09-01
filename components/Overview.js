@@ -1577,6 +1577,21 @@ export default function Overview({
             </div>
           </button>
 
+          {/* Action 7: Certificates */}
+          <button
+            type="button"
+            onClick={() => onSwitchView("certificates")}
+            className="p-4 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-left transition-all cursor-pointer space-y-2 group hover:border-slate-300"
+          >
+            <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <Award size={16} />
+            </div>
+            <div>
+              <div className="text-xs font-bold text-slate-900">Certificates</div>
+              <div className="text-[11px] text-slate-500">Batch A4 generator</div>
+            </div>
+          </button>
+
         </div>
       </div>
 
