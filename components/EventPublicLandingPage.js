@@ -518,6 +518,19 @@ export default function EventPublicLandingPage({
         });
       }
     });
+
+    (s.moderators || []).forEach(mod => {
+      if (mod?.name && !speakerNames.has(mod.name)) {
+        speakerNames.add(mod.name);
+        eventSpeakers.push({
+          name: mod.name,
+          role: "Moderator",
+          title: mod.title || "",
+          company: mod.company || organization || "",
+          image: mod.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(mod.name)}&background=4f46e5&color=fff`
+        });
+      }
+    });
   });
 
   // Real Database Exhibitors, Sponsors & Tickets
@@ -1044,6 +1057,72 @@ export default function EventPublicLandingPage({
       const datesParam = startG && endG ? `&dates=${startG}/${endG}` : "";
 
       return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${cleanTitle}&details=${cleanDetails}&location=${cleanLocation}${datesParam}`;
+    } catch {
+      return "https://calendar.google.com";
+    }
+  };
+
+  const formatSessionTime = (timeStr) => {
+    if (!timeStr) return "";
+    const trimmed = String(timeStr).trim();
+    if (/am|pm/i.test(trimmed)) return trimmed.toUpperCase();
+    const parts = trimmed.split(":");
+    if (parts.length >= 2) {
+      let h = parseInt(parts[0], 10);
+      const m = parts[1].slice(0, 2).padStart(2, "0");
+      if (isNaN(h)) return trimmed;
+      const suffix = h >= 12 ? "PM" : "AM";
+      const displayH = h % 12 === 0 ? 12 : h % 12;
+      return `${String(displayH).padStart(2, "0")}:${m} ${suffix}`;
+    }
+    return trimmed;
+  };
+
+  const getSessionGoogleCalendarUrl = (session) => {
+    try {
+      const cleanTitle = encodeURIComponent(`${session.title || "Session"} - ${title || eventDetails?.title || "Event"}`);
+      
+      const speakersText = (session.speakers || []).map(s => typeof s === "string" ? s : s.name).filter(Boolean).join(", ");
+      const moderatorsText = (session.moderators || []).map(m => typeof m === "string" ? m : m.name).filter(Boolean).join(", ");
+      let detailsBody = session.description || "";
+      if (speakersText) detailsBody += `\n\nSpeakers: ${speakersText}`;
+      if (moderatorsText) detailsBody += `\nModerators: ${moderatorsText}`;
+      if (location) detailsBody += `\nVenue: ${location}`;
+      if (eventDetails?.slug) detailsBody += `\nEvent Link: https://eventzone.pro/${eventDetails.slug}`;
+
+      const cleanDetails = encodeURIComponent(detailsBody);
+      const cleanLocation = encodeURIComponent(session.room || session.location || location || "");
+
+      const sessionDate = session.date || startDate;
+      if (!sessionDate) {
+        return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${cleanTitle}&details=${cleanDetails}&location=${cleanLocation}`;
+      }
+
+      const parseTimeToHoursMinutes = (tStr, defaultObj) => {
+        if (!tStr) return defaultObj;
+        const s = String(tStr).trim();
+        const isPM = /pm/i.test(s);
+        const isAM = /am/i.test(s);
+        const clean = s.replace(/[^0-9:]/g, "");
+        const parts = clean.split(":");
+        let h = parseInt(parts[0] || "0", 10);
+        let m = parseInt(parts[1] || "0", 10);
+        if (isPM && h < 12) h += 12;
+        if (isAM && h === 12) h = 0;
+        return {
+          h: String(h).padStart(2, "0"),
+          m: String(m).padStart(2, "0")
+        };
+      };
+
+      const startTM = parseTimeToHoursMinutes(session.startTime || session.time, { h: "09", m: "00" });
+      const endTM = parseTimeToHoursMinutes(session.endTime, { h: "10", m: "00" });
+
+      const dateClean = sessionDate.split("T")[0].replace(/-/g, ""); // YYYYMMDD
+      const startIso = `${dateClean}T${startTM.h}${startTM.m}00`;
+      const endIso = `${dateClean}T${endTM.h}${endTM.m}00`;
+
+      return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${cleanTitle}&details=${cleanDetails}&location=${cleanLocation}&dates=${startIso}/${endIso}`;
     } catch {
       return "https://calendar.google.com";
     }
@@ -1665,53 +1744,122 @@ export default function EventPublicLandingPage({
                 return (
                   <div
                     key={session.id || idx}
-                    className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-7 shadow-xs hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-6 text-left"
+                    className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-7 shadow-xs hover:shadow-md transition-all flex flex-col gap-4 text-left"
                   >
-                    <div className="space-y-2 flex-1">
-                      <div className="flex flex-wrap items-center gap-2.5">
-                        <span className="px-3 py-1 rounded-xl bg-blue-50 text-blue-700 text-xs font-bold flex items-center gap-1.5">
-                          <Clock size={13} />
-                          <span>{session.startTime || "09:00"} — {session.endTime || "10:00"}</span>
+                    {/* Time & Date Badges */}
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <span className="px-3.5 py-1.5 rounded-xl bg-blue-50 text-blue-700 text-xs font-bold flex items-center gap-1.5">
+                        <Clock size={13} className="text-blue-600 shrink-0" />
+                        <span>
+                          {formatSessionTime(session.startTime || session.time) || "09:00 AM"} — {formatSessionTime(session.endTime) || "10:00 AM"}
                         </span>
+                      </span>
 
-                        {session.date && (
-                          <span className="px-2.5 py-1 rounded-xl bg-slate-100 text-slate-600 text-xs font-semibold">
-                            {session.date}
-                          </span>
-                        )}
-                      </div>
-
-                      <h3 className="text-base sm:text-lg font-bold text-slate-900">{session.title}</h3>
-                      {session.description && (
-                        <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
-                          {session.description}
-                        </p>
-                      )}
-
-                      {/* Speakers Tags */}
-                      {session.speakers && session.speakers.length > 0 && (
-                        <div className="flex flex-wrap items-center gap-2 pt-2">
-                          {session.speakers.map((sp, i) => (
-                            <span key={i} className="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 text-[11px] font-medium flex items-center gap-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
-                              <span>{sp.name}</span>
-                            </span>
-                          ))}
-                        </div>
+                      {session.date && (
+                        <span className="px-2.5 py-1.5 rounded-xl bg-slate-100 text-slate-600 text-xs font-semibold">
+                          {session.date}
+                        </span>
                       )}
                     </div>
 
-                    <div className="shrink-0 flex items-center gap-2">
-                      <button
-                        onClick={() => toggleBookmark(session.id)}
-                        className={`px-4 py-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                          isBookmarked
-                            ? "bg-blue-50 border-blue-300 text-blue-700"
-                            : "border-slate-200 text-slate-600 hover:bg-slate-50"
-                        }`}
+                    {/* Title */}
+                    <h3 className="text-lg sm:text-xl font-bold text-slate-900 leading-snug">
+                      {session.title || "Session"}
+                    </h3>
+
+                    {/* Speakers & Moderators Grid */}
+                    {((session.speakers && session.speakers.length > 0) || (session.moderators && session.moderators.length > 0)) && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                        {/* Speakers */}
+                        {session.speakers && session.speakers.length > 0 && (
+                          <div className="flex flex-col gap-1.5">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                              Speakers
+                            </span>
+                            <div className="flex flex-wrap items-center gap-2">
+                              {session.speakers.map((sp, i) => {
+                                const spName = typeof sp === "string" ? sp : (sp.name || "Speaker");
+                                const spImage = typeof sp === "object" ? (sp.image || sp.avatar) : "";
+                                return (
+                                  <div
+                                    key={i}
+                                    className="flex items-center gap-2 pl-1 pr-3 py-1 bg-white border border-slate-200/90 rounded-full text-xs font-semibold text-slate-800 shadow-2xs"
+                                  >
+                                    {spImage ? (
+                                      // eslint-disable-next-line @next/next/no-img-element
+                                      <img
+                                        src={spImage}
+                                        alt={spName}
+                                        className="w-5 h-5 rounded-full object-cover border border-slate-200 shrink-0"
+                                      />
+                                    ) : (
+                                      <div className="w-5 h-5 rounded-full bg-blue-600 text-white font-bold text-[9px] flex items-center justify-center shrink-0">
+                                        {spName.charAt(0).toUpperCase()}
+                                      </div>
+                                    )}
+                                    <span className="truncate max-w-[140px]">{spName}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Moderators */}
+                        {session.moderators && session.moderators.length > 0 && (
+                          <div className="flex flex-col gap-1.5">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                              Moderators
+                            </span>
+                            <div className="flex flex-wrap items-center gap-2">
+                              {session.moderators.map((mod, i) => {
+                                const modName = typeof mod === "string" ? mod : (mod.name || "Moderator");
+                                const modImage = typeof mod === "object" ? (mod.image || mod.avatar) : "";
+                                return (
+                                  <div
+                                    key={i}
+                                    className="flex items-center gap-2 pl-1 pr-3 py-1 bg-white border border-slate-200/90 rounded-full text-xs font-semibold text-slate-800 shadow-2xs"
+                                  >
+                                    {modImage ? (
+                                      // eslint-disable-next-line @next/next/no-img-element
+                                      <img
+                                        src={modImage}
+                                        alt={modName}
+                                        className="w-5 h-5 rounded-full object-cover border border-indigo-200 shrink-0"
+                                      />
+                                    ) : (
+                                      <div className="w-5 h-5 rounded-full bg-indigo-950 text-white font-bold text-[9px] flex items-center justify-center shrink-0">
+                                        {modName.charAt(0).toUpperCase()}
+                                      </div>
+                                    )}
+                                    <span className="truncate max-w-[140px]">{modName}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Description */}
+                    {session.description && (
+                      <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal pt-1">
+                        {session.description}
+                      </p>
+                    )}
+
+                    {/* Add to Google Calendar Action Button */}
+                    <div className="pt-2">
+                      <a
+                        href={getSessionGoogleCalendarUrl(session)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-700 hover:text-blue-600 text-xs font-bold transition-all shadow-2xs cursor-pointer w-fit"
                       >
-                        <span>{isBookmarked ? "Saved to Agenda" : "Bookmark Session"}</span>
-                      </button>
+                        <Calendar size={14} className="text-blue-600 shrink-0" />
+                        <span>Add to Google Calendar</span>
+                      </a>
                     </div>
                   </div>
                 );
