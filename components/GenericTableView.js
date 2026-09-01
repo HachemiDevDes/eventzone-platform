@@ -29,12 +29,14 @@ import DocumentsView from "./DocumentsView";
 import AnalyticsView from "./AnalyticsView";
 import DevelopersView from "./DevelopersView";
 import CommunicationsView from "./CommunicationsView";
+import CertificatesView from "./CertificatesView";
 import {
   TableViewSkeleton,
   LogisticsSkeleton,
   DocumentsSkeleton,
   AnalyticsSkeleton,
-  DevelopersSkeleton
+  DevelopersSkeleton,
+  CertificatesSkeleton
 } from "./SkeletonLoaders";
 
 export default function GenericTableView({ 
@@ -51,10 +53,20 @@ export default function GenericTableView({
     if (viewName === "analytics") return <AnalyticsSkeleton />;
     if (viewName === "logistics") return <LogisticsSkeleton />;
     if (viewName === "documents") return <DocumentsSkeleton />;
+    if (viewName === "certificates") return <CertificatesSkeleton />;
     return <TableViewSkeleton />;
   }
 
   switch (viewName) {
+    case "certificates":
+      return (
+        <CertificatesView
+          state={state}
+          onUpdateState={onUpdateState}
+          onUploadFile={onUploadFile}
+          onSwitchView={onSwitchView}
+        />
+      );
     case "event-details":
       return <EventDetailsView state={state} onUpdateState={onUpdateState} onUploadFile={onUploadFile} />;
     case "opportunities":
@@ -4807,8 +4819,8 @@ function CheckInView({ state, onUpdateState }) {
       {(() => {
         const eventDetails = state.eventDetails || {};
         const eventId = eventDetails.id || state.activeEventId || "";
-        const eventPasscode = eventDetails.checkinPasscode || eventDetails.checkin_passcode || (eventId ? String(eventId).slice(0, 6).toUpperCase() : "202688");
-        const checkinUrl = `https://ci.eventzone.pro`;
+        const eventPasscode = eventDetails.checkinPasscode || eventDetails.checkin_passcode || (eventId ? String(eventId).slice(0, 6).toUpperCase() : "");
+        const checkinUrl = eventId ? `https://ci.eventzone.pro/checkin?eventId=${eventId}` : `https://ci.eventzone.pro`;
         const localCheckinUrl = eventId ? `/checkin?eventId=${eventId}` : `/checkin`;
 
         return (
