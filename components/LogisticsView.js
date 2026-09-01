@@ -276,7 +276,7 @@ export default function LogisticsView({
     const completedCuesCount = runOfShow.filter(r => r.status === "completed").length;
     const completedChecks = checklists.filter(c => c.isCompleted).length;
     const totalChecks = checklists.length;
-    const readinessPct = totalChecks > 0 ? Math.round((completedChecks / totalChecks) * 100) : 100;
+    const readinessPct = totalChecks > 0 ? Math.round((completedChecks / totalChecks) * 100) : 0;
     const openIncidentsCount = incidents.filter(i => i.status !== "resolved").length;
 
     return {
