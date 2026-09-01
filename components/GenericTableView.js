@@ -2225,6 +2225,9 @@ function PendingView({ state, onUpdateState }) {
     // Automatically dispatch official approval email with badge PDF & fast-track QR code
     if (p.email && typeof p.email === "string" && p.email.includes("@")) {
       const eventDetails = state?.eventDetails || {};
+      const tickets = state?.tickets || [];
+      const resolvedTier = getResolvedTicketName(newAttendee, tickets);
+      const matchedTicket = tickets.find(t => (t.name || t.tier || "").trim().toLowerCase() === (resolvedTier || "").trim().toLowerCase()) || {};
       const targetDate = eventDetails.startDate 
         ? `${eventDetails.startDate}${eventDetails.endDate ? ` - ${eventDetails.endDate}` : ''}`
         : newAttendee.registeredDate || "";
@@ -2244,6 +2247,10 @@ function PendingView({ state, onUpdateState }) {
           jobTitle: newAttendee.jobTitle || "",
           badgeCode: newAttendee.badgeCode || (p.badgeCode || `EZ-${String(newAttendee.id || '').slice(-4).toUpperCase()}`),
           passId: newAttendee.id,
+          eventId: eventDetails.id || state.activeEventId || "",
+          templateUrl: matchedTicket.badgeUrl || eventDetails.badgeUrl || "",
+          badgeSettings: matchedTicket.badgeSettings || eventDetails.badgeSettings || {},
+          attendeePhoto: getAttendeeDisplayImage(newAttendee),
           requiresApproval: false,
           isApproval: true,
           organizerName: eventDetails.organizerName || state?.currentUser?.fullName || "Eventzone Platform",

@@ -483,8 +483,8 @@ export default function AttendeeEmailDrawer({
             .replace(/\{\{company\}\}/g, curData.company || "")
             .replace(/\{\{formLink\}\}/g, resolvedFormUrl || "");
 
-          let payload;
           if (tmpl && tmpl.id === "badge_pass") {
+            const matchedTicket = (tickets || []).find(t => (t.name || t.tier || "").trim().toLowerCase() === (curData.ticketTier || "").trim().toLowerCase()) || {};
             payload = {
               type: "ticket_confirmation",
               to: curData.email,
@@ -494,9 +494,14 @@ export default function AttendeeEmailDrawer({
               eventTitle: curData.eventTitle,
               eventDate: curData.eventDate,
               eventLocation: curData.eventLocation,
+              company: curData.company || curAtt.company || "",
               badgeCode: curData.badgeCode,
               qrDataUrl: includeQr ? curQrDataUrl : undefined,
               passId: curAtt.id,
+              eventId: activeEventId || eventDetails.id || "",
+              templateUrl: matchedTicket.badgeUrl || eventDetails.badgeUrl || "",
+              badgeSettings: matchedTicket.badgeSettings || eventDetails.badgeSettings || {},
+              attendeePhoto: curData.avatar || curAtt.photo || curAtt.avatar || "",
               formUrl: includeFormLink && resolvedFormUrl ? resolvedFormUrl : undefined,
               formButtonText: includeFormLink && resolvedFormUrl ? (formButtonText.trim() || "Open Form") : undefined,
               eventLogo: curData.eventLogo,

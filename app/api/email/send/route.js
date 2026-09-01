@@ -74,15 +74,65 @@ export async function POST(request) {
 
     switch (type) {
       case "ticket_confirmation":
-      case "approval_confirmation":
+      case "approval_confirmation": {
+        let resolvedTemplateUrl = rest.templateUrl || "";
+        let resolvedBadgeSettings = rest.badgeSettings || {};
+
+        if (!resolvedTemplateUrl && eventId && isValidUuid(eventId)) {
+          try {
+            const supabase = getServiceSupabase();
+            if (rest.ticketTier) {
+              const { data: ticketRow } = await supabase
+                .from("tickets")
+                .select("badge_url, badge_settings")
+                .eq("event_id", eventId)
+                .ilike("name", rest.ticketTier.trim())
+                .maybeSingle();
+              if (ticketRow?.badge_url) {
+                resolvedTemplateUrl = ticketRow.badge_url;
+                resolvedBadgeSettings = ticketRow.badge_settings || resolvedBadgeSettings;
+              }
+            }
+            if (!resolvedTemplateUrl) {
+              const { data: anyTicket } = await supabase
+                .from("tickets")
+                .select("badge_url, badge_settings")
+                .eq("event_id", eventId)
+                .not("badge_url", "is", null)
+                .limit(1)
+                .maybeSingle();
+              if (anyTicket?.badge_url) {
+                resolvedTemplateUrl = anyTicket.badge_url;
+                resolvedBadgeSettings = anyTicket.badge_settings || resolvedBadgeSettings;
+              }
+            }
+            if (!resolvedTemplateUrl) {
+              const { data: evRow } = await supabase
+                .from("events")
+                .select("badge_url, badge_settings")
+                .eq("id", eventId)
+                .maybeSingle();
+              if (evRow?.badge_url) {
+                resolvedTemplateUrl = evRow.badge_url;
+                resolvedBadgeSettings = evRow.badge_settings || resolvedBadgeSettings;
+              }
+            }
+          } catch (dbErr) {
+            console.warn("Could not query badge_url in email route:", dbErr);
+          }
+        }
+
         result = await sendTicketConfirmationEmail({ 
           to, 
           subject: finalSubject,
           isApproval: type === "approval_confirmation" || rest.isApproval,
           eventId,
+          templateUrl: resolvedTemplateUrl,
+          badgeSettings: resolvedBadgeSettings,
           ...rest 
         });
         break;
+      }
 
       case "rsvp_confirmation":
         result = await sendRSVPConfirmationEmail({ 
