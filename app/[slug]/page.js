@@ -30,12 +30,11 @@ import { supabase, sanitizeUserForStorage } from "../../lib/supabase";
 import { useLanguage } from "../../lib/i18n";
 import { Calendar, ArrowLeft, Home, Sparkles, AlertCircle } from "lucide-react";
 
-export default function DynamicEventLandingPage({ params }) {
+export default function DynamicEventLandingPage() {
   const router = useRouter();
   const routeParams = useParams();
-  const resolvedParams = params ? (typeof params.then === "function" ? use(params) : params) : routeParams;
-  const rawSlug = resolvedParams?.slug || routeParams?.slug;
-  const slug = Array.isArray(rawSlug) ? rawSlug[0] : rawSlug;
+  const rawSlug = routeParams?.slug;
+  const slug = Array.isArray(rawSlug) ? rawSlug[0] : (rawSlug || "");
 
   const [eventDetails, setEventDetails] = useState(null);
   const [tickets, setTickets] = useState([]);
@@ -97,47 +96,7 @@ export default function DynamicEventLandingPage({ params }) {
       setNotFound(false);
 
       try {
-        // 1. Try unified high-performance bundle fetch (returns event and all public modules in 1 call)
-        const bundle = await fetchEventBundle(slug);
-        if (bundle && bundle.event && bundle.event.id) {
-          if (!isMounted) return;
-          const event = bundle.event;
-          setEventDetails(event);
-          setTickets(bundle.tickets || []);
-          setSessions(bundle.sessions || []);
-          setSponsors(bundle.sponsors || []);
-          setExhibitors(bundle.exhibitors || []);
-          setFloorPlans(bundle.floorPlans || []);
-          setInfluencers(bundle.influencers || []);
-          setForms(bundle.forms || []);
-          setRsvpSettings(bundle.rsvpSettings || {});
-
-          // Track influencer referral if present in search params
-          if (typeof window !== "undefined") {
-            const sp = new URLSearchParams(window.location.search);
-            const refCode = sp.get("ref") || sp.get("referral") || sp.get("influencer");
-            if (refCode) {
-              recordInfluencerClick(event.id, refCode).catch(() => {});
-            }
-          }
-
-          // Fetch remaining dynamic public collections concurrently
-          const [loadedAttendees, loadedDocuments, loadedSubmissions, loadedRsvps] = await Promise.all([
-            fetchAttendees(event.id).catch(() => []),
-            fetchDocuments(event.id).catch(() => []),
-            fetchFormSubmissions(event.id).catch(() => []),
-            fetchRSVPs(event.id).catch(() => [])
-          ]);
-
-          if (!isMounted) return;
-          setAttendees(loadedAttendees || []);
-          setDocuments(loadedDocuments || []);
-          setFormSubmissions(loadedSubmissions || []);
-          setRsvps(loadedRsvps || []);
-          return;
-        }
-
-        // 2. Granular fallback if RPC bundle is unavailable
+        // 1. Resolve event details (supports UUID, slug in DB, or slug computed from title)
         const event = await fetchEventDetails(slug);
         if (!event || !event.id) {
           if (isMounted) {
@@ -149,65 +108,44 @@ export default function DynamicEventLandingPage({ params }) {
 
         if (!isMounted) return;
         setEventDetails(event);
+        setIsLoading(false); // Unblock skeleton immediately once event is resolved!
 
-        // Track influencer referral if present in search params
+        const eventId = event.id;
+
+        // Session de-duplicated influencer tracking
         if (typeof window !== "undefined") {
           const sp = new URLSearchParams(window.location.search);
           const refCode = sp.get("ref") || sp.get("referral") || sp.get("influencer");
           if (refCode) {
-            recordInfluencerClick(event.id, refCode).catch(() => {});
+            const cleanRef = refCode.trim().toUpperCase();
+            const sessionKey = `eventzone_ref_click_${eventId}_${cleanRef}`;
+            if (!sessionStorage.getItem(sessionKey)) {
+              sessionStorage.setItem(sessionKey, "1");
+              recordInfluencerClick(eventId, cleanRef).catch(() => {});
+            }
           }
         }
 
-        // Parallel fetch all related public data
-        const eventId = event.id;
-        const [
-          loadedTickets,
-          loadedSessions,
-          loadedSponsors,
-          loadedExhibitors,
-          loadedAttendees,
-          loadedFloorPlans,
-          loadedDocuments,
-          loadedInfluencers,
-          loadedForms,
-          loadedSubmissions,
-          loadedRsvps,
-          loadedRsvpSettings
-        ] = await Promise.all([
-          fetchTickets(eventId).catch(() => []),
-          fetchSessions(eventId).catch(() => []),
-          fetchSponsors(eventId).catch(() => []),
-          fetchExhibitors(eventId).catch(() => []),
-          fetchAttendees(eventId).catch(() => []),
-          fetchFloorPlans(eventId).catch(() => []),
-          fetchDocuments(eventId).catch(() => []),
-          fetchInfluencers(eventId).catch(() => []),
-          fetchForms(eventId).catch(() => []),
-          fetchFormSubmissions(eventId).catch(() => []),
-          fetchRSVPs(eventId).catch(() => []),
-          fetchRSVPSettings(eventId).catch(() => ({}))
-        ]);
+        // 2. Parallel non-blocking fetches for all event modules
+        fetchTickets(eventId).then(res => isMounted && setTickets(res || [])).catch(() => {});
+        fetchSessions(eventId).then(res => isMounted && setSessions(res || [])).catch(() => {});
+        fetchSponsors(eventId).then(res => isMounted && setSponsors(res || [])).catch(() => {});
+        fetchExhibitors(eventId).then(res => isMounted && setExhibitors(res || [])).catch(() => {});
+        fetchAttendees(eventId).then(res => isMounted && setAttendees(res || [])).catch(() => {});
+        fetchFloorPlans(eventId).then(res => isMounted && setFloorPlans(res || [])).catch(() => {});
+        fetchDocuments(eventId).then(res => isMounted && setDocuments(res || [])).catch(() => {});
+        fetchInfluencers(eventId).then(res => isMounted && setInfluencers(res || [])).catch(() => {});
+        fetchForms(eventId).then(res => isMounted && setForms(res || [])).catch(() => {});
+        fetchFormSubmissions(eventId).then(res => isMounted && setFormSubmissions(res || [])).catch(() => {});
+        fetchRSVPs(eventId).then(res => isMounted && setRsvps(res || [])).catch(() => {});
+        fetchRSVPSettings(eventId).then(res => isMounted && setRsvpSettings(res || {})).catch(() => {});
 
-        if (!isMounted) return;
-
-        setTickets(loadedTickets || []);
-        setSessions(loadedSessions || []);
-        setSponsors(loadedSponsors || []);
-        setExhibitors(loadedExhibitors || []);
-        setAttendees(loadedAttendees || []);
-        setFloorPlans(loadedFloorPlans || []);
-        setDocuments(loadedDocuments || []);
-        setInfluencers(loadedInfluencers || []);
-        setForms(loadedForms || []);
-        setFormSubmissions(loadedSubmissions || []);
-        setRsvps(loadedRsvps || []);
-        setRsvpSettings(loadedRsvpSettings || {});
       } catch (err) {
         console.error("Failed to load event for slug:", slug, err);
-        if (isMounted) setNotFound(true);
-      } finally {
-        if (isMounted) setIsLoading(false);
+        if (isMounted) {
+          setNotFound(true);
+          setIsLoading(false);
+        }
       }
     }
 

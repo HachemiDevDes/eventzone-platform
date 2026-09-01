@@ -1,5 +1,6 @@
 import { Plus_Jakarta_Sans, Cairo } from "next/font/google";
 import "./globals.css";
+import { LanguageProvider } from "../lib/i18n";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -31,7 +32,11 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <LanguageProvider>
+          {children}
+        </LanguageProvider>
+      </body>
     </html>
   );
 }
