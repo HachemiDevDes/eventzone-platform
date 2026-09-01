@@ -262,80 +262,48 @@ export default function CheckInScanner({
     [eventId, isProcessing, onScanResult, staffEmail, staffName, startAutoNextCountdown]
   );
 
-  // Universal jsQR fallback
-  const runJsQrFallback = useCallback(
-    (ctx, width, height) => {
-      try {
-        const imageData = ctx.getImageData(0, 0, width, height);
-        const code = jsQR(imageData.data, imageData.width, imageData.height, {
-          inversionAttempts: "dontInvert",
-        });
+  const scanVideoFrameRef = useRef(null);
 
-        if (code && code.data) {
-          handleScannedPayload(code.data);
-        } else if (isScanningRef.current) {
-          animFrameIdRef.current = requestAnimationFrame(scanVideoFrame);
-        }
-      } catch {
-        if (isScanningRef.current) {
-          animFrameIdRef.current = requestAnimationFrame(scanVideoFrame);
-        }
-      }
-    },
-    [handleScannedPayload]
-  );
-
-  // Scan video frame using BarcodeDetector if available or jsQR fallback
+  // Scan video frame using optimized jsQR loop
   const scanVideoFrame = useCallback(() => {
     if (!isScanningRef.current) return;
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
 
-    if (video && video.readyState >= 2 && canvas) {
+    if (video && video.readyState >= 2 && canvas && video.videoWidth > 0 && video.videoHeight > 0) {
       const ctx = canvas.getContext("2d", { willReadFrequently: true });
       if (ctx) {
-        const videoWidth = video.videoWidth;
-        const videoHeight = video.videoHeight;
+        const scale = Math.min(1, 720 / Math.max(video.videoWidth, video.videoHeight));
+        const scanWidth = Math.max(320, Math.floor(video.videoWidth * scale));
+        const scanHeight = Math.max(240, Math.floor(video.videoHeight * scale));
 
-        if (videoWidth > 0 && videoHeight > 0) {
-          canvas.width = videoWidth;
-          canvas.height = videoHeight;
-          ctx.drawImage(video, 0, 0, videoWidth, videoHeight);
+        canvas.width = scanWidth;
+        canvas.height = scanHeight;
+        ctx.drawImage(video, 0, 0, scanWidth, scanHeight);
 
-          // Fast native BarcodeDetector if available in browser
-          if (typeof window !== "undefined" && "BarcodeDetector" in window) {
-            try {
-              const barcodeDetector = new window.BarcodeDetector({ formats: ["qr_code"] });
-              barcodeDetector
-                .detect(canvas)
-                .then((barcodes) => {
-                  if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
-                    handleScannedPayload(barcodes[0].rawValue);
-                  } else if (isScanningRef.current) {
-                    animFrameIdRef.current = requestAnimationFrame(scanVideoFrame);
-                  }
-                })
-                .catch(() => {
-                  runJsQrFallback(ctx, videoWidth, videoHeight);
-                });
-              return;
-            } catch {
-              // BarcodeDetector fallback
-            }
+        try {
+          const imageData = ctx.getImageData(0, 0, scanWidth, scanHeight);
+          const code = jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: "attemptBoth",
+          });
+
+          if (code && code.data) {
+            handleScannedPayload(code.data);
+            return;
           }
-
-          // Universal jsQR fallback
-          runJsQrFallback(ctx, videoWidth, videoHeight);
-          return;
+        } catch (e) {
+          // Ignore transient frame read errors
         }
       }
     }
 
-    if (isScanningRef.current) {
-      animFrameIdRef.current = requestAnimationFrame(scanVideoFrame);
+    if (isScanningRef.current && scanVideoFrameRef.current) {
+      animFrameIdRef.current = requestAnimationFrame(scanVideoFrameRef.current);
     }
-  }, [handleScannedPayload, runJsQrFallback]);
+  }, [handleScannedPayload]);
+
+  scanVideoFrameRef.current = scanVideoFrame;
 
   // Resume scanning for next attendee
   const handleScanNext = useCallback(() => {
@@ -346,8 +314,10 @@ export default function CheckInScanner({
     setActiveResult(null);
     lastScannedCodeRef.current = "";
     isScanningRef.current = true;
-    requestAnimationFrame(scanVideoFrame);
-  }, [scanVideoFrame]);
+    if (scanVideoFrameRef.current) {
+      animFrameIdRef.current = requestAnimationFrame(scanVideoFrameRef.current);
+    }
+  }, []);
 
   handleScanNextRef.current = handleScanNext;
 
@@ -431,7 +401,9 @@ export default function CheckInScanner({
 
       // Start frame scanning loop
       isScanningRef.current = true;
-      requestAnimationFrame(scanVideoFrame);
+      if (scanVideoFrameRef.current) {
+        animFrameIdRef.current = requestAnimationFrame(scanVideoFrameRef.current);
+      }
     } catch (err) {
       console.warn("Camera init error:", err);
       setCameraPermission("denied");

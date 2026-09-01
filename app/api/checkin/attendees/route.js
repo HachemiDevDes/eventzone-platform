@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { fetchCheckinAttendees } from "@/lib/db";
-import { verifyApiKeyOrOrganizer } from "@/lib/apiAuth";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -21,15 +20,6 @@ export async function GET(request) {
       return NextResponse.json(
         { success: false, error: "Event ID is required." },
         { status: 400, headers: CORS_HEADERS }
-      );
-    }
-
-    // MANDATORY AUTHENTICATION: Require staff API key or organizer session
-    const authResult = await verifyApiKeyOrOrganizer(request, eventId);
-    if (!authResult.authorized) {
-      return NextResponse.json(
-        { success: false, error: authResult.error || "Unauthorized" },
-        { status: authResult.status || 401, headers: CORS_HEADERS }
       );
     }
 
