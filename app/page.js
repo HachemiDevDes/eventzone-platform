@@ -4060,6 +4060,9 @@ export function HomeContent() {
         eventTitle={eventDetails?.title || "Eventzone Summit"}
         onSwitchView={setCurrentView}
         eventDetails={eventDetails}
+        organizations={organizations}
+        sponsors={sponsors}
+        exhibitors={exhibitors}
       />
 
       {/* Team Member Drawer Slide-Over (Granular Permissions & Role Presets) */}
