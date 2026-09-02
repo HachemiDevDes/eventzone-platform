@@ -85,7 +85,7 @@ import {
   fetchFormSubmissions, submitFormResponse, deleteFormSubmission,
   fetchRSVPs, fetchRSVPSettings, upsertRSVPSettings, submitGuestRSVP, updateRSVPStatus, deleteRSVP, archiveRSVP,
   fetchLogistics, upsertLogisticsItem, deleteLogisticsItem, archiveLogisticsItem, upsertFullLogistics,
-  fetchDocuments, upsertDocument, deleteDocument, archiveDocument, togglePinDocument, STARTER_DOCUMENTS,
+  fetchDocuments, upsertDocument, deleteDocument, archiveDocument, togglePinDocument,
   uploadFileToBucket,
   fetchUserEvents, fetchPublicEvents, createEvent, deleteEvent, archiveEvent, unarchiveEvent,
   fetchVisitorRegistrations, registerVisitorForEvent, upsertUserProfile,
@@ -285,7 +285,7 @@ export function HomeContent() {
         }
       } catch (e) {}
     }
-    return STARTER_DOCUMENTS || [];
+    return [];
   });
   const [showGlobalPublicRsvp, setShowGlobalPublicRsvp] = useState(false);
   const [simulatedMemberId, setSimulatedMemberId] = useState(null);
@@ -621,6 +621,17 @@ export function HomeContent() {
         setPublicEvents(pEvents || []);
         setUserEvents(uEvents || []);
         setVisitorRegistrations(vRegs || []);
+
+        // Auto-select organizer's latest event if opening dashboard on demo default
+        if (typeof window !== "undefined" && uEvents && uEvents.length > 0) {
+          const urlParam = new URLSearchParams(window.location.search).get("eventId") || new URLSearchParams(window.location.search).get("event");
+          if (!urlParam && activeEventId === DEFAULT_EVENT_ID) {
+            const hasDefault = uEvents.some(ev => ev.id === DEFAULT_EVENT_ID);
+            if (!hasDefault && uEvents[0]?.id) {
+              setActiveEventStateId(uEvents[0].id);
+            }
+          }
+        }
       } catch (err) {
         console.error("Error loading events hub:", err);
       }
@@ -3481,6 +3492,8 @@ export function HomeContent() {
               <span className={`text-[9px] font-extrabold py-0.5 px-2 rounded-full ${currentView === "influencers" ? "bg-white/25 text-white" : "bg-slate-100 text-slate-500"}`}>{influencers.filter(i => !i.isArchived).length}</span>
             </button>
 
+            {/* Documents Tab (Temporarily hidden to minimize cloud storage & egress) */}
+            {/*
             <button 
               onClick={() => setCurrentView("documents")}
               className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-left group ${currentView === "documents" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
@@ -3493,6 +3506,7 @@ export function HomeContent() {
                 {documents.filter(d => !d.isArchived).length}
               </span>
             </button>
+            */}
 
             <button 
               onClick={() => setCurrentView("check-in")}

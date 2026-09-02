@@ -100,14 +100,25 @@ export async function GET(request, context) {
     const params = await context.params;
     const eventId = params?.id;
 
-    if (!eventId) {
-      return NextResponse.json({ success: false, error: "Event ID is required" }, { status: 400 });
+    if (!eventId || !isValidUuid(eventId)) {
+      return NextResponse.json({ success: false, error: "Valid Event ID is required" }, { status: 400 });
+    }
+
+    // 0. Verify Event Exists
+    const { data: evRow, error: evErr } = await supabase
+      .from('events')
+      .select('id, capacity')
+      .eq('id', eventId)
+      .maybeSingle();
+
+    if (evErr || !evRow) {
+      return NextResponse.json({ success: false, error: "Event not found." }, { status: 404 });
     }
 
     // 1. Fetch RSVP Settings
     let settings = {
       is_enabled: true,
-      capacity_limit: 150,
+      capacity_limit: evRow.capacity || 150,
       allow_plus_ones: true,
       max_plus_ones: 2,
       allow_waitlist: true,
@@ -118,26 +129,14 @@ export async function GET(request, context) {
       confirmation_message: "Thank you for your RSVP! We look forward to seeing you at the event."
     };
 
-    if (isValidUuid(eventId)) {
-      const { data: setRow } = await supabase
-        .from('rsvp_settings')
-        .select('*')
-        .eq('event_id', eventId)
-        .maybeSingle();
+    const { data: setRow } = await supabase
+      .from('rsvp_settings')
+      .select('*')
+      .eq('event_id', eventId)
+      .maybeSingle();
 
-      if (setRow) {
-        settings = { ...settings, ...setRow };
-      } else {
-        // Check event table capacity
-        const { data: evRow } = await supabase
-          .from('events')
-          .select('capacity')
-          .eq('id', eventId)
-          .maybeSingle();
-        if (evRow?.capacity) {
-          settings.capacity_limit = evRow.capacity;
-        }
-      }
+    if (setRow) {
+      settings = { ...settings, ...setRow };
     }
 
     // 2. Fetch RSVPs
@@ -177,8 +176,19 @@ export async function POST(request, context) {
     const params = await context.params;
     const eventId = params?.id;
 
-    if (!eventId) {
-      return NextResponse.json({ success: false, error: "Event ID is required" }, { status: 400 });
+    if (!eventId || !isValidUuid(eventId)) {
+      return NextResponse.json({ success: false, error: "Valid Event ID is required" }, { status: 400 });
+    }
+
+    // Verify Event exists in database
+    const { data: evRow, error: evErr } = await supabase
+      .from('events')
+      .select('id, capacity')
+      .eq('id', eventId)
+      .maybeSingle();
+
+    if (evErr || !evRow) {
+      return NextResponse.json({ success: false, error: "Event not found." }, { status: 404 });
     }
 
     const body = await request.json();
@@ -212,7 +222,7 @@ export async function POST(request, context) {
     // 2. Fetch event settings & capacity
     let settings = {
       is_enabled: true,
-      capacity_limit: 150,
+      capacity_limit: evRow.capacity || 150,
       allow_plus_ones: true,
       max_plus_ones: 2,
       allow_waitlist: true,
@@ -220,16 +230,14 @@ export async function POST(request, context) {
       confirmation_message: "Thank you for your RSVP! We look forward to seeing you at the event."
     };
 
-    if (isValidUuid(eventId)) {
-      const { data: setRow } = await supabase
-        .from('rsvp_settings')
-        .select('*')
-        .eq('event_id', eventId)
-        .maybeSingle();
+    const { data: setRow } = await supabase
+      .from('rsvp_settings')
+      .select('*')
+      .eq('event_id', eventId)
+      .maybeSingle();
 
-      if (setRow) {
-        settings = { ...settings, ...setRow };
-      }
+    if (setRow) {
+      settings = { ...settings, ...setRow };
     }
 
     // Check if RSVP is enabled

@@ -75,26 +75,31 @@ export async function POST(request, context) {
       );
     }
 
-    // 1. Fetch Event Info
-    let eventName = "Eventzone Summit";
-    let eventLocation = "Algiers, Algeria";
-    let eventStartDate = "";
-    let eventEndDate = "";
-
-    if (isValidUuid(eventId)) {
-      const { data: ev } = await supabase
-        .from("events")
-        .select("id, name, location, start_date, end_date")
-        .eq("id", eventId)
-        .maybeSingle();
-
-      if (ev) {
-        eventName = ev.name || eventName;
-        eventLocation = ev.location || eventLocation;
-        eventStartDate = ev.start_date || "";
-        eventEndDate = ev.end_date || "";
-      }
+    if (!eventId || !isValidUuid(eventId)) {
+      return NextResponse.json(
+        { success: false, error: "Valid Event ID is required" },
+        { status: 400, headers: CORS_HEADERS }
+      );
     }
+
+    // 1. Fetch Event Info
+    const { data: ev, error: evErr } = await supabase
+      .from("events")
+      .select("id, name, location, start_date, end_date")
+      .eq("id", eventId)
+      .maybeSingle();
+
+    if (evErr || !ev) {
+      return NextResponse.json(
+        { success: false, error: "Event not found." },
+        { status: 404, headers: CORS_HEADERS }
+      );
+    }
+
+    const eventName = ev.name || "Event";
+    const eventLocation = ev.location || "";
+    const eventStartDate = ev.start_date || "";
+    const eventEndDate = ev.end_date || "";
 
     // 2. Fetch Ticket Tier settings & Quota check
     let matchedTicket = null;

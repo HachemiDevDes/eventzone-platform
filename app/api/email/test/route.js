@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifySmtpConnection, sendEmail, SENDER_EMAIL, SENDER_NAME } from "@/lib/mailer";
+import { verifyOrganizerSession } from "@/lib/apiAuth";
 
 export async function GET() {
   try {
@@ -22,6 +23,15 @@ export async function GET() {
 
 export async function POST(request) {
   try {
+    // MANDATORY AUTHENTICATION: Prevent open SMTP relay
+    const authResult = await verifyOrganizerSession(request);
+    if (!authResult.authorized) {
+      return NextResponse.json(
+        { success: false, error: authResult.error || "Unauthorized: Organizer session required to send test emails." },
+        { status: authResult.status || 401 }
+      );
+    }
+
     const body = await request.json().catch(() => ({}));
     const targetEmail = body.to || SENDER_EMAIL;
 

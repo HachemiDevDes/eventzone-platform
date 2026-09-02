@@ -26,46 +26,40 @@ export async function GET(request, context) {
     const params = await context.params;
     const eventId = params?.id;
 
-    if (!eventId) {
+    if (!eventId || !isValidUuid(eventId)) {
       return NextResponse.json(
-        { success: false, error: "Event ID is required" },
+        { success: false, error: "Valid Event ID is required." },
         { status: 400, headers: CORS_HEADERS }
       );
     }
 
     // 1. Fetch Event Basic Details
-    let eventInfo = {
-      id: eventId,
-      title: "Eventzone Summit",
-      type: "Hybrid",
-      location: "Algiers, Algeria",
-      currency: "DZD",
-      status: "published",
-    };
+    const { data: eventRow, error: eventErr } = await supabase
+      .from("events")
+      .select("id, name, description, location, wilaya, city, start_date, end_date, cover_url, logo_url, status, type")
+      .eq("id", eventId)
+      .maybeSingle();
 
-    if (isValidUuid(eventId)) {
-      const { data: eventRow } = await supabase
-        .from("events")
-        .select("id, name, description, location, wilaya, city, start_date, end_date, cover_url, logo_url, status, type")
-        .eq("id", eventId)
-        .maybeSingle();
-
-      if (eventRow) {
-        eventInfo = {
-          id: eventRow.id,
-          title: eventRow.name || "Eventzone Summit",
-          description: eventRow.description || "",
-          location: eventRow.location || `${eventRow.city || ""}, ${eventRow.wilaya || ""}`.trim(),
-          startDate: eventRow.start_date || "",
-          endDate: eventRow.end_date || "",
-          coverUrl: eventRow.cover_url || "",
-          logoUrl: eventRow.logo_url || "",
-          status: eventRow.status || "published",
-          type: eventRow.type || "Hybrid",
-          currency: "DZD",
-        };
-      }
+    if (eventErr || !eventRow) {
+      return NextResponse.json(
+        { success: false, error: "Event not found." },
+        { status: 404, headers: CORS_HEADERS }
+      );
     }
+
+    const eventInfo = {
+      id: eventRow.id,
+      title: eventRow.name || "Untitled Event",
+      description: eventRow.description || "",
+      location: eventRow.location || `${eventRow.city || ""}, ${eventRow.wilaya || ""}`.trim(),
+      startDate: eventRow.start_date || "",
+      endDate: eventRow.end_date || "",
+      coverUrl: eventRow.cover_url || "",
+      logoUrl: eventRow.logo_url || "",
+      status: eventRow.status || "published",
+      type: eventRow.type || "Hybrid",
+      currency: "DZD",
+    };
 
     // 2. Fetch Tickets
     let tickets = [];

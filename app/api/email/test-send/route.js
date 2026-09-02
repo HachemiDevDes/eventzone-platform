@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { sendBroadcastEmail } from "@/lib/mailer";
-import { getServiceSupabase } from "@/lib/apiAuth";
+import { getServiceSupabase, verifyOrganizerSession } from "@/lib/apiAuth";
 import QRCode from "qrcode";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +32,17 @@ export async function POST(request) {
       sampleAttendee = {}
     } = payload;
 
+    const validEventId = isValidUuid(eventId) ? eventId : null;
+
+    // MANDATORY AUTHENTICATION: Prevent open SMTP relay
+    const authResult = await verifyOrganizerSession(request, validEventId);
+    if (!authResult.authorized) {
+      return NextResponse.json(
+        { error: authResult.error || "Unauthorized: Organizer session required to trigger test emails." },
+        { status: authResult.status || 401 }
+      );
+    }
+
     if (!testEmail || !testEmail.includes("@")) {
       return NextResponse.json({ error: "Please provide a valid test email address." }, { status: 400 });
     }
@@ -40,7 +51,6 @@ export async function POST(request) {
     }
 
     const supabase = getServiceSupabase();
-    const validEventId = isValidUuid(eventId) ? eventId : null;
 
     const formatEventLevelVars = (str) => {
       if (!str) return "";

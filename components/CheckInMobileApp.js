@@ -117,6 +117,9 @@ export default function CheckInMobileApp({
       } catch {}
 
       showToast(`Welcome ${data.staff?.name || "Staff"}! Check-in desk ready.`);
+      if (newSession.eventId) {
+        loadAttendees(newSession.eventId, newSession);
+      }
     } catch (err) {
       console.error("Login error:", err);
       setAuthError("Unable to connect to the check-in server. Please try again.");
@@ -137,11 +140,16 @@ export default function CheckInMobileApp({
   };
 
   // Load attendees for the active event
-  const loadAttendees = useCallback(async (eventId) => {
+  const loadAttendees = useCallback(async (eventId, overrideSession = null) => {
     if (!eventId) return;
+    const activeSess = overrideSession || session;
     setListLoading(true);
     try {
-      const res = await fetch(`/api/checkin/attendees?eventId=${eventId}`);
+      const headers = {};
+      if (activeSess?.passcode) headers["x-checkin-passcode"] = activeSess.passcode;
+      if (activeSess?.email) headers["x-staff-email"] = activeSess.email;
+
+      const res = await fetch(`/api/checkin/attendees?eventId=${eventId}`, { headers });
       const data = await res.json();
       if (data.success && Array.isArray(data.attendees)) {
         setAttendees(data.attendees);
@@ -151,7 +159,7 @@ export default function CheckInMobileApp({
     } finally {
       setListLoading(false);
     }
-  }, []);
+  }, [session]);
 
   // Fetch attendees when logged in
   useEffect(() => {
@@ -195,9 +203,13 @@ export default function CheckInMobileApp({
     }
 
     try {
+      const headers = { "Content-Type": "application/json" };
+      if (session?.passcode) headers["x-checkin-passcode"] = session.passcode;
+      if (session?.email) headers["x-staff-email"] = session.email;
+
       const res = await fetch("/api/checkin/toggle", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           eventId: session.eventId,
           attendeeId,
