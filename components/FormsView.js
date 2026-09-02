@@ -351,10 +351,11 @@ export default function FormsView({
       const matchesSearch = (form.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
                             (form.description || "").toLowerCase().includes(searchQuery.toLowerCase());
       
+      const formType = (form.type || form.category || "").toLowerCase();
       let matchesCat = true;
-      if (selectedCategory === "Ticket Registration") matchesCat = form.type === "ticket_registration";
-      else if (selectedCategory === "Feedback & Survey") matchesCat = form.type === "feedback_survey" || form.type === "session_survey";
-      else if (selectedCategory === "Inquiries & Proposals") matchesCat = form.type === "general_inquiry";
+      if (selectedCategory === "Ticket Registration") matchesCat = formType.includes("ticket") || formType.includes("registration");
+      else if (selectedCategory === "Feedback & Survey") matchesCat = formType.includes("feedback") || formType.includes("survey");
+      else if (selectedCategory === "Inquiries & Proposals") matchesCat = formType.includes("inquiry") || formType.includes("proposal");
 
       let matchesStatus = true;
       if (selectedStatus === "All") matchesStatus = !isArchived;
@@ -604,7 +605,7 @@ function generateUuid() {
 
     const headers = ["Submission ID", "Submitted At", "Respondent Name", "Respondent Email", "Ticket Tier"];
     (editingForm.fields || []).forEach(f => {
-      if (f.type !== "section") headers.push(`"${f.label.replace(/"/g, '""')}"`);
+      if (f.type !== "section") headers.push(`"${(f.label || f.placeholder || f.id || 'Field').replace(/"/g, '""')}"`);
     });
 
     const rows = activeSubmissions.map(sub => {
@@ -634,7 +635,7 @@ function generateUuid() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `${editingForm.title.toLowerCase().replace(/[^a-z0-9]/g, '_')}_responses.csv`);
+    link.setAttribute("download", `${(editingForm.title || 'form').toLowerCase().replace(/[^a-z0-9]/g, '_')}_responses.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -2602,8 +2603,11 @@ function generateUuid() {
           {filteredForms.map(form => {
             const isArchived = form.status === "archived" || form.isArchived;
             const formSubs = submissions.filter(s => s.formId === form.id);
-            const isTicket = form.type === "ticket_registration";
-            const isFeedback = form.type === "feedback_survey" || form.type === "session_survey";
+            const formTypeStr = typeof form.type === 'string' && form.type.trim() 
+              ? form.type 
+              : (typeof form.category === 'string' && form.category.trim() ? form.category : 'ticket_registration');
+            const isTicket = formTypeStr.toLowerCase().includes("ticket") || formTypeStr.toLowerCase().includes("registration");
+            const isFeedback = formTypeStr.toLowerCase().includes("feedback") || formTypeStr.toLowerCase().includes("survey");
 
             return (
               <div
@@ -2618,7 +2622,7 @@ function generateUuid() {
                       isFeedback ? "bg-violet-100 text-violet-700" :
                       "bg-blue-100 text-blue-700"
                     }`}>
-                      {form.type.replace(/_/g, " ")}
+                      {formTypeStr.replace(/_/g, " ")}
                     </span>
 
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
