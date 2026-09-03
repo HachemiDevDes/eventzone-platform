@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { 
   Compass, Ticket, Calendar, MapPin, 
   Sparkles, ArrowRight, ChevronLeft, ChevronRight, 
@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import QRCode from "qrcode";
 import { useLanguage } from "../lib/i18n";
+import { INDUSTRIES, getLocalizedIndustry } from "../lib/constants";
 import UniversalTopBar from "./UniversalTopBar";
 import SearchableSelect from "./SearchableSelect";
 import { HomePageSkeleton } from "./SkeletonLoaders";
@@ -103,21 +104,23 @@ export default function MainHomePage({
     }
   }, [registrations, currentUser]);
 
+  const categoriesRef = useRef(null);
+
+  const scrollCategories = (direction) => {
+    if (categoriesRef.current) {
+      const scrollAmount = direction === "left" ? -320 : 320;
+      categoriesRef.current.scrollBy({ left: isRTL ? -scrollAmount : scrollAmount, behavior: "smooth" });
+    }
+  };
+
   const categories = [
     "All",
-    "Energy & Hydrocarbons",
-    "Technology & Software",
-    "Finance & Banking",
-    "Healthcare & Pharmaceuticals"
+    ...INDUSTRIES
   ];
 
   const getCategoryLabel = (cat) => {
-    if (cat === "All") return t("home.allCategories", "All");
-    if (cat === "Energy & Hydrocarbons") return lang === "ar" ? "الطاقة والمحروقات" : lang === "fr" ? "Énergie & Hydrocarbures" : cat;
-    if (cat === "Technology & Software") return lang === "ar" ? "التكنولوجيا والبرمجيات" : lang === "fr" ? "Technologie & Logiciels" : cat;
-    if (cat === "Finance & Banking") return lang === "ar" ? "المالية والبنوك" : lang === "fr" ? "Finance & Banque" : cat;
-    if (cat === "Healthcare & Pharmaceuticals") return lang === "ar" ? "الرعاية الصحية والأدوية" : lang === "fr" ? "Santé & Pharmacie" : cat;
-    return cat;
+    if (cat === "All") return t("home.allCategories", "All Categories");
+    return getLocalizedIndustry(cat, lang);
   };
 
   const getFormatLabel = (fmt) => {
@@ -129,10 +132,25 @@ export default function MainHomePage({
   };
 
   const filteredEvents = events.filter(ev => {
-    const matchesSearch = (ev.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          (ev.location || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          (ev.category || "").toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === "All" || ev.category === selectedCategory;
+    const q = searchQuery.trim().toLowerCase();
+    const matchesSearch = !q ||
+      (ev.title || "").toLowerCase().includes(q) ||
+      (ev.location || "").toLowerCase().includes(q) ||
+      (ev.category || "").toLowerCase().includes(q) ||
+      (ev.industry || "").toLowerCase().includes(q) ||
+      (ev.description || "").toLowerCase().includes(q) ||
+      (getLocalizedIndustry(ev.category, lang) || "").toLowerCase().includes(q);
+
+    const evCat = (ev.category || ev.industry || "").toLowerCase();
+    const selCat = selectedCategory.toLowerCase();
+
+    const matchesCategory = selectedCategory === "All" ||
+      evCat === selCat ||
+      (selectedCategory === "Technology, AI & Software" && (evCat.includes("tech") || evCat.includes("software"))) ||
+      (selectedCategory === "Energy, Oil & Gas" && (evCat.includes("energy") || evCat.includes("hydrocarbon") || evCat.includes("oil"))) ||
+      (selectedCategory === "Finance, Banking & FinTech" && (evCat.includes("finance") || evCat.includes("bank"))) ||
+      (selectedCategory === "Healthcare, Pharmaceuticals & Biotech" && (evCat.includes("health") || evCat.includes("pharma")));
+
     const matchesFormat = selectedFormat === "All" || (ev.type || "Hybrid") === selectedFormat;
     return matchesSearch && matchesCategory && matchesFormat;
   });
@@ -347,7 +365,7 @@ export default function MainHomePage({
       {/* ==================================================================== */}
       <main id="explore" className="flex-1 max-w-7xl w-full mx-auto px-6 sm:px-8 py-12 space-y-8">
         {/* Section Header & Filters */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
           <div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
               {t("home.upcomingConferences", "Upcoming Conferences & Expos")}
@@ -357,34 +375,73 @@ export default function MainHomePage({
             </p>
           </div>
 
-          {/* Search Bar */}
-          <div className="relative w-full md:w-80">
-            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder={t("home.searchPlaceholder", "Search summits, expos, keywords, or cities...")}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-semibold text-slate-900 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all shadow-xs"
-            />
+          {/* Polished Search Pill */}
+          <div className="relative w-full sm:w-80 md:w-96 lg:w-[380px] shrink-0">
+            <div className="flex items-center gap-2.5 px-4 h-11 bg-white border border-slate-200 hover:border-slate-300 focus-within:border-blue-600 focus-within:ring-4 focus-within:ring-blue-600/10 rounded-full shadow-xs transition-all group">
+              <Search size={16} className="text-slate-400 group-focus-within:text-blue-600 transition-colors shrink-0" />
+              <input
+                type="text"
+                placeholder={t("home.searchPlaceholder", "Search summits, expos, keywords, or cities...")}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-transparent text-xs sm:text-sm font-semibold text-slate-800 placeholder:text-slate-400 placeholder:font-normal outline-none"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors cursor-pointer shrink-0"
+                  title={t("common.clear", "Clear")}
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Category Filter Bar */}
-        <div id="categories" className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none max-w-full pt-1 scroll-mt-20">
-          {categories.map(cat => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                selectedCategory === cat 
-                  ? "bg-blue-600 text-white shadow-md shadow-blue-600/20" 
-                  : "bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-              }`}
-            >
-              {getCategoryLabel(cat)}
-            </button>
-          ))}
+        {/* Category Filter Bar with Smooth Arrow Navigation */}
+        <div className="relative group/chips">
+          {/* Left Arrow Button */}
+          <button
+            type="button"
+            onClick={() => scrollCategories("left")}
+            className="hidden md:flex absolute -left-3 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white border border-slate-200 shadow-md items-center justify-center text-slate-600 hover:text-blue-600 hover:bg-slate-50 transition-all cursor-pointer opacity-0 group-hover/chips:opacity-100 focus:opacity-100"
+            aria-label="Scroll categories left"
+          >
+            <ChevronLeft size={16} />
+          </button>
+
+          {/* Category Chips Scroll Container */}
+          <div 
+            ref={categoriesRef}
+            id="categories" 
+            className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none max-w-full pt-1 scroll-smooth scroll-mt-20 px-0.5"
+          >
+            {categories.map(cat => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer shrink-0 ${
+                  selectedCategory === cat 
+                    ? "bg-blue-600 text-white shadow-md shadow-blue-600/20" 
+                    : "bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                }`}
+              >
+                {getCategoryLabel(cat)}
+              </button>
+            ))}
+          </div>
+
+          {/* Right Arrow Button */}
+          <button
+            type="button"
+            onClick={() => scrollCategories("right")}
+            className="hidden md:flex absolute -right-3 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white border border-slate-200 shadow-md items-center justify-center text-slate-600 hover:text-blue-600 hover:bg-slate-50 transition-all cursor-pointer opacity-0 group-hover/chips:opacity-100 focus:opacity-100"
+            aria-label="Scroll categories right"
+          >
+            <ChevronRight size={16} />
+          </button>
         </div>
 
         {/* Event Cards Grid */}
