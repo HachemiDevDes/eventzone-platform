@@ -151,14 +151,10 @@ export default function UniversalTopBar({
               setLangMenuOpen(o => !o);
               setProfileOpen(false);
             }}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer shadow-xs shrink-0"
+            className="flex items-center gap-1 sm:gap-2 px-2 sm:px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer shadow-xs shrink-0"
             title="Change Language"
           >
-            <img 
-              src={curLang?.icon || "https://i.imgur.com/NXtMImD.png"} 
-              alt={lang} 
-              className="w-4.5 h-3 object-cover rounded-xs border border-slate-300/80 shadow-2xs shrink-0" 
-            />
+            <img src={curLang?.icon || "https://i.imgur.com/NXtMImD.png"} alt={lang} className="w-4 h-4 sm:w-5 sm:h-5 object-contain shrink-0" />
             <span className="uppercase tracking-wide font-extrabold text-[10px] sm:text-[11px]">{lang}</span>
             <ChevronDown size={10} className={`text-slate-400 transition-transform ${langMenuOpen ? "rotate-180" : ""}`} />
           </button>
@@ -179,7 +175,7 @@ export default function UniversalTopBar({
                   }`}
                 >
                   <div className="flex items-center gap-2">
-                    <img src={item.icon} alt={item.code} className="w-4.5 h-3 object-cover rounded-xs border border-slate-200/80 shadow-2xs shrink-0" />
+                    <img src={item.icon} alt={item.code} className="w-5 h-5 object-contain shrink-0" />
                     <span>{item.label}</span>
                   </div>
                   {lang === item.code && <Check size={12} className="text-blue-600 shrink-0" />}

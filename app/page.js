@@ -3162,18 +3162,11 @@ export function HomeContent() {
               <button
                 type="button"
                 onClick={() => setLangDropdownOpen(o => !o)}
-                className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition-all cursor-pointer shadow-2xs shrink-0"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer shadow-2xs"
                 title={`Language: ${languages.find(l => l.code === lang)?.label || "Language"}`}
               >
-                <img 
-                  src={languages.find(l => l.code === lang)?.icon || "https://i.imgur.com/NXtMImD.png"} 
-                  alt={lang} 
-                  className="w-4.5 h-3 object-cover rounded-xs border border-slate-300/80 shadow-2xs shrink-0" 
-                />
-                <span className="uppercase text-[10px] font-extrabold tracking-wide text-slate-700">
-                  {languages.find(l => l.code === lang)?.short || lang}
-                </span>
-                <ChevronDown size={11} className={`text-slate-400 transition-transform duration-200 ${langDropdownOpen ? "rotate-180" : ""}`} />
+                <img src={languages.find(l => l.code === lang)?.icon || "https://i.imgur.com/NXtMImD.png"} alt={lang} className="w-4 h-4 object-contain rounded-xs" />
+                <ChevronDown size={11} className={`text-slate-400 transition-transform ${langDropdownOpen ? "rotate-180" : ""}`} />
               </button>
 
               {/* Language Dropdown Menu */}
@@ -3181,9 +3174,7 @@ export function HomeContent() {
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setLangDropdownOpen(false)} />
                   <div 
-                    className={`absolute top-full mt-2 w-36 bg-white border border-slate-200 rounded-2xl shadow-xl p-1.5 space-y-1 z-50 animate-scale-up ${
-                      isRTL ? "left-0" : "right-0"
-                    }`}
+                    className={`absolute ${isRTL ? "left-0" : "right-0"} top-full mt-2 w-36 bg-white border border-slate-200 rounded-2xl shadow-xl p-1.5 space-y-1 z-50 animate-scale-up`}
                   >
                     {languages.map(l => (
                       <button
@@ -3194,12 +3185,12 @@ export function HomeContent() {
                           setLangDropdownOpen(false);
                         }}
                         className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
-                          lang === l.code ? "bg-blue-50 text-blue-600 font-extrabold" : "text-slate-700 hover:bg-slate-50"
+                          lang === l.code ? "bg-blue-50 text-blue-600" : "text-slate-700 hover:bg-slate-50"
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          <img src={l.icon} alt={l.code} className="w-4.5 h-3 object-cover rounded-xs border border-slate-200/80 shadow-2xs shrink-0" />
-                          <span className="truncate">{l.label}</span>
+                          <img src={l.icon} alt={l.code} className="w-4 h-4 object-contain" />
+                          <span>{l.label}</span>
                         </div>
                         {lang === l.code && <Check size={13} className="text-blue-600 shrink-0" />}
                       </button>
