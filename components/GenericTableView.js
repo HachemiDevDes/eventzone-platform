@@ -1,4 +1,6 @@
 
+"use client";
+
 // Helper to localize ticket tier names
 function getLocalizedTicketTierName(name, t) {
   if (!name || typeof name !== 'string') return name;
@@ -20,7 +22,6 @@ function getLocalizedFieldLabel(label, t) {
   return label;
 }
 
-"use client";
 
 import React, { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
@@ -760,6 +761,7 @@ function renderDynamicCellData(row, col) {
 
 // Full Submission & Intake Form Inspector Slide-Over Drawer
 function SubmissionDetailsModal({ item, type = "attendee", forms = [], tickets = [], onClose, onApprove, onDecline }) {
+  const { t, lang, isRTL } = useLanguage();
   if (!item) return null;
 
   const [previewPhoto, setPreviewPhoto] = useState(false);
@@ -1679,7 +1681,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                               <div className="text-[10px] text-slate-400 font-medium mt-0.5 flex items-center gap-1.5 truncate">
                                 {a.company && <span className="font-bold text-slate-600 truncate">{a.company}</span>}
                                 {a.company && (a.phone || a.answers?.phone || a.customAnswers?.phone) && <span className="text-slate-300">•</span>}
-                                <span dir="ltr">{a.phone || a.answers?.phone || a.answers?.f_core_phone || a.answers?.phoneNumber || a.customAnswers?.phone || a.customAnswers?.f_core_phone || a.customAnswers?.phoneNumber || "/"}</span>
+                                <bdi dir="ltr">{a.phone || a.answers?.phone || a.answers?.f_core_phone || a.answers?.phoneNumber || a.customAnswers?.phone || a.customAnswers?.f_core_phone || a.customAnswers?.phoneNumber || "/"}</bdi>
                               </div>
                             </div>
                           );
@@ -2364,10 +2366,10 @@ function PendingView({ state, onUpdateState }) {
           <div className="flex items-center gap-2">
             <h2 className="text-2xl font-bold text-slate-900">{t("dash.pending", "Pending Approvals")}</h2>
             <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 font-bold text-xs">
-              {pending.length} Awaiting Review
+              {pending.length} {t("table.awaitingReview", "Awaiting Review")}
             </span>
           </div>
-          <p className="text-sm text-slate-500 mt-0.5">Review registrations, intake questionnaires, and validate passes awaiting organizer approval.</p>
+          <p className="text-sm text-slate-500 mt-0.5">{t("table.pendingSubtitle", "Review registrations, intake questionnaires, and validate passes awaiting organizer approval.")}</p>
         </div>
       </header>
 
@@ -2407,7 +2409,7 @@ function PendingView({ state, onUpdateState }) {
             <Search className="absolute left-3.5 top-3 text-slate-400" size={16} />
             <input 
               type="text" 
-              placeholder="Search pending applicants by name, email, note, or answer..." 
+              placeholder={t("table.searchPendingPlaceholder", "Search pending applicants by name, email, note, or answer...")} 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-slate-200 bg-white rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-amber-500 shadow-sm"
@@ -2421,7 +2423,7 @@ function PendingView({ state, onUpdateState }) {
             <thead>
               <tr className="bg-slate-50 border-b border-slate-150 text-[10px] text-slate-400 font-bold uppercase tracking-wider select-none">
                 <th className="py-4 px-6 sticky left-0 bg-slate-50 z-10 min-w-[240px] sm:min-w-[280px] whitespace-nowrap shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">{t("table.applicant", "Applicant")}</th>
-                <th className="py-4 px-6 whitespace-nowrap">Email</th>
+                <th className="py-4 px-6 whitespace-nowrap">{t("common.email", "Email")}</th>
                 {selectedTicketType === "all" && <th className="py-4 px-6 whitespace-nowrap">{t("table.appliedTier", "Applied Tier")}</th>}
                 {/* Dynamic Form Columns */}
                 {dynamicCols.map(col => (
@@ -2440,7 +2442,7 @@ function PendingView({ state, onUpdateState }) {
                 ))}
                 <th className="py-4 px-6 whitespace-nowrap">{t("table.requestNote", "Request Note")}</th>
                 <th className="py-4 px-6 whitespace-nowrap">{t("table.submitted", "Submitted")}</th>
-                <th className="py-4 px-6 text-center w-48 whitespace-nowrap sticky right-0 bg-slate-50 z-10 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]">Actions</th>
+                <th className="py-4 px-6 text-center w-48 whitespace-nowrap sticky right-0 bg-slate-50 z-10 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]">{t("common.actions", "Actions")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -2449,7 +2451,7 @@ function PendingView({ state, onUpdateState }) {
                   <td colSpan={5 + (selectedTicketType === "all" ? 1 : 0) + dynamicCols.length} className="text-center text-slate-400 py-16 font-medium">
                     {selectedTicketType !== "all" 
                       ? `No pending registration requests for ${selectedTicketType}.` 
-                      : "No pending registration requests in the review queue."}
+                      : t("table.noPendingQueue", "No pending registration requests in the review queue.")}
                   </td>
                 </tr>
               ) : (
@@ -2577,6 +2579,7 @@ function PendingView({ state, onUpdateState }) {
 
 // 4. PARTNER ORGANIZATIONS VIEW
 function OrganizationsView({ state, onUpdateState, onOpenModal }) {
+  const { t, lang, isRTL } = useLanguage();
   const { organizations = [], sponsors = [], exhibitors = [], attendees = [] } = state;
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedIndustry, setSelectedIndustry] = useState("all");
@@ -3296,6 +3299,7 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
 
 // 5. EVENT SPONSORS VIEW
 function SponsorsView({ state, onUpdateState, onOpenModal }) {
+  const { t, lang, isRTL } = useLanguage();
   const { sponsors = [], organizations = [], attendees = [] } = state;
   const [searchQuery, setSearchQuery] = useState("");
   const [tierFilter, setTierFilter] = useState("all");
@@ -4002,6 +4006,7 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
 
 // 6. EVENT EXHIBITORS VIEW
 function ExhibitorsView({ state, onUpdateState, onOpenModal }) {
+  const { t, lang, isRTL } = useLanguage();
   const { exhibitors = [], organizations = [], attendees = [] } = state;
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState("grid"); // "grid" | "table"
