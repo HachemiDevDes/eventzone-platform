@@ -31,11 +31,11 @@
 
 /* Event Discovery Card Corner Curvature */
 .event-card-rounded {
-  border-radius: 30px !important;
+  border-radius: 22px !important;
 }
 .event-card-banner-rounded {
-  border-top-left-radius: 30px !important;
-  border-top-right-radius: 30px !important;
+  border-top-left-radius: 22px !important;
+  border-top-right-radius: 22px !important;
 }
 
 @keyframes fadeIn {

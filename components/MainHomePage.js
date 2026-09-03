@@ -613,12 +613,12 @@ export default function MainHomePage({
 
                       {/* Clean, Enhanced Date & Location */}
                       <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-100 text-xs">
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 font-bold border border-blue-100/70 shadow-2xs shrink-0">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-blue-50 text-blue-700 font-bold border border-blue-100/70 shadow-2xs shrink-0">
                           <Calendar size={13} className="stroke-[2.5]" />
                           <span>{formatEventDateRange(ev.startDate, ev.endDate)}</span>
                         </span>
 
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100/90 text-slate-700 font-semibold border border-slate-200/80 max-w-full shadow-2xs">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100/90 text-slate-700 font-semibold border border-slate-200/80 max-w-full shadow-2xs">
                           <MapPin size={13} className="text-slate-500 shrink-0 stroke-[2.2]" />
                           <span className="truncate">{ev.location || t("home.locationTba", "Location to be announced")}</span>
                         </span>
