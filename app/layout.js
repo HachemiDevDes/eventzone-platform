@@ -23,8 +23,25 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={`h-full antialiased ${plusJakartaSans.className} ${cairo.variable}`}>
+    <html 
+      lang="en" 
+      suppressHydrationWarning 
+      className={`h-full antialiased ${plusJakartaSans.className} ${cairo.variable}`}
+    >
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                var saved = localStorage.getItem("app_language");
+                if (saved && (saved === "ar" || saved === "fr" || saved === "en")) {
+                  document.documentElement.lang = saved;
+                  document.documentElement.dir = saved === "ar" ? "rtl" : "ltr";
+                }
+              } catch (e) {}
+            `,
+          }}
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
@@ -32,7 +49,7 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-full flex flex-col">
+      <body suppressHydrationWarning className="min-h-full flex flex-col">
         <LanguageProvider>
           {children}
         </LanguageProvider>

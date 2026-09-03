@@ -4126,19 +4126,17 @@ export function HomeContent() {
 
 export default function Home() {
   return (
-    <LanguageProvider>
-      <Suspense fallback={
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center font-sans">
-          <img 
-            src="https://i.imgur.com/jFDrQbM.png" 
-            alt="eventzone" 
-            style={{ width: "130px", height: "auto", maxHeight: "32px", maxWidth: "100%" }}
-            className="h-8 w-auto object-contain opacity-80 animate-pulse" 
-          />
-        </div>
-      }>
-        <HomeContent />
-      </Suspense>
-    </LanguageProvider>
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center font-sans">
+        <img 
+          src="https://i.imgur.com/jFDrQbM.png" 
+          alt="eventzone" 
+          style={{ width: "130px", height: "auto", maxHeight: "32px", maxWidth: "100%" }}
+          className="h-8 w-auto object-contain opacity-80 animate-pulse" 
+        />
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
   );
 }
