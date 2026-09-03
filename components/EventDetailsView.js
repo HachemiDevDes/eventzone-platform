@@ -20,6 +20,7 @@ import CountryPhoneInput from "./CountryPhoneInput";
 import SearchableSelect from "./SearchableSelect";
 import { EventDetailsSkeleton } from "./SkeletonLoaders";
 import { uploadMedia } from "../lib/storage";
+import { useLanguage } from "../lib/i18n";
 
 const INDUSTRIES = [
   "Technology, AI & Software",
@@ -56,9 +57,9 @@ const INDUSTRIES = [
 ];
 
 const EVENT_TYPES = [
-  { id: "In-Person", label: "In-Person", desc: "Physical on-site attendance only", icon: Building2 },
-  { id: "Hybrid", label: "Hybrid", desc: "Both in-person venue & virtual live stream", icon: Globe },
-  { id: "Virtual", label: "Virtual", desc: "100% online streaming & digital expo", icon: Video }
+  { id: "In-Person", labelKey: "eventsHub.inPerson", label: "In-Person", descKey: "details.inPersonDesc", desc: "Physical on-site attendance only", icon: Building2 },
+  { id: "Hybrid", labelKey: "eventsHub.hybrid", label: "Hybrid", descKey: "details.hybridDesc", desc: "Both in-person venue & virtual live stream", icon: Globe },
+  { id: "Virtual", labelKey: "eventsHub.virtual", label: "Virtual", descKey: "details.virtualDesc", desc: "100% online streaming & digital expo", icon: Video }
 ];
 
 const VIRTUAL_PLATFORMS = [
@@ -472,6 +473,7 @@ export default function EventDetailsView({
   onPreviewLandingPage,
   onUploadFile 
 }) {
+  const { t, lang } = useLanguage();
   // ─── TAB 1: GENERAL SUMMIT STATE ─────────────────────────────────────────
   const [title, setTitle] = useState(eventDetails?.title || "");
   const [tagline, setTagline] = useState(eventDetails?.tagline || "");
@@ -1040,10 +1042,10 @@ export default function EventDetailsView({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-1 pb-2">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">
-            Event Details
+            {t("details.title", "Event Details")}
           </h1>
           <p className="text-sm text-slate-500">
-            Manage your summit schedule, venue location, media assets, and event information.
+            {t("details.subtitle", "Manage your summit schedule, venue location, media assets, and event information.")}
           </p>
         </div>
 
@@ -1053,12 +1055,12 @@ export default function EventDetailsView({
             {syncStatus === "saving" ? (
               <span className="flex items-center gap-1.5 text-blue-600">
                 <Loader2 size={12} className="animate-spin" />
-                <span>Saving in real time...</span>
+                <span>{t("details.savingRealtime", "Saving in real time...")}</span>
               </span>
             ) : (
               <span className="flex items-center gap-1.5 text-emerald-700">
                 <CheckCircle2 size={12} className="text-emerald-600" />
-                <span>All changes saved</span>
+                <span>{t("details.allChangesSaved", "All changes saved")}</span>
               </span>
             )}
           </div>
@@ -1075,7 +1077,7 @@ export default function EventDetailsView({
               className="px-4 py-2.5 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-bold transition-all cursor-pointer shadow-2xs flex items-center gap-1.5"
             >
               <ExternalLink size={13} />
-              <span>Preview Landing Page</span>
+              <span>{t("details.previewLandingPage", "Preview Landing Page")}</span>
             </button>
           )}
         </div>
@@ -1093,7 +1095,7 @@ export default function EventDetailsView({
                 : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
             }`}
           >
-            General Information
+            {t("details.generalTab", "General Information")}
           </button>
           <button
             type="button"
@@ -1104,7 +1106,7 @@ export default function EventDetailsView({
                 : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
             }`}
           >
-            Date &amp; Venue
+            {t("details.scheduleTab", "Date & Venue")}
           </button>
           <button
             type="button"
@@ -1115,7 +1117,7 @@ export default function EventDetailsView({
                 : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
             }`}
           >
-            Media &amp; Gallery
+            {t("details.mediaTab", "Media & Gallery")}
           </button>
           <button
             type="button"
@@ -1126,7 +1128,7 @@ export default function EventDetailsView({
                 : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
             }`}
           >
-            Organizer &amp; Contact
+            {t("details.contactTab", "Organizer & Contact")}
           </button>
         </div>
       </div>
@@ -1140,9 +1142,9 @@ export default function EventDetailsView({
         {activeTab === "general" && (
           <div className="space-y-6 animate-fade-in">
             <div className="border-b border-slate-100 pb-3">
-              <h2 className="text-sm font-bold text-slate-900">General Summit Details</h2>
+              <h2 className="text-sm font-bold text-slate-900">{t("details.generalDetailsTitle", "General Summit Details")}</h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Core event identity, logo, title, industry sector, and attendee overview.
+                {t("details.generalDetailsDesc", "Core event identity, logo, title, industry sector, and attendee overview.")}
               </p>
             </div>
 
@@ -1150,9 +1152,9 @@ export default function EventDetailsView({
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-medium text-slate-700">
-                  Event Logo / Brand Mark
+                  {t("details.eventLogo", "Event Logo / Brand Mark")}
                 </label>
-                <span className="text-[11px] text-slate-400 font-normal">PNG, SVG, JPG up to 10MB</span>
+                <span className="text-[11px] text-slate-400 font-normal">{t("details.logoSpecs", "PNG, SVG, JPG up to 10MB")}</span>
               </div>
 
               {eventLogo ? (
@@ -1169,7 +1171,7 @@ export default function EventDetailsView({
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-bold text-slate-900">Event Logo</span>
                         <span className="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold">
-                          Active
+                          {t("common.active", "Active")}
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-500 mt-0.5">
@@ -1204,16 +1206,16 @@ export default function EventDetailsView({
                 >
                   <div>
                     <span className="text-xs font-bold text-slate-800 group-hover:text-blue-600 transition-colors block">
-                      {uploadingEventLogo ? "Uploading event logo..." : "Click to upload event logo"}
+                      {uploadingEventLogo ? t("common.uploading", "Uploading...") : t("details.clickToUploadLogo", "Click to upload event logo")}
                     </span>
                     <span className="text-[11px] text-slate-400 block mt-0.5">
-                      Displayed on public navigation bars, delegate registration passes, and confirmation tickets
+                      {t("details.logoPublicUsage", "Displayed on public navigation bars, delegate registration passes, and confirmation tickets")}
                     </span>
                   </div>
 
                   <div className="shrink-0">
                     <span className="px-3.5 py-1.5 rounded-xl bg-white border border-slate-200 group-hover:border-blue-300 group-hover:text-blue-600 text-slate-700 text-xs font-bold shadow-2xs transition-all inline-block">
-                      {uploadingEventLogo ? "Uploading..." : "Upload Logo"}
+                      {uploadingEventLogo ? t("common.uploading", "Uploading...") : t("details.uploadLogo", "Upload Logo")}
                     </span>
                   </div>
                 </div>
@@ -1222,7 +1224,7 @@ export default function EventDetailsView({
 
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-slate-700 flex items-center gap-1">
-                <span>Event Title</span>
+                <span>{t("details.eventTitle", "Event Title")}</span>
                 <span className="text-red-500">*</span>
               </label>
               <input
@@ -1237,7 +1239,7 @@ export default function EventDetailsView({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-slate-700">Industry</label>
+                <label className="text-xs font-medium text-slate-700">{t("details.industry", "Industry")}</label>
                 <SearchableSelect
                   value={category}
                   onChange={(val) => setCategory(val)}
@@ -1248,7 +1250,7 @@ export default function EventDetailsView({
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-slate-700">Target Attendance Capacity</label>
+                <label className="text-xs font-medium text-slate-700">{t("details.targetAttendanceCapacity", "Target Attendance Capacity")}</label>
                 <input
                   type="number"
                   min="1"
@@ -1260,7 +1262,7 @@ export default function EventDetailsView({
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-700">About the Event / Full Description</label>
+              <label className="text-xs font-medium text-slate-700">{t("details.aboutEvent", "About the Event / Full Description")}</label>
               <RichTextEditor
                 value={description}
                 onChange={(val) => setDescription(val)}
@@ -1279,9 +1281,9 @@ export default function EventDetailsView({
             {/* Header & Mode Switcher */}
             <div className="border-b border-slate-100 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h2 className="text-base font-bold text-slate-900">Event Dates &amp; Venue Setup</h2>
+                <h2 className="text-base font-bold text-slate-900">{t("details.datesVenueSetup", "Event Dates & Venue Setup")}</h2>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Configure when your event takes place, attendance format, and physical or virtual location.
+                  {t("details.datesVenueSubtitle", "Configure when your event takes place, attendance format, and physical or virtual location.")}
                 </p>
               </div>
 
@@ -1297,7 +1299,7 @@ export default function EventDetailsView({
                   }`}
                 >
                   <CalendarDays size={13} className={scheduleMode === "single" ? "text-blue-600" : "text-slate-400"} />
-                  <span>Standard Event</span>
+                  <span>{t("details.standardEvent", "Standard Event")}</span>
                 </button>
                 <button
                   type="button"
@@ -1309,7 +1311,7 @@ export default function EventDetailsView({
                   }`}
                 >
                   <Layers size={13} className={scheduleMode === "multiple" ? "text-blue-600" : "text-slate-400"} />
-                  <span>Multi-Stop / Tour</span>
+                  <span>{t("details.multiStopTour", "Multi-Stop / Tour")}</span>
                 </button>
               </div>
             </div>
@@ -1325,8 +1327,8 @@ export default function EventDetailsView({
                         <Calendar size={15} />
                       </div>
                       <div>
-                        <h3 className="text-xs font-bold text-slate-900">Dates &amp; Working Hours</h3>
-                        <p className="text-[11px] text-slate-500">Define single day or multi-day date range and operating schedule.</p>
+                        <h3 className="text-xs font-bold text-slate-900">{t("details.datesWorkingHours", "Dates & Working Hours")}</h3>
+                        <p className="text-[11px] text-slate-500">{t("details.datesWorkingHoursDesc", "Define single day or multi-day date range and operating schedule.")}</p>
                       </div>
                     </div>
 
@@ -1342,7 +1344,7 @@ export default function EventDetailsView({
                           !isMultiDay ? "bg-blue-600 text-white font-bold shadow-xs" : "text-slate-600 hover:text-slate-900"
                         }`}
                       >
-                        Single Day
+                        {t("details.singleDay", "Single Day")}
                       </button>
                       <button
                         type="button"
@@ -1351,7 +1353,7 @@ export default function EventDetailsView({
                           isMultiDay ? "bg-blue-600 text-white font-bold shadow-xs" : "text-slate-600 hover:text-slate-900"
                         }`}
                       >
-                        Multi-Day Range
+                        {t("details.multiDayRange", "Multi-Day Range")}
                       </button>
                     </div>
                   </div>
@@ -1360,7 +1362,7 @@ export default function EventDetailsView({
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-1">
                     {!isMultiDay ? (
                       <div className="space-y-1.5 sm:col-span-1">
-                        <label className="text-xs font-medium text-slate-700">Event Date</label>
+                        <label className="text-xs font-medium text-slate-700">{t("details.eventDate", "Event Date")}</label>
                         <CustomDatePicker
                           value={startDate}
                           onChange={(val) => {
@@ -1373,7 +1375,7 @@ export default function EventDetailsView({
                     ) : (
                       <>
                         <div className="space-y-1.5">
-                          <label className="text-xs font-medium text-slate-700">Start Date</label>
+                          <label className="text-xs font-medium text-slate-700">{t("common.startDate", "Start Date")}</label>
                           <CustomDatePicker
                             value={startDate}
                             onChange={(val) => setStartDate(val)}
@@ -1381,7 +1383,7 @@ export default function EventDetailsView({
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <label className="text-xs font-medium text-slate-700">End Date</label>
+                          <label className="text-xs font-medium text-slate-700">{t("common.endDate", "End Date")}</label>
                           <CustomDatePicker
                             value={endDate}
                             minDate={startDate || undefined}
@@ -1394,7 +1396,7 @@ export default function EventDetailsView({
                     )}
 
                     <div className="space-y-1.5 sm:col-span-1">
-                      <label className="text-xs font-medium text-slate-700">Daily Working Hours</label>
+                      <label className="text-xs font-medium text-slate-700">{t("details.dailyWorkingHours", "Daily Working Hours")}</label>
                       <CustomSchedulePicker
                         value={scheduleTime}
                         onChange={(val) => setScheduleTime(val)}
@@ -1411,23 +1413,23 @@ export default function EventDetailsView({
                       <MapPin size={15} />
                     </div>
                     <div>
-                      <h3 className="text-xs font-bold text-slate-900">Attendance Format &amp; Location</h3>
-                      <p className="text-[11px] text-slate-500">Choose how attendees will participate and configure venue or stream links.</p>
+                      <h3 className="text-xs font-bold text-slate-900">{t("details.attendanceFormatLocation", "Attendance Format & Location")}</h3>
+                      <p className="text-[11px] text-slate-500">{t("details.attendanceFormatDesc", "Choose how attendees will participate and configure venue or stream links.")}</p>
                     </div>
                   </div>
 
                   {/* Attendance Format 3 Cards */}
                   <div className="space-y-2">
-                    <label className="text-xs font-semibold text-slate-700 block">Attendance Format</label>
+                    <label className="text-xs font-semibold text-slate-700 block">{t("details.attendanceFormat", "Attendance Format")}</label>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      {EVENT_TYPES.map((t) => {
-                        const Icon = t.icon;
-                        const isSelected = type === t.id;
+                      {EVENT_TYPES.map((itemFormat) => {
+                        const Icon = itemFormat.icon;
+                        const isSelected = type === itemFormat.id;
                         return (
                           <button
-                            key={t.id}
+                            key={itemFormat.id}
                             type="button"
-                            onClick={() => setType(t.id)}
+                            onClick={() => setType(itemFormat.id)}
                             className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
                               isSelected
                                 ? "bg-blue-50/70 border-blue-500 ring-2 ring-blue-500/20 text-blue-900 shadow-2xs"
@@ -1435,10 +1437,10 @@ export default function EventDetailsView({
                             }`}
                           >
                             <div className="flex items-center justify-between mb-1.5">
-                              <span className="text-xs font-bold">{t.label}</span>
+                              <span className="text-xs font-bold">{t(itemFormat.labelKey, itemFormat.label)}</span>
                               <Icon size={16} className={isSelected ? "text-blue-600" : "text-slate-400"} />
                             </div>
-                            <span className="text-[11px] text-slate-500 leading-snug">{t.desc}</span>
+                            <span className="text-[11px] text-slate-500 leading-snug">{t(itemFormat.descKey, itemFormat.desc)}</span>
                           </button>
                         );
                       })}
@@ -1450,14 +1452,14 @@ export default function EventDetailsView({
                     <div className="pt-3 border-t border-slate-100 space-y-4 animate-fade-in">
                       <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
                         <Building2 size={15} className="text-blue-600" />
-                        <span>Physical Venue &amp; Address</span>
+                        <span>{t("details.physicalVenueAddress", "Physical Venue & Address")}</span>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1.5">
                           <label className="text-xs font-medium text-slate-700 flex items-center gap-1">
                             <Globe size={12} className="text-slate-400" />
-                            <span>Country</span>
+                            <span>{t("common.country", "Country")}</span>
                           </label>
                           <CountrySelect
                             value={country}
@@ -1469,7 +1471,7 @@ export default function EventDetailsView({
                         <div className="space-y-1.5">
                           <label className="text-xs font-medium text-slate-700 flex items-center gap-1">
                             <MapPin size={12} className="text-slate-400" />
-                            <span>City</span>
+                            <span>{t("common.city", "City")}</span>
                           </label>
                           <CitySelect
                             value={city}
@@ -1481,7 +1483,7 @@ export default function EventDetailsView({
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-slate-700">Venue / Convention Center Name</label>
+                        <label className="text-xs font-medium text-slate-700">{t("details.venueCenterName", "Venue / Convention Center Name")}</label>
                         <input
                           type="text"
                           value={venueName}
@@ -1497,7 +1499,7 @@ export default function EventDetailsView({
                   {(type === "Virtual" || type === "Hybrid") && (
                     <div className="pt-3 border-t border-slate-100 space-y-4 animate-fade-in">
                       <div className="text-xs font-bold text-slate-800">
-                        Virtual Stream &amp; Remote Access
+                        {t("details.virtualStreamRemoteAccess", "Virtual Stream & Remote Access")}
                       </div>
 
                       <div className="space-y-1.5">
@@ -1526,7 +1528,7 @@ export default function EventDetailsView({
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
                   <div>
                     <h3 className="text-xs font-bold text-slate-900">
-                      Configured Stops &amp; Locations ({multiLocations.length})
+                      {t("details.configuredStopsLocations", "Configured Stops & Locations")} ({multiLocations.length})
                     </h3>
                     <p className="text-[11px] text-slate-500 mt-0.5">
                       Add, arrange, and configure multiple dates, times, cities, venues, or online tracks.
@@ -1538,7 +1540,7 @@ export default function EventDetailsView({
                     className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0"
                   >
                     <Plus size={14} />
-                    <span>Add Date &amp; Location</span>
+                    <span>{t("details.addDateLocation", "Add Date & Location")}</span>
                   </button>
                 </div>
 
@@ -1782,9 +1784,9 @@ export default function EventDetailsView({
         {activeTab === "media" && (
           <div className="space-y-6 animate-fade-in">
             <div className="border-b border-slate-100 pb-3">
-              <h2 className="text-base font-bold text-slate-900">Event Media, Photos &amp; Video</h2>
+              <h2 className="text-base font-bold text-slate-900">{t("details.mediaPhotosVideo", "Event Media, Photos & Video")}</h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Upload up to 5 event images (max 10MB each) and provide an optional YouTube video for the hero player.
+                {t("details.mediaPhotosVideoSubtitle", "Upload up to 5 event images (max 10MB each) and provide an optional YouTube video for the hero player.")}
               </p>
             </div>
 
@@ -1792,15 +1794,15 @@ export default function EventDetailsView({
             <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div>
-                  <h3 className="text-xs font-bold text-slate-900">Hero YouTube Video / Promo Trailer</h3>
+                  <h3 className="text-xs font-bold text-slate-900">{t("details.heroYouTubeVideo", "Hero YouTube Video / Promo Trailer")}</h3>
                   <p className="text-[11px] text-slate-500 mt-0.5">
-                    When provided, this video will play in the landing page hero section, and visitors can swipe to view pictures.
+                    {t("details.heroYouTubeVideoDesc", "When provided, this video will play in the landing page hero section, and visitors can swipe to view pictures.")}
                   </p>
                 </div>
 
                 {youtubeUrl && (
                   <span className="px-2.5 py-1 rounded-full bg-red-50 border border-red-200 text-red-700 text-[10px] font-bold">
-                    Hero Video Active
+                    {t("details.heroVideoActive", "Hero Video Active")}
                   </span>
                 )}
               </div>
@@ -1808,7 +1810,7 @@ export default function EventDetailsView({
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
                   <LinkIcon size={12} className="text-slate-400" />
-                  <span>YouTube Video URL</span>
+                  <span>{t("details.youtubeVideoUrl", "YouTube Video URL")}</span>
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -1824,7 +1826,7 @@ export default function EventDetailsView({
                       onClick={() => setYoutubeUrl("")}
                       className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition-all cursor-pointer"
                     >
-                      Clear
+                      {t("details.clear", "Clear")}
                     </button>
                   )}
                 </div>
@@ -1836,7 +1838,7 @@ export default function EventDetailsView({
                   <div className="flex items-center justify-between text-[11px] font-semibold text-slate-600">
                     <span className="flex items-center gap-1.5 text-emerald-600 font-bold">
                       <CheckCircle2 size={13} />
-                      <span>Valid YouTube Video Detected (Live Preview)</span>
+                      <span>{t("details.validVideoDetected", "Valid YouTube Video Detected (Live Preview)")}</span>
                     </span>
                   </div>
                   <div className="relative aspect-video max-w-xl rounded-2xl overflow-hidden border border-slate-200 bg-black shadow-sm">
@@ -1862,17 +1864,17 @@ export default function EventDetailsView({
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-xs font-bold text-slate-900">Event Photos &amp; Banners</h3>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${
+                    <h3 className="text-xs font-bold text-slate-900">{t("details.eventPhotosBanners", "Event Photos & Banners")}</h3>
+                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold border ${
                       galleryImages.length >= 5 
                         ? "bg-amber-50 border-amber-300 text-amber-800" 
                         : "bg-blue-50 border-blue-200 text-blue-700"
                     }`}>
-                      {galleryImages.length} / 5 uploaded
+                      {galleryImages.length} / 5 {t("details.uploadedImagesCount", "uploaded")}
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-500 mt-0.5">
-                    Upload up to 5 images (max 10MB each). The first photo is used as the primary cover banner.
+                    {t("details.eventPhotosBannersDesc", "Upload up to 5 images (max 10MB each). The first photo is used as the primary cover banner.")}
                   </p>
                 </div>
 
@@ -1888,7 +1890,7 @@ export default function EventDetailsView({
                     }`}
                   >
                     <Upload size={13} />
-                    <span>{uploadingImage ? "Uploading..." : "Upload Image (Max 10MB)"}</span>
+                    <span>{uploadingImage ? t("common.uploading", "Uploading...") : t("details.uploadImageMax", "Upload Image (Max 10MB)")}</span>
                   </button>
                 </div>
               </div>
@@ -1916,11 +1918,11 @@ export default function EventDetailsView({
                         {/* Primary Cover Badge */}
                         {isPrimary ? (
                           <div className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-full bg-blue-600 text-white text-[10px] font-extrabold shadow-md">
-                            <span>Primary Cover Banner</span>
+                            <span>{t("details.primaryCoverBanner", "Primary Cover Banner")}</span>
                           </div>
                         ) : (
                           <div className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-full bg-slate-900/70 text-white text-[10px] font-bold backdrop-blur-xs">
-                            Photo {idx + 1}
+                            {t("details.photo", "Photo")} {idx + 1}
                           </div>
                         )}
                       </div>
@@ -1939,7 +1941,7 @@ export default function EventDetailsView({
                               className="px-2.5 py-1 rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-[10px] font-bold transition-all cursor-pointer"
                               title="Set as primary cover banner"
                             >
-                              Set as Cover
+                              {t("details.setAsCover", "Set as Cover")}
                             </button>
                           )}
                           <button
@@ -1967,7 +1969,7 @@ export default function EventDetailsView({
                     <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
                       <Plus size={16} />
                     </div>
-                    <span className="text-xs font-semibold">Image Slot {galleryImages.length + slotIdx + 1} (Max 10MB)</span>
+                    <span className="text-xs font-semibold">{t("details.imageSlot", "Image Slot")} {galleryImages.length + slotIdx + 1} (Max 10MB)</span>
                   </button>
                 ))}
               </div>
@@ -1981,9 +1983,9 @@ export default function EventDetailsView({
         {activeTab === "contact" && (
           <div className="space-y-6 animate-fade-in">
             <div className="border-b border-slate-100 pb-3">
-              <h2 className="text-sm font-bold text-slate-900">Organizer Entity &amp; Support Contact</h2>
+              <h2 className="text-sm font-bold text-slate-900">{t("details.organizerEntityContact", "Organizer Entity & Support Contact")}</h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Contact information and host branding displayed on delegate registration, passes, and confirmations.
+                {t("details.organizerEntityContactDesc", "Contact information and host branding displayed on delegate registration, passes, and confirmations.")}
               </p>
             </div>
 
@@ -1991,9 +1993,9 @@ export default function EventDetailsView({
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-medium text-slate-700">
-                  Organizer / Host Entity Logo
+                  {t("details.organizerLogo", "Organizer / Host Entity Logo")}
                 </label>
-                <span className="text-[11px] text-slate-400 font-normal">PNG, SVG, JPG up to 10MB</span>
+                <span className="text-[11px] text-slate-400 font-normal">{t("details.logoSpecs", "PNG, SVG, JPG up to 10MB")}</span>
               </div>
 
               {organizerLogo ? (
@@ -2008,13 +2010,13 @@ export default function EventDetailsView({
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-slate-900">Host Logo</span>
+                        <span className="text-xs font-bold text-slate-900">{t("details.activeHostLogo", "Active Host Logo")}</span>
                         <span className="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold">
                           Active
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-500 mt-0.5">
-                        Displayed on delegate badges, host credentials, and footer recognition.
+                        {t("details.hostLogoUsage", "Displayed on delegate badges, host credentials, and footer recognition.")}
                       </p>
                     </div>
                   </div>
@@ -2026,7 +2028,7 @@ export default function EventDetailsView({
                       disabled={uploadingOrganizerLogo}
                       className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-800 text-xs font-bold transition-all cursor-pointer shadow-2xs"
                     >
-                      {uploadingOrganizerLogo ? "Uploading..." : "Replace Logo"}
+                      {uploadingOrganizerLogo ? t("common.uploading", "Uploading...") : t("details.replaceLogo", "Replace Logo")}
                     </button>
                     <button
                       type="button"
@@ -2045,7 +2047,7 @@ export default function EventDetailsView({
                 >
                   <div>
                     <span className="text-xs font-bold text-slate-800 group-hover:text-blue-600 transition-colors block">
-                      {uploadingOrganizerLogo ? "Uploading organizer logo..." : "Click to upload organizer logo"}
+                      {uploadingOrganizerLogo ? t("details.uploadingOrganizerLogo", "Uploading organizer logo...") : t("details.clickToUploadHostLogo", "Click to upload host logo")}
                     </span>
                     <span className="text-[11px] text-slate-400 block mt-0.5">
                       Displayed on delegate badges, host credentials, and footer recognition
@@ -2054,7 +2056,7 @@ export default function EventDetailsView({
 
                   <div className="shrink-0">
                     <span className="px-3.5 py-1.5 rounded-xl bg-white border border-slate-200 group-hover:border-blue-300 group-hover:text-blue-600 text-slate-700 text-xs font-bold shadow-2xs transition-all inline-block">
-                      {uploadingOrganizerLogo ? "Uploading..." : "Upload Logo"}
+                      {uploadingOrganizerLogo ? t("common.uploading", "Uploading...") : t("details.uploadLogo", "Upload Logo")}
                     </span>
                   </div>
                 </div>
@@ -2062,7 +2064,7 @@ export default function EventDetailsView({
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-700">Organizer / Host Entity Name</label>
+              <label className="text-xs font-medium text-slate-700">{t("details.organizerEntityName", "Organizer / Host Entity Name")}</label>
               <input
                 type="text"
                 value={organizerName}
@@ -2074,7 +2076,7 @@ export default function EventDetailsView({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-slate-700">Inquiries &amp; Support Email</label>
+                <label className="text-xs font-medium text-slate-700">{t("details.emailSupport", "Inquiries & Support Email")}</label>
                 <input
                   type="email"
                   value={contactEmail}
@@ -2085,7 +2087,7 @@ export default function EventDetailsView({
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-slate-700">Phone / WhatsApp Support</label>
+                <label className="text-xs font-medium text-slate-700">{t("details.phoneSupport", "Phone / WhatsApp Support")}</label>
                 <CountryPhoneInput
                   value={contactPhone}
                   onChange={(val) => setContactPhone(val)}
