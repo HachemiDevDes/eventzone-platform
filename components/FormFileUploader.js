@@ -5,7 +5,7 @@ import {
   FileText, UploadCloud, X, Check, AlertCircle, 
   Download, Eye, Trash2, FileSpreadsheet, Paperclip 
 } from "lucide-react";
-import { uploadMedia } from "@/lib/storage";
+import { uploadMedia, deleteMedia } from "@/lib/storage";
 
 // Configuration for file types, accepted MIME/extensions, and visual styling
 export const FILE_TYPE_CONFIGS = {
@@ -17,7 +17,7 @@ export const FILE_TYPE_CONFIGS = {
     badgeBg: "bg-rose-50 border-rose-200 text-rose-700",
     iconColor: "text-rose-600",
     badgeLabel: "PDF",
-    hint: "PDF documents only"
+    hint: "PDF documents only (Max 10 MB)"
   },
   word: {
     label: "Word Document",
@@ -27,7 +27,7 @@ export const FILE_TYPE_CONFIGS = {
     badgeBg: "bg-blue-50 border-blue-200 text-blue-700",
     iconColor: "text-blue-600",
     badgeLabel: "DOC / DOCX",
-    hint: "Microsoft Word documents"
+    hint: "Microsoft Word documents (Max 10 MB)"
   },
   excel: {
     label: "Excel Spreadsheet",
@@ -37,7 +37,7 @@ export const FILE_TYPE_CONFIGS = {
     badgeBg: "bg-emerald-50 border-emerald-200 text-emerald-700",
     iconColor: "text-emerald-600",
     badgeLabel: "XLS / XLSX",
-    hint: "Microsoft Excel spreadsheets"
+    hint: "Microsoft Excel spreadsheets (Max 10 MB)"
   },
   csv: {
     label: "CSV Data File",
@@ -47,7 +47,7 @@ export const FILE_TYPE_CONFIGS = {
     badgeBg: "bg-teal-50 border-teal-200 text-teal-700",
     iconColor: "text-teal-600",
     badgeLabel: "CSV",
-    hint: "Comma-separated values data file"
+    hint: "Comma-separated values data file (Max 10 MB)"
   },
   pptx: {
     label: "PowerPoint Presentation",
@@ -57,7 +57,7 @@ export const FILE_TYPE_CONFIGS = {
     badgeBg: "bg-amber-50 border-amber-200 text-amber-700",
     iconColor: "text-amber-600",
     badgeLabel: "PPT / PPTX",
-    hint: "PowerPoint pitch deck or slides"
+    hint: "PowerPoint pitch deck or slides (Max 10 MB)"
   },
   file: {
     label: "Document / File Upload",
@@ -67,11 +67,12 @@ export const FILE_TYPE_CONFIGS = {
     badgeBg: "bg-indigo-50 border-indigo-200 text-indigo-700",
     iconColor: "text-indigo-600",
     badgeLabel: "DOC / PDF / ZIP",
-    hint: "PDF, Word, Excel, PPT, CSV, or ZIP"
+    hint: "PDF, Word, Excel, PPT, CSV, or ZIP (Max 10 MB)"
   }
 };
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+const BLOCKED_EXTENSIONS = new Set(["exe", "bat", "cmd", "sh", "php", "dll", "msi", "vbs", "ps1", "scr"]);
 
 export function formatFileSize(bytes = 0) {
   if (!bytes || isNaN(bytes)) return "0 KB";
@@ -87,7 +88,9 @@ export default function FormFileUploader({
   placeholder = "",
   required = false,
   disabled = false,
-  className = ""
+  className = "",
+  maxSizeMb = 10,
+  eventId = null
 }) {
   const fileInputRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -109,24 +112,40 @@ export default function FormFileUploader({
     if (!file) return;
     setError(null);
 
-    // 1. Validate File Size (Strict 10 MB limit)
-    if (file.size > MAX_FILE_SIZE_BYTES) {
-      const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
-      setError(`File is too large (${sizeMB} MB). Maximum allowed size is 10 MB.`);
+    const maxBytes = (maxSizeMb || 10) * 1024 * 1024;
+    const fileNameLower = file.name.toLowerCase();
+    const fileExt = fileNameLower.includes(".") ? fileNameLower.split(".").pop() : "";
+
+    // 0. Security Guardrail: Block dangerous executable file formats
+    if (BLOCKED_EXTENSIONS.has(fileExt)) {
+      setError(`Executable files (.${fileExt}) are blocked for platform security.`);
+      return;
+    }
+
+    // 1. Validate File Size with helpful compression tip
+    if (file.size > maxBytes) {
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+      setError(
+        `File is too large (${sizeMB} MB). Maximum allowed size is ${maxSizeMb} MB. Tip: Use a PDF compressor (like Smallpdf or Adobe) to reduce the file size before uploading.`
+      );
       return;
     }
 
     // 2. Validate Extension if specific type
-    const fileNameLower = file.name.toLowerCase();
     const isExtensionAllowed = config.extensions.some(ext => fileNameLower.endsWith(ext));
     if (!isExtensionAllowed && config.extensions.length > 0) {
       setError(`Invalid file type. Please upload a ${config.label} (${config.extensions.join(", ")}).`);
       return;
     }
 
+    const previousUrl = fileData?.url;
     setIsUploading(true);
     try {
-      const cdnUrl = await uploadMedia(file, "documents");
+      const cdnUrl = await uploadMedia(file, "documents", eventId, "documents");
+      if (!cdnUrl) {
+        setError("Failed to upload file to storage. Please check your connection and try again.");
+        return;
+      }
       const fileInfo = {
         name: file.name,
         size: file.size,
@@ -136,6 +155,11 @@ export default function FormFileUploader({
       };
 
       if (onChange) onChange(fileInfo);
+
+      // Garbage Collection: Delete previous file if replaced
+      if (previousUrl && previousUrl !== cdnUrl && (previousUrl.includes("r2.dev") || previousUrl.includes("storage/v1/object"))) {
+        deleteMedia(previousUrl, "documents").catch(() => {});
+      }
     } catch (uploadErr) {
       console.error("File upload error:", uploadErr);
       setError("Failed to upload file to storage. Please try again.");
@@ -164,9 +188,13 @@ export default function FormFileUploader({
 
   const handleRemove = (e) => {
     e.stopPropagation();
+    const prevUrl = fileData?.url;
     if (onChange) onChange("");
     setError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+    if (prevUrl && (prevUrl.includes("r2.dev") || prevUrl.includes("storage/v1/object"))) {
+      deleteMedia(prevUrl, "documents").catch(() => {});
+    }
   };
 
   return (

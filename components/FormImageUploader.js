@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { Camera, Upload, Trash2, CheckCircle2, Image as ImageIcon, Smartphone, Loader2 } from "lucide-react";
-import { uploadMedia } from "@/lib/storage";
+import { Camera, Upload, Trash2, CheckCircle2, Image as ImageIcon, Smartphone, Loader2, Sparkles } from "lucide-react";
+import { uploadMedia, deleteMedia } from "@/lib/storage";
 
 export default function FormImageUploader({
   value = "",
@@ -12,7 +12,10 @@ export default function FormImageUploader({
   label = "Upload Picture",
   placeholder = "Upload your photo from phone or computer",
   className = "",
-  bucket = "event-images"
+  bucket = "event-images",
+  preset = "badge",
+  eventId = null,
+  folder = "badges"
 }) {
   const fileInputRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -31,18 +34,32 @@ export default function FormImageUploader({
       return;
     }
 
+    const previousUrl = value;
     try {
       setIsUploading(true);
-      // Scenario B: Upload to Supabase Storage Bucket and return CDN URL
-      const cdnUrl = await uploadMedia(file, bucket);
+      const cdnUrl = await uploadMedia(file, bucket, eventId, folder, { preset });
       if (cdnUrl && onChange) {
         onChange(cdnUrl);
+        // Garbage Collection: Delete old replaced photo from storage
+        if (previousUrl && previousUrl !== cdnUrl && (previousUrl.includes("r2.dev") || previousUrl.includes("storage/v1/object"))) {
+          deleteMedia(previousUrl, bucket).catch(() => {});
+        }
+      } else if (!cdnUrl) {
+        alert("Failed to upload image to cloud storage. Please check your connection and try again.");
       }
     } catch (err) {
       console.error("Image upload failed:", err);
       alert("Failed to upload image. Please try again.");
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleRemove = () => {
+    const previousUrl = value;
+    if (onChange) onChange("");
+    if (previousUrl && (previousUrl.includes("r2.dev") || previousUrl.includes("storage/v1/object"))) {
+      deleteMedia(previousUrl, bucket).catch(() => {});
     }
   };
 
@@ -94,7 +111,7 @@ export default function FormImageUploader({
             <button
               type="button"
               disabled={disabled || isUploading}
-              onClick={() => onChange && onChange("")}
+              onClick={handleRemove}
               className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
               title="Remove photo"
             >
@@ -120,8 +137,9 @@ export default function FormImageUploader({
           <div className="text-xs font-bold text-slate-800">
             {isUploading ? "Uploading to Cloud Storage..." : placeholder}
           </div>
-          <div className="text-[11px] text-slate-400 mt-1 flex items-center justify-center gap-2">
-            <span>PNG, JPG, WebP up to 10MB</span>
+          <div className="text-[11px] text-slate-400 mt-1 flex items-center justify-center gap-1.5">
+            <Sparkles size={11} className="text-blue-500 shrink-0" />
+            <span>Auto-optimized WebP (Max 10MB)</span>
           </div>
         </div>
       )}

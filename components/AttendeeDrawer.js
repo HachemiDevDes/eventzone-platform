@@ -1021,6 +1021,9 @@ export default function AttendeeDrawer({
                           onChange={(imgData) => handleAnswerChange(field.id, imgData)}
                           label={field.label || 'Upload File / Photo'}
                           placeholder={field.placeholder || 'Upload attendee photo or document'}
+                          preset="badge"
+                          folder="badges"
+                          eventId={activeEventId}
                         />
                       ) : fieldType === 'number' ? (
                         <input
@@ -1096,6 +1099,9 @@ export default function AttendeeDrawer({
                   }}
                   label="Upload Attendee Portrait"
                   placeholder="Upload high-res badge photo for lanyard printing"
+                  preset="badge"
+                  folder="badges"
+                  eventId={activeEventId}
                 />
               </div>
 
