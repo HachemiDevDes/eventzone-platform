@@ -111,6 +111,23 @@ export default function MainHomePage({
     "Healthcare & Pharmaceuticals"
   ];
 
+  const getCategoryLabel = (cat) => {
+    if (cat === "All") return t("home.allCategories", "All");
+    if (cat === "Energy & Hydrocarbons") return lang === "ar" ? "الطاقة والمحروقات" : lang === "fr" ? "Énergie & Hydrocarbures" : cat;
+    if (cat === "Technology & Software") return lang === "ar" ? "التكنولوجيا والبرمجيات" : lang === "fr" ? "Technologie & Logiciels" : cat;
+    if (cat === "Finance & Banking") return lang === "ar" ? "المالية والبنوك" : lang === "fr" ? "Finance & Banque" : cat;
+    if (cat === "Healthcare & Pharmaceuticals") return lang === "ar" ? "الرعاية الصحية والأدوية" : lang === "fr" ? "Santé & Pharmacie" : cat;
+    return cat;
+  };
+
+  const getFormatLabel = (fmt) => {
+    if (fmt === "All") return t("home.allFormats", "All");
+    if (fmt === "Hybrid" || fmt?.toLowerCase() === "hybrid") return t("home.hybrid", "Hybrid");
+    if (fmt === "In-Person" || fmt?.toLowerCase() === "in-person") return t("home.inPerson", "In-Person");
+    if (fmt === "Virtual" || fmt?.toLowerCase() === "virtual") return t("home.virtual", "Virtual");
+    return fmt;
+  };
+
   const filteredEvents = events.filter(ev => {
     const matchesSearch = (ev.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
                           (ev.location || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -332,15 +349,11 @@ export default function MainHomePage({
         {/* Section Header & Filters */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-100 text-blue-700 text-xs font-bold mb-2">
-              <Compass size={13} />
-              <span>{t("home.exploreAll", "Explore All Gatherings")}</span>
-            </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
               {t("home.upcomingConferences", "Upcoming Conferences & Expos")}
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 font-normal mt-1">
-              Browse premier summits, claim attendee passes, and preview floor plans.
+              {t("home.browsePremierSummits", "Browse premier summits, claim attendee passes, and preview floor plans.")}
             </p>
           </div>
 
@@ -365,28 +378,28 @@ export default function MainHomePage({
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                   selectedCategory === cat 
                     ? "bg-blue-600 text-white shadow-md shadow-blue-600/20" 
                     : "bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50"
                 }`}
               >
-                {cat}
+                {getCategoryLabel(cat)}
               </button>
             ))}
           </div>
 
           {/* Format Toggle */}
-          <div className="flex items-center bg-white p-1 rounded-xl border border-slate-200 text-xs shrink-0 shadow-xs">
+          <div className="flex items-center bg-white p-1 rounded-full border border-slate-200 text-xs shrink-0 shadow-xs">
             {["All", "Hybrid", "In-Person"].map(fmt => (
               <button
                 key={fmt}
                 onClick={() => setSelectedFormat(fmt)}
-                className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                className={`px-3.5 py-1.5 rounded-full font-bold transition-all cursor-pointer ${
                   selectedFormat === fmt ? "bg-blue-600 text-white shadow-xs" : "text-slate-500 hover:text-slate-900"
                 }`}
               >
-                {fmt}
+                {getFormatLabel(fmt)}
               </button>
             ))}
           </div>
@@ -398,15 +411,15 @@ export default function MainHomePage({
             <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
               <Compass size={28} />
             </div>
-            <h3 className="text-base font-bold text-slate-900">No events match your criteria</h3>
+            <h3 className="text-base font-bold text-slate-900">{t("home.noEventsCriteria", "No events match your criteria")}</h3>
             <p className="text-xs text-slate-400 max-w-sm">
-              Try adjusting your search query or selecting a different category filter.
+              {t("home.adjustSearchFilters", "Try adjusting your search query or selecting a different category filter.")}
             </p>
             <button
               onClick={() => { setSearchQuery(""); setSelectedCategory("All"); setSelectedFormat("All"); }}
               className="mt-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
             >
-              Reset Filters
+              {t("home.resetFilters", "Reset Filters")}
             </button>
           </div>
         ) : (
@@ -431,7 +444,7 @@ export default function MainHomePage({
                       
                       <div className="absolute top-3 left-3">
                         <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-white/90 backdrop-blur-md text-blue-700 border border-white/40 uppercase tracking-wider shadow-xs">
-                          {ev.type || "Hybrid"}
+                          {getFormatLabel(ev.type || "Hybrid")}
                         </span>
                       </div>
 
@@ -439,14 +452,14 @@ export default function MainHomePage({
                         <div className="absolute top-3 right-3">
                           <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-500 text-white shadow-xs flex items-center gap-1">
                             <CheckCircle2 size={11} />
-                            <span>Registered</span>
+                            <span>{t("home.registeredBadge", "Registered")}</span>
                           </span>
                         </div>
                       )}
 
                       <div className="absolute bottom-3 left-3 right-3">
                         <span className="text-[10px] font-bold text-blue-200 uppercase tracking-wider block drop-shadow-sm">
-                          {ev.category || "Technology & Software"}
+                          {getCategoryLabel(ev.category || "Technology & Software")}
                         </span>
                       </div>
                     </div>
@@ -482,7 +495,7 @@ export default function MainHomePage({
                       onClick={() => onViewLivePage(ev.id)}
                       className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs font-bold flex items-center justify-center shadow-md shadow-blue-600/20 hover:shadow-lg hover:shadow-blue-600/30 transition-all cursor-pointer"
                     >
-                      View Event
+                      {t("home.viewEventBtn", "View Event")}
                     </button>
                   </div>
                 </div>
@@ -505,11 +518,11 @@ export default function MainHomePage({
             {/* Left Content Column */}
             <div className="lg:col-span-7 space-y-4 text-left">
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
-                Connect, Network &amp; Scan in Real Time.
+                {t("home.appShowcaseTitle", "Connect, Network & Scan in Real Time.")}
               </h2>
 
               <p className="text-slate-300 text-sm sm:text-base leading-relaxed font-normal max-w-xl">
-                The Eventzone companion app transforms every summit into a high-powered networking hub. Meet verified founders, schedule 1-on-1 meetings, scan badge QR codes, and navigate floor plans seamlessly.
+                {t("home.appShowcaseDesc", "The Eventzone companion app transforms every summit into a high-powered networking hub. Meet verified founders, schedule 1-on-1 meetings, scan badge QR codes, and navigate floor plans seamlessly.")}
               </p>
             </div>
 
@@ -542,15 +555,15 @@ export default function MainHomePage({
                 </span>
               </div>
               <p className="text-xs sm:text-sm text-slate-500 max-w-md leading-relaxed">
-                The modern event management operating system for international summits, conferences, and hybrid exhibitions with real-time 2D floor plans and attendee badge tracking.
+                {t("footer.brandTagline", "The modern event management operating system for international summits, conferences, and hybrid exhibitions with real-time 2D floor plans and attendee badge tracking.")}
               </p>
               <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 font-medium">
                 <div className="flex items-center gap-1.5 text-emerald-600">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="font-bold">Platform Status: All Systems Operational</span>
+                  <span className="font-bold">{t("footer.allSystemsOperational", "Platform Status: All Systems Operational")}</span>
                 </div>
                 <span>•</span>
-                <span>SOC2 &amp; GDPR Compliant</span>
+                <span>{t("footer.compliance", "SOC2 & GDPR Compliant")}</span>
               </div>
             </div>
 
@@ -558,23 +571,23 @@ export default function MainHomePage({
             <div className="lg:col-span-6 bg-slate-50 border border-slate-200/90 rounded-3xl p-6 text-left space-y-3 shadow-xs">
               <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
                 <Sparkles size={16} className="text-blue-600" />
-                <span>Get Early Access &amp; Summit Bulletins</span>
+                <span>{t("footer.bulletinsTitle", "Get Early Access & Summit Bulletins")}</span>
               </div>
               <p className="text-xs text-slate-500">
-                Subscribe to receive upcoming event schedules, keynote announcements, and VIP pass releases.
+                {t("footer.bulletinsDesc", "Subscribe to receive upcoming event schedules, keynote announcements, and VIP pass releases.")}
               </p>
-              <form onSubmit={(e) => { e.preventDefault(); alert("Subscribed to Eventzone bulletins!"); }} className="flex flex-col sm:flex-row gap-2 pt-1">
+              <form onSubmit={(e) => { e.preventDefault(); alert(t("footer.subscribedSuccess", "Subscribed to Eventzone bulletins!")); }} className="flex flex-col sm:flex-row gap-2 pt-1">
                 <input
                   type="email"
                   required
-                  placeholder="Enter your business email"
+                  placeholder={t("footer.emailPlaceholder", "Enter your business email")}
                   className="flex-1 px-4 py-2.5 bg-white border border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 rounded-xl text-xs font-semibold text-slate-900 placeholder-slate-400 outline-none transition-all"
                 />
                 <button
                   type="submit"
                   className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-600/20 shrink-0 cursor-pointer"
                 >
-                  Subscribe
+                  {t("footer.subscribeBtn", "Subscribe")}
                 </button>
               </form>
             </div>
@@ -583,7 +596,7 @@ export default function MainHomePage({
           {/* Middle Row: Links Columns */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-left text-xs">
             <div className="space-y-3">
-              <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">Explore Gatherings</h4>
+              <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">{t("footer.exploreGatherings", "Explore Gatherings")}</h4>
               <ul className="space-y-2 text-slate-500 font-medium">
                 <li><a href="#explore" className="hover:text-blue-600 transition-colors">Upcoming Conferences</a></li>
                 <li><a href="#explore" className="hover:text-blue-600 transition-colors">Tech &amp; AI Summits</a></li>
@@ -594,18 +607,18 @@ export default function MainHomePage({
             </div>
 
             <div className="space-y-3">
-              <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">For Organizers</h4>
+              <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">{t("footer.forOrganizers", "For Organizers")}</h4>
               <ul className="space-y-2 text-slate-500 font-medium">
-                <li><button onClick={() => onOpenEventsHub()} className="hover:text-blue-600 transition-colors text-left cursor-pointer">Event Manager Center</button></li>
-                <li><button onClick={() => onOpenEventsHub()} className="hover:text-blue-600 transition-colors text-left cursor-pointer">2D Floor Plan Modifier</button></li>
-                <li><button onClick={() => onOpenEventsHub()} className="hover:text-blue-600 transition-colors text-left cursor-pointer">Badge &amp; QR Check-In</button></li>
-                <li><button onClick={() => onOpenEventsHub()} className="hover:text-blue-600 transition-colors text-left cursor-pointer">Speaker &amp; Agenda Manager</button></li>
-                <li><button onClick={() => onOpenEventsHub()} className="hover:text-blue-600 transition-colors text-left cursor-pointer">Exhibitor Booth Sales</button></li>
+                <li><button onClick={() => onOpenEventsHub()} className="hover:text-blue-600 transition-colors text-left cursor-pointer">{t("eventsHub.title", "Organizer Event Center")}</button></li>
+                <li><button onClick={() => onOpenEventsHub()} className="hover:text-blue-600 transition-colors text-left cursor-pointer">{t("dash.floorPlans", "Floor Plans")}</button></li>
+                <li><button onClick={() => onOpenEventsHub()} className="hover:text-blue-600 transition-colors text-left cursor-pointer">{t("dash.checkIn", "Check-In Command")}</button></li>
+                <li><button onClick={() => onOpenEventsHub()} className="hover:text-blue-600 transition-colors text-left cursor-pointer">{t("dash.calendar", "Calendar & Agenda")}</button></li>
+                <li><button onClick={() => onOpenEventsHub()} className="hover:text-blue-600 transition-colors text-left cursor-pointer">{t("dash.tickets", "Ticket Passes")}</button></li>
               </ul>
             </div>
 
             <div className="space-y-3">
-              <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">For Attendees</h4>
+              <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">{t("footer.forAttendees", "For Attendees")}</h4>
               <ul className="space-y-2 text-slate-500 font-medium">
                 <li><button onClick={() => onOpenVisitorPasses && onOpenVisitorPasses()} className="hover:text-blue-600 transition-colors text-left cursor-pointer">{t("nav.myTickets", "My Tickets")}</button></li>
                 <li><button onClick={() => onOpenVisitorPasses && onOpenVisitorPasses()} className="hover:text-blue-600 transition-colors text-left cursor-pointer">{t("passes.downloadQR", "QR Code Passes")}</button></li>
@@ -616,11 +629,11 @@ export default function MainHomePage({
             </div>
 
             <div className="space-y-3">
-              <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">Security &amp; Legal</h4>
+              <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">{t("footer.securityLegal", "Security & Legal")}</h4>
               <ul className="space-y-2 text-slate-500 font-medium">
-                <li><span className="hover:text-slate-900 cursor-pointer">Privacy Policy</span></li>
-                <li><span className="hover:text-slate-900 cursor-pointer">Terms of Service</span></li>
-                <li><span className="hover:text-slate-900 cursor-pointer">Cookie Settings</span></li>
+                <li><span className="hover:text-slate-900 cursor-pointer">{t("footer.privacyPolicy", "Privacy Policy")}</span></li>
+                <li><span className="hover:text-slate-900 cursor-pointer">{t("footer.termsOfService", "Terms of Service")}</span></li>
+                <li><span className="hover:text-slate-900 cursor-pointer">{t("footer.cookieSettings", "Cookie Settings")}</span></li>
                 <li><span className="hover:text-slate-900 cursor-pointer">Enterprise Security</span></li>
                 <li><span className="hover:text-slate-900 cursor-pointer">Compliance &amp; GDPR</span></li>
               </ul>
@@ -629,13 +642,13 @@ export default function MainHomePage({
 
           {/* Bottom Row */}
           <div className="pt-8 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
-            <span className="text-slate-400">© 2026 Eventzone SaaS Platform. All rights reserved.</span>
+            <span className="text-slate-400">{t("footer.rightsReserved", "© 2026 Eventzone SaaS Platform. All rights reserved.")}</span>
 
             <button
               onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
               className="px-3.5 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 transition-all font-bold cursor-pointer shadow-xs"
             >
-              Back to Top
+              {t("footer.backToTop", "Back to Top")}
             </button>
           </div>
         </div>
@@ -652,15 +665,15 @@ export default function MainHomePage({
                 <div className="w-14 h-14 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-200">
                   <CheckCircle2 size={32} />
                 </div>
-                <h3 className="text-xl font-bold text-slate-900">Pass Confirmed!</h3>
+                <h3 className="text-xl font-bold text-slate-900">{t("home.passConfirmedTitle", "Pass Confirmed!")}</h3>
                 <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                  Your digital ticket has been issued for <strong>{rsvpSuccess.eventTitle}</strong>.
+                  {t("home.passIssuedDesc", "Your digital ticket has been issued for")} <strong>{rsvpSuccess.eventTitle}</strong>.
                 </p>
 
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-left text-xs space-y-1.5">
-                  <div className="flex justify-between"><span className="text-slate-500">Badge ID:</span> <span className="font-mono font-bold text-blue-600">{rsvpSuccess.badgeCode}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-500">Tier:</span> <span className="font-bold text-slate-900">{rsvpSuccess.ticketType}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-500">Status:</span> <span className="font-bold text-emerald-600">Confirmed</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">{t("home.badgeId", "Badge ID")}:</span> <span className="font-mono font-bold text-blue-600">{rsvpSuccess.badgeCode}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">{t("home.tier", "Tier")}:</span> <span className="font-bold text-slate-900">{rsvpSuccess.ticketType}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">{t("home.status", "Status")}:</span> <span className="font-bold text-emerald-600">{t("home.confirmed", "Confirmed")}</span></div>
                 </div>
 
                 <div className="flex gap-2">
@@ -671,7 +684,7 @@ export default function MainHomePage({
                     }}
                     className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md shadow-blue-600/20"
                   >
-                    View in My Tickets
+                    {t("home.viewInMyTickets", "View in My Tickets")}
                   </button>
                 </div>
               </div>
@@ -680,7 +693,7 @@ export default function MainHomePage({
                 <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
                   <div className="flex items-center gap-2">
                     <Ticket size={18} className="text-blue-600" />
-                    <h3 className="text-base font-bold text-slate-900">Claim Summit Pass</h3>
+                    <h3 className="text-base font-bold text-slate-900">{t("home.claimPassTitle", "Claim Summit Pass")}</h3>
                   </div>
                   <button 
                     onClick={() => setRsvpEvent(null)}
@@ -691,13 +704,13 @@ export default function MainHomePage({
                 </div>
 
                 <p className="text-xs text-slate-500 font-medium mb-4">
-                  Registering for: <strong className="text-slate-900">{rsvpEvent.title}</strong>
+                  {t("home.registeringFor", "Registering for")}: <strong className="text-slate-900">{rsvpEvent.title}</strong>
                 </p>
 
                 <form onSubmit={handleRsvpSubmit} className="space-y-4 text-left">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                      Your Full Name
+                      {t("home.fullName", "Your Full Name")}
                     </label>
                     <input
                       type="text"
@@ -711,7 +724,7 @@ export default function MainHomePage({
 
                   <div>
                     <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                      Email Address for QR Badge
+                      {t("home.emailForBadge", "Email Address for QR Badge")}
                     </label>
                     <input
                       type="email"
@@ -725,7 +738,7 @@ export default function MainHomePage({
 
                   <div>
                     <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                      Select Access Tier
+                      {t("home.selectAccessTier", "Select Access Tier")}
                     </label>
                     <SearchableSelect
                       value={rsvpTier}
@@ -747,7 +760,7 @@ export default function MainHomePage({
                     {rsvpLoading ? (
                       <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
                     ) : (
-                      "Generate Digital Pass"
+                      t("home.generateDigitalPass", "Generate Digital Pass")
                     )}
                   </button>
                 </form>
