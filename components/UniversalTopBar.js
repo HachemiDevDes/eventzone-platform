@@ -192,7 +192,8 @@ export default function UniversalTopBar({
                 setProfileOpen(o => !o);
                 setLangMenuOpen(false);
               }}
-              className="flex items-center gap-1.5 sm:gap-2.5 p-1 sm:p-1.5 sm:pr-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-full transition-all cursor-pointer shadow-xs shrink-0"
+              className="flex items-center gap-1 sm:gap-1.5 p-1 sm:p-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-full transition-all cursor-pointer shadow-xs shrink-0"
+              title={currentUser.fullName || currentUser.full_name || "Profile"}
             >
               <img 
                 src={currentUser.avatar || currentUser.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.fullName || currentUser.full_name || "User")}&background=0b5cdb&color=fff`} 
@@ -203,18 +204,12 @@ export default function UniversalTopBar({
                 }}
                 className="w-6 h-6 sm:w-7 sm:h-7 rounded-full object-cover border border-blue-500/40 shrink-0"
               />
-              <div className="hidden sm:flex flex-col text-left">
-                <span className="text-xs font-bold text-slate-800 leading-tight truncate max-w-[120px]">{currentUser.fullName || currentUser.full_name || currentUser.email?.split("@")[0] || "User"}</span>
-                <span className="text-[9px] font-semibold text-blue-600 uppercase tracking-wider">
-                  {currentUser.role === "organizer" ? t("nav.organizer", "Organizer") : t("nav.visitor", "Visitor")}
-                </span>
-              </div>
               <ChevronDown size={11} className={`text-slate-400 transition-transform ${profileOpen ? "rotate-180" : ""}`} />
             </button>
 
             {/* Profile Dropdown */}
             {profileOpen && (
-              <div className="absolute top-full right-0 mt-2 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl p-2 z-50 animate-scale-up space-y-1">
+              <div className={`absolute top-full ${isRTL ? "left-0" : "right-0"} mt-2 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl p-2 z-50 animate-scale-up space-y-1`}>
                 <div className="px-3 py-2 border-b border-slate-100 mb-1">
                   <span className="text-xs font-bold text-slate-900 block truncate">{currentUser.fullName || currentUser.full_name}</span>
                   <span className="text-[10px] text-slate-400 truncate block">{currentUser.email}</span>
