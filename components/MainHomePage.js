@@ -370,39 +370,21 @@ export default function MainHomePage({
           </div>
         </div>
 
-        {/* Category & Format Filter Bar */}
-        <div id="categories" className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-1 scroll-mt-20">
-          {/* Categories */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none max-w-full">
-            {categories.map(cat => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                  selectedCategory === cat 
-                    ? "bg-blue-600 text-white shadow-md shadow-blue-600/20" 
-                    : "bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-                }`}
-              >
-                {getCategoryLabel(cat)}
-              </button>
-            ))}
-          </div>
-
-          {/* Format Toggle */}
-          <div className="flex items-center bg-white p-1 rounded-full border border-slate-200 text-xs shrink-0 shadow-xs">
-            {["All", "Hybrid", "In-Person"].map(fmt => (
-              <button
-                key={fmt}
-                onClick={() => setSelectedFormat(fmt)}
-                className={`px-3.5 py-1.5 rounded-full font-bold transition-all cursor-pointer ${
-                  selectedFormat === fmt ? "bg-blue-600 text-white shadow-xs" : "text-slate-500 hover:text-slate-900"
-                }`}
-              >
-                {getFormatLabel(fmt)}
-              </button>
-            ))}
-          </div>
+        {/* Category Filter Bar */}
+        <div id="categories" className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none max-w-full pt-1 scroll-mt-20">
+          {categories.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                selectedCategory === cat 
+                  ? "bg-blue-600 text-white shadow-md shadow-blue-600/20" 
+                  : "bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+              }`}
+            >
+              {getCategoryLabel(cat)}
+            </button>
+          ))}
         </div>
 
         {/* Event Cards Grid */}
