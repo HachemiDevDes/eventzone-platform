@@ -105,6 +105,39 @@ export default function MainHomePage({
   }, [registrations, currentUser]);
 
   const categoriesRef = useRef(null);
+  const [isMouseDown, setIsMouseDown] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeftState, setScrollLeftState] = useState(0);
+  const [hasDragged, setHasDragged] = useState(false);
+
+  const handleMouseDown = (e) => {
+    if (!categoriesRef.current) return;
+    setIsMouseDown(true);
+    setHasDragged(false);
+    setStartX(e.pageX - categoriesRef.current.offsetLeft);
+    setScrollLeftState(categoriesRef.current.scrollLeft);
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isMouseDown || !categoriesRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - categoriesRef.current.offsetLeft;
+    const walk = (x - startX) * 1.5;
+    if (Math.abs(x - startX) > 4) {
+      setHasDragged(true);
+    }
+    categoriesRef.current.scrollLeft = scrollLeftState - walk;
+  };
+
+  const handleMouseUp = () => {
+    setIsMouseDown(false);
+    setTimeout(() => setHasDragged(false), 50);
+  };
+
+  const handleMouseLeave = () => {
+    setIsMouseDown(false);
+    setTimeout(() => setHasDragged(false), 50);
+  };
 
   const scrollCategories = (direction) => {
     if (categoriesRef.current) {
@@ -381,7 +414,7 @@ export default function MainHomePage({
               <Search size={16} className="text-slate-400 group-focus-within:text-blue-600 transition-colors shrink-0" />
               <input
                 type="text"
-                placeholder={t("home.searchPlaceholder", "Search summits, expos, keywords, or cities...")}
+                placeholder={t("home.searchPlaceholder", "Search events...")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-transparent text-xs sm:text-sm font-semibold text-slate-800 placeholder:text-slate-400 placeholder:font-normal outline-none"
@@ -400,7 +433,7 @@ export default function MainHomePage({
           </div>
         </div>
 
-        {/* Category Filter Bar with Smooth Arrow Navigation */}
+        {/* Category Filter Bar with Smooth Arrow Navigation & Drag-to-Scroll */}
         <div className="relative group/chips">
           {/* Left Arrow Button */}
           <button
@@ -412,17 +445,27 @@ export default function MainHomePage({
             <ChevronLeft size={16} />
           </button>
 
-          {/* Category Chips Scroll Container */}
+          {/* Category Chips Scroll Container (Draggable) */}
           <div 
             ref={categoriesRef}
             id="categories" 
-            className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none max-w-full pt-1 scroll-smooth scroll-mt-20 px-0.5"
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseLeave}
+            className={`flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none max-w-full pt-1 scroll-smooth scroll-mt-20 px-0.5 select-none ${
+              isMouseDown ? "cursor-grabbing" : "cursor-grab"
+            }`}
           >
             {categories.map(cat => (
               <button
                 key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer shrink-0 ${
+                type="button"
+                onClick={() => {
+                  if (hasDragged) return;
+                  setSelectedCategory(cat);
+                }}
+                className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all select-none shrink-0 ${
                   selectedCategory === cat 
                     ? "bg-blue-600 text-white shadow-md shadow-blue-600/20" 
                     : "bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50"
