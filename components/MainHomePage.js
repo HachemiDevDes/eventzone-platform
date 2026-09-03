@@ -565,15 +565,15 @@ export default function MainHomePage({
               return (
                 <div
                   key={ev.id}
-                  className="bg-white border border-slate-200 hover:border-blue-300 rounded-[28px] overflow-hidden shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between group"
+                  className="event-card-rounded bg-white border border-slate-200 hover:border-blue-300 overflow-hidden shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between group"
                 >
                   <div>
                     {/* Cover Banner */}
-                    <div className="h-44 w-full relative overflow-hidden bg-slate-100 rounded-t-[28px]">
+                    <div className="event-card-banner-rounded h-44 w-full relative overflow-hidden bg-slate-100">
                       <img 
                         src={ev.banner || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80"} 
                         alt={ev.title} 
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 rounded-t-[28px]" 
+                        className="event-card-banner-rounded w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent" />
                       
@@ -612,14 +612,16 @@ export default function MainHomePage({
                       </p>
 
                       {/* Clean, Enhanced Date & Location */}
-                      <div className="space-y-2 pt-3 border-t border-slate-100 text-xs font-medium text-slate-600">
-                        <div className="flex items-center gap-2">
-                          <Calendar size={14} className="text-blue-600 shrink-0" />
-                          <span className="font-semibold text-slate-700">{formatEventDateRange(ev.startDate, ev.endDate)}</span>
+                      <div className="space-y-2.5 pt-3 border-t border-slate-100 text-xs">
+                        <div>
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 font-bold border border-blue-100/70 shadow-2xs">
+                            <Calendar size={13} className="stroke-[2.5]" />
+                            <span>{formatEventDateRange(ev.startDate, ev.endDate)}</span>
+                          </span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <MapPin size={14} className="text-blue-600 shrink-0" />
-                          <span className="truncate text-slate-600">{ev.location || t("home.locationTba", "Location to be announced")}</span>
+                        <div className="flex items-center gap-1.5 text-slate-500 font-medium px-1">
+                          <MapPin size={13} className="text-slate-400 shrink-0" />
+                          <span className="truncate">{ev.location || t("home.locationTba", "Location to be announced")}</span>
                         </div>
                       </div>
                     </div>

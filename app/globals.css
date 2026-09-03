@@ -19,14 +19,23 @@
   --radius-md: 8px;
   --radius-lg: 8px;
   --radius-xl: 8px;
-  --radius-2xl: 8px;
-  --radius-3xl: 8px;
-  --radius-4xl: 8px;
+  --radius-2xl: 16px;
+  --radius-3xl: 24px;
+  --radius-4xl: 32px;
   --radius: 8px;
 
   --animate-fade-in: fadeIn 0.2s ease-out forwards;
   --animate-scale-up: scaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   --animate-slide-in-right: slideInRight 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Event Discovery Card Corner Curvature */
+.event-card-rounded {
+  border-radius: 30px !important;
+}
+.event-card-banner-rounded {
+  border-top-left-radius: 30px !important;
+  border-top-right-radius: 30px !important;
 }
 
 @keyframes fadeIn {
@@ -95,6 +104,120 @@ html[dir="rtl"],
 [dir="rtl"] label,
 .font-cairo {
   font-family: 'Cairo', 'Plus Jakarta Sans', sans-serif !important;
+}
+
+/* ==========================================================================
+   RTL / Arabic Layout & Text Alignment Engine
+   ========================================================================== */
+
+/* 1. Base RTL direction & default right text alignment */
+html[dir="rtl"],
+[dir="rtl"],
+[dir="rtl"] body {
+  direction: rtl;
+  text-align: right;
+}
+
+/* 2. Common layout blocks default to right alignment in RTL */
+[dir="rtl"] main,
+[dir="rtl"] header,
+[dir="rtl"] footer,
+[dir="rtl"] section,
+[dir="rtl"] article,
+[dir="rtl"] aside,
+[dir="rtl"] nav,
+[dir="rtl"] form {
+  text-align: right;
+}
+
+/* 3. Typography: headings, paragraphs, labels, legends */
+[dir="rtl"] h1:not(.text-center):not([class*="text-center"]):not(.text-left):not([class*="text-left"]),
+[dir="rtl"] h2:not(.text-center):not([class*="text-center"]):not(.text-left):not([class*="text-left"]),
+[dir="rtl"] h3:not(.text-center):not([class*="text-center"]):not(.text-left):not([class*="text-left"]),
+[dir="rtl"] h4:not(.text-center):not([class*="text-center"]):not(.text-left):not([class*="text-left"]),
+[dir="rtl"] h5:not(.text-center):not([class*="text-center"]):not(.text-left):not([class*="text-left"]),
+[dir="rtl"] h6:not(.text-center):not([class*="text-center"]):not(.text-left):not([class*="text-left"]),
+[dir="rtl"] p:not(.text-center):not([class*="text-center"]):not(.text-left):not([class*="text-left"]),
+[dir="rtl"] label:not(.text-center):not([class*="text-center"]):not(.text-left):not([class*="text-left"]),
+[dir="rtl"] legend:not(.text-center):not([class*="text-center"]):not(.text-left):not([class*="text-left"]) {
+  text-align: right;
+}
+
+/* 4. Form inputs, textareas, and selects in RTL */
+[dir="rtl"] input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]):not([type="file"]):not([dir="ltr"]):not(.text-center):not([class*="text-center"]):not(.text-right):not([class*="text-right"]),
+[dir="rtl"] textarea:not([dir="ltr"]):not(.text-center):not([class*="text-center"]):not(.text-right):not([class*="text-right"]),
+[dir="rtl"] select:not([dir="ltr"]):not(.text-center):not([class*="text-center"]):not(.text-right):not([class*="text-right"]) {
+  text-align: right;
+  direction: rtl;
+}
+
+[dir="rtl"] input::placeholder,
+[dir="rtl"] textarea::placeholder {
+  text-align: right;
+  direction: rtl;
+}
+
+/* 5. Table alignment in RTL */
+[dir="rtl"] table:not(.text-center):not([class*="text-center"]) {
+  text-align: right;
+}
+
+[dir="rtl"] th:not(.text-center):not(.text-right):not([class*="text-center"]):not([class*="text-right"]),
+[dir="rtl"] td:not(.text-center):not(.text-right):not([class*="text-center"]):not([class*="text-right"]) {
+  text-align: right;
+}
+
+/* 6. Drawers, modals, popovers, and dialogs in RTL */
+[dir="rtl"] [role="dialog"],
+[dir="rtl"] [role="menu"],
+[dir="rtl"] [role="listbox"],
+[dir="rtl"] [class*="modal"],
+[dir="rtl"] [class*="drawer"],
+[dir="rtl"] [class*="portaled"] {
+  text-align: right;
+}
+
+/* 7. Universal rule: Any text-left class automatically adapts to text-align: right in RTL */
+[dir="rtl"] .text-left {
+  text-align: right !important;
+}
+
+@media (min-width: 640px) {
+  [dir="rtl"] .sm\:text-left {
+    text-align: right !important;
+  }
+}
+
+@media (min-width: 768px) {
+  [dir="rtl"] .md\:text-left {
+    text-align: right !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  [dir="rtl"] .lg\:text-left {
+    text-align: right !important;
+  }
+}
+
+@media (min-width: 1280px) {
+  [dir="rtl"] .xl\:text-left {
+    text-align: right !important;
+  }
+}
+
+@media (min-width: 1536px) {
+  [dir="rtl"] .\32xl\:text-left {
+    text-align: right !important;
+  }
+}
+
+/* 8. Interactive elements: buttons, menu triggers, and options with text-left */
+[dir="rtl"] button.text-left,
+[dir="rtl"] button[class*="text-left"],
+[dir="rtl"] [role="button"].text-left,
+[dir="rtl"] [role="button"][class*="text-left"] {
+  text-align: right !important;
 }
 
 body {
