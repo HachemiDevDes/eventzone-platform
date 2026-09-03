@@ -182,7 +182,6 @@ export function HomeContent() {
   });
   const [eventSwitcherOpen, setEventSwitcherOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
-  const [langDropdownOpen, setLangDropdownOpen] = useState(false);
 
   // Visitor Registrations
   const [visitorRegistrations, setVisitorRegistrations] = useState([]);
@@ -3151,51 +3150,10 @@ export function HomeContent() {
       {!isEditingFloorPlan && (
       <aside className="w-[260px] h-screen bg-white border-r border-slate-200 py-5 px-4 flex flex-col justify-between sticky top-0 overflow-y-auto shrink-0 select-none z-40">
         <div className="space-y-4">
-          {/* Top Logo & Language Selector Icon */}
-          <div className="flex items-center justify-between px-1 relative">
+          {/* Top Logo */}
+          <div className="flex items-center px-1">
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => setCurrentView("home")} title="Eventzone Home">
               <img src="https://i.imgur.com/jFDrQbM.png" alt="eventzone" style={{ height: '22px', width: 'auto', maxWidth: '125px' }} className="h-5.5 w-auto object-contain" />
-            </div>
-
-            {/* Language Selector Icon Trigger */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setLangDropdownOpen(o => !o)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer shadow-2xs"
-                title={`Language: ${languages.find(l => l.code === lang)?.label || "Language"}`}
-              >
-                <img src={languages.find(l => l.code === lang)?.icon || "https://i.imgur.com/NXtMImD.png"} alt={lang} className="w-4 h-4 object-contain rounded-xs" />
-                <ChevronDown size={11} className={`text-slate-400 transition-transform ${langDropdownOpen ? "rotate-180" : ""}`} />
-              </button>
-
-              {/* Language Dropdown Menu */}
-              {langDropdownOpen && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setLangDropdownOpen(false)} />
-                  <div className="absolute right-0 top-full mt-2 w-36 bg-white border border-slate-200 rounded-2xl shadow-xl p-1.5 space-y-1 z-50 animate-scale-up">
-                    {languages.map(l => (
-                      <button
-                        key={l.code}
-                        type="button"
-                        onClick={() => {
-                          setLang(l.code);
-                          setLangDropdownOpen(false);
-                        }}
-                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
-                          lang === l.code ? "bg-blue-50 text-blue-600" : "text-slate-700 hover:bg-slate-50"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <img src={l.icon} alt={l.code} className="w-4 h-4 object-contain" />
-                          <span>{l.label}</span>
-                        </div>
-                        {lang === l.code && <Check size={13} className="text-blue-600 shrink-0" />}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
             </div>
           </div>
 
@@ -3225,7 +3183,7 @@ export function HomeContent() {
             {eventSwitcherOpen && (
               <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-2 space-y-1 animate-scale-up">
                 <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider px-2 py-1 block">
-                  Switch Event
+                  {t("dash.switchEvent", "Switch Event")}
                 </span>
                 <div className="max-h-48 overflow-y-auto space-y-0.5">
                   {userEvents.map(ev => (
@@ -3252,7 +3210,7 @@ export function HomeContent() {
                     }}
                     className="w-full text-left p-2 rounded-xl text-xs font-bold text-blue-600 hover:bg-blue-50 flex items-center cursor-pointer"
                   >
-                    <span>Host New Event</span>
+                    <span>{t("dash.hostNewEvent", "Host New Event")}</span>
                   </button>
 
                   <button
@@ -3262,7 +3220,7 @@ export function HomeContent() {
                     }}
                     className="w-full text-left p-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 flex items-center cursor-pointer"
                   >
-                    <span>All Events Hub</span>
+                    <span>{t("dash.allEventsHub", "All Events Hub")}</span>
                   </button>
                 </div>
               </div>
@@ -3441,7 +3399,7 @@ export function HomeContent() {
                   ? "bg-white/25 text-white" 
                   : (eventDetails?.portalStatus === "closed" ? "bg-rose-100 text-rose-700" : (eventDetails?.portalStatus === "scheduled" ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"))
               }`}>
-                {eventDetails?.portalStatus || "open"}
+                {eventDetails?.portalStatus === "closed" ? t("common.closed", "Closed") : eventDetails?.portalStatus === "scheduled" ? t("common.scheduled", "Scheduled") : t("overview.open", "Open")}
               </span>
             </button>
 
@@ -3582,10 +3540,10 @@ export function HomeContent() {
                 </div>
                 <div>
                   <p className="text-xs font-black tracking-wide uppercase">
-                    Testing Platform as {team.find(m => m.id === simulatedMemberId)?.name || 'Team Member'}
+                    {t("dash.testingPlatformAs", "Testing Platform as")} {team.find(m => m.id === simulatedMemberId)?.name || 'Team Member'}
                   </p>
                   <p className="text-xs opacity-95">
-                    Viewing role: <strong>{team.find(m => m.id === simulatedMemberId)?.role || 'Staff'}</strong> • Module permissions are actively simulated.
+                    {t("dash.viewingRole", "Viewing role")}: <strong>{team.find(m => m.id === simulatedMemberId)?.role || 'Staff'}</strong> • {t("dash.modulePermissionsSimulated", "Module permissions are actively simulated.")}
                   </p>
                 </div>
               </div>
@@ -3595,13 +3553,13 @@ export function HomeContent() {
                   onClick={() => setCurrentView("my-team")}
                   className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-xs transition-all cursor-pointer"
                 >
-                  Manage Team
+                  {t("dash.manageTeam", "Manage Team")}
                 </button>
                 <button
                   onClick={() => setSimulatedMemberId(null)}
                   className="px-3.5 py-1.5 bg-white text-amber-900 hover:bg-amber-50 rounded-xl font-bold text-xs transition-all shadow-xs cursor-pointer"
                 >
-                  Exit Simulation
+                  {t("dash.exitSimulation", "Exit Simulation")}
                 </button>
               </div>
             </div>
@@ -3613,7 +3571,7 @@ export function HomeContent() {
               <div className="flex items-center gap-2.5">
                 <Eye size={16} className="text-sky-600 shrink-0" />
                 <span>
-                  <strong>Viewer Mode (Read-Only)</strong>: You have read-only access to this module. Creation and editing actions are restricted to Editors.
+                  <strong>{t("dash.viewerModeTitle", "Viewer Mode (Read-Only)")}</strong>: {t("dash.viewerModeDesc", "You have read-only access to this module. Creation and editing actions are restricted to Editors.")}
                 </span>
               </div>
             </div>
@@ -3625,15 +3583,15 @@ export function HomeContent() {
               <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
                 <ShieldAlert size={32} />
               </div>
-              <h3 className="text-lg font-bold text-slate-900">Access Restricted</h3>
+              <h3 className="text-lg font-bold text-slate-900">{t("dash.accessRestrictedTitle", "Access Restricted")}</h3>
               <p className="text-xs text-slate-500 max-w-md leading-relaxed">
-                You do not have permission to access the <strong>{currentView}</strong> module. Please contact your event administrator to request access.
+                {t("dash.accessRestrictedDesc", "You do not have permission to access this module. Please contact your event administrator to request access.")}
               </p>
               <button 
                 onClick={() => setCurrentView("overview")} 
                 className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition-all cursor-pointer shadow-xs"
               >
-                Back to Dashboard
+                {t("dash.backToDashboard", "Back to Dashboard")}
               </button>
             </div>
           ) : isLoading && !isEditingFloorPlan ? (
