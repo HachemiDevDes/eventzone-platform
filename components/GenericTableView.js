@@ -1,3 +1,25 @@
+
+// Helper to localize ticket tier names
+function getLocalizedTicketTierName(name, t) {
+  if (!name || typeof name !== 'string') return name;
+  const key = 'tickets.tier_' + name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+  if (t) return t(key, name);
+  return name;
+}
+
+// Helper to localize dynamic question / column labels
+function getLocalizedFieldLabel(label, t) {
+  if (!label || typeof label !== 'string') return label;
+  const cleaned = label.trim().toLowerCase();
+  if (cleaned.includes('phone')) return t ? t('common.phone', 'Phone Number') : 'Phone Number';
+  if (cleaned.includes('job function') || cleaned.includes('role')) return t ? t('table.jobRole', 'Job Function / Role') : 'Job Function / Role';
+  if (cleaned.includes('job') || cleaned.includes('title')) return t ? t('common.jobTitle', 'Job Title') : 'Job Title';
+  if (cleaned.includes('company') && cleaned.includes('org')) return t ? t('table.companyOrg', 'Company / Organization') : 'Company / Organization';
+  if (cleaned.includes('company')) return t ? t('common.company', 'Company') : 'Company';
+  if (cleaned.includes('orgid') || cleaned.includes('org id')) return t ? t('table.orgId', 'Organization ID') : 'Organization ID';
+  return label;
+}
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
@@ -176,6 +198,7 @@ function extractTicketFormCredentials(attendee) {
 
 // 1. EVENT DETAILS VIEW
 function EventDetailsView({ state, onUpdateState, onUploadFile }) {
+  const { t, lang, isRTL } = useLanguage();
   const { eventDetails } = state;
   const [title, setTitle] = useState(eventDetails.title);
   const [location, setLocation] = useState(eventDetails.location);
@@ -591,6 +614,15 @@ function getDynamicFormColumns(selectedTicketType, tickets = [], forms = [], dat
   return dynamicColumns;
 }
 
+function formatBoothDisplay(rawBooth) {
+  if (!rawBooth || typeof rawBooth !== 'string') return '';
+  const trimmed = rawBooth.trim();
+  if (!trimmed || /^(unassigned|pending|none|tbd|null|undefined)$/i.test(trimmed)) return '';
+  // Clean raw floorplan template prefixes like "Empty Booth A1" -> "A1", "Equipped Booth B2" -> "B2"
+  const clean = trimmed.replace(/^(empty|semi-equipped|equipped|standard|custom)\s*booth\s*/i, '').replace(/^booth\s*#?\s*/i, '').trim();
+  return clean || '';
+}
+
 function renderDynamicCellData(row, col) {
   const ans = row.answers || row.customAnswers || row.formAnswers || {};
   let val = ans[col.id];
@@ -665,16 +697,36 @@ function renderDynamicCellData(row, col) {
     }
   }
 
-  if (val === undefined || val === null || val === "") {
-    return <span className="text-slate-300 font-normal">—</span>;
+  // If column has select/radio options, try to resolve option ID to option label
+  if (col.options && Array.isArray(col.options)) {
+    const matchedOpt = col.options.find(opt => {
+      if (typeof opt === "string") return opt === val;
+      return (opt.id && String(opt.id) === String(val)) || (opt.value && String(opt.value) === String(val));
+    });
+    if (matchedOpt) {
+      val = typeof matchedOpt === "string" ? matchedOpt : (matchedOpt.label || matchedOpt.name || matchedOpt.text || matchedOpt.value || val);
+    }
+  }
+
+  if (val === undefined || val === null || val === "" || val === "null" || val === "undefined" || val === "—") {
+    return <span className="text-slate-400 font-normal">/</span>;
+  }
+
+  // If value is a raw UUID string (e.g. "f6410b0e-3ffe-461c-8e4d-3218276fcf16"), don't show the UUID - render "/" instead
+  if (typeof val === "string") {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val.trim());
+    if (isUuid) {
+      return <span className="text-slate-400 font-normal">/</span>;
+    }
   }
 
   // Never render raw image/data URL string in cell
   if (typeof val === "string" && (val.startsWith("data:image/") || val.startsWith("blob:") || val.includes("/storage/v1/object/"))) {
-    return <span className="text-slate-300 font-normal">—</span>;
+    return <span className="text-slate-400 font-normal">/</span>;
   }
 
   if (Array.isArray(val)) {
+    if (val.length === 0) return <span className="text-slate-400 font-normal">/</span>;
     return (
       <div className="flex flex-wrap gap-1 max-w-[180px]">
         {val.map((item, idx) => (
@@ -694,7 +746,11 @@ function renderDynamicCellData(row, col) {
     );
   }
 
-  const str = String(val);
+  const str = String(val).trim();
+  if (!str || str === "—" || str === "null" || str === "undefined") {
+    return <span className="text-slate-400 font-normal">/</span>;
+  }
+
   return (
     <span className="text-slate-700 font-medium truncate max-w-[160px] block" title={str}>
       {str}
@@ -827,19 +883,19 @@ function SubmissionDetailsModal({ item, type = "attendee", forms = [], tickets =
               <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-200/70 text-xs">
                 <div>
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Company / Organization</span>
-                  <span className="font-semibold text-slate-800 mt-0.5 block">{item.company || "—"}</span>
+                  <span className="font-semibold text-slate-800 mt-0.5 block">{item.company || "/"}</span>
                 </div>
                 <div>
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Job Function / Role</span>
-                  <span className="font-semibold text-slate-800 mt-0.5 block">{item.jobTitle || item.job_title || "—"}</span>
+                  <span className="font-semibold text-slate-800 mt-0.5 block">{item.jobTitle || item.job_title || "/"}</span>
                 </div>
                 <div>
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Phone Number</span>
-                  <span className="font-semibold text-slate-800 mt-0.5 block">{item.phone || "—"}</span>
+                  <span className="font-semibold text-slate-800 mt-0.5 block">{item.phone || "/"}</span>
                 </div>
                 <div>
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Submitted Date</span>
-                  <span className="font-semibold text-slate-800 mt-0.5 block">{item.date || item.registeredDate || "—"}</span>
+                  <span className="font-semibold text-slate-800 mt-0.5 block">{item.date || item.registeredDate || "/"}</span>
                 </div>
               </div>
 
@@ -916,7 +972,7 @@ function SubmissionDetailsModal({ item, type = "attendee", forms = [], tickets =
                           </div>
                         ) : (
                           <div className="text-xs font-semibold text-slate-900 leading-normal break-words">
-                            {Array.isArray(val) ? val.join(", ") : (typeof val === "boolean" ? (val ? "Yes" : "No") : (String(val) || "—"))}
+                            {Array.isArray(val) ? val.join(", ") : (typeof val === "boolean" ? (val ? "Yes" : "No") : (String(val) || "/"))}
                           </div>
                         )}
                       </div>
@@ -992,6 +1048,7 @@ function SubmissionDetailsModal({ item, type = "attendee", forms = [], tickets =
 
 // 2. ALL ATTENDEES VIEW (Dynamic Form Columns + Ticket-Type Switcher)
 function AttendeesView({ state, onUpdateState, onOpenModal }) {
+  const { t, lang, isRTL } = useLanguage();
   const { attendees = [], tickets = [], forms = [], organizations = [], sponsors = [], exhibitors = [] } = state;
   const [search, setSearch] = useState("");
   const [selectedTicketType, setSelectedTicketType] = useState("all");
@@ -1091,7 +1148,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
 
   // Available Ticket Types + Archived for Unified Switcher Pills (Authoritative from tickets)
   const ticketTypes = useMemo(() => {
-    const list = [{ id: "all", label: "All Tickets" }];
+    const list = [{ id: "all", label: t("table.allTickets", "All Tickets") }];
     const seen = new Set();
     
     // Official tickets configured for the event are the primary source of truth
@@ -1119,12 +1176,12 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
     const hasExhibitors = attendees.some(a => !a.isArchived && a.status !== 'archived' && getAttendeeRoleInfo(a).exhibitor);
     const hasSpeakers = attendees.some(a => !a.isArchived && a.status !== 'archived' && (a.isSpeaker || (a.ticketType || a.ticket_type || "").toLowerCase().includes("speaker")));
 
-    if (hasSponsors) list.push({ id: "sponsors", label: "Sponsors" });
-    if (hasExhibitors) list.push({ id: "exhibitors", label: "Exhibitors" });
-    if (hasSpeakers) list.push({ id: "speakers", label: "Speakers" });
+    if (hasSponsors) list.push({ id: "sponsors", label: t("dash.sponsors", "Sponsors") });
+    if (hasExhibitors) list.push({ id: "exhibitors", label: t("dash.exhibitors", "Exhibitors") });
+    if (hasSpeakers) list.push({ id: "speakers", label: t("dash.speakers", "Speakers") });
 
     // Add Archived tab to top switcher pills
-    list.push({ id: "archived", label: "Archived" });
+    list.push({ id: "archived", label: t("common.archived", "Archived") });
 
     return list;
   }, [tickets, attendees, organizations, sponsors, exhibitors]);
@@ -1336,7 +1393,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
   };
 
   const handleBulkArchive = () => {
-    if (confirm(`Archive ${selectedIds.size} selected attendee(s)? Their registration records will be preserved in archives.`)) {
+    if (confirm(`Archive ${selectedIds.size} ${t("table.selectedCount", "selected")} attendee(s)? Their registration records will be preserved in archives.`)) {
       const selectedKeys = new Set(selectedIds);
       const updated = attendees.map((a, idx) => {
         const key = a.id || `att-${idx}`;
@@ -1413,15 +1470,15 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
     <div className="flex flex-col gap-6 w-full">
       <header className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 select-none">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">All Attendees</h2>
-          <p className="text-sm text-slate-500">Manage list of registered participants, dynamic form data, and ticket tiers.</p>
+          <h2 className="text-2xl font-bold text-slate-900">{t("dash.attendees", "All Attendees")}</h2>
+          <p className="text-sm text-slate-500">{t("table.attendeesSubtitle", "Manage list of registered participants, dynamic form data, and ticket tiers.")}</p>
         </div>
         <button 
           onClick={() => onOpenModal("attendee")}
           className="bg-indigo-650 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 shadow-sm transition-all cursor-pointer self-start sm:self-auto"
         >
           <Plus size={16} />
-          <span>Add Attendee</span>
+          <span>{t("table.addAttendee", "Add Attendee")}</span>
         </button>
       </header>
 
@@ -1448,7 +1505,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                   : "text-slate-500 hover:text-slate-800 hover:bg-white/60 border border-transparent"
               }`}
             >
-              <span>{tt.label}</span>
+              <span>{getLocalizedTicketTierName(tt.label, t)}</span>
               <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-bold transition-colors ${
                 isSelected ? "bg-slate-100 text-slate-700" : "text-slate-400 bg-transparent"
               }`}>
@@ -1466,7 +1523,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
             <Search className="absolute left-3.5 top-3 text-slate-400" size={16} />
             <input 
               type="text" 
-              placeholder="Search attendees by name, email, company, or answer..." 
+              placeholder={t("table.searchPlaceholder", "Search attendees, company, role, or phone...")} 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-slate-200 bg-white rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 shadow-sm"
@@ -1476,7 +1533,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
 
         {/* Dynamic Table */}
         <div className="overflow-x-auto w-full">
-          <table className="w-full border-collapse text-left text-xs font-medium text-slate-700">
+          <table className="w-full border-collapse text-start text-xs font-medium text-slate-700">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-150 text-[10px] text-slate-400 font-bold uppercase tracking-wider select-none">
                 <th className="py-4 pl-5 pr-2 w-10 sticky left-0 bg-slate-50 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
@@ -1497,15 +1554,15 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                     />
                   </div>
                 </th>
-                <th className="py-4 px-4 sticky left-10 bg-slate-50 z-10 min-w-[220px] sm:min-w-[260px] whitespace-nowrap shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">Attendee</th>
-                <th className="py-4 px-6 whitespace-nowrap">Email</th>
-                {selectedTicketType === "all" && <th className="py-4 px-6 whitespace-nowrap">Ticket Tier</th>}
+                <th className="py-4 px-4 sticky left-10 bg-slate-50 z-10 min-w-[220px] sm:min-w-[260px] whitespace-nowrap shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">{t("table.attendee", "Attendee")}</th>
+                <th className="py-4 px-6 whitespace-nowrap">{t("common.email", "Email")}</th>
+                {selectedTicketType === "all" && <th className="py-4 px-6 whitespace-nowrap">{t("table.ticketTier", "Ticket Tier")}</th>}
                 {/* Dynamic Form Columns */}
                 {dynamicCols.map(col => (
                   <th key={col.id} className="py-4 px-6 whitespace-nowrap">
                     <div className="flex items-center gap-1.5">
                       <span className={col.isDeleted ? "text-slate-400 font-semibold" : "text-indigo-900/80 font-bold"}>
-                        {col.baseLabel || col.label}
+                        {getLocalizedFieldLabel(col.baseLabel || col.label, t)}
                       </span>
                       {col.isDeleted && (
                         <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-200 font-bold lowercase tracking-normal">
@@ -1515,9 +1572,9 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                     </div>
                   </th>
                 ))}
-                <th className="py-4 px-6 whitespace-nowrap">Status</th>
-                <th className="py-4 px-6 whitespace-nowrap">Registered</th>
-                <th className="py-4 px-6 text-center w-20 whitespace-nowrap sticky right-0 bg-slate-50 z-10 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]">Actions</th>
+                <th className="py-4 px-6 whitespace-nowrap">{t("common.status", "Status")}</th>
+                <th className="py-4 px-6 whitespace-nowrap">{t("table.registered", "Registered")}</th>
+                <th className="py-4 px-6 text-center w-20 whitespace-nowrap sticky right-0 bg-slate-50 z-10 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]">{t("common.actions", "Actions")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -1597,25 +1654,24 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                         </button>
                         {(() => {
                           const { sponsor, exhibitor } = getAttendeeRoleInfo(a);
+                          const cleanBooth = exhibitor ? formatBoothDisplay(exhibitor.booth || exhibitor.boothNumber) : '';
+                          const boothLabel = cleanBooth ? (cleanBooth.toUpperCase().startsWith('BOOTH') ? cleanBooth.toUpperCase() : `BOOTH ${cleanBooth.toUpperCase()}`) : '';
                           return (
                             <div className="flex flex-col min-w-0">
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 <span className="text-slate-850 font-bold leading-tight truncate">{a.name}</span>
                                 {sponsor && (
-                                  <span className="px-1.5 py-0.2 rounded-md text-[9px] font-black uppercase bg-amber-50 text-amber-800 border border-amber-200 inline-flex items-center gap-0.5" title={`${sponsor.name || 'Sponsor'} (${sponsor.tier || 'Official'})`}>
-                                    <Award size={9} className="text-amber-600 shrink-0" />
+                                  <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase bg-amber-50 text-amber-800 border border-amber-200 inline-flex items-center" title={`${sponsor.name || 'Sponsor'} (${sponsor.tier || 'Official'})`}>
                                     <span>{sponsor.tier ? `${sponsor.tier.toUpperCase()} SPONSOR` : 'SPONSOR'}</span>
                                   </span>
                                 )}
                                 {exhibitor && (
-                                  <span className="px-1.5 py-0.2 rounded-md text-[9px] font-black uppercase bg-blue-50 text-blue-800 border border-blue-200 inline-flex items-center gap-0.5" title={`${exhibitor.name || 'Exhibitor'} (${exhibitor.booth || 'Booth'})`}>
-                                    <Store size={9} className="text-blue-600 shrink-0" />
-                                    <span>{exhibitor.booth ? `EXHIBITOR (${exhibitor.booth})` : 'EXHIBITOR'}</span>
+                                  <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase bg-blue-50 text-blue-800 border border-blue-200 inline-flex items-center" title={`${exhibitor.name || 'Exhibitor'}${boothLabel ? ` (${boothLabel})` : ''}`}>
+                                    <span>{boothLabel ? `EXHIBITOR (${boothLabel})` : 'EXHIBITOR'}</span>
                                   </span>
                                 )}
                                 {a.isSpeaker && (
-                                  <span className="px-1.5 py-0.2 rounded-md text-[9px] font-black uppercase bg-purple-50 text-purple-800 border border-purple-200 inline-flex items-center gap-0.5">
-                                    <Mic size={9} className="text-purple-600 shrink-0" />
+                                  <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase bg-purple-50 text-purple-800 border border-purple-200 inline-flex items-center">
                                     <span>SPEAKER</span>
                                   </span>
                                 )}
@@ -1623,7 +1679,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                               <div className="text-[10px] text-slate-400 font-medium mt-0.5 flex items-center gap-1.5 truncate">
                                 {a.company && <span className="font-bold text-slate-600 truncate">{a.company}</span>}
                                 {a.company && (a.phone || a.answers?.phone || a.customAnswers?.phone) && <span className="text-slate-300">•</span>}
-                                <span>{a.phone || a.answers?.phone || a.answers?.f_core_phone || a.answers?.phoneNumber || a.customAnswers?.phone || a.customAnswers?.f_core_phone || a.customAnswers?.phoneNumber || "—"}</span>
+                                <span dir="ltr">{a.phone || a.answers?.phone || a.answers?.f_core_phone || a.answers?.phoneNumber || a.customAnswers?.phone || a.customAnswers?.f_core_phone || a.customAnswers?.phoneNumber || "/"}</span>
                               </div>
                             </div>
                           );
@@ -1633,7 +1689,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                       {selectedTicketType === "all" && (
                         <td className="py-4 px-6 whitespace-nowrap">
                           <span className="px-2.5 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-slate-700 font-semibold text-[11px]">
-                            {getResolvedTicketName(a, tickets)}
+                            {getLocalizedTicketTierName(getResolvedTicketName(a, tickets), t)}
                           </span>
                         </td>
                       )}
@@ -1654,7 +1710,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                           {isArchived ? 'ARCHIVED' : (isCheckedIn ? 'Checked In' : 'Registered')}
                         </span>
                       </td>
-                      <td className="py-4 px-6 text-slate-400 font-medium whitespace-nowrap">{a.registeredDate || "—"}</td>
+                      <td className="py-4 px-6 text-slate-400 font-medium whitespace-nowrap">{a.registeredDate || "/"}</td>
                       <td className="py-4 px-6 text-center whitespace-nowrap sticky right-0 bg-white group-hover:bg-slate-50 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)] z-10">
                         <div className="relative inline-flex items-center justify-center">
                           {/* 3 Points Action Trigger Button */}
@@ -1957,7 +2013,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
               right: activeActionsMenu.right,
               zIndex: 99999
             }}
-            className="portaled-actions-menu w-48 bg-white border border-slate-200/90 rounded-2xl shadow-2xl shadow-slate-900/20 p-1.5 flex flex-col gap-0.5 text-left select-none animate-in fade-in"
+            className="portaled-actions-menu w-48 bg-white border border-slate-200/90 rounded-2xl shadow-2xl shadow-slate-900/20 p-1.5 flex flex-col gap-0.5 text-start select-none animate-in fade-in"
             onClick={(e) => e.stopPropagation()}
           >
             {(() => {
@@ -1975,7 +2031,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                       setActiveActionsMenu(null);
                       handleToggleCheckin(a.id);
                     }}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer text-left group"
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer text-start group"
                   >
                     <div className="flex items-center gap-2.5">
                       <CheckCircle2
@@ -1999,7 +2055,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                       setActiveActionsMenu(null);
                       handleDirectPrintAttendeeBadge(a);
                     }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer text-left group"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer text-start group"
                   >
                     <Printer size={15} className="text-slate-400 group-hover:text-slate-600 transition-colors" />
                     <span>Print badge</span>
@@ -2013,7 +2069,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                       setActiveActionsMenu(null);
                       setEmailAttendees([a]);
                     }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer text-left group"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer text-start group"
                   >
                     <Mail size={15} className="text-slate-400 group-hover:text-slate-600 transition-colors" />
                     <span>Send Email</span>
@@ -2027,7 +2083,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                       setActiveActionsMenu(null);
                       onOpenModal("attendee", a);
                     }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer text-left group"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer text-start group"
                   >
                     <Pencil size={15} className="text-slate-400 group-hover:text-slate-600 transition-colors" />
                     <span>Edit</span>
@@ -2043,7 +2099,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                       setActiveActionsMenu(null);
                       handleArchive(a.id);
                     }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer text-left group"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer text-start group"
                   >
                     <Archive size={15} className="text-rose-500 group-hover:scale-105 transition-transform" />
                     <span>Archive</span>
@@ -2059,7 +2115,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                       setActiveActionsMenu(null);
                       handleRestore(a.id);
                     }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer text-left group"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer text-start group"
                   >
                     <RotateCcw size={15} className="text-slate-400 group-hover:text-slate-600 transition-colors" />
                     <span>Restore</span>
@@ -2073,7 +2129,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                       setActiveActionsMenu(null);
                       onOpenModal("attendee", a);
                     }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer text-left group"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer text-start group"
                   >
                     <Pencil size={15} className="text-slate-400 group-hover:text-slate-600 transition-colors" />
                     <span>Edit</span>
@@ -2089,7 +2145,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                       setActiveActionsMenu(null);
                       handleDeleteAttendee(a.id);
                     }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer text-left group"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer text-start group"
                   >
                     <Trash2 size={15} className="text-rose-500 group-hover:scale-105 transition-transform" />
                     <span>Delete</span>
@@ -2107,6 +2163,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
 
 // 3. PENDING REGISTRATIONS VIEW (Dynamic Form Columns + Ticket-Type Switcher)
 function PendingView({ state, onUpdateState }) {
+  const { t, lang, isRTL } = useLanguage();
   const { pending = [], attendees = [], tickets = [], forms = [] } = state;
   const [search, setSearch] = useState("");
   const [selectedTicketType, setSelectedTicketType] = useState("all");
@@ -2305,7 +2362,7 @@ function PendingView({ state, onUpdateState }) {
       <header className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 select-none">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-2xl font-bold text-slate-900">Pending Approvals</h2>
+            <h2 className="text-2xl font-bold text-slate-900">{t("dash.pending", "Pending Approvals")}</h2>
             <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 font-bold text-xs">
               {pending.length} Awaiting Review
             </span>
@@ -2360,12 +2417,12 @@ function PendingView({ state, onUpdateState }) {
 
         {/* Dynamic Table */}
         <div className="overflow-x-auto w-full">
-          <table className="w-full border-collapse text-left text-xs font-semibold text-slate-700">
+          <table className="w-full border-collapse text-start text-xs font-semibold text-slate-700">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-150 text-[10px] text-slate-400 font-bold uppercase tracking-wider select-none">
-                <th className="py-4 px-6 sticky left-0 bg-slate-50 z-10 min-w-[240px] sm:min-w-[280px] whitespace-nowrap shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">Applicant</th>
+                <th className="py-4 px-6 sticky left-0 bg-slate-50 z-10 min-w-[240px] sm:min-w-[280px] whitespace-nowrap shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">{t("table.applicant", "Applicant")}</th>
                 <th className="py-4 px-6 whitespace-nowrap">Email</th>
-                {selectedTicketType === "all" && <th className="py-4 px-6 whitespace-nowrap">Applied Tier</th>}
+                {selectedTicketType === "all" && <th className="py-4 px-6 whitespace-nowrap">{t("table.appliedTier", "Applied Tier")}</th>}
                 {/* Dynamic Form Columns */}
                 {dynamicCols.map(col => (
                   <th key={col.id} className="py-4 px-6 whitespace-nowrap">
@@ -2381,8 +2438,8 @@ function PendingView({ state, onUpdateState }) {
                     </div>
                   </th>
                 ))}
-                <th className="py-4 px-6 whitespace-nowrap">Request Note</th>
-                <th className="py-4 px-6 whitespace-nowrap">Submitted</th>
+                <th className="py-4 px-6 whitespace-nowrap">{t("table.requestNote", "Request Note")}</th>
+                <th className="py-4 px-6 whitespace-nowrap">{t("table.submitted", "Submitted")}</th>
                 <th className="py-4 px-6 text-center w-48 whitespace-nowrap sticky right-0 bg-slate-50 z-10 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]">Actions</th>
               </tr>
             </thead>
@@ -2450,7 +2507,7 @@ function PendingView({ state, onUpdateState }) {
                       <td className="py-4 px-6 text-slate-500 italic font-medium leading-relaxed max-w-xs truncate">
                         {p.note || "Standard application"}
                       </td>
-                      <td className="py-4 px-6 text-slate-400 font-medium whitespace-nowrap">{p.date || "—"}</td>
+                      <td className="py-4 px-6 text-slate-400 font-medium whitespace-nowrap">{p.date || "/"}</td>
                       <td className="py-4 px-6 whitespace-nowrap sticky right-0 bg-white group-hover:bg-slate-50 z-10 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]">
                         <div className="flex items-center justify-center gap-1.5">
                           <button
@@ -2617,7 +2674,7 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
       <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <div className="flex items-center gap-2.5">
-            <h2 className="text-2xl font-black text-slate-900 tracking-tight">Partner Organizations</h2>
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight">{t("dash.organizations", "Partner Organizations")}</h2>
             <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-black border border-blue-100">
               {organizations.length} Companies
             </span>
@@ -2909,7 +2966,7 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
 
                       {isExhibitor && (
                         <span className="text-[10px] font-extrabold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
-                          {isExhibitor.booth || isExhibitor.boothNumber || 'BOOTH'}
+                          {formatBoothDisplay(isExhibitor.booth || isExhibitor.boothNumber) ? (formatBoothDisplay(isExhibitor.booth || isExhibitor.boothNumber).toUpperCase().startsWith('BOOTH') ? formatBoothDisplay(isExhibitor.booth || isExhibitor.boothNumber).toUpperCase() : `BOOTH ${formatBoothDisplay(isExhibitor.booth || isExhibitor.boothNumber).toUpperCase()}`) : 'EXHIBITOR'}
                         </span>
                       )}
                     </div>
@@ -3008,13 +3065,13 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
         /* ────────── TABLE VIEW ────────── */
         <div className="bg-white border border-slate-200/80 rounded-3xl shadow-xs overflow-hidden">
           <div className="overflow-x-auto w-full">
-            <table className="w-full border-collapse text-left text-xs font-semibold text-slate-700">
+            <table className="w-full border-collapse text-start text-xs font-semibold text-slate-700">
               <thead>
                 <tr className="bg-slate-50/80 border-b border-slate-200/80 text-[10px] text-slate-400 font-extrabold uppercase tracking-wider select-none">
-                  <th className="py-4 px-6">Company & Sector</th>
-                  <th className="py-4 px-6">Primary Contact</th>
-                  <th className="py-4 px-6">Event Roles</th>
-                  <th className="py-4 px-6">Website / Link</th>
+                  <th className="py-4 px-6">{t("table.companySector", "Company & Sector")}</th>
+                  <th className="py-4 px-6">{t("table.primaryContact", "Primary Contact")}</th>
+                  <th className="py-4 px-6">{t("table.eventRoles", "Event Roles")}</th>
+                  <th className="py-4 px-6">{t("table.websiteLink", "Website / Link")}</th>
                   <th className="py-4 px-6">Status</th>
                   <th className="py-4 px-6 text-right">Actions</th>
                 </tr>
@@ -3099,7 +3156,7 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
                           )}
                           {isExhibitor && (
                             <span className="text-[10px] font-extrabold text-blue-800 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-xl">
-                              {isExhibitor.booth || isExhibitor.boothNumber || 'BOOTH ALLOCATED'}
+                              {formatBoothDisplay(isExhibitor.booth || isExhibitor.boothNumber) ? (formatBoothDisplay(isExhibitor.booth || isExhibitor.boothNumber).toUpperCase().startsWith('BOOTH') ? formatBoothDisplay(isExhibitor.booth || isExhibitor.boothNumber).toUpperCase() : `BOOTH ${formatBoothDisplay(isExhibitor.booth || isExhibitor.boothNumber).toUpperCase()}`) : 'BOOTH ALLOCATED'}
                             </span>
                           )}
                           {!isSponsor && !isExhibitor && (
@@ -3418,7 +3475,7 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
       <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <div className="flex items-center gap-2.5">
-            <h2 className="text-2xl font-black text-slate-900 tracking-tight">Event Sponsors</h2>
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight">{t("dash.sponsors", "Event Sponsors")}</h2>
             <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-black border border-blue-100">
               {sponsors.length} Sponsors
             </span>
@@ -3732,15 +3789,15 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
       ) : (
         <div className="bg-white border border-slate-200/80 rounded-3xl shadow-xs overflow-hidden">
           <div className="overflow-x-auto w-full">
-            <table className="w-full border-collapse text-left text-xs font-semibold text-slate-700">
+            <table className="w-full border-collapse text-start text-xs font-semibold text-slate-700">
               <thead>
                 <tr className="bg-slate-50/80 border-b border-slate-200/80 text-[10px] text-slate-400 font-extrabold uppercase tracking-wider select-none">
-                  <th className="py-4 px-6">Sponsor</th>
-                  <th className="py-4 px-6">Tier Level</th>
-                  <th className="py-4 px-6">Linked Organization</th>
-                  <th className="py-4 px-6">Contact Liaison</th>
-                  <th className="py-4 px-6">Contribution</th>
-                  <th className="py-4 px-6">Booth</th>
+                  <th className="py-4 px-6">{t("table.sponsor", "Sponsor")}</th>
+                  <th className="py-4 px-6">{t("table.tierLevel", "Tier Level")}</th>
+                  <th className="py-4 px-6">{t("table.linkedOrg", "Linked Organization")}</th>
+                  <th className="py-4 px-6">{t("table.contactLiaison", "Contact Liaison")}</th>
+                  <th className="py-4 px-6">{t("table.contribution", "Contribution")}</th>
+                  <th className="py-4 px-6">{t("table.booth", "Booth")}</th>
                   <th className="py-4 px-6 text-right">Actions</th>
                 </tr>
               </thead>
@@ -3980,7 +4037,7 @@ function ExhibitorsView({ state, onUpdateState, onOpenModal }) {
       <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <div className="flex items-center gap-2.5">
-            <h2 className="text-2xl font-black text-slate-900 tracking-tight">Event Exhibitors</h2>
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight">{t("dash.exhibitors", "Event Exhibitors")}</h2>
             <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-black border border-blue-100">
               {exhibitors.length} Exhibitors
             </span>
@@ -4063,7 +4120,8 @@ function ExhibitorsView({ state, onUpdateState, onOpenModal }) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredExhibitors.map((e, index) => {
             const matchedOrg = organizations.find(o => o.id === e.orgId || o.id === e.org_id);
-            const boothDisplay = e.booth || e.boothNumber || "Unassigned";
+            const cleanBooth = formatBoothDisplay(e.booth || e.boothNumber);
+            const boothDisplay = cleanBooth ? (cleanBooth.toUpperCase().startsWith('BOOTH') ? cleanBooth : `Booth ${cleanBooth}`) : "Unassigned";
             const itemKey = e.id ? `exhibitor-${e.id}` : `exhibitor-idx-${index}-${e.name || 'unnamed'}`;
             const liaisonName = e.contact || e.contactPerson || matchedOrg?.contact || matchedOrg?.contactPerson || '';
             const liaisonEmail = e.email || e.contactEmail || matchedOrg?.email || matchedOrg?.contactEmail || '';
@@ -4205,13 +4263,13 @@ function ExhibitorsView({ state, onUpdateState, onOpenModal }) {
       ) : (
         <div className="bg-white border border-slate-200/80 rounded-3xl shadow-xs overflow-hidden">
           <div className="overflow-x-auto w-full">
-            <table className="w-full border-collapse text-left text-xs font-semibold text-slate-700">
+            <table className="w-full border-collapse text-start text-xs font-semibold text-slate-700">
               <thead>
                 <tr className="bg-slate-50/80 border-b border-slate-200/80 text-[10px] text-slate-400 font-extrabold uppercase tracking-wider select-none">
-                  <th className="py-4 px-6">Exhibitor</th>
-                  <th className="py-4 px-6">Booth Allocation</th>
-                  <th className="py-4 px-6">Staff Contact</th>
-                  <th className="py-4 px-6">Passes Quota</th>
+                  <th className="py-4 px-6">{t("table.exhibitor", "Exhibitor")}</th>
+                  <th className="py-4 px-6">{t("table.boothAllocation", "Booth Allocation")}</th>
+                  <th className="py-4 px-6">{t("table.staffContact", "Staff Contact")}</th>
+                  <th className="py-4 px-6">{t("table.passesQuota", "Passes Quota")}</th>
                   <th className="py-4 px-6">Linked Organization</th>
                   <th className="py-4 px-6 text-right">Actions</th>
                 </tr>
@@ -4259,7 +4317,7 @@ function ExhibitorsView({ state, onUpdateState, onOpenModal }) {
                       </td>
                       <td className="py-4 px-6">
                         <span className="font-black text-blue-800 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-xl text-xs">
-                          {e.booth || e.boothNumber || 'Unassigned'}
+                          {formatBoothDisplay(e.booth || e.boothNumber) ? (formatBoothDisplay(e.booth || e.boothNumber).toUpperCase().startsWith('BOOTH') ? formatBoothDisplay(e.booth || e.boothNumber) : `Booth ${formatBoothDisplay(e.booth || e.boothNumber)}`) : 'Unassigned'}
                         </span>
                       </td>
                       <td className="py-4 px-6">
@@ -4329,6 +4387,7 @@ function ExhibitorsView({ state, onUpdateState, onOpenModal }) {
 
 // 7. TICKETS VIEW
 function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
+  const { t, lang, isRTL } = useLanguage();
   const { tickets, attendees, forms = [] } = state;
   const [ticketFilter, setTicketFilter] = useState("active"); // "active" | "archived" | "all"
 
@@ -4371,8 +4430,8 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
     <div className="flex flex-col gap-8 w-full">
       <header className="flex flex-wrap justify-between items-center gap-4 select-none">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Tickets & Pricing</h2>
-          <p className="text-sm text-slate-500">Manage ticket tiers, prices, availability, and sales performance.</p>
+          <h2 className="text-2xl font-bold text-slate-900">{t("tickets.title", "Tickets & Pricing")}</h2>
+          <p className="text-sm text-slate-500">{t("tickets.subtitle", "Configure admission passes, pricing, capacities, and access perks.")}</p>
         </div>
         <div className="flex items-center gap-2.5">
           <button 
@@ -4603,6 +4662,7 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
 
 // 9. CHECK IN VIEW
 function CheckInView({ state, onUpdateState }) {
+  const { t, lang, isRTL } = useLanguage();
   const { attendees = [], tickets = [] } = state;
   const [search, setSearch] = useState("");
   const [selectedBadgeAttendee, setSelectedBadgeAttendee] = useState(null);
@@ -4779,8 +4839,8 @@ function CheckInView({ state, onUpdateState }) {
     <div className="flex flex-col gap-6 w-full font-sans">
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 select-none">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Check-in Management</h2>
-          <p className="text-xs sm:text-sm text-slate-500">Scan QR passes or toggle attendee attendance status at the door.</p>
+          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">{t("checkin.title", "On-Site Check-In Command")}</h2>
+          <p className="text-xs sm:text-sm text-slate-500">{t("checkin.subtitle", "Scan attendee QR codes, verify badges, monitor live attendance flow and manage desk admissions.")}</p>
         </div>
 
         <button
@@ -4957,13 +5017,13 @@ function CheckInView({ state, onUpdateState }) {
         </div>
 
         <div className="overflow-x-auto w-full">
-          <table className="w-full border-collapse text-left text-xs font-medium text-slate-700">
+          <table className="w-full border-collapse text-start text-xs font-medium text-slate-700">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-150 text-[10px] text-slate-400 font-bold uppercase tracking-wider select-none">
-                <th className="py-4 px-6">Attendee</th>
-                <th className="py-4 px-6">Ticket Type</th>
-                <th className="py-4 px-6">Check-in Status</th>
-                <th className="py-4 px-6">Check-in Time</th>
+                <th className="py-4 px-6">{t("table.attendee", "Attendee")}</th>
+                <th className="py-4 px-6">{t("table.ticketTier", "Ticket Type")}</th>
+                <th className="py-4 px-6">{t("table.checkinStatus", "Check-in Status")}</th>
+                <th className="py-4 px-6">{t("table.checkinTime", "Check-in Time")}</th>
                 <th className="py-4 px-6 w-36">Action</th>
               </tr>
             </thead>
