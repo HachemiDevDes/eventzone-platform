@@ -146,43 +146,43 @@ export default function UniversalTopBar({
 
         {/* Language Selector */}
         <div className="relative shrink-0">
-          <button
-            onClick={() => {
-              setLangMenuOpen(o => !o);
-              setProfileOpen(false);
-            }}
-            className="flex items-center gap-1 sm:gap-2 px-2 sm:px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer shadow-xs shrink-0"
-            title="Change Language"
-          >
-            <img src={curLang?.icon || "https://i.imgur.com/NXtMImD.png"} alt={lang} className="w-4 h-4 sm:w-5 sm:h-5 object-contain shrink-0" />
-            <span className="uppercase tracking-wide font-extrabold text-[10px] sm:text-[11px]">{lang}</span>
-            <ChevronDown size={10} className={`text-slate-400 transition-transform ${langMenuOpen ? "rotate-180" : ""}`} />
-          </button>
+            <button
+              onClick={() => {
+                setLangMenuOpen(o => !o);
+                setProfileOpen(false);
+              }}
+              className="h-9 flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer shadow-xs shrink-0"
+              title="Change Language"
+            >
+              <img src={curLang?.icon || "https://i.imgur.com/NXtMImD.png"} alt={lang} className="w-4 h-4 sm:w-5 sm:h-5 object-contain shrink-0" />
+              <span className="uppercase tracking-wide font-extrabold text-[10px] sm:text-[11px]">{lang}</span>
+              <ChevronDown size={11} className={`text-slate-400 transition-transform ${langMenuOpen ? "rotate-180" : ""}`} />
+            </button>
 
-          {langMenuOpen && (
-            <div className={`absolute top-full ${isRTL ? "left-0" : "right-0"} mt-1.5 w-36 bg-white border border-slate-200 rounded-xl shadow-xl p-1 z-50 animate-scale-up space-y-0.5`}>
-              {languages.map(item => (
-                <button
-                  key={item.code}
-                  onClick={() => {
-                    setLang(item.code);
-                    setLangMenuOpen(false);
-                  }}
-                  className={`w-full text-left rtl:text-right px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
-                    lang === item.code 
-                      ? "bg-blue-50 text-blue-600 font-bold" 
-                      : "text-slate-700 hover:bg-slate-50"
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <img src={item.icon} alt={item.code} className="w-5 h-5 object-contain shrink-0" />
-                    <span>{item.label}</span>
-                  </div>
-                  {lang === item.code && <Check size={12} className="text-blue-600 shrink-0" />}
-                </button>
-              ))}
-            </div>
-          )}
+            {langMenuOpen && (
+              <div className={`absolute top-full ${isRTL ? "left-0" : "right-0"} mt-1.5 w-36 bg-white border border-slate-200 rounded-2xl shadow-xl p-1 z-50 animate-scale-up space-y-0.5`}>
+                {languages.map(item => (
+                  <button
+                    key={item.code}
+                    onClick={() => {
+                      setLang(item.code);
+                      setLangMenuOpen(false);
+                    }}
+                    className={`w-full text-left rtl:text-right px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
+                      lang === item.code 
+                        ? "bg-blue-50 text-blue-600 font-bold" 
+                        : "text-slate-700 hover:bg-slate-50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <img src={item.icon} alt={item.code} className="w-5 h-5 object-contain shrink-0" />
+                      <span>{item.label}</span>
+                    </div>
+                    {lang === item.code && <Check size={12} className="text-blue-600 shrink-0" />}
+                  </button>
+                ))}
+              </div>
+            )}
         </div>
 
         {currentUser ? (
@@ -192,7 +192,7 @@ export default function UniversalTopBar({
                 setProfileOpen(o => !o);
                 setLangMenuOpen(false);
               }}
-              className="flex items-center gap-1 sm:gap-1.5 p-1 sm:p-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-full transition-all cursor-pointer shadow-xs shrink-0"
+              className="h-9 flex items-center gap-1.5 pl-1.5 pr-2.5 sm:pr-3 rtl:pl-2.5 rtl:pr-1.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-full transition-all cursor-pointer shadow-xs shrink-0"
               title={currentUser.fullName || currentUser.full_name || "Profile"}
             >
               <img 
@@ -202,7 +202,7 @@ export default function UniversalTopBar({
                   e.currentTarget.onerror = null;
                   e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.fullName || currentUser.full_name || "User")}&background=0b5cdb&color=fff`;
                 }}
-                className="w-6 h-6 sm:w-7 sm:h-7 rounded-full object-cover border border-blue-500/40 shrink-0"
+                className="w-6 h-6 sm:w-6.5 sm:h-6.5 rounded-full object-cover shrink-0"
               />
               <ChevronDown size={11} className={`text-slate-400 transition-transform ${profileOpen ? "rotate-180" : ""}`} />
             </button>
