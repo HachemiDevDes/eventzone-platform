@@ -22,6 +22,7 @@ import SearchableSelect from "./SearchableSelect";
 import { supabase } from "../lib/supabase";
 import { uploadMedia } from "../lib/storage";
 import QRCode from "qrcode";
+import { useLanguage } from "../lib/i18n";
 
 const getSidesStatus = (openSides) => {
   if (!openSides) {
@@ -125,6 +126,7 @@ function PropertyInput({ value, onChange, type = "number", min, max, step, class
 }
 
 function FloorItem({ floor, isActive, isOnly, onSelect, onRename, onDelete }) {
+  const { t, lang, isRTL } = useLanguage();
   const [isEditing, setIsEditing] = useState(false);
   const [tempName, setTempName] = useState(floor.name);
 
@@ -180,7 +182,7 @@ function FloorItem({ floor, isActive, isOnly, onSelect, onRename, onDelete }) {
           className="flex-1 truncate cursor-pointer py-0.5"
           title="Double-click to rename"
         >
-          {floor.name}
+          {floor.name === "Ground Floor" ? t("floor.groundFloor", "Ground Floor") : floor.name}
         </span>
       )}
 
@@ -427,7 +429,7 @@ function CustomFilterDropdown({ value, onChange, options, btnClassName = "px-3.5
                   onChange(opt.value);
                   setIsOpen(false);
                 }}
-                className={`w-full text-left px-3.5 py-2 hover:bg-slate-50 transition-colors text-xs font-semibold flex items-center gap-2.5 cursor-pointer ${
+                className={`w-full text-start rtl:text-right text-left px-3.5 py-2 hover:bg-slate-50 transition-colors text-xs font-semibold flex items-center gap-2.5 cursor-pointer ${
                   isSelected ? "bg-indigo-50/50 text-indigo-650 font-bold" : "text-slate-700"
                 }`}
               >
@@ -461,6 +463,7 @@ export default function FloorPlanModifier({
   initialFloors = [],
   onSaveFloors
 }) {
+  const { t, lang, isRTL } = useLanguage();
   const initialFloorBlueprint = (initialFloors && initialFloors.length > 0 && initialFloors[0]?.blueprint)
     ? initialFloors[0].blueprint
     : (initialBlueprintState || {});
@@ -3403,7 +3406,7 @@ export default function FloorPlanModifier({
             <button
               key={el.id}
               onClick={() => handleItemClick(el)}
-              className={`w-full text-left px-3.5 py-3 border rounded-2xl flex items-center justify-between transition-all duration-200 cursor-pointer ${
+              className={`w-full text-start rtl:text-right text-left px-3.5 py-3 border rounded-2xl flex items-center justify-between transition-all duration-200 cursor-pointer ${
                 isSelected
                   ? "bg-indigo-650 border-indigo-650 text-white shadow-md shadow-indigo-100"
                   : "bg-white/65 hover:bg-white border-slate-200/50 text-slate-800 hover:border-slate-300 shadow-sm"
@@ -3433,7 +3436,7 @@ export default function FloorPlanModifier({
           <div className="flex flex-col border border-slate-200/50 rounded-2xl overflow-hidden bg-white/40 shadow-sm hover:border-slate-300/80 hover:bg-white transition-all duration-200">
             <button
               onClick={() => setIsTablesSectionExpanded(prev => !prev)}
-              className="w-full text-left px-3.5 py-3.5 flex items-center justify-between cursor-pointer"
+              className="w-full text-start rtl:text-right text-left px-3.5 py-3.5 flex items-center justify-between cursor-pointer"
             >
               <div className="flex items-center gap-2.5">
                 <Users size={15} className="text-indigo-650" />
@@ -3466,7 +3469,7 @@ export default function FloorPlanModifier({
                     <div key={el.id} className="flex flex-col">
                       <button
                         onClick={() => handleItemClick(el)}
-                        className={`w-full text-left px-3 py-2.5 border rounded-xl flex items-center justify-between transition-all duration-150 cursor-pointer ${
+                        className={`w-full text-start rtl:text-right text-left px-3 py-2.5 border rounded-xl flex items-center justify-between transition-all duration-150 cursor-pointer ${
                           isSelected
                             ? "bg-indigo-600 border-indigo-600 text-white shadow-md rounded-b-none"
                             : "bg-white hover:bg-slate-50 border-slate-200 text-slate-700"
@@ -3714,7 +3717,7 @@ export default function FloorPlanModifier({
                         {saveStatus === "error" && (
                           <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
                         )}
-                        {saveStatus === "saving" ? "Saving..." : saveStatus === "saved" ? "Saved" : "Save Error"}
+                        {saveStatus === "saving" ? t("floor.saving", "Saving...") : saveStatus === "saved" ? t("floor.savedSuccess", "Saved") : "Save Error"}
                       </span>
                     )}
                   </div>
@@ -3747,7 +3750,7 @@ export default function FloorPlanModifier({
                 <div className="relative w-44">
                   <input
                     type="text"
-                    placeholder="Search map..."
+                    placeholder={t("common.search", "Search map...")}
                     value={previewSearchQuery}
                     onChange={(e) => setPreviewSearchQuery(e.target.value)}
                     className="w-full pl-7.5 pr-7 py-2 bg-slate-50 hover:bg-slate-100 focus:bg-white border border-slate-200 focus:border-indigo-400 rounded-xl font-semibold text-xs text-slate-700 outline-none transition-all"
@@ -3881,7 +3884,7 @@ export default function FloorPlanModifier({
                   title="Preview Map Experience"
                 >
                   {isPreviewMode ? <EyeOff size={15} /> : <Eye size={15} />}
-                  <span>Preview Map</span>
+                  <span>{t("floor.preview", "Preview Map")}</span>
                 </button>
               )}
             </div>
@@ -3892,7 +3895,7 @@ export default function FloorPlanModifier({
       {/* Horizontal Floor Switcher Bar (Preview Mode Only) */}
       {isPreviewMode && !initialPreviewMode && previewDeviceMode !== "mobile" && (
         <div className="bg-white border-b border-slate-200 px-8 py-2.5 flex items-center gap-3 overflow-x-auto shrink-0 select-none scrollbar-none">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1 shrink-0">Floors</span>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1 shrink-0">{t("floor.floors", "Floors")}</span>
           <div className="flex items-center gap-1.5">
             {floors.map(floor => (
               <button
@@ -3931,8 +3934,8 @@ export default function FloorPlanModifier({
             >
               <div className="min-w-[308px] flex flex-col gap-6 pt-6">
                 <div className="flex flex-col gap-1">
-                  <h3 className="text-sm font-bold text-slate-800">1. Drag Elements to Venue</h3>
-                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Drag assets directly onto the blueprint canvas</p>
+                  <h3 className="text-sm font-bold text-slate-800">{t("floor.toolbox", "1. Drag Elements to Venue")}</h3>
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{t("floor.toolboxDesc", "Drag assets directly onto the blueprint canvas")}</p>
                 </div>
 
                 {/* Sticky Search Bar */}
@@ -3940,7 +3943,7 @@ export default function FloorPlanModifier({
                   <div className="relative">
                     <input
                       type="text"
-                      placeholder="Search elements..."
+                      placeholder={t("floor.searchElements", "Search elements...")}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="w-full pl-9 pr-4 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 rounded-xl font-medium text-xs text-slate-800 transition-all duration-150 outline-none"
@@ -3965,9 +3968,9 @@ export default function FloorPlanModifier({
                         <button
                           type="button"
                           onClick={() => toggleCategory(cat.id)}
-                          className="w-full px-4 py-3 bg-slate-50/50 flex items-center justify-between border-b border-slate-150 text-left cursor-pointer hover:bg-slate-100/50 transition-colors outline-none"
+                          className="w-full px-4 py-3 bg-slate-50/50 flex items-center justify-between border-b border-slate-150 text-start rtl:text-right text-left cursor-pointer hover:bg-slate-100/50 transition-colors outline-none"
                         >
-                          <span className="text-[10px] font-bold text-slate-650 uppercase tracking-wider">{cat.title}</span>
+                          <span className="text-[10px] font-bold text-slate-650 uppercase tracking-wider">{t("floor.cat_" + cat.id, cat.title)}</span>
                           <ChevronDown 
                             size={14} 
                             className={`text-slate-400 transition-transform duration-200 ${
@@ -3991,7 +3994,7 @@ export default function FloorPlanModifier({
                                         title={item.desc}
                                       >
                                         <item.icon className={`w-5 h-5 ${item.iconColor || "text-slate-650"} mb-1`} />
-                                        <span className="text-[11px] font-bold text-slate-700 leading-tight truncate w-full">{item.label}</span>
+                                        <span className="text-[11px] font-bold text-slate-700 leading-tight truncate w-full">{t("floor.item_" + item.type.replace(/-/g, "_"), item.label)}</span>
                                         <input 
                                           ref={pictureInputRef} 
                                           type="file" 
@@ -4011,7 +4014,7 @@ export default function FloorPlanModifier({
                                       className="bg-slate-50 border border-slate-200 hover:border-indigo-250 rounded-xl p-3 flex flex-col items-center text-center cursor-grab transition-all duration-200 active:cursor-grabbing hover:shadow-sm hover:bg-slate-50/50 relative group"
                                     >
                                       <item.icon className={`w-5 h-5 ${item.iconColor || "text-slate-650"} mb-1`} />
-                                      <span className="text-[11px] font-bold text-slate-700 leading-tight truncate w-full">{item.label}</span>
+                                      <span className="text-[11px] font-bold text-slate-700 leading-tight truncate w-full">{t("floor.item_" + item.type.replace(/-/g, "_"), item.label)}</span>
                                       {/* Custom delay hover tooltip showing dimension/metadata */}
                                       <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 pointer-events-none transition-all duration-200 delay-300 opacity-0 invisible group-hover:opacity-100 group-hover:visible z-40 bg-slate-900/95 text-white text-[10px] font-semibold px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap">
                                         {item.desc} ({item.dimensions})
@@ -4076,7 +4079,7 @@ export default function FloorPlanModifier({
                   <div className="bg-white/95 backdrop-blur-md border border-slate-200/80 shadow-lg rounded-2xl p-2.5 flex flex-col gap-2 w-48">
                     {/* Header */}
                     <div className="flex items-center justify-between border-b border-slate-100 pb-1.5 px-1 shrink-0">
-                      <span className="text-[9px] font-extrabold text-slate-450 uppercase tracking-wider">Floors</span>
+                      <span className="text-[9px] font-extrabold text-slate-450 uppercase tracking-wider">{t("floor.floors", "Floors")}</span>
                       <button
                         onClick={handleAddFloor}
                         className="p-1 hover:bg-slate-100 rounded-md text-indigo-650 transition-colors cursor-pointer"
@@ -4791,8 +4794,8 @@ export default function FloorPlanModifier({
             >
               <div className="min-w-[292px] flex flex-col gap-6">
                 <div className="flex flex-col gap-1">
-                  <h3 className="text-sm font-bold text-slate-800">2. Properties Settings</h3>
-                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Configure selected element or background</p>
+                  <h3 className="text-sm font-bold text-slate-800">{t("floor.propertiesSettings", "2. Properties Settings")}</h3>
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{t("floor.propertiesDesc", "Configure selected element or background")}</p>
                 </div>
 
                 {selectedElement ? (
@@ -4905,7 +4908,7 @@ export default function FloorPlanModifier({
                           <button
                             type="button"
                             onClick={() => setIsAssignDropdownOpen(!isAssignDropdownOpen)}
-                            className="flex items-center justify-between w-full px-3 py-2 border border-slate-200 focus:outline-none rounded-xl text-xs font-semibold bg-white shadow-inner cursor-pointer hover:border-slate-350 transition-colors text-left"
+                            className="flex items-center justify-between w-full px-3 py-2 border border-slate-200 focus:outline-none rounded-xl text-xs font-semibold bg-white shadow-inner cursor-pointer hover:border-slate-350 transition-colors text-start rtl:text-right text-left"
                           >
                             <span className="text-slate-500 truncate">Select attendee...</span>
                             <ChevronDown size={14} className="text-slate-400 shrink-0 ml-1" />
@@ -4994,7 +4997,7 @@ export default function FloorPlanModifier({
                                             setIsAssignDropdownOpen(false);
                                             setAssignSearchQuery("");
                                           }}
-                                          className="w-full text-left px-3 py-1.5 rounded-lg hover:bg-slate-50 text-xs font-semibold text-slate-700 hover:text-slate-900 transition-colors flex flex-col gap-0.5 cursor-pointer"
+                                          className="w-full text-start rtl:text-right text-left px-3 py-1.5 rounded-lg hover:bg-slate-50 text-xs font-semibold text-slate-700 hover:text-slate-900 transition-colors flex flex-col gap-0.5 cursor-pointer"
                                         >
                                           <span className="font-bold flex items-center gap-1">
                                             {isSpeaker && <span className="text-amber-500 font-extrabold">★</span>}
@@ -7561,7 +7564,7 @@ export default function FloorPlanModifier({
               {/* Dimensions */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Width (px)</label>
+                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{t("floor.widthPx", "Width (px)")}</label>
                   <PropertyInput 
                     type="number" 
                     min={50}
@@ -7582,7 +7585,7 @@ export default function FloorPlanModifier({
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Height (px)</label>
+                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{t("floor.heightPx", "Height (px)")}</label>
                   <PropertyInput 
                     type="number" 
                     min={50}
@@ -7607,7 +7610,7 @@ export default function FloorPlanModifier({
               {/* Dimensions in Meters */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Width (meters)</label>
+                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{t("floor.widthMeters", "Width (meters)")}</label>
                   <PropertyInput 
                     type="number" 
                     step="0.5"
@@ -7630,7 +7633,7 @@ export default function FloorPlanModifier({
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Height (meters)</label>
+                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{t("floor.heightMeters", "Height (meters)")}</label>
                   <PropertyInput 
                     type="number" 
                     step="0.5"
@@ -7701,7 +7704,7 @@ export default function FloorPlanModifier({
             <div className="flex flex-col gap-5">
               {/* 1. Utilities & Actions */}
               <div className="flex flex-col gap-2 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Utilities & Actions</span>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t("floor.utilitiesActions", "Utilities & Actions")}</span>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => setIsExportModalOpen(true)}
@@ -7715,14 +7718,14 @@ export default function FloorPlanModifier({
                     className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-white border border-slate-200 hover:border-indigo-150 hover:text-indigo-650 rounded-xl font-bold text-[10px] transition-all duration-200 cursor-pointer shadow-sm"
                   >
                     <Mail size={13} />
-                    <span>Send PDF</span>
+                    <span>{t("floor.sendPdf", "Send PDF")}</span>
                   </button>
                 </div>
               </div>
 
               {/* 2. Global Typography */}
               <div className="flex flex-col gap-1.5 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Global Typography</span>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t("floor.globalTypography", "Global Typography")}</span>
                 <div className="relative">
                   <SearchableSelect
                     value={floorPlanFont}
@@ -7740,7 +7743,7 @@ export default function FloorPlanModifier({
                       label: f.label
                     }))}
                     isClearable={false}
-                    searchPlaceholder="Search Google Fonts..."
+                    searchPlaceholder={t("floor.searchFonts", "Search Google Fonts...")}
                     className="w-full"
                     buttonClassName="!py-2.5 !px-3.5 !rounded-xl !text-xs !font-semibold border-slate-200"
                   />
@@ -7749,7 +7752,7 @@ export default function FloorPlanModifier({
 
               {/* 3. Grid & Snapping Options */}
               <div className="flex flex-col gap-4 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Grid & Snapping</span>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t("floor.gridSnapping", "Grid & Snapping")}</span>
                 
                 <div className="flex flex-col gap-2">
                   <button
@@ -7761,7 +7764,7 @@ export default function FloorPlanModifier({
                         : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                     }`}
                   >
-                    <span className="flex items-center gap-2"><Grid size={14} />Grid Snap</span>
+                    <span className="flex items-center gap-2"><Grid size={14} />{t("floor.gridSnap", "Grid Snap")}</span>
                     <span className={`w-2 h-2 rounded-full ${snapToGrid ? "bg-indigo-500" : "bg-slate-300"}`} />
                   </button>
                   
@@ -7774,7 +7777,7 @@ export default function FloorPlanModifier({
                         : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                     }`}
                   >
-                    <span className="flex items-center gap-2"><Layers size={14} />Show Grid Lines</span>
+                    <span className="flex items-center gap-2"><Layers size={14} />{t("floor.showGridLines", "Show Grid Lines")}</span>
                     <span className={`w-2 h-2 rounded-full ${showGrid ? "bg-indigo-500" : "bg-slate-300"}`} />
                   </button>
 
@@ -7787,13 +7790,13 @@ export default function FloorPlanModifier({
                         : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                     }`}
                   >
-                    <span className="flex items-center gap-2"><Maximize size={14} />Show Dimensions</span>
+                    <span className="flex items-center gap-2"><Maximize size={14} />{t("floor.showDimensions", "Show Dimensions")}</span>
                     <span className={`w-2 h-2 rounded-full ${showDimensions ? "bg-indigo-500" : "bg-slate-300"}`} />
                   </button>
                 </div>
 
                 <div className="flex flex-col gap-1.5 border-t border-slate-200/60 pt-3">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Snap Grid Size (meters)</label>
+                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{t("floor.snapGridSizeMeters", "Snap Grid Size (meters)")}</label>
                   <PropertyInput 
                     type="number" 
                     min={1}
@@ -7807,7 +7810,7 @@ export default function FloorPlanModifier({
 
               {/* 4. Canvas Dimensions Settings */}
               <div className="flex flex-col gap-4 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Canvas size</span>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t("floor.canvasSize", "Canvas Size")}</span>
                 
                 {/* Dimensions in Meters */}
                 <div className="grid grid-cols-2 gap-3">
@@ -7879,7 +7882,7 @@ export default function FloorPlanModifier({
               {/* 5. Venue Blueprint Background */}
               {blueprintUrl ? (
                 <div className="flex flex-col gap-3.5 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Blueprint Background</span>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t("floor.blueprintBackground", "Blueprint Background")}</span>
                   <div className="flex items-center justify-between text-xs font-semibold text-slate-700 bg-white border border-slate-150 p-2.5 rounded-xl">
                     <span className="truncate max-w-[150px]" title={blueprintName}>{blueprintName}</span>
                     <button
