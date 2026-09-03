@@ -21,7 +21,7 @@ export default function UniversalTopBar({
   onSignOut,
   rightExtra = null,
 }) {
-  const { lang, setLang, t, languages } = useLanguage();
+  const { lang, setLang, t, languages, isRTL } = useLanguage();
   const [profileOpen, setProfileOpen] = useState(false);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
 
@@ -151,16 +151,20 @@ export default function UniversalTopBar({
               setLangMenuOpen(o => !o);
               setProfileOpen(false);
             }}
-            className="flex items-center gap-1 sm:gap-2 px-2 sm:px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer shadow-xs shrink-0"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer shadow-xs shrink-0"
             title="Change Language"
           >
-            <img src={curLang?.icon || "https://i.imgur.com/NXtMImD.png"} alt={lang} className="w-4 h-4 sm:w-5 sm:h-5 object-contain shrink-0" />
+            <img 
+              src={curLang?.icon || "https://i.imgur.com/NXtMImD.png"} 
+              alt={lang} 
+              className="w-4.5 h-3 object-cover rounded-xs border border-slate-300/80 shadow-2xs shrink-0" 
+            />
             <span className="uppercase tracking-wide font-extrabold text-[10px] sm:text-[11px]">{lang}</span>
             <ChevronDown size={10} className={`text-slate-400 transition-transform ${langMenuOpen ? "rotate-180" : ""}`} />
           </button>
 
           {langMenuOpen && (
-            <div className="absolute top-full right-0 mt-1.5 w-36 bg-white border border-slate-200 rounded-xl shadow-xl p-1 z-50 animate-scale-up space-y-0.5">
+            <div className={`absolute top-full ${isRTL ? "left-0" : "right-0"} mt-1.5 w-36 bg-white border border-slate-200 rounded-xl shadow-xl p-1 z-50 animate-scale-up space-y-0.5`}>
               {languages.map(item => (
                 <button
                   key={item.code}
@@ -168,14 +172,14 @@ export default function UniversalTopBar({
                     setLang(item.code);
                     setLangMenuOpen(false);
                   }}
-                  className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
+                  className={`w-full text-left rtl:text-right px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
                     lang === item.code 
                       ? "bg-blue-50 text-blue-600 font-bold" 
                       : "text-slate-700 hover:bg-slate-50"
                   }`}
                 >
                   <div className="flex items-center gap-2">
-                    <img src={item.icon} alt={item.code} className="w-5 h-5 object-contain shrink-0" />
+                    <img src={item.icon} alt={item.code} className="w-4.5 h-3 object-cover rounded-xs border border-slate-200/80 shadow-2xs shrink-0" />
                     <span>{item.label}</span>
                   </div>
                   {lang === item.code && <Check size={12} className="text-blue-600 shrink-0" />}
@@ -206,7 +210,7 @@ export default function UniversalTopBar({
               <div className="hidden sm:flex flex-col text-left">
                 <span className="text-xs font-bold text-slate-800 leading-tight truncate max-w-[120px]">{currentUser.fullName || currentUser.full_name || currentUser.email?.split("@")[0] || "User"}</span>
                 <span className="text-[9px] font-semibold text-blue-600 uppercase tracking-wider">
-                  {currentUser.role === "organizer" ? "Organizer" : "Visitor"}
+                  {currentUser.role === "organizer" ? t("nav.organizer", "Organizer") : t("nav.visitor", "Visitor")}
                 </span>
               </div>
               <ChevronDown size={11} className={`text-slate-400 transition-transform ${profileOpen ? "rotate-180" : ""}`} />
