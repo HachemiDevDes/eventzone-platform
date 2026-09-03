@@ -565,42 +565,42 @@ export default function MainHomePage({
               return (
                 <div
                   key={ev.id}
-                  className="bg-white border border-slate-200/90 hover:border-blue-300 rounded-[32px] overflow-hidden shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between group"
+                  className="bg-white border border-slate-200 hover:border-blue-300 rounded-[28px] overflow-hidden shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between group"
                 >
                   <div>
                     {/* Cover Banner */}
-                    <div className="h-46 w-full relative overflow-hidden bg-slate-100">
+                    <div className="h-44 w-full relative overflow-hidden bg-slate-100 rounded-t-[28px]">
                       <img 
                         src={ev.banner || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80"} 
                         alt={ev.title} 
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 rounded-t-[28px]" 
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent" />
                       
-                      <div className="absolute top-3.5 left-3.5 rtl:left-auto rtl:right-3.5">
-                        <span className="px-3 py-1 rounded-full text-[10px] font-extrabold bg-white/90 backdrop-blur-md text-blue-700 border border-white/40 uppercase tracking-wider shadow-xs">
+                      <div className="absolute top-3 left-3 rtl:left-auto rtl:right-3">
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-white/90 backdrop-blur-md text-blue-700 border border-white/40 uppercase tracking-wider shadow-xs">
                           {getFormatLabel(ev.type || "Hybrid")}
                         </span>
                       </div>
 
                       {isRegistered && (
-                        <div className="absolute top-3.5 right-3.5 rtl:right-auto rtl:left-3.5">
-                          <span className="px-3 py-1 rounded-full text-[10px] font-extrabold bg-emerald-500 text-white shadow-xs flex items-center gap-1">
+                        <div className="absolute top-3 right-3 rtl:right-auto rtl:left-3">
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-500 text-white shadow-xs flex items-center gap-1">
                             <CheckCircle2 size={11} />
                             <span>{t("home.registeredBadge", "Registered")}</span>
                           </span>
                         </div>
                       )}
 
-                      <div className="absolute bottom-3 left-4 right-4">
-                        <span className="text-[10px] font-bold text-blue-100 uppercase tracking-wider block drop-shadow-sm">
+                      <div className="absolute bottom-3 left-3 right-3">
+                        <span className="text-[10px] font-bold text-blue-200 uppercase tracking-wider block drop-shadow-sm">
                           {getCategoryLabel(ev.category || "Technology & Software")}
                         </span>
                       </div>
                     </div>
 
                     {/* Card Content */}
-                    <div className="p-6 space-y-3.5 text-left rtl:text-right">
+                    <div className="p-6 space-y-3 text-left rtl:text-right">
                       <h3 
                         onClick={() => onViewLivePage(ev.id)}
                         className="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1 leading-snug cursor-pointer"
@@ -611,22 +611,15 @@ export default function MainHomePage({
                         {ev.tagline || ev.description || "Join leading delegates for keynotes, workshops, and exhibitions."}
                       </p>
 
-                      {/* Enhanced Date & Location Badges */}
-                      <div className="pt-3 border-t border-slate-100/90 space-y-2">
-                        {/* Date Pill */}
-                        <div className="flex items-center gap-2.5 text-xs text-slate-700 font-semibold bg-slate-50/80 hover:bg-slate-100/70 px-3 py-2 rounded-2xl border border-slate-200/60 transition-colors">
-                          <div className="w-6 h-6 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 shadow-2xs">
-                            <Calendar size={13} className="stroke-[2.2]" />
-                          </div>
-                          <span className="truncate">{formatEventDateRange(ev.startDate, ev.endDate)}</span>
+                      {/* Clean, Enhanced Date & Location */}
+                      <div className="space-y-2 pt-3 border-t border-slate-100 text-xs font-medium text-slate-600">
+                        <div className="flex items-center gap-2">
+                          <Calendar size={14} className="text-blue-600 shrink-0" />
+                          <span className="font-semibold text-slate-700">{formatEventDateRange(ev.startDate, ev.endDate)}</span>
                         </div>
-
-                        {/* Location Pill */}
-                        <div className="flex items-center gap-2.5 text-xs text-slate-700 font-semibold bg-slate-50/80 hover:bg-slate-100/70 px-3 py-2 rounded-2xl border border-slate-200/60 transition-colors">
-                          <div className="w-6 h-6 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 shadow-2xs">
-                            <MapPin size={13} className="stroke-[2.2]" />
-                          </div>
-                          <span className="truncate">{ev.location || t("home.locationTba", "Location to be announced")}</span>
+                        <div className="flex items-center gap-2">
+                          <MapPin size={14} className="text-blue-600 shrink-0" />
+                          <span className="truncate text-slate-600">{ev.location || t("home.locationTba", "Location to be announced")}</span>
                         </div>
                       </div>
                     </div>
@@ -636,7 +629,7 @@ export default function MainHomePage({
                   <div className="p-6 pt-0">
                     <button
                       onClick={() => onViewLivePage(ev.id)}
-                      className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full text-xs font-bold flex items-center justify-center shadow-md shadow-blue-600/20 hover:shadow-lg hover:shadow-blue-600/30 transition-all cursor-pointer"
+                      className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full text-xs font-bold flex items-center justify-center shadow-md shadow-blue-600/20 hover:shadow-lg hover:shadow-blue-600/30 transition-all cursor-pointer"
                     >
                       {t("home.viewEventBtn", "View Event")}
                     </button>
