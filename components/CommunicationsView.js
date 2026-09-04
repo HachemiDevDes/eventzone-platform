@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Mail, Send, Sparkles, Users, CheckCircle2, XCircle, Clock,
   Search, Trash2, Edit3, Eye, RotateCcw, FileText, Ticket, QrCode as QrIcon,
-  Building2, Calendar, MapPin, ArrowRight, ExternalLink, Download,
+  Building2, Calendar, MapPin, ArrowRight, ArrowLeft, ExternalLink, Download,
   Check, X, ChevronDown, ChevronRight, Smartphone, Monitor, Sun, Moon,
   FileSpreadsheet, Layers, Activity, BarChart3, RefreshCw, Sliders, Tag,
   Inbox, Filter, Copy, Plus, Bell, Info, ShieldCheck, Share2, Mic,
@@ -494,6 +494,98 @@ Best regards,
     }
   }
 ];
+
+
+// Localization Helper for Preset Templates
+function getLocalizedTemplate(tmpl, t) {
+  if (!tmpl) return tmpl;
+  const keyMap = {
+    badge_pass: {
+      title: t("comm.tmplBadgePassTitle", "Official Digital Badge & Fast-Track QR Pass"),
+      categoryLabel: t("comm.catBadgePass", "Attendee Pass"),
+      description: t("comm.tmplBadgePassDesc", "Sends confirmed delegates their official digital pass with fast-track check-in QR code.")
+    },
+    registration_welcome: {
+      title: t("comm.tmplRegWelcomeTitle", "Registration Welcome & Ingress Overview"),
+      categoryLabel: t("comm.catOnboarding", "Onboarding"),
+      description: t("comm.tmplRegWelcomeDesc", "Warm welcome message introducing key stages, networking sessions, and arrival guidance.")
+    },
+    event_countdown: {
+      title: t("comm.tmplCountdownTitle", "Event Countdown & Arrival Reminder"),
+      categoryLabel: t("comm.catLogisticsReminder", "Logistics & Reminder"),
+      description: t("comm.tmplCountdownDesc", "High-urgency countdown reminder with venue address and check-in preparation checklist.")
+    },
+    schedule_change: {
+      title: t("comm.tmplScheduleChangeTitle", "Urgent Schedule / Room / Speaker Update"),
+      categoryLabel: t("comm.catUrgentAlert", "Urgent Alert"),
+      description: t("comm.tmplScheduleChangeDesc", "Alert attendees of urgent program changes, new keynote speakers, or track room assignments.")
+    },
+    feedback_survey: {
+      title: t("comm.tmplFeedbackTitle", "Post-Event Thank You & Feedback Survey"),
+      categoryLabel: t("comm.catSurveysFeedback", "Surveys & Feedback"),
+      description: t("comm.tmplFeedbackDesc", "Thank participants for their presence and link directly to a feedback form.")
+    },
+    exhibitor_briefing: {
+      title: t("comm.tmplExhibitorTitle", "Exhibitor & Sponsor Setup Briefing"),
+      categoryLabel: t("comm.catExhibitorsSponsors", "Exhibitors & Sponsors"),
+      description: t("comm.tmplExhibitorDesc", "Briefing pack for booth holders and sponsor representatives with setup schedules.")
+    },
+    speaker_logistics: {
+      title: t("comm.tmplSpeakerTitle", "Speaker & Keynote Presenter Briefing"),
+      categoryLabel: t("comm.catSpeakersKeynotes", "Speakers & Keynotes"),
+      description: t("comm.tmplSpeakerDesc", "Technical instructions for speakers regarding slide formats, microphones, and backstage timings.")
+    },
+    b2b_networking: {
+      title: t("comm.tmplNetworkingTitle", "VIP Networking & B2B Matchmaking Invitation"),
+      categoryLabel: t("comm.catNetworking", "Networking"),
+      description: t("comm.tmplNetworkingDesc", "Invite high-tier attendees to explore B2B matchmaking lounges and book meetings.")
+    },
+    resource_materials: {
+      title: t("comm.tmplResourcesTitle", "Event Presentations & Slide Decks Download"),
+      categoryLabel: t("comm.catResourcesMedia", "Resources & Media"),
+      description: t("comm.tmplResourcesDesc", "Distribute downloadable presentation slides, session replays, and photo galleries.")
+    },
+    custom_blank: {
+      title: t("comm.tmplCustomBlankTitle", "Blank Custom Announcement"),
+      categoryLabel: t("comm.catCustomSlate", "Custom Slate"),
+      description: t("comm.tmplCustomBlankDesc", "Start with a clean canvas to write your own personalized broadcast announcement.")
+    }
+  };
+
+  const loc = keyMap[tmpl.id];
+  if (!loc) return tmpl;
+  return {
+    ...tmpl,
+    title: loc.title || tmpl.title,
+    categoryLabel: loc.categoryLabel || tmpl.categoryLabel,
+    description: loc.description || tmpl.description
+  };
+}
+
+// Localization Helper for Automated Triggers
+function getLocalizedTriggerDef(triggerDef, t) {
+  if (!triggerDef) return triggerDef;
+  const triggerMap = {
+    trigger_ticket_pass: {
+      title: t("comm.triggerTicketPassTitle", "1. Instant Ticket Registration Pass & PDF Badge"),
+    },
+    trigger_rsvp_confirmation: {
+      title: t("comm.triggerRsvpTitle", "2. RSVP Confirmation & Door Access QR"),
+    },
+    trigger_exhibitor_briefing: {
+      title: t("comm.triggerExhibitorTitle", "3. Exhibitor Space Allocation Packet"),
+    },
+    trigger_team_invite: {
+      title: t("comm.triggerTeamInviteTitle", "4. Organizer Team & Staff Invite"),
+    }
+  };
+  const loc = triggerMap[triggerDef.id];
+  if (!loc) return triggerDef;
+  return {
+    ...triggerDef,
+    title: loc.title || triggerDef.title
+  };
+}
 
 export default function CommunicationsView({ state = {}, onUpdateState }) {
   const {
@@ -1164,7 +1256,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
     showToast("success", "Past broadcast loaded into Compose builder!");
   };
 
-  // 9. Save as Custom Template
+  // 9. {t("comm.modalSaveTemplateTitle", "Save as Custom Template")}
   const handleSaveAsTemplate = async () => {
     if (!newTemplateName.trim()) {
       showToast("error", "Please specify a name for this template.");
@@ -1535,7 +1627,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
   }, [history]);
 
   return (
-    <div className="flex flex-col gap-6 w-full pb-16">
+    <div className="flex flex-col gap-6 w-full pb-16" dir={isRTL ? "rtl" : "ltr"}>
       {/* Toast Notification */}
       <AnimatePresence>
         {notification && (
@@ -1558,9 +1650,9 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
       {/* Header & Global Stats Banner */}
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 select-none">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Announcements & Communications</h1>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">{t("comm.title", "Announcements & Communications")}</h1>
           <p className="text-xs text-slate-500 font-semibold mt-0.5">
-            Broadcast branded event communications, embed interactive action buttons, and track real-time email opens.
+            {t("comm.subtitle", "Broadcast branded event communications, embed interactive action buttons, and track real-time email opens.")}
           </p>
         </div>
 
@@ -1569,22 +1661,22 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
           <div className="bg-white border border-slate-200 rounded-2xl px-3.5 py-2 flex items-center gap-2.5 shadow-xs">
             <Send size={15} className="text-blue-600" />
             <div className="flex flex-col">
-              <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Broadcasts</span>
-              <span className="text-xs font-black text-slate-850">{aggregateMetrics.totalBroadcasts}</span>
+              <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{t("comm.tabCampaigns", "Broadcasts")}</span>
+              <span className="text-xs font-black text-slate-850"><bdi dir="ltr">{aggregateMetrics.totalBroadcasts}</bdi></span>
             </div>
           </div>
           <div className="bg-white border border-slate-200 rounded-2xl px-3.5 py-2 flex items-center gap-2.5 shadow-xs">
             <Users size={15} className="text-indigo-600" />
             <div className="flex flex-col">
-              <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Dispatched</span>
-              <span className="text-xs font-black text-slate-850">{aggregateMetrics.totalEmailsSent}</span>
+              <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{t("comm.totalSent", "Dispatched")}</span>
+              <span className="text-xs font-black text-slate-850"><bdi dir="ltr">{aggregateMetrics.totalEmailsSent}</bdi></span>
             </div>
           </div>
           <div className="bg-white border border-slate-200 rounded-2xl px-3.5 py-2 flex items-center gap-2.5 shadow-xs">
             <Activity size={15} className="text-emerald-600" />
             <div className="flex flex-col">
-              <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Avg Open Rate</span>
-              <span className="text-xs font-black text-emerald-600">{aggregateMetrics.avgOpenRate}%</span>
+              <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{t("comm.openRate", "Avg Open Rate")}</span>
+              <span className="text-xs font-black text-emerald-600"><bdi dir="ltr">{aggregateMetrics.avgOpenRate}%</bdi></span>
             </div>
           </div>
         </div>
@@ -1602,7 +1694,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
             }`}
           >
             <Edit3 size={15} />
-            <span>Compose & Broadcast</span>
+            <span>{t("comm.compose", "Compose & Broadcast")}</span>
             {activeTab === "compose" && (
               <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-blue-600" />
             )}
@@ -1620,7 +1712,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
             }`}
           >
             <BarChart3 size={15} />
-            <span>Broadcast History & Opens</span>
+            <span>{t("comm.tabCampaigns", "Broadcast History & Opens")}</span>
             <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
               activeTab === "history" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"
             }`}>
@@ -1640,7 +1732,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
             }`}
           >
             <Layers size={15} />
-            <span>Template Library</span>
+            <span>{t("comm.tabTemplates", "Template Library")}</span>
             <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
               activeTab === "templates" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"
             }`}>
@@ -1660,7 +1752,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
             }`}
           >
             <Sparkles size={15} />
-            <span>Automated Triggers</span>
+            <span>{t("comm.tabTriggers", "Automated Triggers")}</span>
             {activeTab === "triggers" && (
               <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-blue-600" />
             )}
@@ -1674,7 +1766,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
             className="px-3 py-1.5 mr-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
           >
             <RefreshCw size={13} className={historyLoading ? "animate-spin" : ""} />
-            <span>Refresh Analytics</span>
+            <span>{t("comm.refreshAnalytics", "Refresh Analytics")}</span>
           </button>
         )}
       </div>
@@ -1694,14 +1786,14 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                     <Users size={16} />
                   </div>
                   <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">
-                    Target Audience & Segmentation
+                    {t("comm.targetAudienceTitle", "Target Audience & Segmentation")}
                   </h3>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] font-black text-blue-700 bg-blue-50 border border-blue-200/60 px-3 py-1 rounded-full flex items-center gap-1.5 shadow-xs">
                     <UserCheck size={13} />
-                    {targetRecipients.length} Recipient{targetRecipients.length === 1 ? "" : "s"} Selected
+                    <bdi dir="ltr">{targetRecipients.length}</bdi> {t("comm.recipientsSelected", "Recipients Selected")}
                   </span>
                   {targetRecipients.length > 0 && (
                     <button
@@ -1709,7 +1801,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                       onClick={() => setIsRecipientModalOpen(true)}
                       className="text-[11px] font-bold text-slate-600 hover:text-blue-600 hover:bg-slate-100 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
                     >
-                      View List
+                      {t("comm.viewList", "View List")}
                     </button>
                   )}
                 </div>
@@ -1718,21 +1810,21 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5 md:col-span-2">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    Recipient Group
+                    {t("comm.recipientGroupLabel", "Recipient Group")}
                   </label>
                   <SearchableSelect
                     value={recipientGroup}
                     onChange={(val) => setRecipientGroup(val)}
                     options={[
-                      { value: "all", label: `Everyone: All Participants & Partners (${attendees.length + exhibitors.length + sponsors.length + team.length})` },
-                      { value: "attendees", label: `Attendees & Registered Delegates (${attendees.length})` },
-                      { value: "sponsors", label: `Sponsors & Partner Organizations (${sponsors.length})` },
-                      { value: "exhibitors", label: `Exhibitors & Booth Staff (${exhibitors.length})` },
-                      { value: "speakers", label: "Keynote Speakers & Presenters" },
-                      { value: "team", label: `Organizer Staff & Volunteers (${team.length})` },
-                      { value: "custom", label: `Custom Hand-Picked Selection (${customSelectedEmails.length} picked)` }
+                      { value: "all", label: `${t("comm.groupEveryone", "Everyone: All Participants & Partners ({count})").replace("{count}", attendees.length + exhibitors.length + sponsors.length + team.length)}` },
+                      { value: "attendees", label: `${t("comm.groupAttendees", "Attendees & Registered Delegates ({count})").replace("{count}", attendees.length)}` },
+                      { value: "sponsors", label: `${t("comm.groupSponsors", "Sponsors & Partner Organizations ({count})").replace("{count}", sponsors.length)}` },
+                      { value: "exhibitors", label: `${t("comm.groupExhibitors", "Exhibitors & Booth Staff ({count})").replace("{count}", exhibitors.length)}` },
+                      { value: "speakers", label: t("comm.groupSpeakers", "Keynote Speakers & Presenters") },
+                      { value: "team", label: `${t("comm.groupTeam", "Organizer Staff & Volunteers ({count})").replace("{count}", team.length)}` },
+                      { value: "custom", label: `${t("comm.groupCustom", "Custom Hand-Picked Selection ({count} picked)").replace("{count}", customSelectedEmails.length)}` }
                     ]}
-                    placeholder="Select audience group..."
+                    placeholder={t("comm.selectAudiencePlaceholder", "Select audience group...")}
                   />
                 </div>
 
@@ -1741,32 +1833,32 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                   <>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                        Filter by Ticket Tier
+                        {t("comm.filterByTicketTier", "Filter by Ticket Tier")}
                       </label>
                       <SearchableSelect
                         value={ticketTierFilter}
                         onChange={(val) => setTicketTierFilter(val)}
                         options={[
-                          { value: "all", label: "All Admission Tiers" },
+                          { value: "all", label: t("comm.allAdmissionTiers", "All Admission Tiers") },
                           ...ticketTiersList.map(tier => ({ value: tier, label: tier }))
                         ]}
-                        placeholder="All Tiers"
+                        placeholder={t("comm.allAdmissionTiers", "All Admission Tiers")}
                       />
                     </div>
 
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                        Check-in Status
+                        {t("comm.checkinStatusFilter", "Check-in Status")}
                       </label>
                       <SearchableSelect
                         value={checkinStatusFilter}
                         onChange={(val) => setCheckinStatusFilter(val)}
                         options={[
-                          { value: "all", label: "All Attendees (Any Status)" },
-                          { value: "checked_in", label: "Checked-in at Venue Gate Only" },
-                          { value: "not_checked_in", label: "Not Yet Checked-in Only" }
+                          { value: "all", label: t("comm.allAttendeesAnyStatus", "All Attendees (Any Status)") },
+                          { value: "checked_in", label: t("comm.checkedInAtVenueGate", "Checked-in at Venue Gate Only") },
+                          { value: "not_checked_in", label: t("comm.notYetCheckedIn", "Not Yet Checked-in Only") }
                         ]}
-                        placeholder="Any Status"
+                        placeholder={t("comm.allStatuses", "All Statuses")}
                       />
                     </div>
                   </>
@@ -1776,16 +1868,16 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                 {recipientGroup === "sponsors" && sponsorTiersList.length > 0 && (
                   <div className="flex flex-col gap-1.5 md:col-span-2">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                      Filter by Sponsorship Tier
+                      {t("comm.filterBySponsorTier", "Filter by Sponsorship Tier")}
                     </label>
                     <SearchableSelect
                       value={sponsorTierFilter}
                       onChange={(val) => setSponsorTierFilter(val)}
                       options={[
-                        { value: "all", label: "All Sponsor Tiers" },
-                        ...sponsorTiersList.map(tier => ({ value: tier, label: `${tier} Tier Sponsors` }))
+                        { value: "all", label: t("comm.allSponsorTiersOption", "All Sponsor Tiers") },
+                        ...sponsorTiersList.map(tier => ({ value: tier, label: t("comm.tierSponsorsSuffix", "{tier} Tier Sponsors").replace("{tier}", tier) }))
                       ]}
-                      placeholder="All Sponsor Tiers"
+                      placeholder={t("comm.allSponsorTiersOption", "All Sponsor Tiers")}
                     />
                   </div>
                 )}
@@ -1794,17 +1886,18 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                 {recipientGroup === "custom" && (
                   <div className="md:col-span-2 flex items-center justify-between bg-slate-50 border border-slate-200 rounded-2xl p-3.5">
                     <div>
-                      <h4 className="text-xs font-bold text-slate-800">Hand-Pick Specific Recipients</h4>
+                      <h4 className="text-xs font-bold text-slate-800">{t("comm.handPickRecipients", "Hand-Pick Specific Recipients")}</h4>
                       <p className="text-[11px] text-slate-500 font-semibold mt-0.5">
-                        {customSelectedEmails.length} individual recipient{customSelectedEmails.length === 1 ? "" : "s"} selected.
+                        {t("comm.individualRecipientsSelected", "{count} individual recipient(s) selected.").replace("{count}", customSelectedEmails.length)}
                       </p>
                     </div>
                     <button
                       type="button"
                       onClick={() => setIsRecipientModalOpen(true)}
-                      className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+                      className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
                     >
-                      Select Individuals →
+                      <span>{t("comm.selectIndividuals", "Select Individuals")}</span>
+                      <span>{isRTL ? "←" : "→"}</span>
                     </button>
                   </div>
                 )}
@@ -1820,7 +1913,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                     <FileText size={16} />
                   </div>
                   <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">
-                    Message Content & Styling
+                    {t("comm.messageContentTitle", "Message Content & Styling")}
                   </h3>
                 </div>
 
@@ -1831,7 +1924,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                     className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-[11px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
                   >
                     <Plus size={13} />
-                    <span>Save as Template</span>
+                    <span>{t("comm.saveAsTemplate", "Save as Template")}</span>
                   </button>
                   <button
                     type="button"
@@ -1839,7 +1932,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                     className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-[11px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
                   >
                     <Layers size={13} />
-                    <span>Browse Templates</span>
+                    <span>{t("comm.browseTemplates", "Browse Templates")}</span>
                   </button>
                 </div>
               </div>
@@ -1847,7 +1940,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
               {/* Template Quick Select */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  Select Base Email Template
+                  {t("comm.selectBaseTemplate", "Select Base Email Template")}
                 </label>
                 <SearchableSelect
                   value={selectedTemplateId}
@@ -1874,16 +1967,19 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                     }
                   }}
                   options={[
-                    ...PRESET_TEMPLATES.map(t => ({
-                      value: t.id,
-                      label: `${t.title} (${t.categoryLabel})`
-                    })),
+                    ...PRESET_TEMPLATES.map(tDef => {
+                      const loc = getLocalizedTemplate(tDef, t);
+                      return {
+                        value: tDef.id,
+                        label: `${loc.title} (${loc.categoryLabel})`
+                      };
+                    }),
                     ...customTemplates.map(ct => ({
                       value: ct.id,
-                      label: `⭐ ${ct.name} (Custom Template)`
+                      label: `⭐ ${ct.name} (${t("comm.customTemplateBadge", "Custom Template")})`
                     }))
                   ]}
-                  placeholder="Select a template..."
+                  placeholder={t("comm.selectTemplatePlaceholder", "Select a template...")}
                 />
               </div>
 
@@ -1891,15 +1987,15 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    Subject Line <span className="text-rose-500">*</span>
+                    {t("comm.subjectLineLabel", "Subject Line")} <span className="text-rose-500">*</span>
                   </label>
-                  <span className="text-[10px] font-bold text-slate-400">{subject.length} chars</span>
+                  <span className="text-[10px] font-bold text-slate-400"><bdi dir="ltr">{subject.length}</bdi> {t("comm.chars", "chars")}</span>
                 </div>
                 <input
                   ref={subjectInputRef}
                   type="text"
                   required
-                  placeholder="e.g. Important Arrival Notice: Fast-Track Pass for {{eventTitle}}"
+                  placeholder={t("comm.subjectPlaceholder", "e.g. Important Arrival Notice: Fast-Track Pass for {{eventTitle}}")}
                   value={subject}
                   onFocus={() => setLastFocusedField("subject")}
                   onChange={(e) => setSubject(e.target.value)}
@@ -1911,14 +2007,14 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <span>Preheader Snippet (Preview Text)</span>
-                    <span className="text-[9px] font-semibold text-slate-400">(Shows on mobile lock screens)</span>
+                    <span>{t("comm.preheaderSnippet", "Preheader Snippet (Preview Text)")}</span>
+                    <span className="text-[9px] font-semibold text-slate-400">{t("comm.preheaderHelp", "(Shows on mobile lock screens)")}</span>
                   </label>
                 </div>
                 <input
                   ref={preheaderInputRef}
                   type="text"
-                  placeholder="e.g. Your registration is confirmed. Access your badge and fast-track pass."
+                  placeholder={t("comm.preheaderPlaceholder", "e.g. Your registration is confirmed. Access your badge and fast-track pass.")}
                   value={preheader}
                   onFocus={() => setLastFocusedField("preheader")}
                   onChange={(e) => setPreheader(e.target.value)}
@@ -1931,10 +2027,17 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                     <Tag size={12} className="text-blue-600" />
-                    Insert Dynamic Variables
+                    {t("comm.insertDynamicVariables", "Insert Dynamic Variables")}
                   </span>
                   <span className="text-[10px] text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200/60">
-                    Inserts directly at cursor position ({lastFocusedField === "subject" ? "Subject" : lastFocusedField === "preheader" ? "Preheader" : "Message Body"})
+                    {t("comm.insertsDirectlyAtCursor", "Inserts directly at cursor position ({field})").replace(
+                      "{field}",
+                      lastFocusedField === "subject" 
+                        ? t("comm.fieldSubject", "Subject") 
+                        : lastFocusedField === "preheader" 
+                          ? t("comm.fieldPreheader", "Preheader") 
+                          : t("comm.fieldBody", "Message Body")
+                    )}
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -2024,10 +2127,10 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                     <div className="flex flex-col">
                       <span className="text-xs font-extrabold text-slate-900 flex items-center gap-1.5">
                         <FileSpreadsheet size={14} className="text-blue-600" />
-                        Form / Survey CTA Button
+                        {t("comm.formCtaTitle", "Form / Survey CTA Button")}
                       </span>
                       <span className="text-[10px] text-slate-500 font-semibold">
-                        Link delegates directly to an active questionnaire, feedback survey, or intake form.
+                        {t("comm.formCtaSubtitle", "Link delegates directly to an active questionnaire, feedback survey, or intake form.")}
                       </span>
                     </div>
                   </label>
@@ -2037,7 +2140,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mt-4 pt-3.5 border-t border-blue-200/60">
                     <div className="flex flex-col gap-1 sm:col-span-2">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                        Select Target Form
+                        {t("comm.selectTargetForm", "Select Target Form")}
                       </label>
                       <SearchableSelect
                         value={selectedFormId}
@@ -2047,16 +2150,16 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                             value: f.id,
                             label: `📋 ${f.title || f.name || "Untitled Form"} (${f.submissionsCount || 0} responses)`
                           })),
-                          { value: "custom_url", label: "🔗 Enter Custom Form / Survey URL..." }
+                          { value: "custom_url", label: t("comm.enterCustomFormUrl", "🔗 Enter Custom Form / Survey URL...") }
                         ]}
-                        placeholder="Choose an event form..."
+                        placeholder={t("comm.chooseFormPlaceholder", "Choose an event form...")}
                       />
                     </div>
 
                     {selectedFormId === "custom_url" && (
                       <div className="flex flex-col gap-1 sm:col-span-2">
                         <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                          Custom Survey URL
+                          {t("comm.customSurveyUrlLabel", "Custom Survey URL")}
                         </label>
                         <input
                           type="url"
@@ -2070,11 +2173,11 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
 
                     <div className="flex flex-col gap-1 sm:col-span-2">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                        Button CTA Label
+                        {t("comm.buttonCtaLabel", "Button CTA Label")}
                       </label>
                       <input
                         type="text"
-                        placeholder="e.g. Complete 2-Minute Feedback Form →"
+                        placeholder={t("comm.formCtaPlaceholder", "e.g. Complete 2-Minute Feedback Form →")}
                         value={formButtonText}
                         onChange={(e) => setFormButtonText(e.target.value)}
                         className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-850 focus:border-blue-500 focus:outline-none"
@@ -2099,10 +2202,10 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                     <div className="flex flex-col">
                       <span className="text-xs font-extrabold text-slate-900 flex items-center gap-1.5">
                         <Ticket size={14} className="text-indigo-600" />
-                        Digital Badge Pass Button
+                        {t("comm.digitalBadgeButtonTitle", "Digital Badge Pass Button")}
                       </span>
                       <span className="text-[10px] text-slate-500 font-semibold">
-                        Direct CTA leading recipient to view and download their official digital badge pass.
+                        {t("comm.digitalBadgeButtonSubtitle", "Direct CTA leading recipient to view and download their official digital badge pass.")}
                       </span>
                     </div>
                   </label>
@@ -2111,11 +2214,11 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                 {includeTicketButton && (
                   <div className="flex flex-col gap-1 mt-4 pt-3.5 border-t border-indigo-200/60">
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                      Button Label
+                      {t("comm.badgeButtonLabel", "Button Label")}
                     </label>
                     <input
                       type="text"
-                      placeholder="e.g. 🎟️ View My Digital Event Badge"
+                      placeholder={t("comm.badgeButtonPlaceholder", "e.g. 🎟️ View My Digital Event Badge")}
                       value={ticketButtonText}
                       onChange={(e) => setTicketButtonText(e.target.value)}
                       className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-850 focus:border-indigo-500 focus:outline-none"
@@ -2139,10 +2242,10 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                     <div className="flex flex-col">
                       <span className="text-xs font-extrabold text-slate-900 flex items-center gap-1.5">
                         <ExternalLink size={14} className="text-slate-600" />
-                        Secondary Custom CTA Button
+                        {t("comm.customCtaButtonTitle", "Secondary Custom CTA Button")}
                       </span>
                       <span className="text-[10px] text-slate-500 font-semibold">
-                        Link to external schedules, hotel bookings, sponsor brochures, or floor plan viewer.
+                        {t("comm.customCtaButtonSubtitle", "Link to external schedules, hotel bookings, sponsor brochures, or floor plan viewer.")}
                       </span>
                     </div>
                   </label>
@@ -2192,7 +2295,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                       <QrIcon size={14} className="text-blue-600" />
                       Embed Fast-Track QR Pass
                     </span>
-                    <span className="text-[9px] text-slate-400 font-semibold">Generates personalized QR pass</span>
+                    <span className="text-[9px] text-slate-400 font-semibold">{t("comm.embedFastTrackQrHelp", "Generates personalized QR pass")}</span>
                   </div>
                 </label>
 
@@ -2208,7 +2311,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                       <Calendar size={14} className="text-blue-600" />
                       Include Event Details Card
                     </span>
-                    <span className="text-[9px] text-slate-400 font-semibold">Shows date, venue & host details</span>
+                    <span className="text-[9px] text-slate-400 font-semibold">{t("comm.includeEventCardHelp", "Shows date, venue & host details")}</span>
                   </div>
                 </label>
               </div>
@@ -2222,7 +2325,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                 className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all cursor-pointer"
               >
                 <Mail size={14} />
-                <span>Send Test Preview to Me</span>
+                <span>{t("comm.sendTestPreviewToMe", "Send Test Preview to Me")}</span>
               </button>
 
               <button
@@ -2232,7 +2335,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                 className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs font-black shadow-lg shadow-blue-600/25 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:pointer-events-none disabled:transform-none"
               >
                 <Send size={15} />
-                <span>Dispatch Broadcast ({targetRecipients.length} Recipients) →</span>
+                <span>{t("comm.dispatchBroadcastBtn", "Dispatch Broadcast ({count} Recipients)").replace("{count}", targetRecipients.length)}</span> <span>{isRTL ? "←" : "→"}</span>
               </button>
             </div>
           </div>
@@ -2245,7 +2348,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                 <div className="flex items-center gap-2">
                   <Eye size={16} className="text-blue-600" />
                   <span className="text-xs font-black text-slate-900 uppercase tracking-wider">
-                    Live Email Simulator
+                    {t("comm.liveEmailSimulator", "Live Email Simulator")}
                   </span>
                 </div>
 
@@ -2258,7 +2361,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                       className={`p-1 rounded-md transition-all cursor-pointer ${
                         previewTheme === "light" ? "bg-white text-amber-500 shadow-xs" : "text-slate-400"
                       }`}
-                      title="Light Mode Preview"
+                      title={t("comm.lightModePreview", "Light Mode Preview")}
                     >
                       <Sun size={13} />
                     </button>
@@ -2268,7 +2371,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                       className={`p-1 rounded-md transition-all cursor-pointer ${
                         previewTheme === "dark" ? "bg-slate-900 text-blue-400 shadow-xs" : "text-slate-400"
                       }`}
-                      title="Dark Mode Preview"
+                      title={t("comm.darkModePreview", "Dark Mode Preview")}
                     >
                       <Moon size={13} />
                     </button>
@@ -2282,7 +2385,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                       className={`p-1 rounded-md transition-all cursor-pointer ${
                         previewDevice === "desktop" ? "bg-white text-blue-600 shadow-xs" : "text-slate-400"
                       }`}
-                      title="Desktop View"
+                      title={t("comm.desktopView", "Desktop View")}
                     >
                       <Monitor size={14} />
                     </button>
@@ -2292,7 +2395,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                       className={`p-1 rounded-md transition-all cursor-pointer ${
                         previewDevice === "mobile" ? "bg-white text-blue-600 shadow-xs" : "text-slate-400"
                       }`}
-                      title="Mobile View"
+                      title={t("comm.mobileView", "Mobile View")}
                     >
                       <Smartphone size={14} />
                     </button>
@@ -2303,11 +2406,12 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
               {/* Sample Recipient Selector */}
               {targetRecipients.length > 1 && (
                 <div className="flex items-center justify-between gap-2 bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-1.5">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Previewing as:</span>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t("comm.previewingAs", "Previewing as:")}</span>
                   <select
                     value={previewAttendeeIndex}
                     onChange={(e) => setPreviewAttendeeIndex(parseInt(e.target.value, 10))}
                     className="bg-transparent text-[11px] font-bold text-slate-800 focus:outline-none cursor-pointer max-w-[200px] truncate"
+                    dir="ltr"
                   >
                     {targetRecipients.slice(0, 15).map((rec, idx) => (
                       <option key={rec.id || idx} value={idx}>
@@ -2333,12 +2437,12 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                     <span className={`font-extrabold truncate max-w-[200px] text-xs ${
                       previewTheme === "dark" ? "text-slate-100" : "text-slate-850"
                     }`}>
-                      {interpolateText(subject) || "Subject Line Preview"}
+                      {interpolateText(subject) || t("comm.subjectLinePreview", "Subject Line Preview")}
                     </span>
-                    <span className="text-[9px] font-semibold text-slate-400">Just now</span>
+                    <span className="text-[9px] font-semibold text-slate-400">{t("comm.justNow", "Just now")}</span>
                   </div>
                   <div className="flex items-center gap-1.5 text-[10px]">
-                    <span className="font-bold text-slate-400">From:</span>
+                    <span className="font-bold text-slate-400">{t("comm.fromLabel", "From:")}</span>
                     <span className={`font-semibold truncate ${
                       previewTheme === "dark" ? "text-slate-300" : "text-slate-700"
                     }`}>
@@ -2346,7 +2450,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 text-[10px]">
-                    <span className="font-bold text-slate-400">To:</span>
+                    <span className="font-bold text-slate-400">{t("comm.toLabel", "To:")}</span>
                     <span className="font-semibold text-blue-500 truncate">{sampleAttendee?.email}</span>
                   </div>
                 </div>
@@ -2369,7 +2473,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                         {eventDetails?.title || "Eventzone Summit"}
                       </h2>
                       <p className="text-[9px] font-black text-blue-500 uppercase tracking-widest mt-0.5">
-                        Official Event Broadcast
+                        {t("comm.officialEventBroadcast", "Official Event Broadcast")}
                       </p>
                     </div>
 
@@ -2380,7 +2484,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                           ? "bg-slate-800/70 border-blue-400 text-slate-100" 
                           : "bg-slate-50 border-blue-600 text-slate-800"
                       }`}>
-                        {interpolateText(body) || "Your email content will render here dynamically..."}
+                        {interpolateText(body) || t("comm.bodyPreviewPlaceholder", "Your email content will render here dynamically...")}
                       </div>
 
                       {/* Rendered Action Buttons */}
@@ -2391,10 +2495,10 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                           <div className={`text-[11px] font-extrabold mb-2 ${
                             previewTheme === "dark" ? "text-slate-100" : "text-slate-900"
                           }`}>
-                            Action Required: Event Questionnaire
+                            {t("comm.actionRequiredQuestionnaire", "Action Required: Event Questionnaire")}
                           </div>
                           <div className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-black text-xs px-5 py-2.5 rounded-xl shadow-md shadow-blue-600/30">
-                            {formButtonText || "Complete Form"} →
+                            {formButtonText || t("comm.completeFormDefault", "Complete Form")} {isRTL ? "←" : "→"}
                           </div>
                         </div>
                       )}
@@ -2418,7 +2522,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                               ? "bg-slate-800 border border-slate-700 text-slate-200" 
                               : "bg-slate-100 border border-slate-300 text-slate-850"
                           }`}>
-                            🔗 {customButtonText || "Visit Resource"} →
+                            🔗 {customButtonText || t("comm.visitResourceDefault", "Visit Resource")} {isRTL ? "←" : "→"}
                           </div>
                         </div>
                       )}
@@ -2429,7 +2533,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                           previewTheme === "dark" ? "bg-slate-850/80 border-slate-700" : "bg-slate-50 border-slate-250"
                         }`}>
                           <span className="text-[10px] font-black text-blue-500 uppercase tracking-wider block mb-2">
-                            Fast-Track Check-In Pass
+                            {t("comm.fastTrackPassTitle", "Fast-Track Check-In Pass")}
                           </span>
                           <div className="bg-white p-2.5 rounded-xl inline-block shadow-sm">
                             <div className="w-24 h-24 bg-slate-900 rounded-lg flex items-center justify-center text-white">
@@ -2439,7 +2543,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                           <span className={`text-[9px] font-semibold block mt-1.5 ${
                             previewTheme === "dark" ? "text-slate-400" : "text-slate-400"
                           }`}>
-                            Pass Code: {sampleAttendee?.badgeCode || "EZ-PASS"}
+                            <span className="font-semibold">{t("comm.passCodeLabel", "Pass Code:")}</span> <bdi dir="ltr">{sampleAttendee?.badgeCode || "EZ-PASS"}</bdi>
                           </span>
                         </div>
                       )}
@@ -2457,21 +2561,21 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                           <div className={`flex justify-between py-1 border-b ${
                             previewTheme === "dark" ? "border-slate-800" : "border-slate-150"
                           }`}>
-                            <span className="text-slate-400 font-bold">📅 Date:</span>
+                            <span className="text-slate-400 font-bold">{t("comm.dateLabel", "📅 Date:")}</span>
                             <span className={`font-black ${
                               previewTheme === "dark" ? "text-slate-100" : "text-slate-900"
-                            }`}>{eventDetails?.startDate || "Oct 2026"}</span>
+                            }`}><bdi dir="ltr">{eventDetails?.startDate || "Oct 2026"}</bdi></span>
                           </div>
                           <div className={`flex justify-between py-1 border-b ${
                             previewTheme === "dark" ? "border-slate-800" : "border-slate-150"
                           }`}>
-                            <span className="text-slate-400 font-bold">📍 Venue:</span>
+                            <span className="text-slate-400 font-bold">{t("comm.venueLabel", "📍 Venue:")}</span>
                             <span className={`font-black ${
                               previewTheme === "dark" ? "text-slate-100" : "text-slate-900"
                             }`}>{eventDetails?.location || "Grand Hall"}</span>
                           </div>
                           <div className="flex justify-between py-1">
-                            <span className="text-slate-400 font-bold">🏛️ Host:</span>
+                            <span className="text-slate-400 font-bold">{t("comm.hostLabel", "🏛️ Host:")}</span>
                             <span className={`font-black ${
                               previewTheme === "dark" ? "text-slate-100" : "text-slate-900"
                             }`}>{eventDetails?.organizerName || "Organizer"}</span>
@@ -2486,8 +2590,8 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                         ? "bg-slate-950 border-slate-800 text-slate-400" 
                         : "bg-slate-50 border-slate-100 text-slate-400"
                     }`}>
-                      <p className="m-0">Dispatched securely via <strong className={previewTheme === "dark" ? "text-slate-200" : "text-slate-700"}>Eventzone Platform</strong></p>
-                      <p className="m-0 mt-0.5">Sent to registered participants of {eventDetails?.title || "Summit"}</p>
+                      <p className="m-0">{t("comm.dispatchedSecurely", "Dispatched securely via Eventzone Platform")}</p>
+                      <p className="m-0 mt-0.5">{t("comm.sentToRegistered", "Sent to registered participants of {eventTitle}").replace("{eventTitle}", eventDetails?.title || "Summit")}</p>
                     </div>
                   </div>
                 </div>
@@ -2506,38 +2610,38 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white border border-slate-250/70 rounded-3xl p-5 shadow-sm flex flex-col justify-between">
               <div className="flex items-center justify-between text-slate-400 mb-2">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider">Total Broadcasts</span>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider">{t("comm.totalBroadcastsUpper", "TOTAL BROADCASTS")}</span>
                 <Send size={18} className="text-blue-600" />
               </div>
-              <span className="text-2xl font-black text-slate-900">{aggregateMetrics.totalBroadcasts}</span>
-              <span className="text-[10px] text-slate-400 font-semibold mt-1">Dispatched campaigns</span>
+              <span className="text-2xl font-black text-slate-900"><bdi dir="ltr">{aggregateMetrics.totalBroadcasts}</bdi></span>
+              <span className="text-[10px] text-slate-400 font-semibold mt-1">{t("comm.dispatchedCampaigns", "Dispatched campaigns")}</span>
             </div>
 
             <div className="bg-white border border-slate-250/70 rounded-3xl p-5 shadow-sm flex flex-col justify-between">
               <div className="flex items-center justify-between text-slate-400 mb-2">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider">Total Emails Sent</span>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider">{t("comm.totalEmailsSentUpper", "TOTAL EMAILS SENT")}</span>
                 <Users size={18} className="text-indigo-600" />
               </div>
-              <span className="text-2xl font-black text-slate-900">{aggregateMetrics.totalEmailsSent}</span>
-              <span className="text-[10px] text-slate-400 font-semibold mt-1">Delivered via SMTP</span>
+              <span className="text-2xl font-black text-slate-900"><bdi dir="ltr">{aggregateMetrics.totalEmailsSent}</bdi></span>
+              <span className="text-[10px] text-slate-400 font-semibold mt-1">{t("comm.deliveredViaSmtp", "Delivered via SMTP")}</span>
             </div>
 
             <div className="bg-white border border-slate-250/70 rounded-3xl p-5 shadow-sm flex flex-col justify-between">
               <div className="flex items-center justify-between text-slate-400 mb-2">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider">Unique Opens</span>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider">{t("comm.uniqueOpensUpper", "UNIQUE OPENS")}</span>
                 <Eye size={18} className="text-emerald-600" />
               </div>
-              <span className="text-2xl font-black text-emerald-600">{aggregateMetrics.totalUniqueOpens}</span>
-              <span className="text-[10px] text-slate-400 font-semibold mt-1">Confirmed readers</span>
+              <span className="text-2xl font-black text-emerald-600"><bdi dir="ltr">{aggregateMetrics.totalUniqueOpens}</bdi></span>
+              <span className="text-[10px] text-slate-400 font-semibold mt-1">{t("comm.confirmedReaders", "Confirmed readers")}</span>
             </div>
 
             <div className="bg-white border border-slate-250/70 rounded-3xl p-5 shadow-sm flex flex-col justify-between">
               <div className="flex items-center justify-between text-slate-400 mb-2">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider">Average Open Rate</span>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider">{t("comm.avgOpenRateUpper", "AVERAGE OPEN RATE")}</span>
                 <Activity size={18} className="text-amber-500" />
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-2xl font-black text-slate-900">{aggregateMetrics.avgOpenRate}%</span>
+                <span className="text-2xl font-black text-slate-900"><bdi dir="ltr">{aggregateMetrics.avgOpenRate}%</bdi></span>
                 <div className="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden">
                   <div
                     className="bg-emerald-500 h-full rounded-full transition-all"
@@ -2545,7 +2649,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                   />
                 </div>
               </div>
-              <span className="text-[10px] text-slate-400 font-semibold mt-1">Audience engagement pace</span>
+              <span className="text-[10px] text-slate-400 font-semibold mt-1">{t("comm.audienceEngagementPace", "Audience engagement pace")}</span>
             </div>
           </div>
 
@@ -2570,23 +2674,24 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
           {/* History List */}
           {historyLoading ? (
             <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center text-xs font-bold text-slate-400">
-              Loading broadcast history and real-time open statistics...
+              {t("comm.loadingBroadcastHistory", "Loading broadcast history and real-time open statistics...")}
             </div>
           ) : filteredHistory.length === 0 ? (
             <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center flex flex-col items-center gap-3">
               <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
                 <Mail size={24} />
               </div>
-              <h3 className="text-sm font-black text-slate-850">No Broadcast Announcements Found</h3>
+              <h3 className="text-sm font-black text-slate-850">{t("comm.noBroadcastsFound", "No Broadcast Announcements Found")}</h3>
               <p className="text-xs text-slate-500 max-w-sm">
-                Dispatch your first announcement to participants to track delivery, open rates, and engagement.
+                {t("comm.noBroadcastsFoundDesc", "Dispatch your first announcement to participants to track delivery, open rates, and engagement.")}
               </p>
               <button
                 type="button"
                 onClick={() => setActiveTab("compose")}
-                className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-600/20 cursor-pointer"
+                className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-600/20 cursor-pointer flex items-center gap-1.5"
               >
-                Compose Announcement Now →
+                <span>{t("comm.composeAnnouncementNow", "Compose Announcement Now")}</span>
+                <span>{isRTL ? "←" : "→"}</span>
               </button>
             </div>
           ) : (
@@ -2617,7 +2722,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                           </span>
                           {item.include_qr && (
                             <span className="text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60 flex items-center gap-1">
-                              <QrIcon size={10} /> QR Pass
+                              <QrIcon size={10} /> {t("comm.qrPassBadge", "QR Pass")}
                             </span>
                           )}
                         </div>
@@ -2634,11 +2739,11 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                       {/* Open Rate Meter */}
                       <div className="flex flex-col items-start md:items-end">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-black text-slate-900">{openRate}%</span>
-                          <span className="text-[10px] font-bold text-slate-400">Open Rate</span>
+                          <span className="text-xs font-black text-slate-900"><bdi dir="ltr">{openRate}%</bdi></span>
+                          <span className="text-[10px] font-bold text-slate-400">{t("comm.openRateLabel", "Open Rate")}</span>
                         </div>
                         <span className="text-[10px] font-semibold text-slate-500">
-                          {uniqueOpens} / {recipientCount} Opened
+                          <bdi dir="ltr">{uniqueOpens} / {recipientCount}</bdi> {t("comm.openedLabel", "Opened")}
                         </span>
                       </div>
 
@@ -2648,17 +2753,17 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                           type="button"
                           onClick={() => handleOpenRecipientLog(item)}
                           className="px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
-                          title="View Recipient Open Logs"
+                          title={t("comm.viewRecipientOpenLogs", "View Recipient Open Logs")}
                         >
                           <Activity size={14} />
-                          <span>View Analytics</span>
+                          <span>{t("comm.viewAnalyticsBtn", "View Analytics")}</span>
                         </button>
 
                         <button
                           type="button"
                           onClick={() => handleCloneBroadcast(item)}
                           className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-colors cursor-pointer"
-                          title="Clone into Compose Builder"
+                          title={t("comm.cloneIntoCompose", "Clone into Compose Builder")}
                         >
                           <RotateCcw size={14} />
                         </button>
@@ -2667,7 +2772,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                           type="button"
                           onClick={() => handleDeleteBroadcast(item.id)}
                           className="p-2 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-400 rounded-xl transition-colors cursor-pointer"
-                          title="Delete Broadcast"
+                          title={t("comm.deleteBroadcast", "Delete Broadcast")}
                         >
                           <Trash2 size={14} />
                         </button>
@@ -2692,10 +2797,10 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">
-                  Event Template Library
+                  {t("comm.templateLibraryTitle", "Event Template Library")}
                 </h2>
                 <p className="text-xs text-slate-500 font-semibold mt-0.5">
-                  Select from 10+ professionally crafted email layouts, customize trigger emails, or build new custom templates.
+                  {t("comm.templateLibrarySubtitle", "Select from 10+ professionally crafted email layouts, customize trigger emails, or build new custom templates.")}
                 </p>
               </div>
 
@@ -2715,19 +2820,19 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs hover:shadow transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 self-start sm:self-auto"
               >
                 <Plus size={14} />
-                <span>Create New Template</span>
+                <span>{t("comm.createNewTemplate", "Create New Template")}</span>
               </button>
             </div>
 
             {/* Bottom row: Category Filter Pills */}
             <div className="flex items-center gap-1.5 overflow-x-auto pt-3 border-t border-slate-100 no-scrollbar">
               {[
-                { id: "all", label: "All Templates" },
-                { id: "attendees", label: "Attendees & Passes" },
-                { id: "logistics", label: "Logistics & Alerts" },
-                { id: "partners", label: "Sponsors & Speakers" },
-                { id: "surveys", label: "Surveys & Feedback" },
-                { id: "custom", label: "Saved Custom" }
+                { id: "all", label: t("comm.catAllTemplates", "All Templates") },
+                { id: "attendees", label: t("comm.catAttendeesPasses", "Attendees & Passes") },
+                { id: "logistics", label: t("comm.catLogisticsAlerts", "Logistics & Alerts") },
+                { id: "partners", label: t("comm.catSponsorsSpeakers", "Sponsors & Speakers") },
+                { id: "surveys", label: t("comm.catSurveysFeedback", "Surveys & Feedback") },
+                { id: "custom", label: t("comm.catSavedCustom", "Saved Custom") }
               ].map(({ id, label }) => {
                 const count = id === "all" 
                   ? [...PRESET_TEMPLATES, ...customTemplates.filter(ct => !ct.is_trigger)].length
@@ -2791,13 +2896,13 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                           {tmpl.title || tmpl.name}
                         </h3>
                         <p className="text-[11px] font-semibold text-slate-500 mt-1 line-clamp-2">
-                          {tmpl.description || "Reusable custom template"}
+                          {tmpl.description || t("comm.reusableCustomTemplate", "Reusable custom template")}
                         </p>
                       </div>
 
                       {/* Subject Preview */}
                       <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-2.5">
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Subject</span>
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">{t("comm.fieldSubject", "Subject")}</span>
                         <p className="text-[11px] font-bold text-slate-800 truncate mt-0.5">
                           {formatEventText(tmpl.subject)}
                         </p>
@@ -2850,8 +2955,8 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                         }}
                         className="flex-1 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs hover:shadow transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                       >
-                        <span>Use in Compose</span>
-                        <ArrowRight size={13} />
+                        <span>{t("comm.useInCompose", "Use in Compose")}</span>
+                        {isRTL ? <ArrowLeft size={13} /> : <ArrowRight size={13} />}
                       </button>
                     </div>
                   </div>
@@ -2868,15 +2973,16 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
         <div className="flex flex-col gap-6">
           <div className="bg-white border border-slate-250/70 rounded-3xl p-6 shadow-sm flex flex-col gap-2">
             <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">
-              Automated Event Triggers & System Notifications
+              {t("comm.triggersHeaderTitle", "Automated Event Triggers & System Notifications")}
             </h2>
             <p className="text-xs text-slate-500 font-semibold">
-              Eventzone automatically dispatches branded transactional notifications upon key participant actions. You can customize the email wording, action buttons, and fast-track QR passes for every trigger.
+              {t("comm.triggersHeaderSubtitle", "Eventzone automatically dispatches branded transactional notifications upon key participant actions. You can customize the email wording, action buttons, and fast-track QR passes for every trigger.")}
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {AUTOMATED_TRIGGERS_CONFIG.map((triggerDef) => {
+            {AUTOMATED_TRIGGERS_CONFIG.map((triggerDefRaw) => {
+              const triggerDef = getLocalizedTriggerDef(triggerDefRaw, t);
               const config = getTriggerConfig(triggerDef);
 
               return (
@@ -2887,11 +2993,11 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                       <div className="flex items-center gap-1.5">
                         {config.isCustomized ? (
                           <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1">
-                            <Sparkles size={11} /> Customized
+                            <Sparkles size={11} /> {t("comm.customizedBadge", "Customized")}
                           </span>
                         ) : (
                           <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            {config.badge}
+                            {t("comm.activeAutoSend", "Active • Auto-Send")}
                           </span>
                         )}
                       </div>
@@ -2900,14 +3006,14 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
 
                     {/* Subject Line Preview */}
                     <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 flex flex-col gap-1">
-                      <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">Trigger Subject</span>
+                      <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">{t("comm.triggerSubjectLabel", "Trigger Subject")}</span>
                       <p className="text-xs font-bold text-slate-800 truncate">
                         {formatEventText(config.subject)}
                       </p>
                     </div>
 
                     <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 flex flex-col gap-2">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Included Assets & Settings</span>
+                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">{t("comm.includedAssetsSettings", "Included Assets & Settings")}</span>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {config.features.map((feat, fidx) => (
                           <div key={fidx} className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700">
@@ -2928,7 +3034,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                         title="Restore system default template"
                       >
                         <RotateCcw size={13} />
-                        <span>Reset to Default</span>
+                        <span>{t("comm.resetToDefault", "Reset to Default")}</span>
                       </button>
                     ) : <div />}
 
@@ -2938,7 +3044,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                       className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs hover:shadow transition-all cursor-pointer flex items-center gap-1.5"
                     >
                       <Edit3 size={13} />
-                      <span>Customize Template →</span>
+                      <span>{t("comm.customizeTriggerTemplate", "Customize Template")}</span> <span>{isRTL ? "←" : "→"}</span>
                     </button>
                   </div>
                 </div>
@@ -2964,7 +3070,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                 <div className="flex items-center gap-2">
                   <Users size={18} className="text-blue-600" />
                   <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
-                    {recipientGroup === "custom" ? "Select Custom Recipients" : "Target Recipient Roster"}
+                    {recipientGroup === "custom" ? t("comm.selectCustomRecipients", "Select Custom Recipients") : t("comm.targetRecipientRoster", "Target Recipient Roster")}
                   </h3>
                 </div>
                 <button
@@ -2981,7 +3087,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                 <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="Search by name, email, company, or role..."
+                  placeholder={t("comm.searchRecipientsPlaceholder", "Search recipients by name, email, company...")}
                   value={recipientSearchTerm}
                   onChange={(e) => setRecipientSearchTerm(e.target.value)}
                   className="w-full pl-9 pr-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:border-blue-500 focus:outline-none"
@@ -2992,7 +3098,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
               <div className="flex-1 overflow-y-auto max-h-[380px] border border-slate-100 rounded-2xl">
                 {targetRecipients.length === 0 ? (
                   <div className="p-8 text-center text-xs font-bold text-slate-400">
-                    No recipients matching current filter criteria.
+                    {t("comm.noRecipientsMatchingFilter", "No recipients matching current filter criteria.")}
                   </div>
                 ) : (
                   <div className="divide-y divide-slate-100">
@@ -3063,14 +3169,14 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
 
               <div className="flex items-center justify-between pt-2">
                 <span className="text-xs font-bold text-slate-500">
-                  {targetRecipients.length} total recipients
+                  {t("comm.totalRecipients", "{count} total recipients").replace("{count}", targetRecipients.length)}
                 </span>
                 <button
                   type="button"
                   onClick={() => setIsRecipientModalOpen(false)}
                   className="px-5 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer"
                 >
-                  Done
+                  {t("comm.doneBtn", "Done")}
                 </button>
               </div>
             </motion.div>
@@ -3094,7 +3200,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                 <div className="flex items-center gap-2">
                   <Mail size={18} className="text-blue-600" />
                   <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
-                    Send Test Preview Email
+                    {t("comm.sendTestPreviewEmail", "Send Test Preview Email")}
                   </h3>
                 </div>
                 <button
@@ -3107,12 +3213,12 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
               </div>
 
               <p className="text-xs text-slate-500 font-semibold">
-                Dispatch an instant test copy of this broadcast to your personal inbox to verify styling, button links, and mobile responsiveness.
+                {t("comm.sendTestModalDesc", "Dispatch an instant test copy of this broadcast to your personal inbox to verify styling, button links, and mobile responsiveness.")}
               </p>
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  Test Email Destination
+                  {t("comm.testEmailDestination", "Test Email Destination")}
                 </label>
                 <input
                   type="email"
@@ -3139,11 +3245,11 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                   className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black shadow-md shadow-blue-600/25 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
                   {isTestSending ? (
-                    <span>Sending Test...</span>
+                    <span>{t("comm.sendingTestEmail", "Sending Test...")}</span>
                   ) : (
                     <>
                       <Send size={13} />
-                      <span>Send Test Now</span>
+                      <span>{t("comm.sendTestNow", "Send Test Now")}</span>
                     </>
                   )}
                 </button>
@@ -3171,7 +3277,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                     <Send size={18} />
                   </div>
                   <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
-                    Confirm Broadcast Announcement
+                    {t("comm.confirmBroadcastAnnouncement", "Confirm Broadcast Announcement")}
                   </h3>
                 </div>
                 <button
@@ -3185,26 +3291,26 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
 
               <div className="flex flex-col gap-3">
                 <p className="text-xs text-slate-600 font-semibold">
-                  You are about to broadcast an official email announcement to <strong>{targetRecipients.length} recipients</strong> with live open tracking enabled.
+                  {t("comm.confirmModalBroadcastDesc", "You are about to broadcast an official email announcement to {count} recipients with live open tracking enabled.").replace("{count}", targetRecipients.length)}
                 </p>
 
                 <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col gap-2 text-xs">
                   <div className="flex justify-between py-1 border-b border-slate-200">
-                    <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Subject</span>
+                    <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">{t("comm.subjectLabel", "Subject:")}</span>
                     <span className="text-slate-900 font-bold truncate max-w-[240px]">{subject}</span>
                   </div>
                   <div className="flex justify-between py-1 border-b border-slate-200">
-                    <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Recipient Group</span>
+                    <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">{t("comm.audienceLabel", "Audience:")}</span>
                     <span className="text-blue-700 font-bold uppercase tracking-wider text-[10px]">{recipientGroup}</span>
                   </div>
                   <div className="flex justify-between py-1 border-b border-slate-200">
-                    <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Total Recipients</span>
+                    <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">{t("comm.totalRecipientsLabel", "Total Recipients")}</span>
                     <span className="text-slate-900 font-black">{targetRecipients.length}</span>
                   </div>
                   <div className="flex justify-between py-1">
-                    <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Open Tracking</span>
+                    <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">{t("comm.thOpenStatus", "Open Tracking")}</span>
                     <span className="text-emerald-600 font-black flex items-center gap-1">
-                      <Check size={13} /> Active (1x1 Pixel)
+                      <Check size={13} /> {t("comm.openTrackingActive", "Active (1x1 Pixel)")}
                     </span>
                   </div>
                 </div>
@@ -3217,7 +3323,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                   onClick={() => setIsConfirmModalOpen(false)}
                   className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
                 >
-                  Cancel
+                  {t("comm.cancelBtn", "Cancel")}
                 </button>
                 <button
                   type="button"
@@ -3226,11 +3332,11 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                   className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/25 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
                 >
                   {isSending ? (
-                    <span>Broadcasting Emails...</span>
+                    <span>{t("comm.broadcastingEmails", "Broadcasting Emails...")}</span>
                   ) : (
                     <>
                       <Send size={14} />
-                      <span>Confirm & Send Now</span>
+                      <span>{t("comm.confirmSendNow", "Confirm & Send Now")}</span>
                     </>
                   )}
                 </button>
@@ -3270,7 +3376,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  Template Name
+                  {t("comm.templateNameLabel", "Template Name")}
                 </label>
                 <input
                   type="text"
@@ -3284,7 +3390,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  Category
+                  {t("comm.categoryLabel", "Category")}
                 </label>
                 <SearchableSelect
                   value={newTemplateCategory}
@@ -3314,7 +3420,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                   onClick={handleSaveAsTemplate}
                   className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer disabled:opacity-50"
                 >
-                  Save Template
+                  {t("comm.saveTemplateBtn", "Save Template")}
                 </button>
               </div>
             </motion.div>
@@ -3357,23 +3463,23 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
               {/* Metrics Header */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 border border-slate-200/80 rounded-2xl p-4">
                 <div className="flex flex-col">
-                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Total Sent</span>
+                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">{t("comm.totalSent", "Total Sent")}</span>
                   <span className="text-base font-black text-slate-900">{selectedHistoryItem.recipient_count || 0}</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Unique Opens</span>
+                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">{t("comm.uniqueOpensUpper", "Unique Opens")}</span>
                   <span className="text-base font-black text-emerald-600">
                     {recipientLogs.filter(l => (l.open_count > 0) || l.status === "opened" || l.opened_at).length}
                   </span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Total Opens</span>
+                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">{t("comm.totalOpensLabel", "Total Opens")}</span>
                   <span className="text-base font-black text-indigo-600">
                     {recipientLogs.reduce((sum, l) => sum + (l.open_count || 0), 0)}
                   </span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Open Rate</span>
+                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">{t("comm.openRateLabel", "Open Rate")}</span>
                   <span className="text-base font-black text-blue-600">
                     {selectedHistoryItem.recipient_count > 0
                       ? Math.round(
@@ -3392,7 +3498,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                   <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
-                    placeholder="Search recipients or email..."
+                    placeholder={t("comm.searchLogsPlaceholder", "Search recipients or email...")}
                     value={recipientLogSearch}
                     onChange={(e) => setRecipientLogSearch(e.target.value)}
                     className="w-full pl-9 pr-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:border-blue-500 focus:outline-none"
@@ -3406,7 +3512,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                     className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
                   >
                     <Download size={13} />
-                    <span>Export CSV</span>
+                    <span>{t("comm.exportCsv", "Export CSV")}</span>
                   </button>
                 </div>
               </div>
@@ -3415,9 +3521,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
               <div className="bg-blue-50/70 border border-blue-200/80 rounded-2xl p-3 flex items-start gap-2.5 text-[11px] text-blue-900 font-semibold">
                 <Info size={16} className="text-blue-600 shrink-0 mt-0.5" />
                 <div className="flex-1">
-                  <span>
-                    <strong>Open Tracking Active:</strong> A 1x1 transparent tracking pixel is embedded in each sent email. When opened in an email client (Gmail, Outlook, Apple Mail), the pixel logs the timestamp and increments open counts in real time.
-                  </span>
+                  <span>{t("comm.openTrackingActiveDesc", "Open Tracking Active: A 1x1 transparent tracking pixel is embedded in each sent email. When opened in an email client (Gmail, Outlook, Apple Mail), the pixel logs the timestamp and increments open counts in real time.")}</span>
                 </div>
               </div>
 
@@ -3432,15 +3536,15 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                     No recipient tracking rows found for this broadcast.
                   </div>
                 ) : (
-                  <table className="w-full text-left text-xs border-collapse">
+                  <table className="w-full text-start rtl:text-right text-left text-xs border-collapse">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                        <th className="p-3 pl-4">Recipient</th>
-                        <th className="p-3">Status</th>
-                        <th className="p-3">Open Count</th>
-                        <th className="p-3">First Opened At</th>
-                        <th className="p-3">Last Activity</th>
-                        <th className="p-3 pr-4 text-right">Actions</th>
+                        <th className="p-3 pl-4">{t("comm.thRecipientName", "Recipient")}</th>
+                        <th className="p-3">{t("comm.thStatus", "Status")}</th>
+                        <th className="p-3">{t("comm.thOpenCount", "Open Count")}</th>
+                        <th className="p-3">{t("comm.thFirstOpened", "First Opened At")}</th>
+                        <th className="p-3">{t("comm.thLastActivity", "Last Activity")}</th>
+                        <th className="p-3 pr-4 text-right">{t("comm.thActions", "Actions")}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
@@ -3509,7 +3613,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                   onClick={() => setSelectedHistoryItem(null)}
                   className="px-5 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold cursor-pointer"
                 >
-                  Close Report
+                  {t("comm.closeBtn", "Close")}
                 </button>
               </div>
             </motion.div>
@@ -3539,19 +3643,19 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                     <div className="flex items-center gap-2">
                       <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
                         {editingTemplateData?.isTrigger
-                          ? `Customize Trigger: ${editingTemplateData.title}`
-                          : `Edit Template: ${editModalName || "Custom Template"}`}
+                          ? t("comm.customizeTriggerHeader", "Customize Trigger: {title}").replace("{title}", editingTemplateData.title)
+                          : t("comm.editTemplateHeader", "Edit Template: {name}").replace("{name}", editModalName || "Custom Template")}
                       </h3>
                       {editingTemplateData?.isTrigger && (
                         <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          Automated Trigger
+                          {t("comm.automatedTriggerBadge", "Automated Trigger")}
                         </span>
                       )}
                     </div>
                     <p className="text-xs text-slate-500 font-semibold mt-0.5">
                       {editingTemplateData?.isTrigger
-                        ? "Edits will automatically customize this transactional notification for this event."
-                        : "Modify email content, preheaders, action buttons, and save updates to your library."}
+                        ? t("comm.triggerModalDesc", "Edits will automatically customize this transactional notification for this event.")
+                        : t("comm.templateModalDesc", "Modify email content, preheaders, action buttons, and save updates to your library.")}
                     </p>
                   </div>
                 </div>
@@ -3597,7 +3701,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                           <option value="logistics">Logistics & Alerts</option>
                           <option value="partners">Sponsors & Speakers</option>
                           <option value="surveys">Surveys & Feedback</option>
-                          <option value="custom">Custom Presets</option>
+                          <option value="custom">{t("comm.catCustomPresets", "Custom Presets")}</option>
                         </select>
                       </div>
                     </div>
@@ -3627,7 +3731,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                   {/* Preheader Line Field */}
                   <div>
                     <label className="text-[11px] font-black uppercase tracking-wider text-slate-700 block mb-1.5">
-                      Preheader Preview Text
+                      {t("comm.preheaderPreviewText", "Preheader Preview Text")}
                     </label>
                     <input
                       ref={editPreheaderRef}
@@ -3645,10 +3749,10 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                         <Sparkles size={12} className="text-amber-500" />
-                        <span>Insert Dynamic Tag at Cursor</span>
+                        <span>{t("comm.insertDynamicTagAtCursor", "Insert Dynamic Tag at Cursor")}</span>
                       </span>
                       <span className="text-[10px] font-semibold text-slate-400">
-                        Active Field: <strong className="text-blue-600 uppercase">{editModalLastFocused}</strong>
+                        {t("comm.activeFieldLabel", "Active Field:")} <strong className="text-blue-600 uppercase">{editModalLastFocused}</strong>
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5 flex-wrap">
@@ -3680,7 +3784,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                   {/* Message Body Field */}
                   <div>
                     <label className="text-[11px] font-black uppercase tracking-wider text-slate-700 block mb-1.5">
-                      Email Message Body (Markdown Supported)
+                      {t("comm.emailMessageBodyMarkdown", "Email Message Body (Markdown Supported)")}
                     </label>
                     <textarea
                       ref={editBodyRef}
@@ -3706,10 +3810,10 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                       <div className="flex flex-col">
                         <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
                           <QrIcon size={14} className="text-blue-600" />
-                          <span>Include Fast-Track QR Pass</span>
+                          <span>{t("comm.includeFastTrackQrPass", "Include Fast-Track QR Pass")}</span>
                         </span>
                         <span className="text-[10px] text-slate-500 font-semibold">
-                          Generates scannable QR pass for each recipient
+                          {t("comm.generatesScannableQr", "Generates scannable QR pass for each recipient")}
                         </span>
                       </div>
                     </label>
@@ -3725,10 +3829,10 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                       <div className="flex flex-col">
                         <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
                           <Ticket size={14} className="text-indigo-600" />
-                          <span>Badge Pass Action Button</span>
+                          <span>{t("comm.badgePassActionButton", "Badge Pass Action Button")}</span>
                         </span>
                         <span className="text-[10px] text-slate-500 font-semibold">
-                          Links directly to digital attendee pass
+                          {t("comm.linksDirectlyToBadge", "Links directly to digital attendee pass")}
                         </span>
                       </div>
                     </label>
@@ -3737,7 +3841,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                   {/* Form & Custom Buttons Configuration */}
                   <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 flex flex-col gap-3">
                     <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                      Interactive CTA Buttons
+                      {t("comm.interactiveCtaButtons", "Interactive CTA Buttons")}
                     </span>
 
                     {/* Form Button */}
@@ -3749,7 +3853,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                           onChange={(e) => setEditModalIncludeFormBtn(e.target.checked)}
                           className="w-4 h-4 rounded text-blue-600"
                         />
-                        <span className="text-xs font-bold text-slate-800">Include Form / Survey CTA Button</span>
+                        <span className="text-xs font-bold text-slate-800">{t("comm.includeFormCtaBtn", "Include Form / Survey CTA Button")}</span>
                       </label>
                       {editModalIncludeFormBtn && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-6">
@@ -3762,7 +3866,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                           />
                           <input
                             type="text"
-                            placeholder="Custom Form URL (Optional)"
+                            placeholder={t("comm.customFormUrlOptional", "Custom Form URL (Optional)")}
                             value={editModalFormUrl}
                             onChange={(e) => setEditModalFormUrl(e.target.value)}
                             className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold"
@@ -3780,7 +3884,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                           onChange={(e) => setEditModalIncludeCustomBtn(e.target.checked)}
                           className="w-4 h-4 rounded text-blue-600"
                         />
-                        <span className="text-xs font-bold text-slate-800">Include Secondary Resource CTA Button</span>
+                        <span className="text-xs font-bold text-slate-800">{t("comm.includeSecondaryCtaBtn", "Include Secondary Resource CTA Button")}</span>
                       </label>
                       {editModalIncludeCustomBtn && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-6">
@@ -3809,7 +3913,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
                       <Eye size={14} className="text-blue-600" />
-                      <span>Live Email Simulator</span>
+                      <span>{t("comm.liveEmailSimulator", "Live Email Simulator")}</span>
                     </span>
 
                     <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
@@ -3819,7 +3923,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                         className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
                           editModalPreviewDevice === "desktop" ? "bg-white text-blue-600 shadow-2xs" : "text-slate-500"
                         }`}
-                        title="Desktop View (600px)"
+                        title={t("comm.desktopViewTooltip", "Desktop View (600px)")}
                       >
                         <Monitor size={14} />
                       </button>
@@ -3829,7 +3933,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                         className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
                           editModalPreviewDevice === "mobile" ? "bg-white text-blue-600 shadow-2xs" : "text-slate-500"
                         }`}
-                        title="Mobile View (340px)"
+                        title={t("comm.mobileViewTooltip", "Mobile View (340px)")}
                       >
                         <Smartphone size={14} />
                       </button>
@@ -3840,7 +3944,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                         className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
                           editModalPreviewTheme === "dark" ? "bg-slate-800 text-amber-400 shadow-2xs" : "text-slate-500 hover:text-slate-900"
                         }`}
-                        title="Toggle Light / Dark Mode"
+                        title={t("comm.toggleLightDark", "Toggle Light / Dark Mode")}
                       >
                         {editModalPreviewTheme === "light" ? <Moon size={14} /> : <Sun size={14} />}
                       </button>
@@ -3863,7 +3967,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                         editModalPreviewTheme === "dark" ? "bg-slate-950/60 border-slate-800" : "bg-slate-50 border-slate-100"
                       }`}>
                         <span className="text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-blue-600/10 text-blue-600">
-                          {editingTemplateData?.isTrigger ? "System Automated Notification" : "Official Event Announcement"}
+                          {editingTemplateData?.isTrigger ? t("comm.systemAutoNotification", "System Automated Notification") : t("comm.officialEventAnnouncement", "Official Event Announcement")}
                         </span>
                         <h4 className="text-sm font-black tracking-tight mt-0.5">
                           {eventDetails?.title || "Eventzone Summit & Expo"}
@@ -3915,13 +4019,13 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                             editModalPreviewTheme === "dark" ? "bg-slate-950 border-slate-800" : "bg-slate-50 border-slate-200"
                           }`}>
                             <span className="text-[9px] font-black uppercase tracking-wider text-blue-600">
-                              Fast-Track Check-In QR Pass
+                              {t("comm.fastTrackPassTitle", "Fast-Track Check-In Pass")}
                             </span>
                             <div className="bg-white p-2 rounded-xl shadow-xs">
                               <QrIcon size={80} className="text-slate-900" />
                             </div>
                             <span className="text-[10px] text-slate-400 font-semibold">
-                              Present upon arrival at reception
+                              {t("comm.presentUponArrival", "Present upon arrival at reception")}
                             </span>
                           </div>
                         )}
@@ -3951,7 +4055,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                       className="px-3.5 py-2 text-rose-600 hover:bg-rose-50 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
                     >
                       <RotateCcw size={13} />
-                      <span>Reset to System Default</span>
+                      <span>{t("comm.resetToSystemDefault", "Reset to System Default")}</span>
                     </button>
                   )}
 
@@ -3962,7 +4066,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                     className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
                   >
                     <Send size={13} />
-                    <span>{isTestSendingEditTemplate ? "Sending Test..." : "Send Test Preview"}</span>
+                    <span>{isTestSendingEditTemplate ? t("comm.sendingTestEmail", "Sending Test...") : t("comm.sendTestPreview", "Send Test Preview")}</span>
                   </button>
                 </div>
 
@@ -3984,12 +4088,12 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                     {isSavingEditTemplate ? (
                       <>
                         <RefreshCw size={13} className="animate-spin" />
-                        <span>Saving Changes...</span>
+                        <span>{t("comm.savingChanges", "Saving Changes...")}</span>
                       </>
                     ) : (
                       <>
                         <Check size={14} />
-                        <span>Save & Apply Template</span>
+                        <span>{t("comm.saveApplyTemplate", "Save & Apply Template")}</span>
                       </>
                     )}
                   </button>
