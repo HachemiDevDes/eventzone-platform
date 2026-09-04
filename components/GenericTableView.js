@@ -1564,7 +1564,10 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
           <table className="w-full border-collapse text-start text-xs font-medium text-slate-700">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-150 text-[10px] text-slate-400 font-bold uppercase tracking-wider select-none">
-                <th className="py-4 pl-5 pr-2 w-10 sticky left-0 bg-slate-50 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
+                <th
+                  style={{ [isRTL ? 'right' : 'left']: 0 }}
+                  className={`py-4 ${isRTL ? 'pr-5 pl-2' : 'pl-5 pr-2'} w-10 sticky bg-slate-50 z-20 ${isRTL ? 'shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]' : 'shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]'}`}
+                >
                   <div className="flex items-center justify-center">
                     <input
                       type="checkbox"
@@ -1582,7 +1585,12 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                     />
                   </div>
                 </th>
-                <th className="py-4 px-4 sticky left-10 bg-slate-50 z-10 min-w-[220px] sm:min-w-[260px] whitespace-nowrap shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">{t("table.attendee", "Attendee")}</th>
+                <th
+                  style={{ [isRTL ? 'right' : 'left']: 40 }}
+                  className={`py-4 px-4 sticky bg-slate-50 z-10 min-w-[220px] sm:min-w-[260px] whitespace-nowrap ${isRTL ? 'shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]' : 'shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]'}`}
+                >
+                  {t("table.attendee", "Attendee")}
+                </th>
                 <th className="py-4 px-6 whitespace-nowrap">{t("common.email", "Email")}</th>
                 {selectedTicketType === "all" && <th className="py-4 px-6 whitespace-nowrap">{t("table.ticketTier", "Ticket Tier")}</th>}
                 {/* Dynamic Form Columns */}
@@ -1602,7 +1610,12 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                 ))}
                 <th className="py-4 px-6 whitespace-nowrap">{t("common.status", "Status")}</th>
                 <th className="py-4 px-6 whitespace-nowrap">{t("table.registered", "Registered")}</th>
-                <th className="py-4 px-6 text-center w-20 whitespace-nowrap sticky right-0 bg-slate-50 z-10 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]">{t("common.actions", "Actions")}</th>
+                <th
+                  style={{ [isRTL ? 'left' : 'right']: 0 }}
+                  className={`py-4 px-6 text-center w-20 whitespace-nowrap sticky bg-slate-50 z-10 ${isRTL ? 'shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]' : 'shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]'}`}
+                >
+                  {t("common.actions", "Actions")}
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -1623,7 +1636,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                   const isCheckedIn = Boolean(a.status === 'checked-in' || a.status === 'checked_in' || a.checkedIn || a.checked_in);
                   const displayImg = getAttendeeDisplayImage(a);
                   const attendeeKey = a.id || `att-${globalIdx}`;
-                  const isMenuActive = activeActionsMenu === attendeeKey;
+                  const isMenuActive = activeActionsMenu?.key === attendeeKey;
                   const isSelected = selectedIds.has(attendeeKey);
 
                   return (
@@ -1631,7 +1644,10 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                       key={a.id ? `${a.id}-${globalIdx}` : `attendee-${globalIdx}`} 
                       className={`group hover:bg-slate-50 transition-colors duration-150 ${isSelected ? 'bg-indigo-50/50 hover:bg-indigo-50/70' : isArchived ? 'bg-slate-50/60 text-slate-600' : ''} ${isMenuActive ? 'relative z-40' : 'relative z-0'}`}
                     >
-                      <td className="py-4 pl-5 pr-2 w-10 sticky left-0 bg-white group-hover:bg-slate-50 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
+                      <td
+                        style={{ [isRTL ? 'right' : 'left']: 0 }}
+                        className={`py-4 ${isRTL ? 'pr-5 pl-2' : 'pl-5 pr-2'} w-10 sticky bg-white group-hover:bg-slate-50 z-20 ${isRTL ? 'shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]' : 'shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]'}`}
+                      >
                         <div className="flex items-center justify-center">
                           <input
                             type="checkbox"
@@ -1642,7 +1658,10 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                           />
                         </div>
                       </td>
-                      <td className="py-4 px-4 font-semibold flex items-center gap-3 sticky left-10 bg-white group-hover:bg-slate-50 z-10 min-w-[220px] sm:min-w-[260px] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
+                      <td
+                        style={{ [isRTL ? 'right' : 'left']: 40 }}
+                        className={`py-4 px-4 font-semibold flex items-center gap-3 sticky bg-white group-hover:bg-slate-50 z-10 min-w-[220px] sm:min-w-[260px] ${isRTL ? 'shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]' : 'shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]'}`}
+                      >
                         <button 
                           type="button"
                           onClick={(e) => {
@@ -1739,7 +1758,10 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                         </span>
                       </td>
                       <td className="py-4 px-6 text-slate-400 font-medium whitespace-nowrap">{a.registeredDate || "/"}</td>
-                      <td className="py-4 px-6 text-center whitespace-nowrap sticky right-0 bg-white group-hover:bg-slate-50 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)] z-10">
+                      <td
+                        style={{ [isRTL ? 'left' : 'right']: 0 }}
+                        className={`py-4 px-6 text-center whitespace-nowrap sticky bg-white group-hover:bg-slate-50 z-10 ${isRTL ? 'shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]' : 'shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]'}`}
+                      >
                         <div className="relative inline-flex items-center justify-center">
                           {/* 3 Points Action Trigger Button */}
                           <button
@@ -2450,7 +2472,12 @@ function PendingView({ state, onUpdateState }) {
           <table className="w-full border-collapse text-start text-xs font-semibold text-slate-700">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-150 text-[10px] text-slate-400 font-bold uppercase tracking-wider select-none">
-                <th className="py-4 px-6 sticky left-0 bg-slate-50 z-10 min-w-[240px] sm:min-w-[280px] whitespace-nowrap shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">{t("table.applicant", "Applicant")}</th>
+                <th
+                  style={{ [isRTL ? 'right' : 'left']: 0 }}
+                  className={`py-4 px-6 sticky bg-slate-50 z-10 min-w-[240px] sm:min-w-[280px] whitespace-nowrap ${isRTL ? 'shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]' : 'shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]'}`}
+                >
+                  {t("table.applicant", "Applicant")}
+                </th>
                 <th className="py-4 px-6 whitespace-nowrap">{t("common.email", "Email")}</th>
                 {selectedTicketType === "all" && <th className="py-4 px-6 whitespace-nowrap">{t("table.appliedTier", "Applied Tier")}</th>}
                 {/* Dynamic Form Columns */}
@@ -2470,7 +2497,12 @@ function PendingView({ state, onUpdateState }) {
                 ))}
                 <th className="py-4 px-6 whitespace-nowrap">{t("table.requestNote", "Request Note")}</th>
                 <th className="py-4 px-6 whitespace-nowrap">{t("table.submitted", "Submitted")}</th>
-                <th className="py-4 px-6 text-center w-48 whitespace-nowrap sticky right-0 bg-slate-50 z-10 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]">{t("common.actions", "Actions")}</th>
+                <th
+                  style={{ [isRTL ? 'left' : 'right']: 0 }}
+                  className={`py-4 px-6 text-center w-48 whitespace-nowrap sticky bg-slate-50 z-10 ${isRTL ? 'shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]' : 'shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]'}`}
+                >
+                  {t("common.actions", "Actions")}
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -2488,7 +2520,10 @@ function PendingView({ state, onUpdateState }) {
                   const displayImg = getAttendeeDisplayImage(p);
                   return (
                     <tr key={p.id ? `${p.id}-${globalIdx}` : `pending-${globalIdx}`} className="group hover:bg-slate-50 transition-all duration-150">
-                      <td className="py-4 px-6 font-bold text-slate-800 sticky left-0 bg-white group-hover:bg-slate-50 z-10 min-w-[240px] sm:min-w-[280px] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
+                      <td
+                        style={{ [isRTL ? 'right' : 'left']: 0 }}
+                        className={`py-4 px-6 font-bold text-slate-800 sticky bg-white group-hover:bg-slate-50 z-10 min-w-[240px] sm:min-w-[280px] ${isRTL ? 'shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]' : 'shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]'}`}
+                      >
                         <div className="flex items-center gap-3">
                           <button 
                             type="button"
@@ -2538,7 +2573,10 @@ function PendingView({ state, onUpdateState }) {
                         {p.note || "Standard application"}
                       </td>
                       <td className="py-4 px-6 text-slate-400 font-medium whitespace-nowrap">{p.date || "/"}</td>
-                      <td className="py-4 px-6 whitespace-nowrap sticky right-0 bg-white group-hover:bg-slate-50 z-10 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]">
+                      <td
+                        style={{ [isRTL ? 'left' : 'right']: 0 }}
+                        className={`py-4 px-6 whitespace-nowrap sticky bg-white group-hover:bg-slate-50 z-10 ${isRTL ? 'shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]' : 'shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]'}`}
+                      >
                         <div className="flex items-center justify-center gap-1.5">
                           <button
                             onClick={() => setSelectedSubmissionModal(p)}
