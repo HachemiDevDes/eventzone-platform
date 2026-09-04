@@ -21,6 +21,7 @@ import SearchableSelect from "./SearchableSelect";
 import { EventDetailsSkeleton } from "./SkeletonLoaders";
 import { uploadMedia } from "../lib/storage";
 import { useLanguage } from "../lib/i18n";
+import { getLocalizedIndustry } from "../lib/constants";
 
 const INDUSTRIES = [
   "Technology, AI & Software",
@@ -207,7 +208,7 @@ function RichTextEditor({
   };
 
   return (
-    <div className="border border-slate-200 rounded-2xl bg-white overflow-hidden shadow-2xs focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/10 transition-all text-left">
+    <div className="border border-slate-200 rounded-2xl bg-white overflow-hidden shadow-2xs focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/10 transition-all text-start">
       {/* ── RICH TEXT TOOLBAR ── */}
       <div className="bg-slate-50/90 border-b border-slate-200 px-3 py-2 flex flex-wrap items-center gap-1.5 select-none">
         
@@ -234,7 +235,7 @@ function RichTextEditor({
                   key={sz.label}
                   type="button"
                   onClick={() => applyTextSize(sz)}
-                  className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-colors ${
+                  className={`w-full text-start px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-colors ${
                     activeSize === sz.label ? "bg-blue-50 text-blue-700 font-bold" : "hover:bg-slate-50 text-slate-700 font-medium"
                   }`}
                 >
@@ -1012,7 +1013,7 @@ export default function EventDetailsView({
   }
 
   return (
-    <div className="space-y-6 w-full text-left pb-12 animate-fade-in font-sans">
+    <div className="space-y-6 w-full text-start pb-12 animate-fade-in font-sans">
       {/* Hidden File Input for Gallery Images (Accepts max 5MB images) */}
       <input
         type="file"
@@ -1243,9 +1244,9 @@ export default function EventDetailsView({
                 <SearchableSelect
                   value={category}
                   onChange={(val) => setCategory(val)}
-                  options={INDUSTRIES}
-                  placeholder="Select industry..."
-                  searchPlaceholder="Search industry (e.g. AI, Healthcare, Energy)..."
+                  options={INDUSTRIES.map(ind => ({ value: ind, label: getLocalizedIndustry(ind, t) }))}
+                  placeholder={t("details.selectIndustry", "Select industry...")}
+                  searchPlaceholder={t("details.searchIndustry", "Search industry (e.g. AI, Healthcare, Energy)...")}
                 />
               </div>
 
@@ -1430,7 +1431,7 @@ export default function EventDetailsView({
                             key={itemFormat.id}
                             type="button"
                             onClick={() => setType(itemFormat.id)}
-                            className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                            className={`p-3.5 rounded-2xl border text-start transition-all cursor-pointer flex flex-col justify-between ${
                               isSelected
                                 ? "bg-blue-50/70 border-blue-500 ring-2 ring-blue-500/20 text-blue-900 shadow-2xs"
                                 : "bg-slate-50/60 border-slate-200 text-slate-700 hover:bg-slate-100/80"
@@ -1637,7 +1638,7 @@ export default function EventDetailsView({
 
                         {/* Expanded Stop Editor Form */}
                         {isEditing && (
-                          <div className="pt-3 border-t border-slate-100 space-y-4 animate-fade-in text-left">
+                          <div className="pt-3 border-t border-slate-100 space-y-4 animate-fade-in text-start">
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                               <div className="sm:col-span-2 space-y-1">
                                 <label className="text-[11px] font-semibold text-slate-700">Stop / Session Title</label>

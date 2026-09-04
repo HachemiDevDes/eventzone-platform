@@ -811,6 +811,90 @@ fun main() {
       };
     }
 
+    if (selectedEndpoint === "chargily_checkout") {
+      const url = `${origin}/api/payments/chargily/create-checkout`;
+      const checkoutPayload = {
+        eventId: currentEventId,
+        ticketId: targetTicketId,
+        ticketType: ticketName,
+        name: "Yacine Benali",
+        email: "yacine@example.com",
+        phone: "0555123456",
+        quantity: 1
+      };
+      return {
+        curl: `curl -X POST "${url}" \\
+  -H "Content-Type: application/json" \\
+  -d '${JSON.stringify(checkoutPayload)}'`,
+        javascript: `// Initialize EDAHABIA / CIB Online Checkout
+const res = await fetch("${url}", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(${JSON.stringify(checkoutPayload, null, 2)})
+});
+const data = await res.json();
+// Redirect user to Chargily payment gateway
+if (data.checkoutUrl) window.location.href = data.checkoutUrl;`,
+        nodejs: `const axios = require("axios");
+
+async function initiatePayment() {
+  const { data } = await axios.post("${url}", ${JSON.stringify(checkoutPayload, null, 2)});
+  console.log("Redirect customer to:", data.checkoutUrl);
+}
+initiatePayment();`,
+        python: `# Chargily Pay v2 Checkout (Python)
+import requests
+
+url = "${url}"
+payload = ${JSON.stringify(checkoutPayload, null, 4)}
+
+response = requests.post(url, json=payload)
+data = response.json()
+print("Checkout URL (EDAHABIA/CIB):", data.get("checkoutUrl"))`,
+        php: `<?php
+// Chargily Pay v2 Checkout (PHP)
+$ch = curl_init("${url}");
+curl_setopt_array($ch, [
+  CURLOPT_RETURNTRANSFER => true,
+  CURLOPT_POST => true,
+  CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+  CURLOPT_POSTFIELDS => '${JSON.stringify(checkoutPayload)}'
+]);
+$response = json_decode(curl_exec($ch), true);
+curl_close($ch);
+echo "Payment URL: " . $response['checkoutUrl'];`,
+        golang: `// Go HTTP Request
+package main
+
+import (
+    "bytes"
+    "fmt"
+    "net/http"
+)
+
+func main() {
+    jsonBody := []byte(\`${JSON.stringify(checkoutPayload)}\`)
+    resp, err := http.Post("${url}", "application/json", bytes.NewBuffer(jsonBody))
+    if err != nil { panic(err) }
+    defer resp.Body.Close()
+    fmt.Println("Status:", resp.Status)
+}`,
+        dart: `// Flutter / Dart
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
+Future<void> startCheckout() async {
+  final res = await http.post(
+    Uri.parse('${url}'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode(${JSON.stringify(checkoutPayload, null, 2)}),
+  );
+  final data = jsonDecode(res.body);
+  print('Checkout URL: \${data["checkoutUrl"]}');
+}`
+      };
+    }
+
     if (selectedEndpoint === "get_tickets") {
       const url = `${origin}/api/events/${currentEventId}/tickets`;
       return {
@@ -1850,6 +1934,7 @@ fun main() {
           <div className="flex items-center gap-2 overflow-x-auto pb-1">
             {[
               { id: "register_attendee", method: "POST", path: "/tickets/register", label: t("dev.registerAttendeeEndpoint", "Register Attendee ({tier})").replace("{tier}", currentSelectedTicket?.name || "Direct Ticket") },
+              { id: "chargily_checkout", method: "POST", path: "/payments/chargily/create-checkout", label: "Chargily Pay (EDAHABIA / CIB)" },
               { id: "get_tickets", method: "GET", path: "/tickets", label: t("dev.listActiveTicketsEndpoint", "List Active Tickets") },
               { id: "get_attendees", method: "GET", path: "/attendees", label: t("dev.queryAttendeesEndpoint", "Query Attendees") },
             ].map((ep) => (

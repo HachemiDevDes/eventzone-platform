@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { uploadFileToBucket } from "../lib/db";
 import { useLanguage } from "../lib/i18n";
+import { getLocalizedIndustry } from "../lib/constants";
 import CustomDatePicker from "./CustomDatePicker";
 import CustomTimePicker from "./CustomTimePicker";
 import SearchableSelect from "./SearchableSelect";
@@ -97,7 +98,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
 
   // Current screen state:
   // "1A": Event Name input
-  // "2A": What best describes your event? (Single date / Multiple dates / Appointment)
+  // "2A": {t("wizard.step2Title", "What best describes your event?")} (Single date / Multiple dates / Appointment)
   // "2B": When is your event? (Dates / Times / Timezone)
   // "2C": Where is your event? (Venue / Hybrid / Virtual)
   // "2D": Category & Banner selection
@@ -382,7 +383,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
                       setLang(item.code);
                       setLangMenuOpen(false);
                     }}
-                    className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
+                    className={`w-full text-start px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
                       lang === item.code 
                         ? "bg-blue-50 text-blue-600 font-bold" 
                         : "text-slate-700 hover:bg-slate-50"
@@ -406,7 +407,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
       {/* ==================================================================== */}
       <main className="flex-1 max-w-3xl w-full mx-auto px-6 py-12 flex flex-col items-center justify-center">
         {/* ────────────────────────────────────────────────────────────────── */}
-        {/* SUB-STEP 1A: What is the name of your event?                       */}
+        {/* SUB-STEP 1A: {t("wizard.step1Title", "What is the name of your event?")}                       */}
         {/* ────────────────────────────────────────────────────────────────── */}
         {currentScreen === "1A" && (
           <div className="w-full animate-fade-in text-center">
@@ -414,10 +415,10 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
               What is the name of your event?
             </h1>
             <p className="text-sm text-slate-500 font-medium mt-2 mb-8 max-w-md mx-auto">
-              Give your conference, summit, or meetup a clear and memorable title.
+              {t("wizard.step1Desc", "Give your event a clear, memorable title. You can customize the subtitle and banner next.")}
             </p>
 
-            <form onSubmit={handleNextFrom1A} className="space-y-6 max-w-xl mx-auto text-left">
+            <form onSubmit={handleNextFrom1A} className="space-y-6 max-w-xl mx-auto text-start">
               <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs space-y-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
@@ -427,7 +428,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
                     type="text"
                     required
                     autoFocus
-                    placeholder="e.g. Algeria job summit"
+                    placeholder={t("wizard.titlePlaceholder", "e.g. Algiers Tech Summit 2026")}
                     value={formData.title}
                     onChange={(e) => handleChange("title", e.target.value)}
                     className="w-full px-5 py-4 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-50 rounded-2xl text-sm font-semibold text-slate-900 placeholder-slate-400 outline-none transition-all"
@@ -441,14 +442,14 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
                   onClick={onCancel}
                   className="px-6 py-3.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold text-xs transition-all cursor-pointer"
                 >
-                  Cancel
+                  {t("common.cancel", "Cancel")}
                 </button>
 
                 <button
                   type="submit"
                   className="px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-lg shadow-blue-600/30 transition-all cursor-pointer"
                 >
-                  Continue
+                  {t("common.next", "Continue")}
                 </button>
               </div>
             </form>
@@ -464,7 +465,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
               What best describes your event?
             </h1>
             <p className="text-sm text-slate-500 font-medium mt-2 mb-8">
-              This helps us customize your experience.
+              {t("wizard.step2Desc", "Select the format that best fits your event structure.")}
             </p>
 
             <div className="flex flex-col gap-3.5 max-w-xl mx-auto">
@@ -508,7 +509,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
                 onClick={handleBack}
                 className="px-5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold text-xs transition-all cursor-pointer"
               >
-                Back
+                {t("common.back", "Back")}
               </button>
 
               <button
@@ -542,7 +543,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
               Skip for now
             </button>
 
-            <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs max-w-xl mx-auto text-left space-y-6">
+            <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs max-w-xl mx-auto text-start space-y-6">
               {/* EVENT START */}
               <div>
                 <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-2">
@@ -636,7 +637,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
               Select venue format and physical or virtual address.
             </p>
 
-            <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs max-w-xl mx-auto text-left space-y-6">
+            <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs max-w-xl mx-auto text-start space-y-6">
               <div>
                 <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-2.5">
                   Format
@@ -741,17 +742,17 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
               Customize how your event card appears on the public discovery calendar.
             </p>
 
-            <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs max-w-2xl mx-auto text-left space-y-6">
+            <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs max-w-2xl mx-auto text-start space-y-6">
               <div>
                 <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-2">
-                  Industry / Category
+                  {t("wizard.industryCategory", "Industry / Category")}
                 </label>
                 <SearchableSelect
                   value={formData.category}
                   onChange={(val) => handleChange("category", val)}
-                  options={INDUSTRIES}
-                  placeholder="Select industry / category..."
-                  searchPlaceholder="Type to search industry (e.g. AI, Healthcare, Energy)..."
+                  options={INDUSTRIES.map(ind => ({ value: ind, label: getLocalizedIndustry(ind, t) }))}
+                  placeholder={t("wizard.selectIndustry", "Select industry / category...")}
+                  searchPlaceholder={t("wizard.searchIndustry", "Type to search industry (e.g. AI, Healthcare, Energy)...")}
                 />
               </div>
 
@@ -903,7 +904,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
               This is the link you&apos;ll give to guests so they can register.
             </p>
 
-            <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs max-w-xl mx-auto text-left space-y-6">
+            <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs max-w-xl mx-auto text-start space-y-6">
               <div>
                 <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-2">
                   EVENT URL
@@ -969,7 +970,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
               Review your setup before launching your event manager dashboard.
             </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 max-w-3xl mx-auto text-left">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 max-w-3xl mx-auto text-start">
               {/* Host Fields */}
               <div className="md:col-span-7 bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs space-y-4">
                 <h3 className="text-sm font-bold text-slate-800 pb-2 border-b border-slate-100 flex items-center gap-2">

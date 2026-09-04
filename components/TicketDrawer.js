@@ -27,6 +27,7 @@ import {
 import A4BadgeSheet from "./A4BadgeSheet";
 import SearchableSelect from "./SearchableSelect";
 import { uploadMedia } from "@/lib/storage";
+import { useLanguage } from "../lib/i18n";
 
 // Standard preset tier name chips
 const TIER_NAME_SUGGESTIONS = [
@@ -39,6 +40,18 @@ const TIER_NAME_SUGGESTIONS = [
   "Workshop Pass",
   "Virtual Attendee"
 ];
+
+const TIER_SUGGESTIONS_MAP = [
+  { id: "vip", key: "tickets.suggestionVip", fallback: "VIP Access Pass" },
+  { id: "standard", key: "tickets.suggestionStandard", fallback: "Standard Admission" },
+  { id: "delegate", key: "tickets.suggestionDelegate", fallback: "Delegate Pass" },
+  { id: "earlyBird", key: "tickets.suggestionEarlyBird", fallback: "Early Bird Pass" },
+  { id: "speaker", key: "tickets.suggestionSpeaker", fallback: "Speaker Pass" },
+  { id: "exhibitor", key: "tickets.suggestionExhibitor", fallback: "Exhibitor Pass" },
+  { id: "workshop", key: "tickets.suggestionWorkshop", fallback: "Workshop Pass" },
+  { id: "virtual", key: "tickets.suggestionVirtual", fallback: "Virtual Attendee" }
+];
+
 
 // Price suggestions in DZD
 const PRICE_SUGGESTIONS_DZD = [
@@ -75,6 +88,22 @@ const SUGGESTED_PERKS = [
   "Speaker Q&A Priority"
 ];
 
+const SUGGESTED_PERKS_MAP = [
+  { id: "keynote", key: "perk.fullKeynote", fallback: "Full Keynote Access" },
+  { id: "floor", key: "perk.floorAccess", fallback: "Exhibition Floor Access" },
+  { id: "vipLounge", key: "perk.vipLounge", fallback: "VIP Lounge Access" },
+  { id: "lunch", key: "perk.buffetLunch", fallback: "Buffet Lunch & Coffee Breaks" },
+  { id: "dinner", key: "perk.networkingDinner", fallback: "Networking Dinner & Cocktail" },
+  { id: "cert", key: "perk.certificate", fallback: "Certificate of Attendance" },
+  { id: "workshop", key: "perk.workshopEntry", fallback: "Workshop & Masterclass Entry" },
+  { id: "b2b", key: "perk.b2bMatchmaking", fallback: "B2B Matchmaking Tool" },
+  { id: "welcomeKit", key: "perk.welcomeKit", fallback: "Welcome Kit & Gift Bag" },
+  { id: "kiosk", key: "perk.fastTrackCheckin", fallback: "Fast-Track Kiosk Check-in" },
+  { id: "videos", key: "perk.videoRecordings", fallback: "Session Video Recordings" },
+  { id: "speakerQa", key: "perk.speakerQa", fallback: "Speaker Q&A Priority" }
+];
+
+
 export default function TicketDrawer({
   isOpen,
   onClose,
@@ -86,6 +115,7 @@ export default function TicketDrawer({
   eventTitle = "Eventzone Summit",
   onSwitchView
 }) {
+  const { t, isRTL } = useLanguage();
   // Navigation Tabs
   const [activeTab, setActiveTab] = useState("general"); // 'general' | 'form' | 'badge'
 
@@ -295,22 +325,22 @@ export default function TicketDrawer({
         <header className="px-8 py-5 border-b border-slate-200 flex items-center justify-between bg-white select-none">
           <div className="flex items-center gap-3">
             <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
-              {ticket ? "Edit Ticket Tier" : "Create Ticket Tier"}
+              {ticket ? t("tickets.editTier", "Edit Ticket Tier") : t("tickets.createTier", "Create Ticket Tier")}
             </h2>
             <span className={`text-[11px] font-bold tracking-wide uppercase px-2.5 py-0.5 rounded-full ${
               status === "Active" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-slate-100 text-slate-600 border border-slate-200"
             }`}>
-              {status}
+              {status === "Active" ? t("tickets.statusActive", "Active") : t("tickets.statusDraft", "Draft")}
             </span>
             {isPopular && (
               <span className="text-[11px] font-bold tracking-wide uppercase px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1">
                 <Star size={11} className="fill-amber-500 text-amber-500" />
-                Featured Tier
+                {t("tickets.featuredTier", "Featured Tier")}
               </span>
             )}
             {requiresApproval && (
               <span className="text-[11px] font-bold tracking-wide uppercase px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-                Review Required
+                {t("tickets.reviewRequired", "Review Required")}
               </span>
             )}
           </div>
@@ -335,7 +365,7 @@ export default function TicketDrawer({
               }`}
             >
               <Ticket size={15} className={activeTab === "general" ? "text-blue-600" : "text-slate-400"} />
-              <span>Details & Pricing</span>
+              <span>{t("tickets.detailsPricingTab", "Details & Pricing")}</span>
             </button>
 
             <button
@@ -347,7 +377,7 @@ export default function TicketDrawer({
               }`}
             >
               <FileText size={15} className={activeTab === "form" ? "text-blue-600" : "text-slate-400"} />
-              <span>Registration Form</span>
+              <span>{t("drawer.tabForm", "Registration Form")}</span>
               {selectedFormId !== "default" && (
                 <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0"></span>
               )}
@@ -362,7 +392,7 @@ export default function TicketDrawer({
               }`}
             >
               <Printer size={15} className={activeTab === "badge" ? "text-blue-600" : "text-slate-400"} />
-              <span>Badge & Print Layout</span>
+              <span>{t("drawer.tabBadge", "Badge & Credentials")}</span>
             </button>
           </div>
         </div>
@@ -379,7 +409,7 @@ export default function TicketDrawer({
               {/* Ticket Tier Name & Small Suggestion Chips */}
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">
-                  Ticket Tier Name <span className="text-rose-500">*</span>
+                  {t("tickets.tierNameLabel", "Ticket Tier Name")} <span className="text-rose-500">*</span>
                 </label>
                 
                 <input
@@ -387,27 +417,31 @@ export default function TicketDrawer({
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. VIP Access Pass"
+                  placeholder={t("tickets.tierNamePlaceholder", "e.g. VIP Access Pass")}
                   className="px-4 py-3 border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all bg-white"
                 />
 
                 {/* Small Clean Chips Underneath */}
                 <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                  <span className="text-[11px] font-semibold text-slate-400 mr-1">Suggestions:</span>
-                  {TIER_NAME_SUGGESTIONS.map((preset) => (
-                    <button
-                      type="button"
-                      key={preset}
-                      onClick={() => setName(preset)}
-                      className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
-                        name === preset
-                          ? "bg-blue-50 border-blue-400 text-blue-700 font-bold"
-                          : "bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50"
-                      }`}
-                    >
-                      {preset}
-                    </button>
-                  ))}
+                  <span className="text-[11px] font-semibold text-slate-400 mr-1">{t("tickets.suggestionsLabel", "Suggestions:")}</span>
+                  {TIER_SUGGESTIONS_MAP.map((item) => {
+                    const translatedLabel = t(item.key, item.fallback);
+                    const isSelected = name === translatedLabel || name === item.fallback;
+                    return (
+                      <button
+                        type="button"
+                        key={item.id}
+                        onClick={() => setName(translatedLabel)}
+                        className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                          isSelected
+                            ? "bg-blue-50 border-blue-400 text-blue-700 font-bold"
+                            : "bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                        }`}
+                      >
+                        {translatedLabel}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -418,7 +452,7 @@ export default function TicketDrawer({
                 <div className="bg-slate-50/90 border border-slate-250 rounded-2xl p-4.5 flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">
-                      Ticket Price (DZD)
+                      {t("tickets.ticketPriceLabel", "Ticket Price (DZD)")}
                     </label>
                     
                     <div className="inline-flex p-0.5 bg-slate-200 rounded-xl text-[11px] font-bold">
@@ -429,7 +463,7 @@ export default function TicketDrawer({
                           !isFree ? "bg-white text-slate-900 shadow-xs" : "text-slate-500 hover:text-slate-800"
                         }`}
                       >
-                        Paid
+                        {t("tickets.paidOption", "Paid")}
                       </button>
                       <button
                         type="button"
@@ -438,7 +472,7 @@ export default function TicketDrawer({
                           isFree ? "bg-emerald-600 text-white shadow-xs" : "text-slate-500 hover:text-slate-800"
                         }`}
                       >
-                        Free
+                        {t("tickets.freeOption", "Free")}
                       </button>
                     </div>
                   </div>
@@ -446,7 +480,7 @@ export default function TicketDrawer({
                   {isFree ? (
                     <div className="py-2.5 px-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-800 flex items-center gap-2">
                       <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
-                      <span>Complimentary Admission (0 DZD)</span>
+                      <span>{t("tickets.complimentaryAdmission", "Complimentary Admission (0 DZD)")}</span>
                     </div>
                   ) : (
                     <>
@@ -461,7 +495,7 @@ export default function TicketDrawer({
                           className="w-full pl-4 pr-14 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-extrabold text-slate-900 focus:outline-none focus:border-blue-600"
                         />
                         <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-extrabold text-slate-500">
-                          DZD
+                          {t("common.dzd", "DZD")}
                         </span>
                       </div>
 
@@ -478,7 +512,7 @@ export default function TicketDrawer({
                                 : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100"
                             }`}
                           >
-                            {p.label}
+                            <bdi dir="ltr">{p.label}</bdi>
                           </button>
                         ))}
                       </div>
@@ -490,7 +524,7 @@ export default function TicketDrawer({
                 <div className="bg-slate-50/90 border border-slate-250 rounded-2xl p-4.5 flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">
-                      Available Capacity
+                      {t("tickets.availableCapacityLabel", "Available Capacity")}
                     </label>
                     
                     <div className="inline-flex p-0.5 bg-slate-200 rounded-xl text-[11px] font-bold">
@@ -501,7 +535,7 @@ export default function TicketDrawer({
                           !isUnlimited ? "bg-white text-slate-900 shadow-xs" : "text-slate-500 hover:text-slate-800"
                         }`}
                       >
-                        Limited
+                        {t("tickets.limitedOption", "Limited")}
                       </button>
                       <button
                         type="button"
@@ -510,7 +544,7 @@ export default function TicketDrawer({
                           isUnlimited ? "bg-blue-600 text-white shadow-xs" : "text-slate-500 hover:text-slate-800"
                         }`}
                       >
-                        Unlimited
+                        {t("tickets.unlimitedOption", "Unlimited")}
                       </button>
                     </div>
                   </div>
@@ -518,7 +552,7 @@ export default function TicketDrawer({
                   {isUnlimited ? (
                     <div className="py-2.5 px-3.5 bg-blue-50 border border-blue-200 rounded-xl text-xs font-bold text-blue-800 flex items-center gap-2">
                       <Users size={16} className="text-blue-600 shrink-0" />
-                      <span>Unlimited Registrations</span>
+                      <span>{t("tickets.unlimitedRegistrations", "Unlimited Registrations")}</span>
                     </div>
                   ) : (
                     <>
@@ -532,7 +566,7 @@ export default function TicketDrawer({
                           className="w-full pl-4 pr-16 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-extrabold text-slate-900 focus:outline-none focus:border-blue-600"
                         />
                         <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-extrabold text-slate-400">
-                          Tickets
+                          {t("tickets.ticketsUnit", "Tickets")}
                         </span>
                       </div>
 
@@ -578,15 +612,15 @@ export default function TicketDrawer({
                   <div className="flex-1 min-w-0">
                     <div className="text-xs font-extrabold text-slate-900 flex items-center gap-1.5">
                       <Star size={13} className={isPopular ? "fill-amber-500 text-amber-500" : "text-slate-400"} />
-                      <span>Featured / Most Popular Tag</span>
+                      <span>{t("tickets.featuredPopularTag", "Featured / Most Popular Tag")}</span>
                     </div>
                     <p className="text-[11px] text-slate-500 mt-1 leading-snug">
-                      Highlights this tier with a &quot;Best Seller&quot; badge on the registration page. Only one ticket tier can hold this tag.
+                      {t("tickets.featuredPopularDesc", "Highlights this tier with a \"Best Seller\" badge on the registration page. Only one ticket tier can hold this tag.")}
                     </p>
                   </div>
                 </div>
 
-                {/* Tier Visibility Status */}
+                {/* {t("tickets.tierVisibilityLabel", "Tier Visibility")} Status */}
                 <div className="bg-slate-50/70 border border-slate-200 rounded-2xl p-4 flex flex-col justify-between gap-2.5">
                   <label className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">
                     Tier Visibility
@@ -601,7 +635,7 @@ export default function TicketDrawer({
                           : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
                       }`}
                     >
-                      Active (On Sale)
+                      {t("tickets.activeOnSale", "Active (On Sale)")}
                     </button>
                     <button
                       type="button"
@@ -612,7 +646,7 @@ export default function TicketDrawer({
                           : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
                       }`}
                     >
-                      Draft (Hidden)
+                      {t("tickets.draftHidden", "Draft (Hidden)")}
                     </button>
                   </div>
                 </div>
@@ -622,8 +656,8 @@ export default function TicketDrawer({
               {/* Registration Approval Policy */}
               <div className="flex flex-col gap-2.5">
                 <label className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center justify-between">
-                  <span>Registration Approval Policy</span>
-                  <span className="text-[11px] font-medium text-slate-400">Controls registration flow</span>
+                  <span>{t("tickets.approvalPolicyLabel", "Registration Approval Policy")}</span>
+                  <span className="text-[11px] font-medium text-slate-400">{t("tickets.controlsRegFlow", "Controls registration flow")}</span>
                 </label>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
@@ -641,11 +675,11 @@ export default function TicketDrawer({
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-xs font-bold text-slate-900 flex items-center justify-between">
-                        <span>Auto-Accept</span>
-                        {!requiresApproval && <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md">Active</span>}
+                        <span>{t("tickets.autoAccept", "Auto-Accept")}</span>
+                        {!requiresApproval && <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md">{t("tickets.activeBadge", "Active")}</span>}
                       </div>
                       <p className="text-[11px] text-slate-500 mt-1 leading-snug">
-                        Immediate confirmation and attendee badge issued upon form submission.
+                        {t("tickets.autoAcceptDesc", "Immediate confirmation and attendee badge issued upon form submission.")}
                       </p>
                     </div>
                   </div>
@@ -664,11 +698,11 @@ export default function TicketDrawer({
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-xs font-bold text-slate-900 flex items-center justify-between">
-                        <span>Require Approval</span>
-                        {requiresApproval && <span className="text-[10px] font-bold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-md">Pending Queue</span>}
+                        <span>{t("tickets.requireApproval", "Require Approval")}</span>
+                        {requiresApproval && <span className="text-[10px] font-bold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-md">{t("tickets.pendingQueue", "Pending Queue")}</span>}
                       </div>
                       <p className="text-[11px] text-slate-500 mt-1 leading-snug">
-                        Registrations go to Pending Approvals queue for organizer review before passes are issued.
+                        {t("tickets.requireApprovalDesc", "Registrations go to Pending Approvals queue for organizer review before passes are issued.")}
                       </p>
                     </div>
                   </div>
@@ -678,13 +712,13 @@ export default function TicketDrawer({
               {/* Description (Clean, no dummy pre-filled text) */}
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">
-                  Description / Marketing Summary
+                  {t("tickets.descSummaryLabel", "Description / Marketing Summary")}
                 </label>
                 <textarea
                   rows={2}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="e.g. Access to all sessions, lunch buffet, VIP lounge, and networking floor..."
+                  placeholder={t("tickets.descSummaryPlaceholder", "e.g. Access to all sessions, lunch buffet, VIP lounge, and networking floor...")}
                   className="px-4 py-3 border border-slate-300 rounded-xl text-xs font-medium focus:outline-none focus:border-blue-600 resize-none leading-relaxed bg-white"
                 />
               </div>
@@ -693,9 +727,9 @@ export default function TicketDrawer({
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">
-                    Included Perks & Inclusions ({features.length})
+                    {t("tickets.perksLabel", "Included Perks & Inclusions")} ({features.length})
                   </label>
-                  <span className="text-[11px] font-medium text-slate-400">Displayed on public landing page</span>
+                  <span className="text-[11px] font-medium text-slate-400">{t("tickets.perksSubtitle", "Displayed on public landing page")}</span>
                 </div>
 
                 {/* Perk Input */}
@@ -710,7 +744,7 @@ export default function TicketDrawer({
                         handleAddPerk(newPerkInput);
                       }
                     }}
-                    placeholder="Type a custom perk (e.g. VIP Lounge Access) and press Enter"
+                    placeholder={t("tickets.perkInputPlaceholder", "Type a custom perk (e.g. VIP Lounge Access) and press Enter")}
                     className="flex-1 px-4 py-2.5 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 bg-white"
                   />
                   <button
@@ -718,31 +752,32 @@ export default function TicketDrawer({
                     onClick={() => handleAddPerk(newPerkInput)}
                     className="bg-slate-900 hover:bg-black text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
                   >
-                    <Plus size={14} /> Add Perk
+                    <Plus size={14} /> {t("tickets.addPerk", "Add Perk")}
                   </button>
                 </div>
 
                 {/* Rich Suggested Perks Bank */}
                 <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 flex flex-col gap-2">
                   <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
-                    Suggested Perks (Click to add)
+                    {t("tickets.suggestedPerksLabel", "Suggested Perks (Click to add)")}
                   </span>
                   <div className="flex flex-wrap gap-1.5">
-                    {SUGGESTED_PERKS.map((preset) => {
-                      const isAdded = features.includes(preset);
+                    {SUGGESTED_PERKS_MAP.map((item) => {
+                      const translatedPerk = t(item.key, item.fallback);
+                      const isAdded = features.includes(translatedPerk) || features.includes(item.fallback);
                       return (
                         <button
                           type="button"
-                          key={preset}
+                          key={item.id}
                           disabled={isAdded}
-                          onClick={() => handleAddPerk(preset)}
+                          onClick={() => handleAddPerk(translatedPerk)}
                           className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-all ${
                             isAdded
                               ? "bg-emerald-50 text-emerald-700 border-emerald-200 opacity-60 cursor-default"
                               : "bg-white text-slate-700 border-slate-250 hover:bg-slate-100 hover:border-slate-300 cursor-pointer"
                           }`}
                         >
-                          {isAdded ? "✓ " : "+ "} {preset}
+                          {isAdded ? "✓ " : "+ "} {translatedPerk}
                         </button>
                       );
                     })}
@@ -783,9 +818,9 @@ export default function TicketDrawer({
               <div className="bg-blue-50/70 border border-blue-200 rounded-2xl p-4 flex items-start gap-3.5">
                 <FileCheck className="text-blue-600 shrink-0 mt-0.5" size={18} />
                 <div className="text-xs">
-                  <div className="font-bold text-blue-950">Registration Questionnaire</div>
+                  <div className="font-bold text-blue-950">{t("tickets.regQuestionnaireTitle", "Registration Questionnaire")}</div>
                   <div className="text-blue-800/80 mt-0.5 leading-relaxed">
-                    Select which registration questionnaire attendees must complete when applying for or purchasing this ticket tier.
+                    {t("tickets.regQuestionnaireDesc", "Select which registration questionnaire attendees must complete when applying for or purchasing this ticket tier.")}
                   </div>
                 </div>
               </div>
@@ -806,11 +841,11 @@ export default function TicketDrawer({
                       <FileText size={17} />
                     </div>
                     <div>
-                      <div className="text-sm font-bold text-slate-900">Standard Event Registration (Default)</div>
-                      <div className="text-xs text-slate-500 mt-0.5">Captures Full Name & Email Address with instant badge generation.</div>
+                      <div className="text-sm font-bold text-slate-900">{t("tickets.standardRegForm", "Standard Event Registration (Default)")}</div>
+                      <div className="text-xs text-slate-500 mt-0.5">{t("tickets.standardRegDesc", "Captures Full Name & Email Address with instant badge generation.")}</div>
                       <div className="flex items-center gap-2 mt-2">
-                        <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-md">2 Standard Fields</span>
-                        <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-md">Fast Intake</span>
+                        <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-md">{t("tickets.twoStandardFields", "2 Standard Fields")}</span>
+                        <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-md">{t("tickets.fastIntake", "Fast Intake")}</span>
                       </div>
                     </div>
                   </div>
@@ -841,13 +876,13 @@ export default function TicketDrawer({
                         </div>
                         <div>
                           <div className="text-sm font-bold text-slate-900">{form.title}</div>
-                          <div className="text-xs text-slate-500 mt-0.5 line-clamp-1">{form.description || "Custom registration questionnaire"}</div>
+                          <div className="text-xs text-slate-500 mt-0.5 line-clamp-1">{form.description || t("tickets.customRegDesc", "Custom registration questionnaire")}</div>
                           <div className="flex items-center gap-2 mt-2">
                             <span className="text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-0.5 rounded-md">
-                              {fieldCount} Questions
+                              {t("tickets.questionsCount", "{count} Questions", { count: fieldCount })}
                             </span>
                             <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-md capitalize">
-                              {form.type?.replace("_", " ") || "Custom Form"}
+                              {form.type?.replace("_", " ") || t("tickets.customForm", "Custom Form")}
                             </span>
                           </div>
                         </div>
@@ -867,7 +902,7 @@ export default function TicketDrawer({
                 <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                      Questionnaire Preview ({activeFormObj.fields.length} Fields)
+                      {t("tickets.previewFields", "Questionnaire Preview ({count} Fields)", { count: activeFormObj.fields.length })}
                     </span>
                     <span className="text-xs font-bold text-blue-600">{activeFormObj.title}</span>
                   </div>
@@ -878,7 +913,7 @@ export default function TicketDrawer({
                           <span className="truncate">{field.label}</span>
                           {field.required && <span className="text-rose-500 text-[10px] font-bold shrink-0">*</span>}
                         </div>
-                        <div className="text-[10px] text-slate-400 capitalize mt-0.5">{field.type} Field</div>
+                        <div className="text-[10px] text-slate-400 capitalize mt-0.5">{t("tickets.fieldType", "{type} Field", { type: field.type })}</div>
                       </div>
                     ))}
                   </div>
@@ -887,7 +922,7 @@ export default function TicketDrawer({
 
               {/* Form Builder Shortcut */}
               <div className="border-t border-slate-200 pt-3.5 flex items-center justify-between">
-                <div className="text-xs text-slate-500 font-medium">Need a new form or additional intake fields?</div>
+                <div className="text-xs text-slate-500 font-medium">{t("tickets.needNewForm", "Need a new form or additional intake fields?")}</div>
                 <button
                   type="button"
                   onClick={() => {
@@ -896,7 +931,7 @@ export default function TicketDrawer({
                   }}
                   className="flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors cursor-pointer"
                 >
-                  Open Form Builder <ArrowRight size={13} />
+                  {t("tickets.openFormBuilder", "Open Form Builder")} <ArrowRight size={13} />
                 </button>
               </div>
             </div>
@@ -909,10 +944,10 @@ export default function TicketDrawer({
             <div className="flex flex-col gap-5 animate-fade-in">
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">
-                  Badge Design & Printing Layout
+                  {t("tickets.badgeDesignTitle", "Badge Design & Printing Layout")}
                 </label>
                 <p className="text-xs text-slate-500">
-                  Select the physical print format for attendee credentials.
+                  {t("tickets.badgeDesignDesc", "Select the physical print format for attendee credentials.")}
                 </p>
               </div>
 
@@ -934,9 +969,9 @@ export default function TicketDrawer({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <div className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                        Compact Thermal Ticket Printer
+                        {t("tickets.thermalPrinterTitle", "Compact Thermal Ticket Printer")}
                         <span className="text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-md">
-                          58mm / 80mm
+                          <bdi dir="ltr">58mm / 80mm</bdi>
                         </span>
                       </div>
                       {badgeType === "thermal_qr" && (
@@ -946,7 +981,7 @@ export default function TicketDrawer({
                       )}
                     </div>
                     <p className="text-xs text-slate-500 mt-1 leading-snug">
-                      High-speed on-demand printout for small thermal receipt/sticker printers (Zebra, Brother, Rollo, POS).
+                      {t("tickets.thermalPrinterDesc", "High-speed on-demand printout for small thermal receipt/sticker printers (Zebra, Brother, Rollo, POS).")}
                     </p>
                   </div>
                 </div>
@@ -966,9 +1001,9 @@ export default function TicketDrawer({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <div className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                        A4 4-Fold Badge Sheet
+                        {t("tickets.a4BadgeSheetTitle", "A4 4-Fold Badge Sheet")}
                         <span className="text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-md">
-                          210 x 297 mm
+                          <bdi dir="ltr">210 x 297 mm</bdi>
                         </span>
                       </div>
                       {badgeType === "a4" && (
@@ -978,7 +1013,7 @@ export default function TicketDrawer({
                       )}
                     </div>
                     <p className="text-xs text-slate-500 mt-1 leading-snug">
-                      Custom A4 template with attendee credentials &amp; QR codes centered in the top-left and top-right quadrants for standard lanyard pouch folding.
+                      {t("tickets.a4BadgeSheetDesc", "Custom A4 template with attendee credentials & QR codes centered in the top-left and top-right quadrants for standard lanyard pouch folding.")}
                     </p>
                   </div>
                 </div>
@@ -990,10 +1025,10 @@ export default function TicketDrawer({
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="text-xs font-bold text-slate-900">
-                        Upload A4 Background Artwork Template
+                        {t("tickets.uploadA4ArtworkTitle", "Upload A4 Background Artwork Template")}
                       </div>
                       <div className="text-[11px] text-slate-500">
-                        Full-page background (210 x 297 mm). Top-left and top-right cards will overlay dynamically.
+                        <>{t("tickets.uploadA4ArtworkDesc", "Full-page background (210 x 297 mm). Top-left and top-right cards will overlay dynamically.")}</>
                       </div>
                     </div>
                     {badgeUrl && (
@@ -1002,7 +1037,7 @@ export default function TicketDrawer({
                         onClick={() => setBadgeUrl("")}
                         className="text-xs font-bold text-rose-600 hover:text-rose-800 cursor-pointer"
                       >
-                        Remove Artwork
+                        {t("tickets.removeArtwork", "Remove Artwork")}
                       </button>
                     )}
                   </div>
@@ -1030,17 +1065,17 @@ export default function TicketDrawer({
                       <div className="flex-1 min-w-0">
                         <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
                           <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                          <span>Custom A4 Template Active</span>
+                          <span>{t("tickets.customA4TemplateActive", "Custom A4 Template Active")}</span>
                         </div>
                         <p className="text-[11px] text-slate-500 mt-0.5">
-                          Full-page background applied to badge sheet
+                          {t("tickets.fullPageBackgroundApplied", "Full-page background applied to badge sheet")}
                         </p>
                         <button
                           type="button"
                           onClick={() => fileInputRef.current?.click()}
                           className="mt-1.5 text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
                         >
-                          <Upload size={12} /> Replace Template
+                          <Upload size={12} /> {t("tickets.replaceTemplate", "Replace Template")}
                         </button>
                       </div>
                     </div>
@@ -1052,13 +1087,13 @@ export default function TicketDrawer({
                       {isUploading ? (
                         <div className="flex items-center gap-2">
                           <Loader2 className="animate-spin text-blue-600" size={18} />
-                          <span className="text-xs font-bold text-slate-600">Uploading artwork template...</span>
+                          <span className="text-xs font-bold text-slate-600">{t("tickets.uploadingArtwork", "Uploading artwork template...")}</span>
                         </div>
                       ) : (
                         <div className="flex items-center gap-2 text-xs">
                           <Upload size={16} className="text-blue-600" />
-                          <span className="font-bold text-blue-600">Upload A4 background template</span>
-                          <span className="text-slate-400 font-medium">(PNG or JPEG up to 10MB)</span>
+                          <span className="font-bold text-blue-600">{t("tickets.uploadA4Template", "Upload A4 background template")}</span>
+                          <span className="text-slate-400 font-medium"><bdi dir="ltr">(PNG or JPEG up to 10MB)</bdi></span>
                         </div>
                       )}
                     </div>
@@ -1067,56 +1102,56 @@ export default function TicketDrawer({
                   {/* Badge Controls Grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-slate-200">
                     <div className="flex flex-col gap-1">
-                      <label className="text-[11px] font-bold text-slate-600 uppercase">Card Style</label>
+                      <label className="text-[11px] font-bold text-slate-600 uppercase">{t("tickets.cardStyleLabel", "Card Style")}</label>
                       <SearchableSelect
                         value={badgeSettings.cardTheme || "white"}
                         onChange={(val) => setBadgeSettings({ ...badgeSettings, cardTheme: val })}
                         options={[
-                          { value: "white", label: "Compact White Card" },
-                          { value: "glass", label: "Translucent Glass Card" },
-                          { value: "floating", label: "Borderless / Direct on Artwork" },
-                          { value: "clean", label: "Minimal Border Outline" }
+                          { value: "white", label: t("tickets.cardStyleCompactWhite", "Compact White Card") },
+                          { value: "glass", label: t("tickets.cardStyleTranslucentGlass", "Translucent Glass Card") },
+                          { value: "floating", label: t("tickets.cardStyleBorderless", "Borderless / Direct on Artwork") },
+                          { value: "clean", label: t("tickets.cardStyleMinimalOutline", "Minimal Border Outline") }
                         ]}
-                        placeholder="Select card style..."
+                        placeholder={t("tickets.selectCardStylePlaceholder", "Select card style...")}
                       />
                     </div>
 
                     <div className="flex flex-col gap-1">
-                      <label className="text-[11px] font-bold text-slate-600 uppercase">Fold Guidelines</label>
+                      <label className="text-[11px] font-bold text-slate-600 uppercase">{t("tickets.foldGuidelinesLabel", "Fold Guidelines")}</label>
                       <SearchableSelect
                         value={badgeSettings.showFoldGuide !== false ? "true" : "false"}
                         onChange={(val) => setBadgeSettings({ ...badgeSettings, showFoldGuide: val === "true" })}
                         options={[
-                          { value: "true", label: "Show Center Fold Crosshairs" },
-                          { value: "false", label: "Hide Fold Guidelines" }
+                          { value: "true", label: t("tickets.showCenterFold", "Show Center Fold Crosshairs") },
+                          { value: "false", label: t("tickets.hideFoldGuidelines", "Hide Fold Guidelines") }
                         ]}
-                        placeholder="Fold guidelines..."
+                        placeholder={t("tickets.foldGuidelinesPlaceholder", "Fold guidelines...")}
                       />
                     </div>
 
                     <div className="flex flex-col gap-1">
-                      <label className="text-[11px] font-bold text-slate-600 uppercase">Attendee Photo</label>
+                      <label className="text-[11px] font-bold text-slate-600 uppercase">{t("tickets.attendeePhotoLabel", "Attendee Photo")}</label>
                       <SearchableSelect
                         value={badgeSettings.showPhoto !== false ? "true" : "false"}
                         onChange={(val) => setBadgeSettings({ ...badgeSettings, showPhoto: val === "true" })}
                         options={[
-                          { value: "true", label: "Show Avatar / Photo Circle" },
-                          { value: "false", label: "Text & QR Only" }
+                          { value: "true", label: t("tickets.showAvatarCircle", "Show Avatar / Photo Circle") },
+                          { value: "false", label: t("tickets.textAndQrOnly", "Text & QR Only") }
                         ]}
-                        placeholder="Attendee photo..."
+                        placeholder={t("tickets.attendeePhotoPlaceholder", "Attendee photo...")}
                       />
                     </div>
 
                     <div className="flex flex-col gap-1">
-                      <label className="text-[11px] font-bold text-slate-600 uppercase">QR Code Pass</label>
+                      <label className="text-[11px] font-bold text-slate-600 uppercase">{t("tickets.qrCodePassLabel", "QR Code Pass")}</label>
                       <SearchableSelect
                         value={badgeSettings.showQr !== false ? "true" : "false"}
                         onChange={(val) => setBadgeSettings({ ...badgeSettings, showQr: val === "true" })}
                         options={[
-                          { value: "true", label: "Include Door Check-in QR" },
-                          { value: "false", label: "Badge ID Only" }
+                          { value: "true", label: t("tickets.includeDoorCheckinQr", "Include Door Check-in QR") },
+                          { value: "false", label: t("tickets.badgeIdOnly", "Badge ID Only") }
                         ]}
-                        placeholder="QR code pass..."
+                        placeholder={t("tickets.qrCodePassPlaceholder", "QR code pass...")}
                       />
                     </div>
                   </div>
@@ -1129,10 +1164,10 @@ export default function TicketDrawer({
                   <div className="flex items-center gap-2">
                     <Sparkles size={15} className="text-amber-400" />
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                      Live Output Sample Preview
+                      {t("tickets.liveOutputPreview", "Live Output Sample Preview")}
                     </span>
                   </div>
-                  <span className="text-xs font-medium text-slate-400">Sample: Elena Rostova</span>
+                  <span className="text-xs font-medium text-slate-400">{t("tickets.sampleName", "Sample: Elena Rostova")}</span>
                 </div>
 
                 <div className="flex justify-center py-2">
@@ -1141,7 +1176,7 @@ export default function TicketDrawer({
                     <div className="w-60 bg-white text-slate-900 rounded-lg p-4.5 shadow-xl flex flex-col gap-3 font-mono border-t-4 border-slate-800 relative">
                       <div className="text-center border-b border-dashed border-slate-300 pb-2.5">
                         <div className="text-xs font-black uppercase tracking-wider text-slate-800">{eventTitle}</div>
-                        <div className="text-[9px] text-slate-500 uppercase mt-0.5">Check-In Pass</div>
+                        <div className="text-[9px] text-slate-500 uppercase mt-0.5">{t("tickets.checkInPass", "Check-In Pass")}</div>
                       </div>
 
                       <div className="text-center py-0.5">
@@ -1161,7 +1196,7 @@ export default function TicketDrawer({
                       </div>
 
                       <div className="text-center border-t border-dashed border-slate-300 pt-2 text-[8px] text-slate-400 uppercase">
-                        Kiosk Print • 10:45 AM
+                        {t("tickets.kioskPrintSample", "Kiosk Print • 10:45 AM")}
                       </div>
                     </div>
                   )}
@@ -1198,7 +1233,7 @@ export default function TicketDrawer({
             onClick={onClose}
             className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold text-xs transition-colors cursor-pointer"
           >
-            Cancel
+            {t("common.cancel", "Cancel")}
           </button>
 
           <div className="flex items-center gap-2.5">
@@ -1211,7 +1246,7 @@ export default function TicketDrawer({
                 }}
                 className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer"
               >
-                Next <ChevronRight size={14} />
+                {t("common.next", "Next")} <ChevronRight size={14} />
               </button>
             ) : null}
 
@@ -1223,11 +1258,11 @@ export default function TicketDrawer({
             >
               {isSaving ? (
                 <>
-                  <Loader2 size={14} className="animate-spin" /> Saving...
+                  <Loader2 size={14} className="animate-spin" /> {t("common.saving", "Saving...")}
                 </>
               ) : (
                 <>
-                  <Check size={14} /> {ticket ? "Save Changes" : "Create Ticket Tier"}
+                  <Check size={14} /> {ticket ? t("common.saveChanges", "Save Changes") : t("tickets.createTier", "Create Ticket Tier")}
                 </>
               )}
             </button>

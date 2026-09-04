@@ -200,196 +200,201 @@ export default function MyTicketsPage({
               return (
                 <div 
                   key={reg.id}
-                  className={`bg-white border rounded-3xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col justify-between group ${
-                    isPending ? "border-amber-200/90" : "border-slate-200 hover:border-indigo-200"
+                  className={`relative bg-white border rounded-3xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden flex flex-col sm:flex-row group ${
+                    isPending ? "border-amber-200/90" : "border-slate-200/90 hover:border-slate-300"
                   }`}
                 >
-                  {/* Top Header Strip with Tier & Status */}
-                  <div className={`px-6 py-3.5 flex items-center justify-between border-b ${
-                    isPending
-                      ? "bg-amber-50/60 border-amber-100"
-                      : isVip 
-                      ? "bg-amber-50/40 border-amber-100/80" 
-                      : "bg-slate-50/80 border-slate-100"
-                  }`}>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border shadow-2xs ${
-                        isVip 
-                          ? "bg-amber-500 text-white border-amber-600" 
-                          : "bg-indigo-650 text-white border-indigo-700"
-                      }`}>
-                        {reg.ticketType || "Standard Admission"}
-                      </span>
-
-                      {isPending ? (
-                        <span className="text-[10px] font-bold text-amber-700 bg-amber-100/80 px-2.5 py-1 rounded-lg border border-amber-200/80 flex items-center gap-1.5">
-                          <Clock size={11} className="stroke-[2.5]" />
-                          <span>{t("tickets.pendingReview", "Pending Review")}</span>
+                  {/* ========================================================= */}
+                  {/* LEFT: TICKET MAIN BODY & PRIMARY ACTIONS                  */}
+                  {/* ========================================================= */}
+                  <div className="flex-1 flex flex-col justify-between text-start rtl:text-right min-w-0">
+                    <div className="p-6 space-y-4">
+                      {/* Header Row: Tier Badge (and Pending state if pending) */}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md border ${
+                          isVip 
+                            ? "bg-amber-50 text-amber-800 border-amber-200" 
+                            : "bg-slate-100 text-slate-700 border-slate-200/90"
+                        }`}>
+                          {reg.ticketType || "Standard Admission"}
                         </span>
-                      ) : (
-                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200/80 flex items-center gap-1.5">
-                          <CheckCircle2 size={11} className="stroke-[2.5] text-emerald-600" />
-                          <span>{t("tickets.confirmedStatus", "Confirmed")}</span>
-                        </span>
-                      )}
-                    </div>
 
-                    {isPending && (
-                      <span className="text-[11px] font-semibold text-amber-700">
-                        Awaiting Approval
-                      </span>
-                    )}
-                  </div>
+                        {isPending && (
+                          <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200/80 flex items-center gap-1.5 shrink-0">
+                            <Clock size={11} className="stroke-[2.5]" />
+                            <span>{t("tickets.pendingReview", "Pending Review")}</span>
+                          </span>
+                        )}
+                      </div>
 
-                  {/* Main Ticket Body */}
-                  <div className="p-6 flex flex-col sm:flex-row items-center sm:items-start justify-between gap-6">
-                    {/* Left: Event Details & Attendee */}
-                    <div className="space-y-4 flex-1 text-start rtl:text-right text-left min-w-0">
+                      {/* Title & Boarding-Pass Details */}
                       <div>
-                        <h3 className="text-lg font-black text-slate-900 leading-snug group-hover:text-indigo-650 transition-colors truncate">
+                        <h3 className="text-lg font-black text-slate-900 group-hover:text-blue-600 transition-colors leading-snug truncate">
                           {reg.eventTitle}
                         </h3>
-                        <div className="flex flex-wrap items-center gap-y-1 gap-x-3.5 mt-2 text-xs text-slate-500 font-medium">
-                          {reg.startDate && (
-                            <span className="flex items-center gap-1.5">
-                              <Calendar size={13} className="text-slate-400 shrink-0" />
-                              <span>{reg.startDate}</span>
-                            </span>
-                          )}
-                          {reg.location && (
-                            <span className="flex items-center gap-1.5">
-                              <MapPin size={13} className="text-slate-400 shrink-0" />
-                              <span className="truncate max-w-[220px]">{reg.location}</span>
-                            </span>
-                          )}
-                        </div>
-                      </div>
 
-                      {/* Attendee Info Box */}
-                      <div className="p-3 bg-slate-50 rounded-2xl border border-slate-150 flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-black text-xs shrink-0">
-                          {attendeeName.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <span className="text-xs font-bold text-slate-800 block truncate">
-                            {attendeeName}
-                          </span>
-                          <span className="text-[11px] text-slate-400 truncate block">
-                            {attendeeEmail}
-                          </span>
+                        <div className="grid grid-cols-2 gap-4 mt-3 pt-3 border-t border-slate-100">
+                          <div>
+                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">
+                              Date
+                            </span>
+                            <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                              <Calendar size={13} className="text-blue-600 shrink-0" />
+                              <span>{reg.startDate || "Date TBA"}</span>
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">
+                              Venue
+                            </span>
+                            <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5 truncate">
+                              <MapPin size={13} className="text-blue-600 shrink-0" />
+                              <span className="truncate">{reg.location || "Online / TBA"}</span>
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Right: Interactive Live QR Code or Pending Locked State */}
-                    {isPending ? (
-                      <div className="flex flex-col items-center shrink-0">
+                    {/* Left Bottom Action Bar (Desktop only; on mobile consolidated into card footer) */}
+                    <div className="hidden sm:flex px-6 py-3 bg-slate-50/40 border-t border-slate-200/70 items-center gap-2 mt-auto">
+                      {isPending ? (
+                        <button
+                          disabled
+                          className="w-8 h-8 rounded-full bg-slate-100 text-slate-400 border border-slate-200/80 flex items-center justify-center cursor-not-allowed opacity-75 shrink-0"
+                          title="Printable badge is locked while application is under review"
+                        >
+                          <Lock size={14} className="text-amber-600" />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setSelectedBadgePass(reg)}
+                          className="w-8 h-8 rounded-full bg-white hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 flex items-center justify-center transition-all cursor-pointer shadow-2xs hover:border-slate-300 shrink-0"
+                          title="Print Official A6 Conference Badge"
+                        >
+                          <Printer size={14} />
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => handleAddToCalendar(reg)}
+                        className="w-8 h-8 rounded-full bg-white hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 flex items-center justify-center transition-all cursor-pointer shadow-2xs hover:border-slate-300 shrink-0"
+                        title="Add to Google Calendar"
+                      >
+                        <Calendar size={14} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* ========================================================= */}
+                  {/* PERFORATION DIVIDER WITH TRUE OUTER CUTOUT NOTCHES        */}
+                  {/* ========================================================= */}
+                  {/* Desktop: Vertical from card top edge to card bottom edge */}
+                  <div className="relative hidden sm:flex flex-col items-center justify-between w-0 shrink-0 select-none pointer-events-none">
+                    {/* Top Notch: cleanly clips into card's top border */}
+                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 w-7 h-7 rounded-full bg-slate-50 border border-slate-200 shadow-inner z-10" />
+                    
+                    {/* Full-height Vertical Dashed Perforation Line */}
+                    <div className="h-full border-r-2 border-dashed border-slate-200/90" />
+                    
+                    {/* Bottom Notch: cleanly clips into card's bottom border */}
+                    <div className="absolute -bottom-3.5 left-1/2 -translate-x-1/2 w-7 h-7 rounded-full bg-slate-50 border border-slate-200 shadow-inner z-10" />
+                  </div>
+
+                  {/* Mobile: Horizontal Perforation Divider */}
+                  <div className="relative flex sm:hidden items-center justify-between h-0 shrink-0 select-none pointer-events-none">
+                    <div className="absolute -left-3.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-slate-50 border border-slate-200 shadow-inner z-10" />
+                    <div className="w-full border-b-2 border-dashed border-slate-200/90" />
+                    <div className="absolute -right-3.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-slate-50 border border-slate-200 shadow-inner z-10" />
+                  </div>
+
+                  {/* ========================================================= */}
+                  {/* RIGHT / MOBILE BOTTOM: TICKET STUB / QR PASS              */}
+                  {/* ========================================================= */}
+                  <div className="sm:w-56 bg-white sm:bg-slate-50/70 flex flex-col justify-between text-center relative border-t-0 sm:border-t-0">
+                    <div className="p-6 flex flex-col items-center justify-center flex-1 my-auto">
+                      {/* Scannable QR Code */}
+                      {isPending ? (
                         <div 
-                          className="p-3 bg-amber-50 border border-amber-200 rounded-2xl shadow-2xs w-24 h-24 sm:w-28 sm:h-28 flex flex-col items-center justify-center text-amber-700 select-none text-center"
+                          className="p-3 bg-amber-50/80 border border-amber-200 rounded-2xl shadow-2xs w-28 h-28 flex flex-col items-center justify-center text-amber-700 select-none text-center"
                           title="Door QR pass will be unlocked upon organizer approval"
                         >
                           <Lock size={22} className="stroke-[2.3] mb-1 text-amber-600" />
                           <span className="text-[9px] font-black uppercase tracking-tight">{t("tickets.qrLocked", "QR Locked")}</span>
                           <span className="text-[8px] text-amber-800/80 leading-tight mt-0.5">{t("tickets.awaitingReview", "Awaiting Review")}</span>
                         </div>
-                        <span className="text-[9px] font-bold text-amber-700 uppercase tracking-widest mt-1.5 flex items-center gap-0.5">
-                          <Clock size={10} /> Under Review
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center shrink-0">
+                      ) : (
                         <div 
                           onClick={() => setSelectedQrPass(reg)}
-                          className="p-2 bg-slate-50/80 border border-slate-200 rounded-2xl shadow-2xs hover:shadow-md hover:border-indigo-500 transition-all cursor-pointer group/qr relative"
+                          className="p-2.5 bg-white border border-slate-200 rounded-2xl shadow-2xs hover:shadow-md hover:border-blue-500 transition-all cursor-pointer group/qr relative"
                           title="Click to enlarge QR Code"
                         >
                           {qrUrl ? (
                             <img 
                               src={qrUrl} 
                               alt="QR Pass" 
-                              className="w-24 h-24 sm:w-28 sm:h-28 object-contain rounded-xl bg-white p-1"
+                              className="w-28 h-28 object-contain rounded-xl bg-white p-0.5"
                             />
                           ) : (
-                            <div className="w-24 h-24 sm:w-28 sm:h-28 bg-slate-100 rounded-xl flex items-center justify-center">
+                            <div className="w-28 h-28 bg-slate-100 rounded-xl flex items-center justify-center">
                               <QrCode size={32} className="text-slate-300 animate-pulse" />
                             </div>
                           )}
-                          <div className="absolute inset-0 bg-slate-900/60 rounded-2xl opacity-0 group-hover/qr:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold gap-1">
+                          <div className="absolute inset-0 bg-slate-900/60 rounded-2xl opacity-0 group-hover/qr:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold gap-1 backdrop-blur-2xs">
                             <Eye size={13} />
                             <span>{t("tickets.enlarge", "Enlarge")}</span>
                           </div>
                         </div>
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">
-                          Scan at Gate
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Bottom Action Footer */}
-                  <div className="px-6 py-3.5 bg-slate-50/60 border-t border-slate-150 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      {/* Printable A6 Badge Action or Locked State */}
-                      {isPending ? (
-                        <button
-                          disabled
-                          className="px-3.5 py-2 bg-slate-100 text-slate-400 border border-slate-200/80 rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-not-allowed opacity-75"
-                          title="Printable badge is locked while application is under review"
-                        >
-                          <Lock size={12} className="text-amber-600" />
-                          <span>{t("tickets.badgeLocked", "Badge Locked")}</span>
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => setSelectedBadgePass(reg)}
-                          className="px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs hover:border-slate-300"
-                          title="Print Official A6 Conference Badge"
-                        >
-                          <Printer size={13} className="text-indigo-650" />
-                          <span>{t("passes.printBadge", "Print Badge")}</span>
-                        </button>
                       )}
-
-                      {/* Download QR (Only for confirmed passes) */}
-                      {!isPending && (
-                        <button
-                          onClick={() => handleDownloadQR(reg)}
-                          className="p-2 bg-white hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs hover:border-slate-300"
-                          title={t("passes.downloadQR", "Save QR Code")}
-                        >
-                          <Download size={14} />
-                        </button>
-                      )}
-
-                      {/* Add to Calendar */}
-                      <button
-                        onClick={() => handleAddToCalendar(reg)}
-                        className="p-2 bg-white hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs hover:border-slate-300"
-                        title="Add to Google Calendar"
-                      >
-                        <Calendar size={14} />
-                      </button>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      {/* Attendee Portal Shortcut */}
-                      <button
-                        onClick={() => onOpenAttendeePortal && onOpenAttendeePortal(reg.eventId)}
-                        className="px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs hover:border-blue-300"
-                        title="Access Interactive Attendee Portal"
-                      >
-                        <Globe size={13} className="text-blue-600" />
-                        <span>{t("dash.attendeePortal", "Attendee Portal")}</span>
-                      </button>
+                    {/* Right Bottom Action Bar: Portal + View Event Details (+ Mobile Quick Actions) */}
+                    <div className="px-4 sm:px-3 py-3 bg-slate-100/60 border-t border-slate-200/70 flex items-center justify-between sm:justify-center gap-2 sm:gap-1.5">
+                      {/* Mobile-only left actions (Print Badge & Calendar) */}
+                      <div className="flex sm:hidden items-center gap-1.5 shrink-0">
+                        {isPending ? (
+                          <button
+                            disabled
+                            className="w-8 h-8 rounded-full bg-slate-100 text-slate-400 border border-slate-200/80 flex items-center justify-center cursor-not-allowed opacity-75 shrink-0"
+                            title="Printable badge is locked while application is under review"
+                          >
+                            <Lock size={14} className="text-amber-600" />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setSelectedBadgePass(reg)}
+                            className="w-8 h-8 rounded-full bg-white hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 flex items-center justify-center transition-all cursor-pointer shadow-2xs hover:border-slate-300 shrink-0"
+                            title="Print Official A6 Conference Badge"
+                          >
+                            <Printer size={14} />
+                          </button>
+                        )}
 
-                      {/* View Event Details */}
-                      <button
-                        onClick={() => onViewLivePage && onViewLivePage(reg.eventId)}
-                        className="px-4 py-2 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-xs hover:shadow"
-                      >
-                        <span>{t("event.about", "About")}</span>
-                        <ExternalLink size={12} />
-                      </button>
+                        <button
+                          onClick={() => handleAddToCalendar(reg)}
+                          className="w-8 h-8 rounded-full bg-white hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 flex items-center justify-center transition-all cursor-pointer shadow-2xs hover:border-slate-300 shrink-0"
+                          title="Add to Google Calendar"
+                        >
+                          <Calendar size={14} />
+                        </button>
+                      </div>
+
+                      {/* Right Action Buttons: Portal + About */}
+                      <div className="flex items-center gap-2 sm:gap-1.5 flex-1 sm:flex-initial justify-end">
+                        <button
+                          onClick={() => onOpenAttendeePortal && onOpenAttendeePortal(reg.eventId)}
+                          className="flex-1 sm:flex-initial py-1.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-full text-xs font-bold transition-all cursor-pointer flex items-center justify-center shadow-2xs hover:shadow active:scale-[0.98]"
+                          title="Access Interactive Attendee Portal"
+                        >
+                          <span>Portal</span>
+                        </button>
+                        <button
+                          onClick={() => onViewLivePage && onViewLivePage(reg.eventId)}
+                          className="py-1.5 px-3 bg-transparent hover:bg-slate-200/70 text-slate-600 hover:text-slate-900 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center justify-center active:scale-[0.98]"
+                        >
+                          <span>{t("event.about", "About")}</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

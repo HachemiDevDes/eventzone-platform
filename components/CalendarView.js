@@ -8,6 +8,7 @@ import SearchableSelect from "./SearchableSelect";
 import { generateUuid } from "../lib/db";
 import { CalendarSkeleton } from "./SkeletonLoaders";
 import { uploadMedia } from "@/lib/storage";
+import { useLanguage } from "../lib/i18n";
 
 export default function CalendarView({
   sessions = [],
@@ -17,6 +18,7 @@ export default function CalendarView({
   onClearAllSessions,
   onUploadFile
 }) {
+  const { t, lang } = useLanguage();
   // Database states
   const [editingSessionId, setEditingSessionId] = useState(null);
   const [activeFilter, setActiveFilter] = useState("all");
@@ -218,14 +220,6 @@ export default function CalendarView({
           console.warn("Storage upload notice:", storageErr);
         }
       }
-      if (!publicUrl) {
-        publicUrl = await new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result);
-          reader.onerror = () => resolve(null);
-          reader.readAsDataURL(file);
-        });
-      }
 
       if (publicUrl) {
         if (targetType === "speaker") {
@@ -235,18 +229,12 @@ export default function CalendarView({
         } else if (targetType === "logo") {
           setLogoImg(publicUrl);
         }
+      } else {
+        alert("Could not upload image to cloud storage. Please check your connection and try again.");
       }
     } catch (err) {
-      console.warn("Image upload error, fallback to local preview:", err);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (reader.result) {
-          if (targetType === "speaker") setSpeakerImg(reader.result);
-          else if (targetType === "moderator") setModeratorImg(reader.result);
-          else if (targetType === "logo") setLogoImg(reader.result);
-        }
-      };
-      reader.readAsDataURL(file);
+      console.warn("Image upload error:", err);
+      alert("An error occurred while uploading the image.");
     } finally {
       if (targetType === "speaker") setIsUploadingSpeaker(false);
       else if (targetType === "moderator") setIsUploadingModerator(false);
@@ -280,14 +268,6 @@ export default function CalendarView({
           console.warn("Storage upload notice:", storageErr);
         }
       }
-      if (!publicUrl) {
-        publicUrl = await new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result);
-          reader.onerror = () => resolve(null);
-          reader.readAsDataURL(file);
-        });
-      }
 
       if (publicUrl) {
         if (type === "speaker") {
@@ -295,20 +275,12 @@ export default function CalendarView({
         } else {
           setModeratorsList(prev => prev.map(m => m.id === id ? { ...m, image: publicUrl } : m));
         }
+      } else {
+        alert("Could not update photo to cloud storage. Please try again.");
       }
     } catch (err) {
-      console.warn("Photo replacement error, using local fallback:", err);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (reader.result) {
-          if (type === "speaker") {
-            setSpeakersList(prev => prev.map(s => s.id === id ? { ...s, image: reader.result } : s));
-          } else {
-            setModeratorsList(prev => prev.map(m => m.id === id ? { ...m, image: reader.result } : m));
-          }
-        }
-      };
-      reader.readAsDataURL(file);
+      console.warn("Photo replacement error:", err);
+      alert("An error occurred while replacing the photo.");
     } finally {
       e.target.value = "";
     }
@@ -485,12 +457,14 @@ export default function CalendarView({
 
   const formatDateLabel = (dateStr) => {
     const options = { weekday: 'short', month: 'short', day: 'numeric' };
-    return new Date(dateStr).toLocaleDateString('en-US', options);
+    const locale = lang === 'ar' ? 'ar-EG' : lang === 'fr' ? 'fr-FR' : 'en-US';
+    return new Date(dateStr).toLocaleDateString(locale, options);
   };
 
   const formatFullDate = (dateStr) => {
     const options = { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' };
-    return new Date(dateStr).toLocaleDateString('en-US', options);
+    const locale = lang === 'ar' ? 'ar-EG' : lang === 'fr' ? 'fr-FR' : 'en-US';
+    return new Date(dateStr).toLocaleDateString(locale, options);
   };
 
   // Google Calendar integration URL helper
@@ -531,12 +505,12 @@ export default function CalendarView({
         {/* Dynamic Title: switches between Create a Session and Edit a Session */}
         <div className="flex flex-col gap-1 pb-2 border-b border-slate-100">
           <h2 className="text-2xl font-bold text-slate-900">
-            {editingSessionId ? "Edit a Session" : "Create a Session"}
+            {editingSessionId ? t("calendar.editSession", "Edit a Session") : t("calendar.createSession", "Create a Session")}
           </h2>
           <p className="text-sm text-slate-500">
             {editingSessionId 
-              ? "Edit the details below to update this session." 
-              : "Fill in the details to schedule a new event session."}
+              ? t("calendar.editSessionDesc", "Edit the details below to update this session.") 
+              : t("calendar.createSessionDesc", "Fill in the details to schedule a new event session.")}
           </p>
         </div>
 
@@ -544,13 +518,13 @@ export default function CalendarView({
           {/* Session Title */}
           <div className="flex flex-col gap-1.5">
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              Session Title *
+              * {t("calendar.sessionTitle", "Session Title")}
             </label>
             <input 
               type="text" 
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Opening Keynote" 
+              placeholder={t("calendar.titlePlaceholder", "e.g. Opening Keynote")} 
               required
               className="px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:bg-white focus:border-blue-600 text-xs font-semibold"
             />
@@ -559,12 +533,12 @@ export default function CalendarView({
           {/* Date */}
           <div className="flex flex-col gap-1.5">
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              Date *
+              * {t("calendar.date", "Date")}
             </label>
             <CustomDatePicker
               value={date}
               onChange={setDate}
-              placeholder="Select session date"
+              placeholder={t("calendar.selectDatePlaceholder", "Select session date")}
             />
           </div>
 
@@ -572,24 +546,24 @@ export default function CalendarView({
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                Start Time *
+                * {t("calendar.startTime", "Start Time")}
               </label>
               <CustomTimePicker
                 value={startTime}
                 onChange={setStartTime}
-                placeholder="Start time"
+                placeholder={t("calendar.startTimePlaceholder", "Start time")}
                 align="left"
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                End Time *
+                * {t("calendar.endTime", "End Time")}
               </label>
               <CustomTimePicker
                 value={endTime}
                 onChange={setEndTime}
-                placeholder="End time"
+                placeholder={t("calendar.endTimePlaceholder", "End time")}
                 align="right"
               />
             </div>
@@ -599,7 +573,7 @@ export default function CalendarView({
           <div className="flex flex-col gap-2 pt-1 border-t border-slate-100">
             <div className="flex items-center justify-between">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                Speakers
+                {t("calendar.speakers", "Speakers")}
               </label>
 
               <div className="flex items-center gap-2">
@@ -609,7 +583,7 @@ export default function CalendarView({
                     onClick={() => setSpeakerImg("")}
                     className="text-[10px] text-rose-500 hover:text-rose-700 font-semibold cursor-pointer"
                   >
-                    Clear Photo
+                    {t("calendar.clearPhoto", "Clear Photo")}
                   </button>
                 )}
 
@@ -622,7 +596,7 @@ export default function CalendarView({
                         speakerMode === "list" ? "bg-white text-blue-700 shadow-2xs font-extrabold" : "text-slate-500 hover:text-slate-800"
                       }`}
                     >
-                      From List
+                      {t("calendar.fromList", "From List")}
                     </button>
                     <button
                       type="button"
@@ -631,7 +605,7 @@ export default function CalendarView({
                         speakerMode === "manual" ? "bg-white text-blue-700 shadow-2xs font-extrabold" : "text-slate-500 hover:text-slate-800"
                       }`}
                     >
-                      New Speaker
+                      {t("calendar.newSpeaker", "New Speaker")}
                     </button>
                   </div>
                 )}
@@ -681,7 +655,7 @@ export default function CalendarView({
                   className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer flex items-center gap-1"
                 >
                   <Plus size={13} />
-                  Add
+                  {t("common.add", "Add")}
                 </button>
               </div>
             ) : (
@@ -691,7 +665,7 @@ export default function CalendarView({
                   type="text" 
                   value={speakerName}
                   onChange={(e) => setSpeakerName(e.target.value)}
-                  placeholder="Speaker Name"
+                  placeholder={t("calendar.speakerName", "Speaker Name")}
                   className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-600"
                 />
                 <label className={`px-3 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-all shrink-0 flex items-center gap-1.5 ${
@@ -707,7 +681,7 @@ export default function CalendarView({
                   ) : (
                     <Camera size={13} />
                   )}
-                  <span>{isUploadingSpeaker ? "Uploading..." : speakerImg ? "Photo Attached" : "Photo"}</span>
+                  <span>{isUploadingSpeaker ? t("common.uploading", "Uploading...") : speakerImg ? t("calendar.photoAttached", "Photo Attached") : t("calendar.photo", "Photo")}</span>
                   <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, "speaker")} className="hidden" />
                 </label>
                 <button 
@@ -715,7 +689,7 @@ export default function CalendarView({
                   onClick={() => addPerson("speaker")}
                   className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer"
                 >
-                  Add
+                  {t("common.add", "Add")}
                 </button>
               </div>
             )}
@@ -751,7 +725,7 @@ export default function CalendarView({
           <div className="flex flex-col gap-2 pt-1 border-t border-slate-100">
             <div className="flex items-center justify-between">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                Moderators
+                {t("calendar.moderators", "Moderators")}
               </label>
 
               <div className="flex items-center gap-2">
@@ -783,7 +757,7 @@ export default function CalendarView({
                         moderatorMode === "manual" ? "bg-white text-indigo-700 shadow-2xs font-extrabold" : "text-slate-500 hover:text-slate-800"
                       }`}
                     >
-                      New Moderator
+                      {t("calendar.newModerator", "New Moderator")}
                     </button>
                   </div>
                 )}
@@ -845,7 +819,7 @@ export default function CalendarView({
                   type="text" 
                   value={moderatorName}
                   onChange={(e) => setModeratorName(e.target.value)}
-                  placeholder="Moderator Name"
+                  placeholder={t("calendar.moderatorName", "Moderator Name")}
                   className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-600"
                 />
                 <label className={`px-3 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-all shrink-0 flex items-center gap-1.5 ${
@@ -861,7 +835,7 @@ export default function CalendarView({
                   ) : (
                     <Camera size={13} />
                   )}
-                  <span>{isUploadingModerator ? "Uploading..." : moderatorImg ? "Photo Attached" : "Photo"}</span>
+                  <span>{isUploadingModerator ? t("common.uploading", "Uploading...") : moderatorImg ? t("calendar.photoAttached", "Photo Attached") : t("calendar.photo", "Photo")}</span>
                   <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, "moderator")} className="hidden" />
                 </label>
                 <button 
@@ -903,14 +877,14 @@ export default function CalendarView({
           {/* Logos & Partners */}
           <div className="flex flex-col gap-2 pt-1 border-t border-slate-100">
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              Logos &amp; Partners
+              {t("calendar.logosPartners", "Logos & Partners")}
             </label>
             <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col gap-2.5">
               <input 
                 type="text" 
                 value={logoLabel}
                 onChange={(e) => setLogoLabel(e.target.value)}
-                placeholder="Label (e.g. Sponsor, Co-Host)"
+                placeholder={t("calendar.labelPlaceholder", "Label (e.g. Sponsor, Co-Host)")}
                 className="w-full px-3 py-2 border border-slate-200 bg-white rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-600"
               />
 
@@ -926,7 +900,7 @@ export default function CalendarView({
                   ) : (
                     <Upload size={13} />
                   )}
-                  <span>{isUploadingLogo ? "Uploading..." : logoImg ? "Logo Attached" : "Upload Logo Image"}</span>
+                  <span>{isUploadingLogo ? t("common.uploading", "Uploading...") : logoImg ? t("calendar.photoAttached", "Logo Attached") : t("calendar.uploadLogoImage", "Upload Logo Image")}</span>
                   <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, "logo")} className="hidden" />
                 </label>
 
@@ -957,13 +931,13 @@ export default function CalendarView({
           {/* Description */}
           <div className="flex flex-col gap-1.5 pt-1 border-t border-slate-100">
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              Description
+              {t("calendar.description", "Description")}
             </label>
             <textarea 
               rows={3} 
               value={description} 
               onChange={(e) => setDescription(e.target.value)} 
-              placeholder="Tell us about this session..." 
+              placeholder={t("calendar.descPlaceholder", "Tell us about this session...")} 
               className="px-3.5 py-2.5 border border-slate-200 bg-slate-50 focus:bg-white rounded-xl text-slate-800 focus:outline-none focus:border-blue-600 text-xs resize-none font-medium"
             />
           </div>
@@ -974,7 +948,7 @@ export default function CalendarView({
               type="submit" 
               className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-xl font-bold text-xs transition-all shadow-md shadow-blue-600/20 cursor-pointer"
             >
-              {editingSessionId ? "Update Session" : "Create Session"}
+              {editingSessionId ? t("calendar.updateSession", "Update Session") : t("calendar.createSession", "Create Session")}
             </button>
 
             {editingSessionId && (
@@ -983,7 +957,7 @@ export default function CalendarView({
                 onClick={resetForm}
                 className="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 py-2.5 px-4 rounded-xl font-bold text-xs transition-all cursor-pointer"
               >
-                Cancel Edit
+                {t("calendar.cancelEdit", "Cancel Edit")}
               </button>
             )}
           </div>
@@ -1008,10 +982,10 @@ export default function CalendarView({
         <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
           <div>
             <h2 className="text-2xl font-bold text-slate-900">
-              Event Timeline &amp; Sessions
+              {t("calendar.timelineSessions", "Event Timeline & Sessions")}
             </h2>
             <p className="text-sm text-slate-500">
-              Sort, view, edit, and organize scheduled sessions by day.
+              {t("calendar.timelineSubtitle", "Sort, view, edit, and organize scheduled sessions by day.")}
             </p>
           </div>
 
@@ -1021,7 +995,7 @@ export default function CalendarView({
               onClick={onClearAllSessions}
               className="px-3.5 py-2 bg-white border border-slate-200 hover:bg-rose-50 hover:border-rose-200 hover:text-rose-600 text-slate-600 rounded-xl text-xs font-bold transition-all cursor-pointer self-start sm:self-auto shadow-2xs"
             >
-              Clear All
+              {t("calendar.clearAll", "Clear All")}
             </button>
           )}
         </header>
@@ -1036,7 +1010,7 @@ export default function CalendarView({
                 activeFilter === "all" ? "bg-white text-blue-600 shadow-xs" : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              All Active ({activeSessions.length})
+              {t("calendar.allActive", "All Active")} ({activeSessions.length})
             </button>
             {uniqueDates.map((date, i) => (
               <button
@@ -1047,7 +1021,7 @@ export default function CalendarView({
                   activeFilter === date ? "bg-white text-blue-600 shadow-xs" : "text-slate-600 hover:text-slate-900"
                 }`}
               >
-                Day {i + 1} ({formatDateLabel(date)})
+                {t("calendar.day", "Day")} {i + 1} ({formatDateLabel(date)})
               </button>
             ))}
             {archivedSessions.length > 0 && (
@@ -1059,7 +1033,7 @@ export default function CalendarView({
                 }`}
               >
                 <Archive size={13} />
-                <span>Archived ({archivedSessions.length})</span>
+                <span>{t("table.archived", "Archived")} ({archivedSessions.length})</span>
               </button>
             )}
           </div>
@@ -1121,7 +1095,7 @@ export default function CalendarView({
                               className="px-2.5 py-1 bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 rounded-lg text-xs font-bold transition-colors cursor-pointer"
                               title="Edit Session"
                             >
-                              Edit
+                              {t("common.edit", "Edit")}
                             </button>
                           )}
 
@@ -1134,7 +1108,7 @@ export default function CalendarView({
                                 title="Restore Session"
                               >
                                 <RotateCcw size={12} />
-                                <span>Restore</span>
+                                <span>{t("common.restore", "Restore")}</span>
                               </button>
                               <button 
                                 type="button"
@@ -1143,7 +1117,7 @@ export default function CalendarView({
                                 title="Delete Session Permanently"
                               >
                                 <Trash2 size={12} />
-                                <span>Delete</span>
+                                <span>{t("common.delete", "Delete")}</span>
                               </button>
                             </div>
                           ) : (
@@ -1154,7 +1128,7 @@ export default function CalendarView({
                               title="Archive Session (Data preserved)"
                             >
                               <Archive size={11} />
-                              <span>Archive</span>
+                              <span>{t("common.archive", "Archive")}</span>
                             </button>
                           )}
                         </div>
@@ -1168,7 +1142,7 @@ export default function CalendarView({
                         {/* Speakers */}
                         {Array.isArray(session.speakers) && session.speakers.length > 0 && (
                           <div className="flex flex-col gap-1.5">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none">Speakers</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none">{t("calendar.speakers", "Speakers")}</span>
                             <div className="flex flex-wrap gap-2">
                               {session.speakers.map((s, idx) => (
                                 s ? (
@@ -1186,7 +1160,7 @@ export default function CalendarView({
                         {/* Moderators */}
                         {Array.isArray(session.moderators) && session.moderators.length > 0 && (
                           <div className="flex flex-col gap-1.5">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none">Moderators</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none">{t("calendar.moderators", "Moderators")}</span>
                             <div className="flex flex-wrap gap-2">
                               {session.moderators.map((m, idx) => (
                                 m ? (
@@ -1232,7 +1206,7 @@ export default function CalendarView({
                           rel="noopener noreferrer"
                           className="text-xs font-bold text-slate-700 bg-slate-50 hover:bg-blue-50 hover:text-blue-700 border border-slate-200 px-3.5 py-1.5 rounded-xl transition-colors"
                         >
-                          Add to Google Calendar
+                          {t("calendar.addToGCal", "Add to Google Calendar")}
                         </a>
                       </div>
                     </div>

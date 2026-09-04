@@ -7,8 +7,10 @@ import {
   CheckSquare, Square, Search
 } from "lucide-react";
 import { logCommunication, upsertExhibitor } from "../lib/db";
+import { useLanguage } from "../lib/i18n";
 
 export default function SendPlanModal({ isOpen, onClose, exhibitors = [], planName = "Floor Plan", elements = [], onSuccess }) {
+  const { t } = useLanguage();
   const [recipientMode, setRecipientMode] = useState("all"); // 'all' | 'custom'
   const [selectedExhibitorIds, setSelectedExhibitorIds] = useState([]);
   const [exhibitorEmails, setExhibitorEmails] = useState({});
@@ -194,8 +196,8 @@ export default function SendPlanModal({ isOpen, onClose, exhibitors = [], planNa
               <Mail size={18} />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-800">Email Floor Plan to Exhibitors</h3>
-              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Send PDF attachments and booth details</p>
+              <h3 className="text-sm font-bold text-slate-800">{t("export.sendPlanTitle", "Email Floor Plan to Exhibitors")}</h3>
+              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">{t("export.sendPlanSubtitle", "Send PDF attachments and booth details")}</p>
             </div>
           </div>
           <button 
@@ -263,7 +265,7 @@ export default function SendPlanModal({ isOpen, onClose, exhibitors = [], planNa
                     </div>
 
                     <div className="border border-slate-200 rounded-2xl overflow-hidden max-h-48 overflow-y-auto">
-                      <table className="w-full text-left text-xs">
+                      <table className="w-full text-start rtl:text-right text-left text-xs">
                         <thead className="bg-slate-50 text-slate-450 text-[10px] uppercase font-bold tracking-wider select-none sticky top-0 border-b border-slate-200 z-10">
                           <tr>
                             <th className="px-4 py-2 w-10">
@@ -470,14 +472,14 @@ export default function SendPlanModal({ isOpen, onClose, exhibitors = [], planNa
                 onClick={onClose}
                 className="px-4 py-2.5 border border-slate-200 bg-white hover:bg-slate-50 text-slate-650 rounded-xl font-bold text-xs transition-colors duration-200 cursor-pointer"
               >
-                Cancel
+                {t("export.cancel", "Cancel")}
               </button>
               <button
                 type="submit"
                 className="flex items-center gap-2 px-5 py-2.5 bg-indigo-650 hover:bg-indigo-750 text-white rounded-xl font-bold text-xs transition-all duration-200 shadow-md shadow-indigo-100 cursor-pointer"
               >
                 <Send size={14} />
-                <span>Send PDF to Exhibitors</span>
+                <span>{t("floor.sendPlan", "Send PDF to Exhibitors")}</span>
               </button>
             </footer>
           )}

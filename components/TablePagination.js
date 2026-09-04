@@ -2,6 +2,7 @@
 
 import React from "react";
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { useLanguage } from "../lib/i18n";
 
 /**
  * TablePagination Component
@@ -13,10 +14,23 @@ export default function TablePagination({
   pageSize = 10,
   onPageChange,
   onPageSizeChange,
-  itemName = "attendees",
+  itemName = "",
   pageSizeOptions = [5, 10, 25, 50, 100],
   className = ""
 }) {
+  const { t, isRTL } = useLanguage();
+  const getLocalizedItemName = (name) => {
+    if (!name) return "";
+    if (name.includes("pending")) return t("table.pendingRegistrations", "pending registrations");
+    if (name.includes("archived")) return t("table.archivedAttendees", "archived attendees");
+    if (name.includes("attendee")) return t("dash.attendees", "attendees");
+    if (name.includes("speaker")) return t("dash.speakers", "speakers");
+    if (name.includes("sponsor")) return t("dash.sponsors", "sponsors");
+    if (name.includes("exhibitor")) return t("dash.exhibitors", "exhibitors");
+    if (name.includes("organization")) return t("dash.organizations", "organizations");
+    return name;
+  };
+
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
 
@@ -51,14 +65,14 @@ export default function TablePagination({
       {/* Left: Range Info & Page Size */}
       <div className="flex flex-wrap items-center gap-3 text-xs font-semibold text-slate-500">
         <span>
-          Showing <span className="font-bold text-slate-850">{startItem}</span> to{" "}
-          <span className="font-bold text-slate-850">{endItem}</span> of{" "}
-          <span className="font-bold text-slate-850">{totalItems}</span> {itemName}
+          {t("common.showing", "Showing")} <span className="font-bold text-slate-850">{startItem}</span> {t("common.to", "to")}{" "}
+          <span className="font-bold text-slate-850">{endItem}</span> {t("common.of", "of")}{" "}
+          <span className="font-bold text-slate-850">{totalItems}</span> {itemName ? getLocalizedItemName(itemName) : ""}
         </span>
 
         {onPageSizeChange && (
           <div className="flex items-center gap-1.5 pl-3 border-l border-slate-200">
-            <span className="text-[11px] text-slate-400">Rows:</span>
+            <span className="text-[11px] text-slate-400">{t("common.rows", "Rows")}:</span>
             <select
               value={pageSize}
               onChange={(e) => {
@@ -87,9 +101,9 @@ export default function TablePagination({
             onClick={() => handlePageClick(1)}
             disabled={safeCurrentPage === 1}
             className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-50 disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
-            title="First Page"
+            title={t("common.firstPage", "First Page")}
           >
-            <ChevronsLeft size={14} />
+            {isRTL ? <ChevronsRight size={14} /> : <ChevronsLeft size={14} />}
           </button>
 
           {/* Previous Page */}
@@ -98,9 +112,9 @@ export default function TablePagination({
             onClick={() => handlePageClick(safeCurrentPage - 1)}
             disabled={safeCurrentPage === 1}
             className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-50 disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
-            title="Previous Page"
+            title={t("common.previousPage", "Previous Page")}
           >
-            <ChevronLeft size={14} />
+            {isRTL ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
           </button>
 
           {/* Page Numbers */}
@@ -138,9 +152,9 @@ export default function TablePagination({
             onClick={() => handlePageClick(safeCurrentPage + 1)}
             disabled={safeCurrentPage === totalPages}
             className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-50 disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
-            title="Next Page"
+            title={t("common.nextPage", "Next Page")}
           >
-            <ChevronRight size={14} />
+            {isRTL ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
           </button>
 
           {/* Last Page */}
@@ -149,9 +163,9 @@ export default function TablePagination({
             onClick={() => handlePageClick(totalPages)}
             disabled={safeCurrentPage === totalPages}
             className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-50 disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
-            title="Last Page"
+            title={t("common.lastPage", "Last Page")}
           >
-            <ChevronsRight size={14} />
+            {isRTL ? <ChevronsLeft size={14} /> : <ChevronsRight size={14} />}
           </button>
         </div>
       )}

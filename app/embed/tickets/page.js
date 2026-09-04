@@ -156,6 +156,45 @@ function EmbedTicketsContent() {
         source: "embed_widget",
       };
 
+      const ticketPrice = typeof selectedTicket?.price === "number"
+        ? selectedTicket.price
+        : parseFloat(String(selectedTicket?.price || "0").replace(/[^0-9.]/g, "")) || 0;
+
+      if (ticketPrice > 0) {
+        // Online Payment via Chargily Pay (EDAHABIA / CIB)
+        const payRes = await fetch("/api/payments/chargily/create-checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            eventId: eventId,
+            ticketId: selectedTicket?.id,
+            ticketType: selectedTicket?.name,
+            name: formData.name.trim(),
+            email: formData.email.trim().toLowerCase(),
+            phone: formData.phone.trim(),
+            company: formData.company.trim(),
+            jobTitle: formData.jobTitle.trim(),
+            referralCode: formData.referralCode.trim(),
+            answers: customAnswers,
+          }),
+        });
+
+        const payData = await payRes.json();
+        if (!payRes.ok || !payData.success || !payData.checkoutUrl) {
+          throw new Error(payData.error || "Online payment session failed to initialize.");
+        }
+
+        // Redirect top window if inside iframe, or current window
+        if (typeof window !== "undefined") {
+          if (window.top && window.top !== window) {
+            window.top.location.href = payData.checkoutUrl;
+          } else {
+            window.location.href = payData.checkoutUrl;
+          }
+        }
+        return;
+      }
+
       const res = await fetch(`/api/events/${eventId}/tickets/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -326,7 +365,7 @@ function EmbedTicketsContent() {
                       </div>
 
                       <div className="flex items-center justify-between sm:flex-col sm:items-end gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800">
-                        <div className="text-left sm:text-right">
+                        <div className="text-start rtl:text-right text-left sm:text-right">
                           <span className="text-lg font-black tracking-tight">
                             {isFree ? "Free" : (Number(t.price).toLocaleString() + " " + (t.currency || "DZD"))}
                           </span>
@@ -568,13 +607,22 @@ function EmbedTicketsContent() {
                 {submitting ? (
                   <>
                     <RefreshCw size={15} className="animate-spin" />
-                    <span>Submitting...</span>
+                    <span>Processing...</span>
                   </>
+                ) : selectedTicket && Number(selectedTicket.price) > 0 ? (
+                  <span>Pay with EDAHABIA / CIB ({Number(selectedTicket.price).toLocaleString()} DZD)</span>
                 ) : (
-                  <span>Submit</span>
+                  <span>{selectedTicket?.requiresApproval ? "Submit Application" : "Confirm Registration"}</span>
                 )}
               </button>
             </div>
+            {selectedTicket && Number(selectedTicket.price) > 0 && (
+              <div className="text-center pt-2">
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                  🔒 Secured by Chargily Pay (CIB &amp; EDAHABIA)
+                </span>
+              </div>
+            )}
           </form>
         )}
 
@@ -606,7 +654,7 @@ function EmbedTicketsContent() {
               isDark ? "bg-slate-850 border-slate-700" : "bg-gradient-to-b from-white to-slate-50 border-slate-200"
             }`}>
               <div className="flex items-center justify-between border-b pb-3 mb-4 border-slate-100 dark:border-slate-800">
-                <div className="text-left">
+                <div className="text-start rtl:text-right text-left">
                   <span className="text-[9px] font-bold text-slate-400 uppercase">Event Pass</span>
                   <div className="text-xs font-black truncate max-w-[170px]">{eventData?.title || "Eventzone Summit"}</div>
                 </div>
@@ -628,7 +676,7 @@ function EmbedTicketsContent() {
                 </div>
               )}
 
-              <div className="space-y-1 text-left bg-slate-100/70 dark:bg-slate-800/80 p-3 rounded-2xl">
+              <div className="space-y-1 text-start rtl:text-right text-left bg-slate-100/70 dark:bg-slate-800/80 p-3 rounded-2xl">
                 <div className="flex justify-between text-xs">
                   <span className="text-slate-400 font-medium">Attendee:</span>
                   <span className="font-bold">{registrationResult.attendee?.name}</span>

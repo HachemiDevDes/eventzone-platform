@@ -34,6 +34,9 @@ import { useLanguage } from '../lib/i18n';
 import SearchableSelect from './SearchableSelect';
 import CountryPhoneInput from './CountryPhoneInput';
 import FormImageUploader from './FormImageUploader';
+import { getLocalizedIndustry } from '../lib/constants';
+
+// Uses getLocalizedIndustry from lib/constants
 
 const INDUSTRIES_LIST = [
   "Technology, AI & Software",
@@ -169,13 +172,13 @@ export default function CompanyDrawer({
   }, [eventDetails, activeEventId]);
 
   const sponsorTierOptions = useMemo(() => [
-    { value: "diamond", label: tierNamesMap.diamond || "Diamond Tier", color: "text-sky-600 bg-sky-50 border-sky-200" },
-    { value: "gold", label: tierNamesMap.gold || "Gold Tier", color: "text-amber-600 bg-amber-50 border-amber-200" },
-    { value: "silver", label: tierNamesMap.silver || "Silver Tier", color: "text-slate-600 bg-slate-100 border-slate-200" },
-    { value: "bronze", label: tierNamesMap.bronze || "Bronze Tier", color: "text-amber-800 bg-orange-50 border-orange-200" },
-    { value: "title", label: tierNamesMap.title || "Title / Presenting Sponsor", color: "text-purple-700 bg-purple-50 border-purple-200" },
-    { value: "partner", label: tierNamesMap.partner || "Official Strategic Partner", color: "text-blue-700 bg-blue-50 border-blue-200" },
-    { value: "custom", label: tierNamesMap.custom || "Custom Sponsorship Package", color: "text-blue-700 bg-blue-50 border-blue-200" }
+    { value: "diamond", label: tierNamesMap.diamond || t("sponsors.tier_diamond", "Diamond Tier"), color: "text-sky-600 bg-sky-50 border-sky-200" },
+    { value: "gold", label: tierNamesMap.gold || t("sponsors.tier_gold", "Gold Tier"), color: "text-amber-600 bg-amber-50 border-amber-200" },
+    { value: "silver", label: tierNamesMap.silver || t("sponsors.tier_silver", "Silver Tier"), color: "text-slate-600 bg-slate-100 border-slate-200" },
+    { value: "bronze", label: tierNamesMap.bronze || t("sponsors.tier_bronze", "Bronze Tier"), color: "text-amber-800 bg-orange-50 border-orange-200" },
+    { value: "title", label: tierNamesMap.title || t("sponsors.tier_title", "Title / Presenting Sponsor"), color: "text-purple-700 bg-purple-50 border-purple-200" },
+    { value: "partner", label: tierNamesMap.partner || t("sponsors.tier_partner", "Official Strategic Partner"), color: "text-blue-700 bg-blue-50 border-blue-200" },
+    { value: "custom", label: tierNamesMap.custom || t("sponsors.tier_custom", "Custom Sponsorship Package"), color: "text-blue-700 bg-blue-50 border-blue-200" }
   ], [tierNamesMap]);
 
   // Active drawer mode state (can switch within the drawer)
@@ -295,7 +298,7 @@ export default function CompanyDrawer({
     return organizations.map(o => ({
       value: String(o.id),
       label: o.name,
-      description: o.industry || "Partner Organization",
+      description: o.industry ? getLocalizedIndustry(o.industry, t) : t("drawer.partnerOrganization", "Partner Organization"),
       icon: o.logo ? (
         <img src={o.logo} alt="" className="w-4 h-4 rounded object-cover" />
       ) : (
@@ -322,7 +325,7 @@ export default function CompanyDrawer({
       return {
         value: String(o.id),
         label: isAlreadySponsor ? `${o.name} (Already a Sponsor)` : o.name,
-        description: isAlreadySponsor ? "Already added as sponsor" : (o.industry || "Partner Organization"),
+        description: isAlreadySponsor ? t("drawer.alreadySponsor", "Already added as sponsor") : (o.industry ? getLocalizedIndustry(o.industry, t) : t("drawer.partnerOrganization", "Partner Organization")),
         disabled: isAlreadySponsor,
         icon: o.logo ? (
           <img src={o.logo} alt="" className="w-4 h-4 rounded object-cover" />
@@ -351,7 +354,7 @@ export default function CompanyDrawer({
       return {
         value: String(o.id),
         label: isAlreadyExhibitor ? `${o.name} (Already an Exhibitor)` : o.name,
-        description: isAlreadyExhibitor ? "Already registered with booth" : (o.industry || "Partner Organization"),
+        description: isAlreadyExhibitor ? t("drawer.alreadyExhibitor", "Already registered with booth") : (o.industry ? getLocalizedIndustry(o.industry, t) : t("drawer.partnerOrganization", "Partner Organization")),
         disabled: isAlreadyExhibitor,
         icon: o.logo ? (
           <img src={o.logo} alt="" className="w-4 h-4 rounded object-cover" />
@@ -1207,14 +1210,14 @@ export default function CompanyDrawer({
           <header className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
             <div>
               <h3 className="text-base font-extrabold text-slate-900 leading-tight">
-                {currentMode === "org" && (item ? `Edit ${item.name || 'Organization'}` : "Add Partner Organization")}
-                {currentMode === "sponsor" && (item ? `Edit ${item.name || 'Sponsor'}` : "Add Event Sponsor")}
-                {currentMode === "exhibitor" && (item ? `Edit ${item.name || 'Exhibitor'}` : "Add Event Exhibitor")}
+                {currentMode === "org" && (item ? t("drawer.editCompany", "Edit Organization") : t("table.addCompany", "Add Partner Organization"))}
+                {currentMode === "sponsor" && (item ? t("drawer.editSponsor", "Edit Sponsor") : t("table.addSponsor", "Add Event Sponsor"))}
+                {currentMode === "exhibitor" && (item ? t("drawer.editExhibitor", "Edit Exhibitor") : t("table.addExhibitor", "Add Event Exhibitor"))}
               </h3>
               <p className="text-xs text-slate-500 font-medium mt-0.5">
-                {currentMode === "org" && "Manage company profile, contact liaison, and partner assets"}
-                {currentMode === "sponsor" && "Configure sponsorship package, branding tier, and contact liaison"}
-                {currentMode === "exhibitor" && "Allocate booth space, staff credentials, and contact liaison"}
+                {currentMode === "org" && t("drawer.manageCompanyProfile", "Manage company profile, contact liaison, and partner assets")}
+                {currentMode === "sponsor" && t("drawer.manageSponsorProfile", "Configure sponsorship package, branding tier, and contact liaison")}
+                {currentMode === "exhibitor" && t("drawer.manageExhibitorProfile", "Allocate booth space, staff credentials, and contact liaison")}
               </p>
             </div>
 
@@ -1243,10 +1246,10 @@ export default function CompanyDrawer({
               >
                 <span>
                   {currentMode === "sponsor"
-                    ? "Sponsorship Details"
+                    ? t("drawer.tabSponsor", "Sponsorship Details")
                     : currentMode === "exhibitor"
-                    ? "Exhibitor Details"
-                    : "Showcase & Profile"}
+                    ? t("drawer.tabExhibitor", "Exhibitor Details")
+                    : t("drawer.tabProfile", "Showcase & Profile")}
                 </span>
               </button>
 
@@ -1259,7 +1262,7 @@ export default function CompanyDrawer({
                     : "border-transparent text-slate-500 hover:text-slate-800"
                 }`}
               >
-                <span>Contact Liaison</span>
+                <span>{t("drawer.tabLiaison", "Contact Liaison")}</span>
                 {selectedLiaisonAttendee && (
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
                 )}
@@ -1274,13 +1277,13 @@ export default function CompanyDrawer({
                     : "border-transparent text-slate-500 hover:text-slate-800"
                 }`}
               >
-                <span>Company Personnel</span>
-                <span className={`ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-black border ${
+                <span>{t("drawer.tabPersonnel", "Company Personnel")}</span>
+                <span className={`ms-1.5 px-1.5 py-0.2 rounded-full text-[10px] font-black border ${
                   isQuotaReached 
                     ? "bg-amber-50 text-amber-800 border-amber-200" 
                     : "bg-blue-50 text-blue-700 border-blue-100"
                 }`}>
-                  {maxStaffBadges !== null ? `${assignedPersonnel.length} / ${maxStaffBadges}` : assignedPersonnel.length}
+                  {maxStaffBadges !== null ? <bdi dir="ltr">{assignedPersonnel.length} / {maxStaffBadges}</bdi> : assignedPersonnel.length}
                 </span>
               </button>
             </div>
@@ -1309,15 +1312,15 @@ export default function CompanyDrawer({
                     <FormImageUploader
                       value={orgLogo}
                       onChange={(url) => setOrgLogo(url)}
-                      label="Company / Organization Logo"
-                      placeholder="Upload official high-resolution brand logo (JPG, PNG, SVG)"
+                      label={t("drawer.orgLogo", "Company / Organization Logo")}
+                      placeholder={t("drawer.logoUploadPlaceholder", "Upload official high-resolution brand logo (JPG, PNG, SVG)")}
                     />
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {/* Name */}
                       <div className="flex flex-col gap-1.5 sm:col-span-2">
                         <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                          Organization Legal / Brand Name <span className="text-rose-500">*</span>
+                          {t("drawer.orgBrandName", "Organization Legal / Brand Name")} <span className="text-rose-500">*</span>
                         </label>
                         <input
                           type="text"
@@ -1332,14 +1335,14 @@ export default function CompanyDrawer({
                       {/* Industry */}
                       <div className="flex flex-col gap-1.5">
                         <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                          Sector / Industry <span className="text-rose-500">*</span>
+                          {t("drawer.sectorIndustry", "Sector / Industry")} <span className="text-rose-500">*</span>
                         </label>
                         <SearchableSelect
                           value={orgIndustry}
                           onChange={(val) => setOrgIndustry(val)}
-                          options={INDUSTRIES_LIST.map(ind => ({ value: ind, label: ind }))}
-                          placeholder="-- Select Industry --"
-                          searchPlaceholder="Search industry..."
+                          options={INDUSTRIES_LIST.map(ind => ({ value: ind, label: getLocalizedIndustry(ind, t) }))}
+                          placeholder={t("drawer.selectIndustry", "-- Select Industry --")}
+                          searchPlaceholder={t("drawer.searchIndustry", "Search industry...")}
                           required
                         />
                       </div>
@@ -1347,7 +1350,7 @@ export default function CompanyDrawer({
                       {/* Website */}
                       <div className="flex flex-col gap-1.5">
                         <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                          Company Website URL
+                          {t("drawer.websiteUrl", "Company Website URL")}
                         </label>
                         <div className="relative">
                           <Globe size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -1365,7 +1368,7 @@ export default function CompanyDrawer({
                     {/* Address / Location */}
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                        Headquarters / City & Country
+                        {t("drawer.hqCityCountry", "Headquarters / City & Country")}
                       </label>
                       <div className="relative">
                         <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -1382,13 +1385,13 @@ export default function CompanyDrawer({
                     {/* Bio / Description */}
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                        Organization Overview & Description (Optional)
+                        {t("drawer.orgOverview", "Organization Overview & Description (Optional)")}
                       </label>
                       <textarea
                         rows={3}
                         value={orgDescription}
                         onChange={(e) => setOrgDescription(e.target.value)}
-                        placeholder="Brief summary of the organization's business, mission, and activities..."
+                        placeholder={t("drawer.orgOverviewPlaceholder", "Brief summary of the organization's business, mission, and activities...")}
                         className="w-full p-3 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 resize-none"
                       />
                     </div>
@@ -1402,14 +1405,14 @@ export default function CompanyDrawer({
                     {!item && (
                       <div className="flex flex-col gap-1.5">
                         <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                          Select Registered Organization <span className="text-rose-500">*</span>
+                          {t("drawer.selectRegisteredOrg", "Select Registered Organization")} <span className="text-rose-500">*</span>
                         </label>
                         <SearchableSelect
                           value={selectedOrgIdForSponsor}
                           onChange={(val) => handleSelectOrgForSponsor(val)}
                           options={existingOrgOptionsForSponsor}
-                          placeholder="-- Choose a registered organization to sponsor this event --"
-                          searchPlaceholder="Search registered organization..."
+                          placeholder={t("drawer.chooseOrgToSponsor", "-- Choose a registered organization to sponsor this event --")}
+                          searchPlaceholder={t("drawer.searchRegisteredOrg", "Search registered organization...")}
                           required
                         />
                       </div>
@@ -1418,7 +1421,7 @@ export default function CompanyDrawer({
                     {/* Company Details (Pre-filled from existing org selected, or editable) */}
                     <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col gap-4">
                       <span className="text-xs font-bold text-slate-800 flex items-center justify-between">
-                        <span>Sponsor Branding & Info</span>
+                        <span>{t("drawer.sponsorBrandingInfo", "Sponsor Branding & Info")}</span>
                         <span className="text-[10px] px-2 py-0.5 bg-emerald-100 text-emerald-800 font-extrabold rounded-full">
                           Linked with Organization
                         </span>
@@ -1427,7 +1430,7 @@ export default function CompanyDrawer({
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="flex flex-col gap-1.5 sm:col-span-2">
                           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                            Sponsor Name <span className="text-rose-500">*</span>
+                            {t("drawer.sponsorName", "Sponsor Name")} <span className="text-rose-500">*</span>
                           </label>
                           <input
                             type="text"
@@ -1444,29 +1447,29 @@ export default function CompanyDrawer({
                           <FormImageUploader
                             value={orgLogo}
                             onChange={(url) => setOrgLogo(url)}
-                            label="Sponsor Logo"
-                            placeholder="Upload sponsor logo for website and badges"
+                            label={t("drawer.sponsorLogo", "Sponsor Logo")}
+                            placeholder={t("drawer.uploadSponsorLogo", "Upload sponsor logo for website and badges")}
                           />
                         </div>
 
                         {/* Sector */}
                         <div className="flex flex-col gap-1.5">
                           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                            Industry / Sector
+                            {t("drawer.sectorIndustry", "Industry / Sector")}
                           </label>
                           <SearchableSelect
                             value={orgIndustry}
                             onChange={(val) => setOrgIndustry(val)}
-                            options={INDUSTRIES_LIST.map(i => ({ value: i, label: i }))}
-                            placeholder="-- Select Industry --"
-                            searchPlaceholder="Search industry..."
+                            options={INDUSTRIES_LIST.map(i => ({ value: i, label: getLocalizedIndustry(i, t) }))}
+                            placeholder={t("drawer.selectIndustry", "-- Select Industry --")}
+                            searchPlaceholder={t("drawer.searchIndustry", "Search industry...")}
                           />
                         </div>
 
                         {/* Website */}
                         <div className="flex flex-col gap-1.5">
                           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                            Sponsor Website
+                            {t("drawer.sponsorWebsite", "Sponsor Website")}
                           </label>
                           <input
                             type="text"
@@ -1482,19 +1485,19 @@ export default function CompanyDrawer({
                     {/* 2. Sponsorship Tier & Financial Package */}
                     <div className="p-4 bg-white border border-slate-200 rounded-2xl flex flex-col gap-4">
                       <span className="text-xs font-bold text-slate-800">
-                        Sponsorship Tier & Package
+                        {t("drawer.sponsorshipTierPackage", "Sponsorship Tier & Package")}
                       </span>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="flex flex-col gap-1.5">
                           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                            Sponsor Tier Level <span className="text-rose-500">*</span>
+                            {t("drawer.sponsorTierLevel", "Sponsor Tier Level")} <span className="text-rose-500">*</span>
                           </label>
                           <SearchableSelect
                             value={sponsorTier}
                             onChange={(val) => setSponsorTier(val)}
                             options={sponsorTierOptions}
-                            placeholder="-- Select Tier --"
+                            placeholder={t("drawer.selectTier", "-- Select Tier --")}
                             isClearable={false}
                             required
                           />
@@ -1502,7 +1505,7 @@ export default function CompanyDrawer({
 
                         <div className="flex flex-col gap-1.5">
                           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                            Contribution Amount & Currency
+                            {t("drawer.contributionAmountCurrency", "Contribution Amount & Currency")}
                           </label>
                           <div className="flex gap-2">
                             <input
@@ -1547,10 +1550,10 @@ export default function CompanyDrawer({
                       <div className="flex flex-col gap-3 pt-2 border-t border-slate-100">
                         <div className="flex items-center justify-between">
                           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                            Included Package Deliverables & Perks
+                            {t("drawer.includedPerks", "Included Package Deliverables & Perks")}
                           </label>
                           <span className="text-[10px] font-semibold text-blue-600">
-                            {sponsorPerks.length} Selected
+                            {sponsorPerks.length} {t("common.selected", "Selected")}
                           </span>
                         </div>
 
@@ -1562,14 +1565,14 @@ export default function CompanyDrawer({
                               <div
                                 key={perk.id}
                                 onClick={() => toggleSponsorPerk(perk.id)}
-                                className={`p-2.5 rounded-xl border text-left text-xs font-semibold transition-all cursor-pointer flex items-center justify-between group ${
+                                className={`p-2.5 rounded-xl border text-start rtl:text-right text-left text-xs font-semibold transition-all cursor-pointer flex items-center justify-between group ${
                                   isChecked
                                     ? "border-blue-500 bg-blue-50/70 text-blue-950 font-bold shadow-2xs"
                                     : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
                                 }`}
                               >
                                 <div className="flex items-center gap-1.5 min-w-0 pr-1">
-                                  <span className="truncate">{perk.label}</span>
+                                  <span className="truncate">{perk.isCustom ? perk.label : t("sponsors.perk_" + perk.id, perk.label)}</span>
                                   {perk.isCustom && (
                                     <span className="px-1.5 py-0.2 rounded-md text-[9px] font-bold uppercase bg-blue-100 text-blue-700 shrink-0">
                                       Custom
@@ -1583,7 +1586,7 @@ export default function CompanyDrawer({
                                       type="button"
                                       onClick={(e) => handleRemoveCustomPerk(perk.id, e)}
                                       className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-all cursor-pointer"
-                                      title="Remove custom deliverable"
+                                      title={t("drawer.removeDeliverable", "Remove custom deliverable")}
                                     >
                                       <X size={12} />
                                     </button>
@@ -1606,7 +1609,7 @@ export default function CompanyDrawer({
                                 handleAddCustomPerk(e);
                               }
                             }}
-                            placeholder="Add custom deliverable (e.g. VIP Gala Table, Coffee Lounge)..."
+                            placeholder={t("drawer.addDeliverablePlaceholder", "Add custom deliverable (e.g. VIP Gala Table, Coffee Lounge)...")}
                             className="flex-1 px-3.5 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 bg-white"
                           />
                           <button
@@ -1630,14 +1633,14 @@ export default function CompanyDrawer({
                     {!item && (
                       <div className="flex flex-col gap-1.5">
                         <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                          Select Registered Organization <span className="text-rose-500">*</span>
+                          {t("drawer.selectRegisteredOrg", "Select Registered Organization")} <span className="text-rose-500">*</span>
                         </label>
                         <SearchableSelect
                           value={selectedOrgIdForExhibitor}
                           onChange={(val) => handleSelectOrgForExhibitor(val)}
                           options={existingOrgOptionsForExhibitor}
-                          placeholder="-- Choose a registered organization to exhibit at this event --"
-                          searchPlaceholder="Search registered organization..."
+                          placeholder={t("drawer.chooseOrgToExhibit", "-- Choose a registered organization to exhibit at this event --")}
+                          searchPlaceholder={t("drawer.searchRegisteredOrg", "Search registered organization...")}
                           required
                         />
                       </div>
@@ -1650,20 +1653,20 @@ export default function CompanyDrawer({
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="flex flex-col gap-1.5">
                           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                            Sector / Industry
+                            {t("drawer.sectorIndustry", "Sector / Industry")}
                           </label>
                           <SearchableSelect
                             value={orgIndustry}
                             onChange={(val) => setOrgIndustry(val)}
-                            options={INDUSTRIES_LIST.map(ind => ({ value: ind, label: ind }))}
-                            placeholder="-- Select Industry --"
-                            searchPlaceholder="Search industry..."
+                            options={INDUSTRIES_LIST.map(ind => ({ value: ind, label: getLocalizedIndustry(ind, t) }))}
+                            placeholder={t("drawer.selectIndustry", "-- Select Industry --")}
+                            searchPlaceholder={t("drawer.searchIndustry", "Search industry...")}
                           />
                         </div>
 
                         <div className="flex flex-col gap-1.5">
                           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                            Staff Badge Count (Credentials)
+                            {t("drawer.staffBadgeCount", "Staff Badge Count (Credentials)")}
                           </label>
                           <input
                             type="number"
@@ -1679,13 +1682,13 @@ export default function CompanyDrawer({
                       {/* Products & Description */}
                       <div className="flex flex-col gap-1.5">
                         <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                          Showcase & Products Description
+                          {t("drawer.showcaseProductsDesc", "Showcase & Products Description")}
                         </label>
                         <textarea
                           rows={2}
                           value={exhibitorProducts}
                           onChange={(e) => setExhibitorProducts(e.target.value)}
-                          placeholder="What products or innovations will this company be exhibiting?"
+                          placeholder={t("drawer.exhibitorProductsPlaceholder", "What products or innovations will this company be exhibiting?")}
                           className="w-full p-3 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 resize-none bg-white"
                         />
                       </div>
@@ -1709,8 +1712,8 @@ export default function CompanyDrawer({
                     value={selectedLiaisonAttendeeId}
                     onChange={(val) => handleSelectLiaisonAttendee(val)}
                     options={liaisonAttendeeOptions}
-                    placeholder="-- Choose a registered attendee as contact liaison --"
-                    searchPlaceholder="Search attendee by name, email, or company..."
+                    placeholder={t("drawer.chooseLiaisonPlaceholder", "-- Choose a registered attendee as contact liaison --")}
+                    searchPlaceholder={t("drawer.searchAttendeePlaceholder", "Search attendee by name, email, or company...")}
                   />
                 </div>
 
@@ -1735,7 +1738,7 @@ export default function CompanyDrawer({
                       <div className="flex flex-col min-w-0">
                         <span className="text-xs font-black text-slate-900 truncate">{selectedLiaisonAttendee.name}</span>
                         <span className="text-[11px] font-semibold text-blue-700 truncate">
-                          {orgContactTitle || selectedLiaisonAttendee.jobTitle || selectedLiaisonAttendee.ticketType || selectedLiaisonAttendee.ticket_type || (currentMode === "sponsor" ? "Sponsor Liaison" : currentMode === "exhibitor" ? "Exhibitor Liaison" : "Corporate Liaison")}
+                          {orgContactTitle || selectedLiaisonAttendee.jobTitle || selectedLiaisonAttendee.ticketType || selectedLiaisonAttendee.ticket_type || (currentMode === "sponsor" ? t("drawer.sponsorLiaison", "Sponsor Liaison") : currentMode === "exhibitor" ? t("drawer.exhibitorLiaison", "Exhibitor Liaison") : t("drawer.corporateLiaison", "Corporate Liaison"))}
                         </span>
                         <div className="flex items-center gap-2 mt-0.5 text-[10px] text-slate-500 truncate">
                           {selectedLiaisonAttendee.email && <span>{selectedLiaisonAttendee.email}</span>}
@@ -1747,14 +1750,14 @@ export default function CompanyDrawer({
                       type="button"
                       onClick={() => handleSelectLiaisonAttendee("")}
                       className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-bold transition-all cursor-pointer shrink-0"
-                      title="Unassign contact liaison"
+                      title={t("drawer.unassignLiaison", "Unassign contact liaison")}
                     >
                       <X size={14} />
                     </button>
                   </div>
                 ) : (
                   <div className="p-3.5 bg-slate-50 border border-dashed border-slate-200 rounded-2xl text-center text-xs text-slate-500 font-medium">
-                    No contact liaison assigned. Choose an attendee from the registered attendees list above.
+                    {t("drawer.noLiaisonAssigned", "No contact liaison assigned. Choose an attendee from the registered attendees list above.")}
                   </div>
                 )}
 
@@ -1767,7 +1770,7 @@ export default function CompanyDrawer({
                     rows={3}
                     value={orgNotes}
                     onChange={(e) => setOrgNotes(e.target.value)}
-                    placeholder="Internal communication notes, billing details, contract references..."
+                    placeholder={t("drawer.internalNotesPlaceholder", "Internal communication notes, billing details, contract references...")}
                     className="w-full p-3 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 resize-none"
                   />
                 </div>
@@ -1801,7 +1804,7 @@ export default function CompanyDrawer({
                   <div className="p-3.5 bg-amber-50/90 border border-amber-200 rounded-2xl flex items-center justify-between gap-3 text-xs text-amber-900 font-semibold">
                     <div className="flex items-center gap-2.5 min-w-0">
                       <ShieldAlert size={16} className="text-amber-600 shrink-0" />
-                      <span>Staff badge limit reached ({assignedPersonnel.length} / {maxStaffBadges} credentials assigned).</span>
+                      <span>{t("drawer.staffBadgeLimitReached", "Staff badge limit reached")} (<bdi dir="ltr">{assignedPersonnel.length} / {maxStaffBadges}</bdi> {t("drawer.credentialsAssigned", "credentials assigned")}).</span>
                     </div>
                     {currentMode === "exhibitor" && (
                       <button
@@ -1820,10 +1823,10 @@ export default function CompanyDrawer({
                   isQuotaReached ? "bg-slate-50/70 border border-slate-200/80 opacity-70" : "bg-blue-50/40 border border-blue-100"
                 }`}>
                   <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-bold text-slate-900">Assign Registered Attendee to Personnel</h4>
+                    <h4 className="text-xs font-bold text-slate-900">{t("drawer.assignPersonnelTitle", "Assign Registered Attendee to Personnel")}</h4>
                     {maxStaffBadges !== null && (
                       <span className="text-[10px] font-bold text-slate-500">
-                        Quota: <span className="font-extrabold text-blue-700">{assignedPersonnel.length}</span> / {maxStaffBadges} Badges
+                        {t("drawer.quotaLabel", "Quota")}: <bdi dir="ltr"><span className="font-extrabold text-blue-700">{assignedPersonnel.length}</span> / {maxStaffBadges}</bdi> {t("drawer.badges", "Badges")}
                       </span>
                     )}
                   </div>
@@ -1837,7 +1840,7 @@ export default function CompanyDrawer({
                         value={selectedAttendeeIdToAssign}
                         onChange={(val) => setSelectedAttendeeIdToAssign(val)}
                         options={unassignedAttendeesOptions}
-                        placeholder={isQuotaReached ? `-- Badge limit reached (${maxStaffBadges} max) --` : "-- Choose a registered attendee to add as staff --"}
+                        placeholder={isQuotaReached ? t("drawer.badgeLimitReached", "-- Badge limit reached ({max} max) --", { max: maxStaffBadges }) : t("drawer.chooseStaffPlaceholder", "-- Choose a registered attendee to add as staff --")}
                         searchPlaceholder="Search attendee by name, email, or company..."
                         disabled={isQuotaReached}
                       />
@@ -1852,7 +1855,7 @@ export default function CompanyDrawer({
                           type="text"
                           value={assignPersonnelRole}
                           onChange={(e) => setAssignPersonnelRole(e.target.value)}
-                          placeholder="e.g. Booth Manager, Senior Engineer, CEO"
+                          placeholder={t("drawer.rolePlaceholder", "e.g. Booth Manager, Senior Engineer, CEO")}
                           disabled={isQuotaReached}
                           className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 bg-white disabled:bg-slate-100 disabled:text-slate-400"
                         />
@@ -1866,7 +1869,7 @@ export default function CompanyDrawer({
                           className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           {isAssigning ? <Loader2 size={14} className="animate-spin" /> : <UserCheck size={14} />}
-                          <span>Assign Attendee</span>
+                          <span>{t("drawer.assignAttendeeBtn", "Assign Attendee")}</span>
                         </button>
                       </div>
                     </div>
@@ -1878,21 +1881,21 @@ export default function CompanyDrawer({
                   <div className="flex items-center justify-between">
                     <h4 className="text-xs font-bold text-slate-900 flex items-center gap-2">
                       <Users size={14} className="text-slate-500" />
-                      <span>Assigned Company Personnel</span>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${
-                        isQuotaReached ? "bg-amber-50 text-amber-800 border-amber-200" : "bg-blue-50 text-blue-700 border-blue-100"
-                      }`}>
-                        {maxStaffBadges !== null ? `${assignedPersonnel.length} / ${maxStaffBadges} Badges Used` : `${assignedPersonnel.length} Assigned`}
-                      </span>
+                      <span>{t("drawer.assignedPersonnelTitle", "Assigned Company Personnel")}</span>
                     </h4>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${
+                      isQuotaReached ? "bg-amber-50 text-amber-800 border-amber-200" : "bg-blue-50 text-blue-700 border-blue-100"
+                    }`}>
+                      {maxStaffBadges !== null ? <><bdi dir="ltr">{assignedPersonnel.length} / {maxStaffBadges}</bdi> {t("drawer.badgesUsed", "Badges Used")}</> : <><bdi dir="ltr">{assignedPersonnel.length}</bdi> {t("drawer.assignedCount", "Assigned")}</>}
+                    </span>
                   </div>
 
                   {assignedPersonnel.length === 0 ? (
                     <div className="p-8 border border-dashed border-slate-200 rounded-2xl text-center flex flex-col items-center gap-2">
                       <UserCheck size={28} className="text-slate-300" />
-                      <p className="text-xs font-bold text-slate-700">No personnel assigned yet</p>
+                      <p className="text-xs font-bold text-slate-700">{t("drawer.noPersonnelYet", "No personnel assigned yet")}</p>
                       <p className="text-[11px] text-slate-400 max-w-xs">
-                        Assign registered event attendees to this company using the dropdown above.
+                        {t("drawer.noPersonnelDesc", "Assign registered event attendees to this company using the dropdown above.")}
                       </p>
                     </div>
                   ) : (
@@ -1932,7 +1935,7 @@ export default function CompanyDrawer({
                                     <>
                                       {(currentMode === "sponsor" || linkedSponsor) && (
                                         <span className="px-2 py-0.2 rounded-md text-[9px] font-black uppercase bg-amber-50 text-amber-800 border border-amber-200 shrink-0">
-                                          {sponsorTier || linkedSponsor?.tier || 'Sponsor'} Rep
+                                          {sponsorTier || linkedSponsor?.tier || t("drawer.sponsor", "Sponsor")} {t("drawer.rep", "Rep")}
                                         </span>
                                       )}
                                       {(currentMode === "exhibitor" || linkedExhibitor) && (
@@ -1945,7 +1948,7 @@ export default function CompanyDrawer({
                                 </div>
 
                                 <div className="flex items-center gap-2 text-[11px] text-slate-500 font-medium truncate mt-0.5">
-                                  <span className="font-bold text-slate-700 truncate">{person.jobTitle || 'Representative'}</span>
+                                  <span className="font-bold text-slate-700 truncate">{person.jobTitle || t("drawer.representative", "Representative")}</span>
                                   {person.email && (
                                     <>
                                       <span className="text-slate-300">•</span>
@@ -1971,7 +1974,7 @@ export default function CompanyDrawer({
                                 type="button"
                                 onClick={() => handleRemovePersonnel(person.id)}
                                 className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                                title="Remove from Company Personnel"
+                                title={t("drawer.removePersonnel", "Remove from Company Personnel")}
                               >
                                 <Trash2 size={14} />
                               </button>
@@ -1993,7 +1996,7 @@ export default function CompanyDrawer({
                   onClick={onClose}
                   className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold text-xs transition-colors cursor-pointer"
                 >
-                  Cancel
+                  {t("common.cancel", "Cancel")}
                 </button>
 
                 {item?.id && (
@@ -2005,9 +2008,9 @@ export default function CompanyDrawer({
                   >
                     {isDeleting ? <Loader2 size={14} className="animate-spin text-rose-600" /> : <Trash2 size={14} className="text-rose-500" />}
                     <span>
-                      {currentMode === "org" && "Delete Organization"}
-                      {currentMode === "sponsor" && "Delete Sponsor"}
-                      {currentMode === "exhibitor" && "Delete Exhibitor"}
+                      {currentMode === "org" && t("drawer.deleteOrg", "Delete Organization")}
+                      {currentMode === "sponsor" && t("drawer.deleteSponsor", "Delete Sponsor")}
+                      {currentMode === "exhibitor" && t("drawer.deleteExhibitor", "Delete Exhibitor")}
                     </span>
                   </button>
                 )}
@@ -2021,15 +2024,13 @@ export default function CompanyDrawer({
                 {isSubmitting ? (
                   <>
                     <Loader2 size={14} className="animate-spin" />
-                    <span>Saving Entry...</span>
+                    <span>{t("common.saving", "Saving Entry...")}</span>
                   </>
                 ) : (
                   <>
                     <Check size={14} />
                     <span>
-                      {currentMode === "org" && (item ? "Save Organization" : "Create Organization")}
-                      {currentMode === "sponsor" && (item ? "Save Sponsor" : "Register Sponsor")}
-                      {currentMode === "exhibitor" && (item ? "Save Exhibitor" : "Register Exhibitor")}
+                      {item ? t("common.saveChanges", "Save Changes") : t("common.save", "Save")}
                     </span>
                   </>
                 )}

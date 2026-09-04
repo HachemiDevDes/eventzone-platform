@@ -557,7 +557,7 @@ export default function VisitorPortal({
                   Your digital ticket has been issued for <strong>{rsvpSuccessPass.eventTitle}</strong>.
                 </p>
 
-                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-left text-xs space-y-1">
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-start text-xs space-y-1">
                   <div className="flex justify-between"><span className="text-slate-400">Badge ID:</span> <span className="font-mono font-bold text-indigo-600">{rsvpSuccessPass.badgeCode}</span></div>
                   <div className="flex justify-between"><span className="text-slate-400">Tier:</span> <span className="font-bold text-slate-800">{rsvpSuccessPass.ticketType}</span></div>
                   <div className="flex justify-between"><span className="text-slate-400">Status:</span> <span className="font-bold text-emerald-600">Active</span></div>
@@ -594,7 +594,7 @@ export default function VisitorPortal({
                   Registering for: <strong className="text-slate-800">{selectedEventToRsvp.title}</strong>
                 </p>
 
-                <form onSubmit={handleRsvpSubmit} className="space-y-4 text-left">
+                <form onSubmit={handleRsvpSubmit} className="space-y-4 text-start">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                       Your Full Name

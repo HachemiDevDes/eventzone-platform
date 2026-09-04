@@ -3,8 +3,10 @@
 import React, { useState, useRef } from "react";
 import { Camera, Upload, Trash2, CheckCircle2, Image as ImageIcon, Smartphone, Loader2, Sparkles } from "lucide-react";
 import { uploadMedia, deleteMedia } from "@/lib/storage";
+import { useLanguage } from "../lib/i18n";
 
 export default function FormImageUploader({
+
   value = "",
   onChange,
   required = false,
@@ -17,6 +19,7 @@ export default function FormImageUploader({
   eventId = null,
   folder = "badges"
 }) {
+  const { t } = useLanguage ? useLanguage() : { t: (k, d) => d };
   const fileInputRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -95,9 +98,9 @@ export default function FormImageUploader({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
               <CheckCircle2 size={13} className="text-emerald-600" />
-              <span>Photo Attached</span>
+              <span>{t("forms.photoAttached", "Photo Attached")}</span>
             </div>
-            <p className="text-[11px] text-slate-400 truncate mt-0.5">Ready for form submission</p>
+            <p className="text-[11px] text-slate-400 truncate mt-0.5">{t("forms.readyForSubmission", "Ready for form submission")}</p>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -106,14 +109,14 @@ export default function FormImageUploader({
               onClick={() => fileInputRef.current?.click()}
               className="px-2.5 py-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
             >
-              {isUploading ? <Loader2 size={14} className="animate-spin" /> : "Change"}
+              {isUploading ? <Loader2 size={14} className="animate-spin" /> : t("forms.changePhoto", "Change")}
             </button>
             <button
               type="button"
               disabled={disabled || isUploading}
               onClick={handleRemove}
               className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-              title="Remove photo"
+              title={t("forms.removePhoto", "Remove photo")}
             >
               <Trash2 size={14} />
             </button>
@@ -135,11 +138,11 @@ export default function FormImageUploader({
             {isUploading ? <Loader2 size={20} className="animate-spin text-blue-600" /> : <Camera size={20} />}
           </div>
           <div className="text-xs font-bold text-slate-800">
-            {isUploading ? "Uploading to Cloud Storage..." : placeholder}
+            {isUploading ? t("forms.uploadingToCloud", "Uploading to Cloud Storage...") : (placeholder || t("forms.uploadPhotoPlaceholder", "Upload your photo from phone or computer"))}
           </div>
           <div className="text-[11px] text-slate-400 mt-1 flex items-center justify-center gap-1.5">
             <Sparkles size={11} className="text-blue-500 shrink-0" />
-            <span>Auto-optimized WebP (Max 10MB)</span>
+            <span><bdi dir="ltr">{t("forms.autoOptimizedWebp", "Auto-optimized WebP (Max 10MB)")}</bdi></span>
           </div>
         </div>
       )}

@@ -19,6 +19,7 @@ const FloorPlanCanvas = dynamic(() => import("./FloorPlanCanvas"), { ssr: false 
 import ExportModal from "./ExportModal";
 import SendPlanModal from "./SendPlanModal";
 import SearchableSelect from "./SearchableSelect";
+import { getLocalizedIndustry } from "../lib/constants";
 import { supabase } from "../lib/supabase";
 import { uploadMedia } from "../lib/storage";
 import QRCode from "qrcode";
@@ -127,6 +128,20 @@ function PropertyInput({ value, onChange, type = "number", min, max, step, class
 
 function FloorItem({ floor, isActive, isOnly, onSelect, onRename, onDelete }) {
   const { t, lang, isRTL } = useLanguage();
+
+  const localizedFilterOptions = useMemo(() => [
+    { value: "all", label: t("floor.filter_all", "Show All Locations"), icon: Globe, iconColor: "text-indigo-500" },
+    { value: "draft", label: t("floor.filter_draft", "Draft Booths"), icon: Folder, iconColor: "text-amber-500" },
+    { value: "available", label: t("floor.filter_available", "Available Booths"), icon: Circle, iconColor: "text-emerald-500" },
+    { value: "reserved", label: t("floor.filter_reserved", "Reserved Booths"), icon: Clock, iconColor: "text-orange-500" },
+    { value: "sold", label: t("floor.filter_sold", "Sold Booths"), icon: CheckCircle2, iconColor: "text-red-500" },
+    { value: "checked_in", label: t("floor.filter_checked_in", "Checked In Booths"), icon: Shield, iconColor: "text-emerald-600" },
+    { value: "empty", label: t("floor.filter_empty", "Empty Booths"), icon: Square, iconColor: "text-purple-400" },
+    { value: "equipped", label: t("floor.filter_equipped", "Equipped Booths"), icon: Briefcase, iconColor: "text-rose-500" },
+    { value: "tables", label: t("floor.filter_tables", "Banquet Seating Tables"), icon: Utensils, iconColor: "text-indigo-650" },
+    { value: "logistics", label: t("floor.filter_logistics", "Logistics & Utilities"), icon: AlertTriangle, iconColor: "text-amber-600" },
+  ], [t]);
+
   const [isEditing, setIsEditing] = useState(false);
   const [tempName, setTempName] = useState(floor.name);
 
@@ -442,6 +457,36 @@ function CustomFilterDropdown({ value, onChange, options, btnClassName = "px-3.5
       )}
     </div>
   );
+}
+
+
+function getLocalizedElementLabel(label, type, t) {
+  if (!label) return t ? t("floor.unnamedLocation", "Unnamed Location") : "Unnamed Location";
+  if (!t) return label;
+  if (label.startsWith("Empty Booth ")) {
+    return `${t("floor.item_booth_empty", "Empty Booth")} ${label.slice(12)}`;
+  }
+  if (label.startsWith("Semi-Equipped Booth ")) {
+    return `${t("floor.item_booth_semi", "Semi-Equipped Booth")} ${label.slice(20)}`;
+  }
+  if (label.startsWith("Equipped Booth ")) {
+    return `${t("floor.item_booth_equipped", "Equipped Booth")} ${label.slice(15)}`;
+  }
+  if (label.startsWith("Booth ")) {
+    return `${t("table.booth", "Booth")} ${label.slice(6)}`;
+  }
+  return label;
+}
+
+function getLocalizedTag(tag, t) {
+  if (!tag) return "";
+  if (!t) return tag;
+  const lower = String(tag).trim().toLowerCase();
+  if (lower === "available") return t("floor.status_available", "AVAILABLE").toUpperCase();
+  if (lower === "reserved") return t("floor.status_reserved", "RESERVED").toUpperCase();
+  if (lower === "sold") return t("floor.status_sold", "SOLD").toUpperCase();
+  if (lower === "sold out") return t("floor.status_sold_out", "SOLD OUT").toUpperCase();
+  return tag;
 }
 
 export default function FloorPlanModifier({ 
@@ -3366,7 +3411,7 @@ export default function FloorPlanModifier({
     if (allMatched.length === 0) {
       return (
         <div className="text-center text-slate-400 py-8 text-xs font-semibold">
-          No locations matched your search.
+          {t("floor.noLocationsMatched", "No locations matched your search.")}
         </div>
       );
     }
@@ -3397,7 +3442,7 @@ export default function FloorPlanModifier({
             }
           }
           if (!subtitle) {
-            subtitle = el.type.replace("utility-", "").replace("furniture-", "").replace("structural-", "").replace("access-", "").replace("stage-", "").replace("tech-", "").replace("net-", "").replace("-", " ").toUpperCase();
+            subtitle = t("floor.item_" + el.type.replace(/-/g, "_"), el.type.replace("utility-", "").replace("furniture-", "").replace("structural-", "").replace("access-", "").replace("stage-", "").replace("tech-", "").replace("net-", "").replace("-", " ").toUpperCase());
           }
 
           const isSelected = selectedIds.includes(el.id);
@@ -3413,7 +3458,7 @@ export default function FloorPlanModifier({
               }`}
             >
               <div className="flex flex-col gap-0.5 max-w-[80%]">
-                <span className="text-xs font-bold truncate">{el.label || "Unnamed Location"}</span>
+                <span className="text-xs font-bold truncate">{getLocalizedElementLabel(el.label, el.type, t)}</span>
                 <span className={`text-[10px] font-medium truncate ${isSelected ? "text-indigo-200" : "text-slate-450"}`}>
                   {subtitle}
                 </span>
@@ -3425,7 +3470,7 @@ export default function FloorPlanModifier({
                     ? "bg-indigo-50 text-indigo-600" 
                     : "bg-slate-100 text-slate-500"
               }`}>
-                {el.type.startsWith("booth") ? "Booth" : "Venue"}
+                {el.type.startsWith("booth") ? t("table.booth", "Booth") : t("floor.venue", "Venue")}
               </span>
             </button>
           );
@@ -3441,9 +3486,9 @@ export default function FloorPlanModifier({
               <div className="flex items-center gap-2.5">
                 <Users size={15} className="text-indigo-650" />
                 <div className="flex flex-col gap-0.5">
-                  <span className="text-xs font-extrabold text-slate-800">Seating Tables & Podiums</span>
+                  <span className="text-xs font-extrabold text-slate-800">{t("floor.seatingTablesAndPodiums", "Seating Tables & Podiums")}</span>
                   <span className="text-[10px] font-semibold text-slate-450">
-                    {tableChairsMatched.length} Seating Location{tableChairsMatched.length > 1 ? "s" : ""}
+                    <bdi dir="ltr">{tableChairsMatched.length}</bdi> {t("floor.seatingLocations", "Seating Locations")}
                   </span>
                 </div>
               </div>
@@ -3823,7 +3868,7 @@ export default function FloorPlanModifier({
                     }`}
                   >
                     <Monitor size={13} />
-                    <span>Web / Desktop</span>
+                    <span>{t("floor.webDesktop", "Web / Desktop")}</span>
                   </button>
                   <button
                     onClick={() => setPreviewDeviceMode("mobile")}
@@ -3834,7 +3879,7 @@ export default function FloorPlanModifier({
                     }`}
                   >
                     <Smartphone size={13} />
-                    <span>Mobile App</span>
+                    <span>{t("floor.mobileApp", "Mobile App")}</span>
                   </button>
                 </div>
               )}
@@ -3852,7 +3897,7 @@ export default function FloorPlanModifier({
                   </button>
                   {isShareTooltipVisible && (
                     <div className="absolute top-full right-0 mt-1.5 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg z-50 whitespace-nowrap animate-fade-in font-sans">
-                      Link Copied!
+                      {t("floor.linkCopied", "Link Copied!")}
                     </div>
                   )}
                 </div>
@@ -4276,7 +4321,7 @@ export default function FloorPlanModifier({
                           );
                         })()}
                         <div className="flex flex-col gap-0.5 max-w-[190px]">
-                          <h4 className="text-xs font-bold text-slate-800 truncate leading-snug">{mobileDetailsData.title}</h4>
+                          <h4 className="text-xs font-bold text-slate-800 truncate leading-snug">{getLocalizedElementLabel(mobileDetailsData.title, mobileDetailsData.el?.type, t)}</h4>
                           <span className="text-[10px] font-semibold text-indigo-650 truncate">{mobileDetailsData.subtitle}</span>
                         </div>
                       </div>
@@ -4312,7 +4357,7 @@ export default function FloorPlanModifier({
                     <div className="flex-1 overflow-y-auto px-5 pb-12 flex flex-col gap-3">
                       {mobileDetailsData.attendee && (
                         <div className="mt-1 flex flex-col gap-2 bg-emerald-50/20 border border-emerald-100/30 p-3 rounded-xl">
-                          <span className="text-[8px] font-bold text-emerald-800 uppercase tracking-wider">Reservation Details</span>
+                          <span className="text-[8px] font-bold text-emerald-800 uppercase tracking-wider">{t("floor.reservationDetails", "Reservation Details")}</span>
                           <div className="flex flex-col gap-1 text-[10px]">
                             <div className="flex justify-between">
                               <span className="font-semibold text-slate-500">Name</span>
@@ -4332,7 +4377,7 @@ export default function FloorPlanModifier({
                             )}
                             {(mobileDetailsData.attendee.ticketType || mobileDetailsData.attendee.ticket_type) && (
                               <div className="flex justify-between">
-                                <span className="font-semibold text-slate-500">Ticket Type</span>
+                                <span className="font-semibold text-slate-500">{t("table.ticketTier", "Ticket Type")}</span>
                                 <span className="font-bold text-indigo-650">{mobileDetailsData.attendee.ticketType || mobileDetailsData.attendee.ticket_type}</span>
                               </div>
                             )}
@@ -4384,7 +4429,7 @@ export default function FloorPlanModifier({
                                   onError={(e) => { e.target.style.display = 'none'; }}
                                 />
                               ) : null}
-                              <span className="font-bold text-slate-700 truncate">{mobileDetailsData.exhibitor.contact || "Representative"}</span>
+                              <span className="font-bold text-slate-700 truncate">{mobileDetailsData.exhibitor.contact || t("drawer.representative", "Representative")}</span>
                             </div>
                             <span className="text-[9px] font-bold text-indigo-650 bg-indigo-50 px-2 py-0.5 rounded-md shrink-0">Representative</span>
                           </div>
@@ -4435,7 +4480,7 @@ export default function FloorPlanModifier({
                 <div className="relative">
                   <input
                     type="text"
-                    placeholder="Search by company, booth, category..."
+                    placeholder={t("floor.searchDirectoryPlaceholder", "Search by company, booth, category...")}
                     value={previewSearchQuery}
                     onChange={(e) => setPreviewSearchQuery(e.target.value)}
                     className="w-full pl-9 pr-8 py-2.5 bg-slate-100/50 hover:bg-slate-100 focus:bg-white border border-slate-200/50 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 rounded-2xl font-semibold text-xs text-slate-850 transition-all duration-150 outline-none shadow-sm"
@@ -4453,11 +4498,11 @@ export default function FloorPlanModifier({
 
                 {/* View Filter Dropdown */}
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider">Filter View</label>
+                  <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider">{t("floor.filterView", "Filter View")}</label>
                   <CustomFilterDropdown
                     value={previewFilter}
                     onChange={setPreviewFilter}
-                    options={filterOptions}
+                    options={localizedFilterOptions}
                     btnClassName="px-3 py-2 rounded-2xl text-xs"
                   />
                 </div>
@@ -4671,7 +4716,7 @@ export default function FloorPlanModifier({
                       );
                     })()}
                     <div className="flex flex-col gap-0.5 max-w-[70%]">
-                      <h4 className="text-sm font-bold text-slate-800 truncate leading-snug">{title}</h4>
+                      <h4 className="text-sm font-bold text-slate-800 truncate leading-snug">{getLocalizedElementLabel(title, el.type, t)}</h4>
                       <span className="text-xs font-semibold text-indigo-650 truncate">{subtitle}</span>
                     </div>
                   </div>
@@ -4697,7 +4742,7 @@ export default function FloorPlanModifier({
 
                   {attendee && (
                     <div className="mt-1 flex flex-col gap-2 bg-emerald-50/20 border border-emerald-100/40 p-4 rounded-2xl">
-                      <span className="text-[9px] font-bold text-emerald-800 uppercase tracking-wider">Reservation Details</span>
+                      <span className="text-[9px] font-bold text-emerald-800 uppercase tracking-wider">{t("floor.reservationDetails", "Reservation Details")}</span>
                       <div className="flex flex-col gap-1.5 text-xs">
                         <div className="flex justify-between">
                           <span className="font-semibold text-slate-500">Name</span>
@@ -4759,7 +4804,7 @@ export default function FloorPlanModifier({
 
                   {exhibitor && (
                     <div className="mt-auto flex flex-col gap-2 bg-indigo-50/30 border border-indigo-100/40 p-4 rounded-2xl">
-                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Exhibitor Contact</span>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{t("floor.exhibitorContact", "Exhibitor Contact")}</span>
                       <div className="flex justify-between items-center text-xs">
                         <div className="flex items-center gap-2 min-w-0">
                           {(exhibitor.contactPhoto || exhibitor.photo || exhibitor.avatar) ? (
@@ -4772,7 +4817,7 @@ export default function FloorPlanModifier({
                           ) : null}
                           <span className="font-bold text-slate-700 truncate">{exhibitor.contact || "Representative"}</span>
                         </div>
-                        <span className="text-[10px] font-bold text-indigo-650 bg-indigo-50 px-2.5 py-0.5 rounded-full shrink-0">Representative</span>
+                        <span className="text-[10px] font-bold text-indigo-650 bg-indigo-50 px-2.5 py-0.5 rounded-full shrink-0">{t("drawer.representative", "Representative")}</span>
                       </div>
                     </div>
                   )}
@@ -5241,7 +5286,7 @@ export default function FloorPlanModifier({
                              options={exhibitors.map(ex => ({
                                value: String(ex.id),
                                label: ex.name || "Unnamed Exhibitor",
-                               description: ex.booth ? `Booth: ${ex.booth}` : (ex.industry ? `Industry: ${ex.industry}` : undefined)
+                               description: ex.booth ? `${t("table.booth", "Booth")}: ${ex.booth}` : (ex.industry ? `${t("table.industry", "Industry")}: ${getLocalizedIndustry(ex.industry, t)}` : undefined)
                              }))}
                              isClearable={true}
                              className="w-full"
@@ -6845,7 +6890,7 @@ export default function FloorPlanModifier({
                                       options={exhibitors.map(ex => ({
                                         value: String(ex.id),
                                         label: ex.name || "Unnamed Exhibitor",
-                                        description: ex.booth ? `Booth: ${ex.booth}` : (ex.industry ? `Industry: ${ex.industry}` : undefined)
+                                        description: ex.booth ? `${t("table.booth", "Booth")}: ${ex.booth}` : (ex.industry ? `${t("table.industry", "Industry")}: ${getLocalizedIndustry(ex.industry, t)}` : undefined)
                                       }))}
                                       isClearable={true}
                                       className="w-full"
@@ -7515,7 +7560,7 @@ export default function FloorPlanModifier({
               {/* Blueprint Opacity input */}
               <div className="flex flex-col gap-1.5">
                 <div className="flex justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  <span>Opacity</span>
+                  <span>{t("floor.opacity", "Opacity")}</span>
                   <span>{Math.round(blueprintOpacity * 100)}%</span>
                 </div>
                 <input 
@@ -7815,7 +7860,7 @@ export default function FloorPlanModifier({
                 {/* Dimensions in Meters */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Width (meters)</label>
+                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{t("floor.widthMeters", "Width (meters)")}</label>
                     <PropertyInput 
                       type="number" 
                       step="1"
@@ -7830,7 +7875,7 @@ export default function FloorPlanModifier({
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Height (meters)</label>
+                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{t("floor.heightMeters", "Height (meters)")}</label>
                     <PropertyInput 
                       type="number" 
                       step="1"
@@ -7849,7 +7894,7 @@ export default function FloorPlanModifier({
                 {/* Dimensions in Pixels */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Width (px)</label>
+                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{t("floor.widthPx", "Width (px)")}</label>
                     <PropertyInput 
                       type="number" 
                       step="100"
@@ -7863,7 +7908,7 @@ export default function FloorPlanModifier({
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Height (px)</label>
+                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{t("floor.heightPx", "Height (px)")}</label>
                     <PropertyInput 
                       type="number" 
                       step="100"
@@ -7907,7 +7952,7 @@ export default function FloorPlanModifier({
                           : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-indigo-650"
                       }`}
                     >
-                      <span>{blueprintIsLocked ? "🔒 Locked" : "🔓 Unlocked"}</span>
+                      <span>{blueprintIsLocked ? t("floor.locked", "🔒 Locked") : t("floor.unlocked", "🔓 Unlocked")}</span>
                     </button>
                     <button
                       type="button"
@@ -7939,15 +7984,15 @@ export default function FloorPlanModifier({
                 </div>
               ) : (
                 <div className="flex flex-col gap-1.5">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Blueprint Background</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("floor.blueprintBackground", "Blueprint Background")}</span>
                   <button
                     onClick={() => fileInputRef.current.click()}
                     className="w-full flex flex-col items-center justify-center gap-2.5 py-6 px-4 bg-white border border-dashed border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/20 rounded-2xl cursor-pointer transition-all duration-200"
                   >
                     <Upload size={20} className="text-slate-400" />
                     <div className="flex flex-col gap-0.5 items-center">
-                      <span className="text-xs font-bold text-slate-700">Upload Blueprint Background</span>
-                      <span className="text-[9px] font-semibold text-slate-400">Scale drawing as backdrop (PNG, JPG up to 10MB)</span>
+                      <span className="text-xs font-bold text-slate-700">{t("floor.uploadBlueprint", "Upload Blueprint Background")}</span>
+                      <span className="text-[9px] font-semibold text-slate-400">{t("floor.uploadBlueprintDesc", "Scale drawing as backdrop (PNG, JPG up to 10MB)")}</span>
                     </div>
                     <input
                       ref={fileInputRef}
@@ -7967,14 +8012,14 @@ export default function FloorPlanModifier({
                   className="w-full flex items-center justify-center gap-2 py-3 bg-white border border-slate-200 hover:border-indigo-150 hover:text-indigo-650 rounded-xl font-bold text-xs text-slate-655 transition-all duration-200 cursor-pointer shadow-sm"
                 >
                   <Keyboard size={15} />
-                  <span>View Keyboard Shortcuts</span>
+                  <span>{t("floor.viewShortcuts", "View Keyboard Shortcuts")}</span>
                 </button>
               </div>
 
               {/* Selection help info */}
               <div className="flex flex-col items-center justify-center text-center text-slate-450 py-5 px-4 border border-dashed border-slate-200 rounded-3xl gap-2.5 bg-slate-50/40">
                 <Layers size={20} className="opacity-30" />
-                <p className="text-[10px] text-slate-400 leading-normal font-semibold">Click on any placed booth, stage, custom shape, or facility inside the canvas workspace to modify details.</p>
+                <p className="text-[10px] text-slate-400 leading-normal font-semibold">{t("floor.canvasHelp", "Click on any placed booth, stage, custom shape, or facility inside the canvas workspace to modify details.")}</p>
               </div>
             </div>
           )}

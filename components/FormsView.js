@@ -20,8 +20,10 @@ import { CountrySelect, CitySelect } from "./LocationInputs";
 import SearchableSelect from "./SearchableSelect";
 import FormImageUploader from "./FormImageUploader";
 import FormFileUploader, { formatFileSize } from "./FormFileUploader";
-import { PRESET_SMART_FIELDS, getFormSections } from "../lib/formPresets";
+import { PRESET_SMART_FIELDS, getFormSections, getPresetFieldLabel, getPresetFieldDescription, getLocalizedPresetOption } from "../lib/formPresets";
+import { getLocalizedIndustry } from "../lib/constants";
 import { FormsSkeleton } from "./SkeletonLoaders";
+import { useLanguage } from "../lib/i18n";
 
 // Available field types in the toolbox
 const FIELD_TYPES = [
@@ -110,6 +112,105 @@ export function ensureCoreLockedFields(fields = []) {
   return [...missing, ...sanitized];
 }
 
+
+const getFieldTypeLabel = (ft, t) => {
+  if (!ft) return "";
+  const keyMap = {
+    text: "forms.typeShortText",
+    textarea: "forms.typeParagraph",
+    phone: "forms.typePhone",
+    country: "forms.typeCountry",
+    city: "forms.typeCity",
+    picture: "forms.typePicture",
+    email: "forms.typeEmail",
+    number: "forms.typeNumber",
+    date: "forms.typeDate",
+    pdf: "forms.typePdf",
+    pptx: "forms.typePptx",
+    excel: "forms.typeExcel",
+    csv: "forms.typeCsv",
+    word: "forms.typeWord",
+    file: "forms.typeFile",
+    select: "forms.typeSelect",
+    radio: "forms.typeRadio",
+    checkbox: "forms.typeCheckbox",
+    switch: "forms.typeSwitch",
+    rating: "forms.typeRating",
+    nps: "forms.typeNps",
+    section: "forms.typeSection"
+  };
+  const key = keyMap[ft.type || ft];
+  return key && typeof t === "function" ? t(key, ft.label || ft) : (ft.label || ft);
+};
+
+const getFieldTypeDescription = (ft, t) => {
+  if (!ft) return "";
+  const keyMap = {
+    text: "forms.typeShortTextDesc",
+    textarea: "forms.typeParagraphDesc",
+    phone: "forms.typePhoneDesc",
+    country: "forms.typeCountryDesc",
+    city: "forms.typeCityDesc",
+    picture: "forms.typePictureDesc",
+    email: "forms.typeEmailDesc",
+    number: "forms.typeNumberDesc",
+    date: "forms.typeDateDesc",
+    pdf: "forms.typePdfDesc",
+    pptx: "forms.typePptxDesc",
+    excel: "forms.typeExcelDesc",
+    csv: "forms.typeCsvDesc",
+    word: "forms.typeWordDesc",
+    file: "forms.typeFileDesc",
+    select: "forms.typeSelectDesc",
+    radio: "forms.typeRadioDesc",
+    checkbox: "forms.typeCheckboxDesc",
+    switch: "forms.typeSwitchDesc",
+    rating: "forms.typeRatingDesc",
+    nps: "forms.typeNpsDesc",
+    section: "forms.typeSectionDesc"
+  };
+  const key = keyMap[ft.type || ft];
+  return key && typeof t === "function" ? t(key, ft.description || "") : (ft.description || "");
+};
+
+const getCategoryLabel = (cat, t) => {
+  if (typeof t !== "function") return `${cat} Elements`;
+  const map = {
+    "Standard": t("forms.catStandardElements", "Standard Elements"),
+    "Files & Docs": t("forms.catFilesDocsElements", "Files & Docs Elements"),
+    "Choices": t("forms.catChoicesElements", "Choices Elements"),
+    "Feedback": t("forms.catFeedbackElements", "Feedback Elements"),
+    "Layout": t("forms.catLayoutElements", "Layout Elements")
+  };
+  return map[cat] || `${cat} Elements`;
+};
+
+const getFormTypeBadgeText = (typeStr, t) => {
+  const s = (typeStr || "").toLowerCase();
+  if (typeof t !== "function") return typeStr.replace(/_/g, " ");
+  if (s.includes("ticket") || s.includes("registration")) {
+    return t("forms.catTicketRegistration", "Ticket Registration");
+  }
+  if (s.includes("session")) {
+    return t("forms.catSessionSurvey", "Session Survey");
+  }
+  if (s.includes("feedback") || s.includes("survey")) {
+    return t("forms.catFeedbackSurvey", "Feedback & Survey");
+  }
+  if (s.includes("inquiry") || s.includes("proposal")) {
+    return t("forms.catInquiriesProposals", "Inquiries & Proposals");
+  }
+  return typeStr.replace(/_/g, " ");
+};
+
+const renderOptionLabel = (opt, t, isIndustryField = false) => {
+  if (!opt) return "";
+  if (isIndustryField) {
+    return getLocalizedIndustry(opt, t);
+  }
+  return getLocalizedPresetOption(opt, t);
+};
+
 export default function FormsView({
   forms = [],
   submissions = [],
@@ -123,6 +224,7 @@ export default function FormsView({
   onSubmitResponse,
   activeEventTitle = "Eventzone Conference"
 }) {
+  const { t, lang, isRTL } = useLanguage();
   // Mode: "hub" (list) | "builder" (edit/create) | "responses" (view submissions)
   const [viewMode, setViewMode] = useState("hub");
   const [activeFormId, setActiveFormId] = useState(null);
@@ -599,7 +701,7 @@ function generateUuid() {
   // Export Submissions to CSV
   const handleExportCSV = () => {
     if (!editingForm || activeSubmissions.length === 0) {
-      alert("No submissions available to export yet.");
+      alert(t("forms.noSubmissionsToExport", "No submissions available to export yet."));
       return;
     }
 
@@ -655,7 +757,7 @@ function generateUuid() {
         const val = previewAnswers[f.id];
         const isEmpty = val === undefined || val === null || val === "" || (Array.isArray(val) && val.length === 0);
         if (isEmpty) {
-          errors[f.id] = "This question requires an answer.";
+          errors[f.id] = t("forms.questionRequiresAnswer", "This question requires an answer.");
         }
       }
     });
@@ -692,7 +794,7 @@ function generateUuid() {
         const val = previewAnswers[f.id];
         const isEmpty = val === undefined || val === null || val === "" || (Array.isArray(val) && val.length === 0);
         if (isEmpty) {
-          errors[f.id] = "This question requires an answer.";
+          errors[f.id] = t("forms.questionRequiresAnswer", "This question requires an answer.");
         }
       }
     });
@@ -707,7 +809,7 @@ function generateUuid() {
     if (onSubmitResponse && editingForm) {
       onSubmitResponse({
         formId: editingForm.id,
-        respondentName: previewAnswers["f_core_name"] || "Preview Test User",
+        respondentName: previewAnswers["f_core_name"] || t("forms.previewTestUser", "Preview Test User"),
         respondentEmail: previewAnswers["f_core_email"] || "test@eventzone.io",
         ticketTier: editingForm.ticketId === "all" ? "Standard Admission" : editingForm.ticketId,
         answers: previewAnswers
@@ -732,9 +834,9 @@ function generateUuid() {
             <button
               type="button"
               onClick={handleBackToHub}
-              className="p-1 -ml-1 text-slate-400 hover:text-slate-900 hover:bg-slate-100/80 rounded-lg transition-colors cursor-pointer shrink-0"
-              title="Back to Forms list"
-              aria-label="Back to Forms list"
+              className="p-1 -ms-1 text-slate-400 hover:text-slate-900 hover:bg-slate-100/80 rounded-lg transition-colors cursor-pointer shrink-0"
+              title={t("forms.backToFormsList", "Back to Forms list")}
+              aria-label={t("forms.backToFormsList", "Back to Forms list")}
             >
               <ArrowLeft size={18} />
             </button>
@@ -746,13 +848,13 @@ function generateUuid() {
                   value={editingForm.title}
                   onChange={(e) => setEditingForm(prev => ({ ...prev, title: e.target.value }))}
                   className="text-lg sm:text-xl font-bold text-slate-900 bg-transparent hover:bg-slate-100/80 focus:bg-white focus:ring-2 focus:ring-blue-500 rounded-xl px-2 py-0.5 outline-none transition-all"
-                  placeholder="Untitled Form"
+                  placeholder={t("forms.untitledForm", "Untitled Form")}
                 />
               </div>
               <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium px-2">
-                <span>{editingForm.fields?.length || 0} Questions</span>
+                <span><bdi dir="ltr">{editingForm.fields?.length || 0}</bdi> {t("forms.questionsLabel", "Questions")}</span>
                 <span>•</span>
-                <span>{activeSubmissions.length} Submissions</span>
+                <span><bdi dir="ltr">{activeSubmissions.length}</bdi> {t("forms.submissionsLabel", "Submissions")}</span>
               </div>
             </div>
           </div>
@@ -768,7 +870,7 @@ function generateUuid() {
                 }`}
               >
                 <FileText size={13} />
-                <span>Questions</span>
+                <span>{t("forms.tabQuestions", "Questions")}</span>
               </button>
 
               {/* Responses Tab */}
@@ -779,11 +881,11 @@ function generateUuid() {
                 }`}
               >
                 <BarChart2 size={13} />
-                <span>Responses</span>
+                <span>{t("forms.tabResponses", "Responses")}</span>
                 <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
                   builderTab === "submissions" ? "bg-blue-100 text-blue-700" : "bg-slate-200/80 text-slate-600"
                 }`}>
-                  {activeSubmissions.length}
+                  <bdi dir="ltr">{activeSubmissions.length}</bdi>
                 </span>
               </button>
 
@@ -795,8 +897,8 @@ function generateUuid() {
                 className={`p-2 rounded-xl text-xs font-bold transition-all cursor-pointer relative group ${
                   builderTab === "settings" ? "bg-white text-blue-600 shadow-xs" : "text-slate-500 hover:text-slate-900 hover:bg-white/50"
                 }`}
-                title="Form Settings"
-                aria-label="Form Settings"
+                title={t("forms.formSettings", "Form Settings")}
+                aria-label={t("forms.formSettings", "Form Settings")}
               >
                 <Settings size={15} />
               </button>
@@ -811,8 +913,8 @@ function generateUuid() {
                 className={`p-2 rounded-xl text-xs font-bold transition-all cursor-pointer relative group ${
                   builderTab === "preview" ? "bg-white text-blue-600 shadow-xs" : "text-slate-500 hover:text-slate-900 hover:bg-white/50"
                 }`}
-                title="Live Simulator Preview"
-                aria-label="Live Simulator"
+                title={t("forms.liveSimulator", "Live Simulator Preview")}
+                aria-label={t("forms.liveSimulator", "Live Simulator Preview")}
               >
                 <Eye size={15} />
               </button>
@@ -821,8 +923,8 @@ function generateUuid() {
               <button
                 onClick={() => handleOpenShare(editingForm)}
                 className="p-2 rounded-xl text-xs font-bold transition-all cursor-pointer text-slate-500 hover:text-slate-900 hover:bg-white/50 relative group"
-                title="Share & QR Code"
-                aria-label="Share & QR Code"
+                title={t("forms.shareQrCode", "Share & QR Code")}
+                aria-label={t("forms.shareQrCode", "Share & QR Code")}
               >
                 <Share2 size={15} />
               </button>
@@ -839,10 +941,10 @@ function generateUuid() {
             <div className="lg:col-span-4 bg-white border border-slate-200 rounded-3xl p-6 shadow-xs flex flex-col gap-5 sticky top-28">
               <div>
                 <h3 className="text-sm font-bold text-slate-900">
-                  Question Elements
+                  {t("forms.questionElementsTitle", "Question Elements")}
                 </h3>
                 <p className="text-xs text-slate-500 mt-1">
-                  Click any element to append it to your form.
+                  {t("forms.questionElementsSubtitle", "Click any element to append it to your form.")}
                 </p>
               </div>
 
@@ -850,7 +952,7 @@ function generateUuid() {
               <div className="flex flex-col gap-2.5 bg-gradient-to-b from-blue-50/80 to-indigo-50/40 p-3.5 rounded-2xl border border-blue-200/80 shadow-2xs">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-extrabold uppercase text-blue-800 tracking-wider">
-                    Pre-Made Smart Fields
+                    {t("forms.premadeSmartFields", "Pre-Made Smart Fields")}
                   </span>
                 </div>
                 <div className="grid grid-cols-1 gap-1.5">
@@ -861,7 +963,7 @@ function generateUuid() {
                         key={preset.id}
                         type="button"
                         onClick={() => handleAppendPresetField(preset)}
-                        className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white border border-blue-100/90 hover:border-blue-400 hover:bg-blue-50/50 hover:shadow-xs text-left transition-all group cursor-pointer"
+                        className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white border border-blue-100/90 hover:border-blue-400 hover:bg-blue-50/50 hover:shadow-xs text-start rtl:text-right text-left transition-all group cursor-pointer"
                       >
                         <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
                           {PresetIcon && <PresetIcon size={14} />}
@@ -869,17 +971,17 @@ function generateUuid() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="text-xs font-bold text-slate-800 group-hover:text-blue-600 truncate transition-colors">
-                              {preset.label}
+                              {getPresetFieldLabel(preset, t)}
                             </span>
                             {preset.showsOnBadge && (
                               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200/80 text-[9px] font-extrabold tracking-wide uppercase shadow-2xs">
                                 <Award size={9} className="text-amber-600 shrink-0" />
-                                <span>Shows on Badge</span>
+                                <span>{t("forms.showsOnBadgeBadge", "Shows on Badge")}</span>
                               </span>
                             )}
                           </div>
                           <div className="text-[10px] text-slate-400 truncate mt-0.5">
-                            {preset.description}
+                            {getPresetFieldDescription(preset, t)}
                           </div>
                         </div>
                         <Plus size={13} className="text-blue-400 group-hover:text-blue-700 transition-colors shrink-0" />
@@ -893,7 +995,7 @@ function generateUuid() {
               {["Standard", "Files & Docs", "Choices", "Feedback", "Layout"].map(cat => (
                 <div key={cat} className="flex flex-col gap-2">
                   <span className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">
-                    {cat} Elements
+                    {getCategoryLabel(cat, t)}
                   </span>
                   <div className="grid grid-cols-1 gap-2">
                     {FIELD_TYPES.filter(t => t.category === cat).map(ft => {
@@ -902,17 +1004,17 @@ function generateUuid() {
                         <button
                           key={ft.type}
                           onClick={() => handleAddField(ft.type)}
-                          className="flex items-center gap-3 p-3 rounded-2xl border border-slate-100 hover:border-blue-300 hover:bg-blue-50/40 text-left transition-all group cursor-pointer shadow-2xs hover:shadow-xs"
+                          className="flex items-center gap-3 p-3 rounded-2xl border border-slate-100 hover:border-blue-300 hover:bg-blue-50/40 text-start rtl:text-right text-left transition-all group cursor-pointer shadow-2xs hover:shadow-xs"
                         >
                           <div className="w-8 h-8 rounded-xl bg-slate-50 border border-slate-200/70 flex items-center justify-center text-slate-500 group-hover:text-blue-600 group-hover:bg-blue-50 group-hover:border-blue-200 transition-all shrink-0">
                             {IconComponent && <IconComponent size={15} />}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="text-xs font-bold text-slate-800 group-hover:text-blue-600 transition-colors">
-                              {ft.label}
+                              {getFieldTypeLabel(ft, t)}
                             </div>
                             <div className="text-[10px] text-slate-400 truncate mt-0.5">
-                              {ft.description}
+                              {getFieldTypeDescription(ft, t)}
                             </div>
                           </div>
                           <Plus size={14} className="text-slate-300 group-hover:text-blue-600 transition-colors shrink-0" />
@@ -930,14 +1032,14 @@ function generateUuid() {
               <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-xs flex flex-col gap-2 relative">
                 <div className="flex items-center justify-between px-1">
                   <span className="text-xs font-bold text-slate-700">
-                    Form Description & Instructions
+                    {t("forms.formDescTitle", "Form Description & Instructions")}
                   </span>
-                  <span className="text-[10px] text-slate-400 font-medium">Shown to respondents at the top of the form</span>
+                  <span className="text-[10px] text-slate-400 font-medium">{t("forms.formDescHelper", "Shown to respondents at the top of the form")}</span>
                 </div>
                 <textarea
                   value={editingForm.description}
                   onChange={(e) => setEditingForm(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Enter greeting, instructions, or context for respondents..."
+                  placeholder={t("forms.formDescPlaceholder", "Enter greeting, instructions, or context for respondents...")}
                   rows={2}
                   className="w-full text-xs font-medium text-slate-800 bg-slate-50/70 hover:bg-slate-50 focus:bg-white border border-slate-200 focus:border-blue-600 rounded-2xl p-3 outline-none placeholder:text-slate-400 transition-all resize-none shadow-2xs"
                 />
@@ -948,10 +1050,10 @@ function generateUuid() {
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                     <ListChecks size={15} className="text-blue-600" />
-                    <span>Form Elements & Questions</span>
+                    <span>{t("forms.formElementsQuestions", "Form Elements & Questions")}</span>
                   </span>
                   <span className="text-[10px] font-extrabold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-                    {editingForm.fields?.length || 0}
+                    <bdi dir="ltr">{editingForm.fields?.length || 0}</bdi>
                   </span>
                 </div>
 
@@ -964,12 +1066,12 @@ function generateUuid() {
                     {areAllCollapsed ? (
                       <>
                         <UnfoldVertical size={13} className="text-blue-600" />
-                        <span>Expand All</span>
+                        <span>{t("forms.expandAll", "Expand All")}</span>
                       </>
                     ) : (
                       <>
                         <FoldVertical size={13} className="text-blue-600" />
-                        <span>Collapse All</span>
+                        <span>{t("forms.collapseAll", "Collapse All")}</span>
                       </>
                     )}
                   </button>
@@ -983,9 +1085,9 @@ function generateUuid() {
                     <ListChecks size={24} />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-slate-900">Your form has no questions yet</h4>
+                    <h4 className="text-sm font-bold text-slate-900">{t("forms.noQuestionsYet", "Your form has no questions yet")}</h4>
                     <p className="text-xs text-slate-400 mt-1 max-w-xs">
-                      Choose an element from the toolbox on the left to start building your questions.
+                      {t("forms.chooseElementFromToolbox", "Choose an element from the toolbox on the left to start building your questions.")}
                     </p>
                   </div>
                 </div>
@@ -1024,7 +1126,7 @@ function generateUuid() {
                               Page Break {sectionNumber}
                             </span>
                             <span className="text-xs font-bold text-blue-950 truncate">
-                              {field.label || `Section ${sectionNumber}`}
+                              {field.label || t("forms.sectionDefaultTitle", "Section {num}").replace("{num}", sectionNumber)}
                             </span>
                           </div>
 
@@ -1034,7 +1136,7 @@ function generateUuid() {
                               onClick={() => handleMoveField(index, -1)}
                               disabled={index === 0}
                               className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-white/80 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
-                              title="Move Up"
+                              title={t("forms.moveUp", "Move Up")}
                             >
                               <ArrowUp size={13} />
                             </button>
@@ -1043,7 +1145,7 @@ function generateUuid() {
                               onClick={() => handleMoveField(index, 1)}
                               disabled={index === editingForm.fields.length - 1}
                               className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-white/80 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
-                              title="Move Down"
+                              title={t("forms.moveDown", "Move Down")}
                             >
                               <ArrowDown size={13} />
                             </button>
@@ -1052,7 +1154,7 @@ function generateUuid() {
                               type="button"
                               onClick={() => handleDeleteField(field.id)}
                               className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 cursor-pointer font-bold text-xs transition-colors"
-                              title="Delete Section Header"
+                              title={t("forms.deleteSectionHeader", "Delete Section Header")}
                             >
                               <Trash2 size={14} />
                             </button>
@@ -1060,7 +1162,7 @@ function generateUuid() {
                               type="button"
                               onClick={() => toggleFieldCollapse(field.id)}
                               className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-100 cursor-pointer transition-colors"
-                              title="Expand Section Header"
+                              title={t("forms.expandSectionHeader", "Expand Section Header")}
                             >
                               <UnfoldVertical size={14} />
                             </button>
@@ -1082,10 +1184,10 @@ function generateUuid() {
                               §
                             </span>
                             <span className="px-2.5 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-extrabold uppercase tracking-wider shadow-2xs">
-                              Page Break & Section Header
+                              {t("forms.pageBreakHeader", "Page Break & Section Header")}
                             </span>
                             <span className="text-xs font-bold text-blue-900">
-                              (Starts Page {sectionNumber})
+                              {t("forms.startsPage", "(Starts Page {page})").replace("{page}", sectionNumber)}
                             </span>
                           </div>
 
@@ -1095,7 +1197,7 @@ function generateUuid() {
                               onClick={() => handleMoveField(index, -1)}
                               disabled={index === 0}
                               className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-white/80 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
-                              title="Move Up"
+                              title={t("forms.moveUp", "Move Up")}
                             >
                               <ArrowUp size={13} />
                             </button>
@@ -1104,7 +1206,7 @@ function generateUuid() {
                               onClick={() => handleMoveField(index, 1)}
                               disabled={index === editingForm.fields.length - 1}
                               className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-white/80 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
-                              title="Move Down"
+                              title={t("forms.moveDown", "Move Down")}
                             >
                               <ArrowDown size={13} />
                             </button>
@@ -1113,7 +1215,7 @@ function generateUuid() {
                               type="button"
                               onClick={() => handleDeleteField(field.id)}
                               className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 cursor-pointer font-bold text-xs transition-colors"
-                              title="Delete Section Header"
+                              title={t("forms.deleteSectionHeader", "Delete Section Header")}
                             >
                               <Trash2 size={14} />
                             </button>
@@ -1121,7 +1223,7 @@ function generateUuid() {
                               type="button"
                               onClick={() => toggleFieldCollapse(field.id)}
                               className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 cursor-pointer transition-colors"
-                              title="Collapse Section Header"
+                              title={t("forms.collapseSectionHeader", "Collapse Section Header")}
                             >
                               <FoldVertical size={14} />
                             </button>
@@ -1137,7 +1239,7 @@ function generateUuid() {
                             type="text"
                             value={field.label}
                             onChange={(e) => handleUpdateField(field.id, { label: e.target.value })}
-                            placeholder="e.g. Professional Details or Dietary Preferences"
+                            placeholder={t("forms.sectionTitlePlaceholder", "e.g. Professional Details or Dietary Preferences")}
                             className="w-full px-3.5 py-2 bg-white border border-blue-200 focus:border-blue-600 rounded-xl text-xs font-bold text-slate-900 outline-none transition-all shadow-2xs"
                           />
                         </div>
@@ -1145,20 +1247,20 @@ function generateUuid() {
                         {/* Section Subtitle / HelpText Input */}
                         <div>
                           <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                            Section Description / Subtitle (Optional)
+                            {t("forms.sectionDescriptionSubtitle", "Section Description / Subtitle (Optional)")}
                           </label>
                           <textarea
                             rows={2}
                             value={field.helpText || ""}
                             onChange={(e) => handleUpdateField(field.id, { helpText: e.target.value })}
-                            placeholder="Provide extra instructions or context for this step..."
+                            placeholder={t("forms.sectionSubtitlePlaceholder", "Provide extra instructions or context for this step...")}
                             className="w-full px-3.5 py-2 bg-white border border-slate-200 focus:border-blue-600 rounded-xl text-xs font-medium text-slate-800 outline-none transition-all resize-none shadow-2xs"
                           />
                         </div>
 
                         <div className="text-[11px] text-blue-800 font-medium bg-blue-100/60 rounded-xl p-2.5 flex items-center gap-2">
                           <Layers size={14} className="shrink-0 text-blue-600" />
-                          <span>Respondents will fill preceding questions on Page {sectionNumber - 1}, then click <strong>Next</strong> to navigate to this section.</span>
+                          <span>{t("forms.sectionHelpBanner", "Respondents will fill preceding questions on Page {prevPage}, then click Next to navigate to this section.").replace("{prevPage}", sectionNumber - 1)}</span>
                         </div>
                       </div>
                     );
@@ -1182,27 +1284,27 @@ function generateUuid() {
                           </div>
                           <div className="flex items-center gap-2 min-w-0 flex-1 flex-wrap sm:flex-nowrap">
                             <span className="text-xs font-bold text-slate-800 truncate">
-                              {field.label || "Untitled Question"}
+                              {field.label || t("forms.untitledQuestion", "Untitled Question")}
                             </span>
                             <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md shrink-0 hidden sm:inline-block">
-                              {fieldDef.label}
+                              {getFieldTypeLabel(fieldDef, t)}
                             </span>
                             {isLockedField ? (
                               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[9px] font-extrabold uppercase tracking-wider shrink-0">
                                 <Lock size={9} />
-                                <span>Core Required</span>
+                                <span>{t("forms.coreRequiredBadge", "Core Required")}</span>
                               </span>
                             ) : (
                               <>
                                 {isShowsOnBadgeField && (
                                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200/80 text-amber-700 text-[9px] font-extrabold uppercase tracking-wider shrink-0 shadow-2xs">
                                     <Award size={9} className="text-amber-600" />
-                                    <span>Shows on Badge</span>
+                                    <span>{t("forms.showsOnBadgeBadge", "Shows on Badge")}</span>
                                   </span>
                                 )}
                                 {field.required && (
                                   <span className="text-[9px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded-md border border-rose-200/60 shrink-0">
-                                    Required
+                                    {t("forms.requiredBadge", "Required")}
                                   </span>
                                 )}
                               </>
@@ -1217,7 +1319,7 @@ function generateUuid() {
                             onClick={() => handleMoveField(index, -1)}
                             disabled={index === 0}
                             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
-                            title="Move Up"
+                            title={t("forms.moveUp", "Move Up")}
                           >
                             <ArrowUp size={13} />
                           </button>
@@ -1226,7 +1328,7 @@ function generateUuid() {
                             onClick={() => handleMoveField(index, 1)}
                             disabled={index === editingForm.fields.length - 1}
                             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
-                            title="Move Down"
+                            title={t("forms.moveDown", "Move Down")}
                           >
                             <ArrowDown size={13} />
                           </button>
@@ -1236,7 +1338,7 @@ function generateUuid() {
                           {isLockedField ? (
                             <span
                               className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-400 px-1.5 py-1 select-none"
-                              title="Core locked identity field"
+                              title={t("forms.coreMandatoryReq", "Core mandatory requirement for all submissions")}
                             >
                               <Lock size={12} className="text-blue-500" />
                             </span>
@@ -1245,7 +1347,7 @@ function generateUuid() {
                               type="button"
                               onClick={() => handleDeleteField(field.id)}
                               className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 cursor-pointer font-bold text-xs transition-colors"
-                              title="Delete Question"
+                              title={t("forms.deleteQuestion", "Delete Question")}
                             >
                               <Trash2 size={14} />
                             </button>
@@ -1255,7 +1357,7 @@ function generateUuid() {
                             type="button"
                             onClick={() => toggleFieldCollapse(field.id)}
                             className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 cursor-pointer transition-colors"
-                            title="Expand Question Details"
+                            title={t("forms.expandQuestionDetails", "Expand Question Details")}
                           >
                             <UnfoldVertical size={14} />
                           </button>
@@ -1284,17 +1386,17 @@ function generateUuid() {
                             value={field.label}
                             onChange={(e) => handleUpdateField(field.id, { label: e.target.value })}
                             className="text-xs font-bold text-slate-800 bg-transparent hover:bg-slate-50 focus:bg-white border-b border-transparent focus:border-blue-600 rounded px-1.5 py-0.5 outline-none flex-1 transition-all"
-                            placeholder="Enter question title..."
+                            placeholder={t("forms.enterQuestionTitlePlaceholder", "Enter question title...")}
                           />
                           {isLockedField ? (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-extrabold uppercase tracking-wider shrink-0">
                               <Lock size={10} />
-                              <span>Core Required</span>
+                              <span>{t("forms.coreRequiredBadge", "Core Required")}</span>
                             </span>
                           ) : isShowsOnBadgeField ? (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200/80 text-amber-700 text-[10px] font-extrabold uppercase tracking-wider shrink-0 shadow-2xs">
                               <Award size={10} className="text-amber-600" />
-                              <span>Shows on Badge</span>
+                              <span>{t("forms.showsOnBadgeBadge", "Shows on Badge")}</span>
                             </span>
                           ) : null}
                         </div>
@@ -1306,7 +1408,7 @@ function generateUuid() {
                             onClick={() => handleMoveField(index, -1)}
                             disabled={index === 0}
                             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
-                            title="Move Up"
+                            title={t("forms.moveUp", "Move Up")}
                           >
                             <ArrowUp size={13} />
                           </button>
@@ -1315,7 +1417,7 @@ function generateUuid() {
                             onClick={() => handleMoveField(index, 1)}
                             disabled={index === editingForm.fields.length - 1}
                             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
-                            title="Move Down"
+                            title={t("forms.moveDown", "Move Down")}
                           >
                             <ArrowDown size={13} />
                           </button>
@@ -1326,17 +1428,17 @@ function generateUuid() {
                           {isLockedField ? (
                             <span
                               className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-400 px-2 py-1 select-none"
-                              title="This core attendee identity field is required across all forms and cannot be deleted"
+                              title={t("forms.coreMandatoryReq", "Core mandatory requirement for all submissions")}
                             >
                               <Lock size={12} className="text-blue-500" />
-                              <span>Locked</span>
+                              <span>{t("forms.lockedBadge", "Locked")}</span>
                             </span>
                           ) : (
                             <button
                               type="button"
                               onClick={() => handleDeleteField(field.id)}
                               className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 cursor-pointer font-bold text-xs transition-colors"
-                              title="Delete Question"
+                              title={t("forms.deleteQuestion", "Delete Question")}
                             >
                               <Trash2 size={14} />
                             </button>
@@ -1346,7 +1448,7 @@ function generateUuid() {
                             type="button"
                             onClick={() => toggleFieldCollapse(field.id)}
                             className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 cursor-pointer transition-colors"
-                            title="Collapse Question"
+                            title={t("forms.collapseQuestion", "Collapse Question")}
                           >
                             <FoldVertical size={14} />
                           </button>
@@ -1362,7 +1464,7 @@ function generateUuid() {
                           type="text"
                           value={field.label}
                           onChange={(e) => handleUpdateField(field.id, { label: e.target.value })}
-                          placeholder="e.g. Dietary Requirements or Keynote Rating"
+                          placeholder={t("forms.questionTitlePlaceholderSample", "e.g. Dietary Requirements or Keynote Rating")}
                           className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-xl text-xs font-bold text-slate-900 outline-none transition-all"
                         />
                       </div>
@@ -1371,7 +1473,7 @@ function generateUuid() {
                       {isChoice && (
                         <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 flex flex-col gap-2.5">
                           <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                            Answer Choices / Options
+                            {t("forms.answerChoicesOptions", "Answer Choices / Options")}
                           </span>
                           <div className="flex flex-col gap-1.5">
                             {(field.options || []).map((opt, optIdx) => (
@@ -1400,7 +1502,7 @@ function generateUuid() {
                             onClick={() => handleAddOption(field.id)}
                             className="self-start text-xs font-bold text-blue-600 hover:text-blue-700 mt-1 cursor-pointer"
                           >
-                            Add Another Choice
+                            {t("forms.addAnotherChoice", "Add Another Choice")}
                           </button>
                         </div>
                       )}
@@ -1409,13 +1511,13 @@ function generateUuid() {
                       {["text", "textarea", "number", "email", "phone"].includes(field.type) && (
                         <div>
                           <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                            {field.type === "phone" ? "Sample / Format Hint" : "Input Placeholder Hint"}
+                            {field.type === "phone" ? t("forms.sampleFormatHint", "Sample / Format Hint") : t("forms.inputPlaceholderHint", "Input Placeholder Hint")}
                           </label>
                           <input
                             type="text"
                             value={field.placeholder || ""}
                             onChange={(e) => handleUpdateField(field.id, { placeholder: e.target.value })}
-                            placeholder={field.type === "phone" ? "e.g. 550 12 34 56" : "e.g. Enter your details..."}
+                            placeholder={field.type === "phone" ? "e.g. 550 12 34 56" : t("forms.enterYourDetailsPlaceholder", "e.g. Enter your details...")}
                             className="w-full px-3.5 py-1.5 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-xl text-xs font-medium text-slate-700 outline-none transition-all"
                           />
                         </div>
@@ -1425,7 +1527,7 @@ function generateUuid() {
                       {field.type === "country" && (
                         <div className="flex items-center gap-3 p-3 bg-blue-50/60 border border-blue-100 rounded-2xl text-xs text-blue-900 font-semibold">
                           <Globe size={16} className="text-blue-600 shrink-0" />
-                          <span>Includes all 240+ world countries with instant search autocomplete.</span>
+                          <span>{t("forms.countryFieldBanner", "Includes all 240+ world countries with instant search autocomplete.")}</span>
                         </div>
                       )}
 
@@ -1433,7 +1535,7 @@ function generateUuid() {
                       {field.type === "city" && (
                         <div className="flex items-center gap-3 p-3 bg-indigo-50/60 border border-indigo-100 rounded-2xl text-xs text-indigo-900 font-semibold">
                           <MapPin size={16} className="text-indigo-600 shrink-0" />
-                          <span>Dynamically populates cities based on the respondent&apos;s selected Country.</span>
+                          <span>{t("forms.cityFieldBanner", "Dynamically populates cities based on the respondent's selected Country.")}</span>
                         </div>
                       )}
 
@@ -1441,7 +1543,7 @@ function generateUuid() {
                       {field.type === "picture" && (
                         <div className="flex items-center gap-3 p-3 bg-emerald-50/60 border border-emerald-100 rounded-2xl text-xs text-emerald-900 font-semibold">
                           <Camera size={16} className="text-emerald-600 shrink-0" />
-                          <span>Attendee photo displayed and printed directly on the official conference badge.</span>
+                          <span>{t("forms.badgePictureBanner", "Attendee photo displayed and printed directly on the official conference badge.")}</span>
                         </div>
                       )}
 
@@ -1449,7 +1551,7 @@ function generateUuid() {
                       {isShowsOnBadgeField && field.type !== "picture" && (
                         <div className="flex items-center gap-3 p-3 bg-amber-50/70 border border-amber-200/80 rounded-2xl text-xs text-amber-900 font-semibold shadow-2xs">
                           <Award size={16} className="text-amber-600 shrink-0" />
-                          <span>This information is automatically formatted and printed directly on the attendee&apos;s conference badge.</span>
+                          <span>{t("forms.showsOnBadgeBanner", "This information is automatically formatted and printed directly on the attendee's conference badge.")}</span>
                         </div>
                       )}
 
@@ -1458,11 +1560,9 @@ function generateUuid() {
                         <div className="flex items-center justify-between p-3 bg-rose-50/60 border border-rose-100 rounded-2xl text-xs text-rose-900 font-semibold">
                           <div className="flex items-center gap-2.5">
                             <FileText size={16} className="text-rose-600 shrink-0" />
-                            <span>PDF Document Upload (.pdf)</span>
+                            <span>{t("forms.pdfBanner", "PDF Document Upload (.pdf)")}</span>
                           </div>
-                          <span className="text-[10px] font-bold text-rose-700 bg-white px-2.5 py-0.5 rounded-full border border-rose-200 shadow-2xs">
-                            Max 10 MB
-                          </span>
+                          <span className="text-[10px] font-bold text-rose-700 bg-white px-2.5 py-0.5 rounded-full border border-rose-200 shadow-2xs"><bdi dir="ltr">{t("forms.max10Mb", "Max 10 MB")}</bdi></span>
                         </div>
                       )}
 
@@ -1471,11 +1571,9 @@ function generateUuid() {
                         <div className="flex items-center justify-between p-3 bg-blue-50/60 border border-blue-100 rounded-2xl text-xs text-blue-900 font-semibold">
                           <div className="flex items-center gap-2.5">
                             <FileText size={16} className="text-blue-600 shrink-0" />
-                            <span>Microsoft Word Document (.docx, .doc)</span>
+                            <span>{t("forms.wordBanner", "Microsoft Word Document (.docx, .doc)")}</span>
                           </div>
-                          <span className="text-[10px] font-bold text-blue-700 bg-white px-2.5 py-0.5 rounded-full border border-blue-200 shadow-2xs">
-                            Max 10 MB
-                          </span>
+                          <span className="text-[10px] font-bold text-blue-700 bg-white px-2.5 py-0.5 rounded-full border border-blue-200 shadow-2xs"><bdi dir="ltr">{t("forms.max10Mb", "Max 10 MB")}</bdi></span>
                         </div>
                       )}
 
@@ -1484,11 +1582,9 @@ function generateUuid() {
                         <div className="flex items-center justify-between p-3 bg-emerald-50/60 border border-emerald-100 rounded-2xl text-xs text-emerald-900 font-semibold">
                           <div className="flex items-center gap-2.5">
                             <FileSpreadsheet size={16} className="text-emerald-600 shrink-0" />
-                            <span>Excel Spreadsheet (.xlsx, .xls)</span>
+                            <span>{t("forms.excelBanner", "Excel Spreadsheet (.xlsx, .xls)")}</span>
                           </div>
-                          <span className="text-[10px] font-bold text-emerald-700 bg-white px-2.5 py-0.5 rounded-full border border-emerald-200 shadow-2xs">
-                            Max 10 MB
-                          </span>
+                          <span className="text-[10px] font-bold text-emerald-700 bg-white px-2.5 py-0.5 rounded-full border border-emerald-200 shadow-2xs"><bdi dir="ltr">{t("forms.max10Mb", "Max 10 MB")}</bdi></span>
                         </div>
                       )}
 
@@ -1497,11 +1593,9 @@ function generateUuid() {
                         <div className="flex items-center justify-between p-3 bg-teal-50/60 border border-teal-100 rounded-2xl text-xs text-teal-900 font-semibold">
                           <div className="flex items-center gap-2.5">
                             <FileSpreadsheet size={16} className="text-teal-600 shrink-0" />
-                            <span>CSV Data File (.csv)</span>
+                            <span>{t("forms.csvBanner", "CSV Data File (.csv)")}</span>
                           </div>
-                          <span className="text-[10px] font-bold text-teal-700 bg-white px-2.5 py-0.5 rounded-full border border-teal-200 shadow-2xs">
-                            Max 10 MB
-                          </span>
+                          <span className="text-[10px] font-bold text-teal-700 bg-white px-2.5 py-0.5 rounded-full border border-teal-200 shadow-2xs"><bdi dir="ltr">{t("forms.max10Mb", "Max 10 MB")}</bdi></span>
                         </div>
                       )}
 
@@ -1510,11 +1604,9 @@ function generateUuid() {
                         <div className="flex items-center justify-between p-3 bg-amber-50/60 border border-amber-100 rounded-2xl text-xs text-amber-900 font-semibold">
                           <div className="flex items-center gap-2.5">
                             <Presentation size={16} className="text-amber-600 shrink-0" />
-                            <span>PowerPoint Presentation (.pptx, .ppt)</span>
+                            <span>{t("forms.pptxBanner", "PowerPoint Presentation (.pptx, .ppt)")}</span>
                           </div>
-                          <span className="text-[10px] font-bold text-amber-700 bg-white px-2.5 py-0.5 rounded-full border border-amber-200 shadow-2xs">
-                            Max 10 MB
-                          </span>
+                          <span className="text-[10px] font-bold text-amber-700 bg-white px-2.5 py-0.5 rounded-full border border-amber-200 shadow-2xs"><bdi dir="ltr">{t("forms.max10Mb", "Max 10 MB")}</bdi></span>
                         </div>
                       )}
 
@@ -1523,11 +1615,9 @@ function generateUuid() {
                         <div className="flex items-center justify-between p-3 bg-indigo-50/60 border border-indigo-100 rounded-2xl text-xs text-indigo-900 font-semibold">
                           <div className="flex items-center gap-2.5">
                             <Paperclip size={16} className="text-indigo-600 shrink-0" />
-                            <span>Supporting Document (PDF, Word, Excel, PPT, ZIP)</span>
+                            <span>{t("forms.fileBanner", "Supporting Document (PDF, Word, Excel, PPT, ZIP)")}</span>
                           </div>
-                          <span className="text-[10px] font-bold text-indigo-700 bg-white px-2.5 py-0.5 rounded-full border border-indigo-200 shadow-2xs">
-                            Max 10 MB
-                          </span>
+                          <span className="text-[10px] font-bold text-indigo-700 bg-white px-2.5 py-0.5 rounded-full border border-indigo-200 shadow-2xs"><bdi dir="ltr">{t("forms.max10Mb", "Max 10 MB")}</bdi></span>
                         </div>
                       )}
 
@@ -1535,7 +1625,7 @@ function generateUuid() {
                       {field.type === "rating" && (
                         <div className="flex items-center gap-4 text-xs font-semibold text-slate-600 bg-amber-50/50 border border-amber-200/50 rounded-2xl p-3">
                           <Star size={16} className="text-amber-500 fill-amber-500" />
-                          <span>5-Star Interactive Rating Scale with live score analytics.</span>
+                          <span>{t("forms.ratingBanner", "5-Star Interactive Rating Scale with live score analytics.")}</span>
                         </div>
                       )}
 
@@ -1553,16 +1643,16 @@ function generateUuid() {
                               }`}
                             />
                             <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                              <span>Required Question</span>
+                              <span>{t("forms.requiredQuestion", "Required Question")}</span>
                               {isLockedField && (
-                                <span className="text-[10px] text-blue-600 font-semibold">(Mandatory Core Input)</span>
+                                <span className="text-[10px] text-blue-600 font-semibold">{t("forms.mandatoryCoreInput", "(Mandatory Core Input)")}</span>
                               )}
                             </span>
                           </label>
                           <span className="text-[11px] text-slate-400 font-medium">
                             {isLockedField 
-                              ? "Core mandatory requirement for all submissions"
-                              : (field.required ? "Attendee must answer before submission" : "Optional for attendee")}
+                              ? t("forms.coreMandatoryReq", "Core mandatory requirement for all submissions")
+                              : (field.required ? t("forms.mustAnswerBeforeSubmitting", "Attendee must answer before submission") : t("forms.optionalForAttendee", "Optional for attendee"))}
                           </span>
                         </div>
                       )}
@@ -1580,43 +1670,43 @@ function generateUuid() {
         {builderTab === "settings" && (
           <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-xs flex flex-col gap-6 max-w-3xl mx-auto">
             <div>
-              <h3 className="text-lg font-bold text-slate-900">Form Configuration & Target</h3>
+              <h3 className="text-lg font-bold text-slate-900">{t("forms.settingsModalTitle", "Form Configuration & Target")}</h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Configure who sees this form, where responses are routed, and post-submission confirmations.
+                {t("forms.settingsModalSubtitle", "Configure who sees this form, where responses are routed, and post-submission confirmations.")}
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Form Category & Purpose
+                  {t("forms.formCategoryPurpose", "Form Category & Purpose")}
                 </label>
                 <SearchableSelect
                   value={editingForm.type}
                   onChange={(val) => setEditingForm(prev => ({ ...prev, type: val }))}
                   options={[
-                    { value: "ticket_registration", label: "Ticket Registration & Checkout Intake" },
-                    { value: "feedback_survey", label: "Post-Event Attendee Feedback & CSAT" },
-                    { value: "session_survey", label: "Breakout Session / Speaker Evaluation" },
-                    { value: "general_inquiry", label: "Call for Papers & General Inquiries" }
+                    { value: "ticket_registration", label: t("forms.purposeTicketReg", "Ticket Registration & Checkout Intake") },
+                    { value: "feedback_survey", label: t("forms.purposeFeedbackSurvey", "Post-Event Attendee Feedback & CSAT") },
+                    { value: "session_survey", label: t("forms.purposeSessionSurvey", "Breakout Session / Speaker Evaluation") },
+                    { value: "general_inquiry", label: t("forms.purposeGeneralInquiries", "Call for Papers & General Inquiries") }
                   ]}
-                  placeholder="Select category..."
+                  placeholder={t("forms.selectCategoryPlaceholder", "Select category...")}
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Publication Status
+                  {t("forms.publicationStatus", "Publication Status")}
                 </label>
                 <SearchableSelect
                   value={editingForm.status}
                   onChange={(val) => setEditingForm(prev => ({ ...prev, status: val }))}
                   options={[
-                    { value: "active", label: "Active (Accepting Responses)" },
-                    { value: "draft", label: "Draft (Hidden from Public)" },
-                    { value: "archived", label: "Archived" }
+                    { value: "active", label: t("forms.statusActiveAccepting", "Active (Accepting Responses)") },
+                    { value: "draft", label: t("forms.statusDraftInternal", "Draft (Hidden from Public)") },
+                    { value: "archived", label: t("forms.statusArchivedClosed", "Archived (Closed)") }
                   ]}
-                  placeholder="Select status..."
+                  placeholder={t("forms.selectStatusPlaceholder", "Select status...")}
                 />
               </div>
             </div>
@@ -1627,8 +1717,8 @@ function generateUuid() {
               return (
                 <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 flex flex-col gap-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-800">Linked Tickets</span>
-                    <span className="text-[11px] font-semibold text-slate-500">Configured in Ticket Editor</span>
+                    <span className="text-xs font-bold text-slate-800">{t("forms.linkedTickets", "Linked Tickets")}</span>
+                    <span className="text-[11px] font-semibold text-slate-500">{t("forms.configuredInTicketEditor", "Configured in Ticket Editor")}</span>
                   </div>
                   {linkedTickets.length > 0 ? (
                     <div className="flex flex-wrap gap-1.5 pt-1">
@@ -1640,7 +1730,7 @@ function generateUuid() {
                     </div>
                   ) : (
                     <span className="text-xs text-slate-500 italic">
-                      This form is currently not linked to any ticket tier. You can link it to any ticket when creating or editing tickets in the Tickets dashboard.
+                      {t("forms.notLinkedToTicketTier", "This form is currently not linked to any ticket tier. You can link it to any ticket when creating or editing tickets in the Tickets dashboard.")}
                     </span>
                   )}
                 </div>
@@ -1649,7 +1739,7 @@ function generateUuid() {
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                Submit Button Text
+                {t("forms.submitButtonTextLabel", "Submit Button Text")}
               </label>
               <input
                 type="text"
@@ -1664,7 +1754,7 @@ function generateUuid() {
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                Post-Submission Success Message
+                {t("forms.postSubmitSuccessMsgLabel", "Post-Submission Success Message")}
               </label>
               <textarea
                 value={editingForm.settings?.successMessage || ""}
@@ -1679,8 +1769,8 @@ function generateUuid() {
 
             <div className="flex items-center justify-between border-t border-slate-100 pt-4">
               <div>
-                <span className="text-xs font-bold text-slate-900 block">Allow Anonymous Submissions</span>
-                <span className="text-[11px] text-slate-400">Great for candid attendee reviews and ratings</span>
+                <span className="text-xs font-bold text-slate-900 block">{t("forms.allowAnonymousSubmissions", "Allow Anonymous Submissions")}</span>
+                <span className="text-[11px] text-slate-400">{t("forms.anonymousSubmissionsHelp", "Great for candid attendee reviews and ratings")}</span>
               </div>
               <input
                 type="checkbox"
@@ -1708,7 +1798,7 @@ function generateUuid() {
                   previewDevice === "desktop" ? "bg-white text-blue-600 shadow-xs" : "text-slate-500"
                 }`}
               >
-                Desktop Screen
+                {t("forms.previewDesktopScreen", "Desktop Screen")}
               </button>
               <button
                 onClick={() => setPreviewDevice("mobile")}
@@ -1716,7 +1806,7 @@ function generateUuid() {
                   previewDevice === "mobile" ? "bg-white text-blue-600 shadow-xs" : "text-slate-500"
                 }`}
               >
-                Mobile Device (375px)
+                {t("forms.previewMobileDevice", "Mobile Device (375px)")}
               </button>
             </div>
 
@@ -1731,9 +1821,9 @@ function generateUuid() {
                       ✓
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold text-slate-900">Submission Successful</h3>
+                      <h3 className="text-lg font-bold text-slate-900">{t("forms.submissionSuccessful", "Submission Successful")}</h3>
                       <p className="text-xs text-slate-500 mt-1 max-w-sm">
-                        {editingForm.settings?.successMessage || "Thank you! Your response has been recorded."}
+                        {editingForm.settings?.successMessage || t("forms.defaultSuccessMsg", "Thank you! Your response has been recorded.")}
                       </p>
                     </div>
                     <button
@@ -1743,7 +1833,7 @@ function generateUuid() {
                       }}
                       className="text-xs font-bold text-blue-600 hover:text-blue-700 mt-2 cursor-pointer"
                     >
-                      Test Again
+                      {t("forms.testAgain", "Test Again")}
                     </button>
                   </div>
                 ) : (
@@ -1767,14 +1857,14 @@ function generateUuid() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 text-[10px] font-extrabold uppercase tracking-wide">
-                              Section {safeSectionIdx + 1} of {formSections.length}
+                              {t("forms.sectionOfSteps", "Section {current} of {total}").replace("{current}", safeSectionIdx + 1).replace("{total}", formSections.length)}
                             </span>
                             <span className="text-xs font-bold text-slate-800 line-clamp-1">
-                              {currentSec.title || `Step ${safeSectionIdx + 1}`}
+                              {currentSec.title || t("forms.stepNumber", "Step {num}").replace("{num}", safeSectionIdx + 1)}
                             </span>
                           </div>
                           <span className="text-[11px] font-bold text-slate-400">
-                            {Math.round(((safeSectionIdx + 1) / formSections.length) * 100)}% Complete
+                            <bdi dir="ltr">{Math.round(((safeSectionIdx + 1) / formSections.length) * 100)}%</bdi> {t("forms.complete", "Complete")}
                           </span>
                         </div>
 
@@ -1846,7 +1936,7 @@ function generateUuid() {
                                   setPreviewSectionErrors(prev => ({ ...prev, [field.id]: undefined }));
                                 }
                               }}
-                              placeholder={field.placeholder || "Select your country..."}
+                              placeholder={field.placeholder || t("forms.selectCountryPlaceholder", "Select your country...")}
                               required={field.required}
                             />
                           )}
@@ -1867,7 +1957,7 @@ function generateUuid() {
                                   setPreviewSectionErrors(prev => ({ ...prev, [field.id]: undefined }));
                                 }
                               }}
-                              placeholder={field.placeholder || "Select or enter your city..."}
+                              placeholder={field.placeholder || t("forms.selectCityPlaceholder", "Select or enter your city...")}
                               required={field.required}
                             />
                           )}
@@ -1882,7 +1972,7 @@ function generateUuid() {
                                   setPreviewSectionErrors(prev => ({ ...prev, [field.id]: undefined }));
                                 }
                               }}
-                              placeholder={field.placeholder || "Upload your photo from phone or computer"}
+                              placeholder={field.placeholder || t("forms.uploadPhotoPlaceholder", "Upload your photo from phone or computer")}
                               required={field.required}
                             />
                           )}
@@ -1943,9 +2033,9 @@ function generateUuid() {
                               <SearchableSelect
                                 value={isOtherValue(previewAnswers[field.id]) ? ((field.options || []).find(o => isOtherOption(o)) || "Other") : (previewAnswers[field.id] || "")}
                                 onChange={(val) => handlePreviewSelect(field.id, val)}
-                                options={field.options || []}
-                                placeholder="Select an option..."
-                                searchPlaceholder="Search choices..."
+                                options={(field.options || []).map(opt => ({ value: opt, label: renderOptionLabel(opt, t, field.id?.includes("industry")) }))}
+                                placeholder={t("forms.selectOptionPlaceholder", "Select an option...")}
+                                searchPlaceholder={t("forms.searchChoicesPlaceholder", "Search choices...")}
                                 required={field.required}
                               />
                               {isOtherValue(previewAnswers[field.id]) && (
@@ -1955,7 +2045,7 @@ function generateUuid() {
                                     required={field.required}
                                     value={getOtherTextForPreview(field.id, previewAnswers[field.id])}
                                     onChange={(e) => handlePreviewOtherText(field.id, e.target.value)}
-                                    placeholder="Please specify / Type what's other..."
+                                    placeholder={t("forms.pleaseSpecifyOther", "Please specify / Type what's other...")}
                                     className="w-full px-3 py-2 bg-white border border-blue-300 focus:border-blue-600 rounded-lg text-xs font-semibold text-slate-900 outline-none shadow-2xs placeholder:text-slate-400"
                                     autoFocus
                                   />
@@ -1985,16 +2075,16 @@ function generateUuid() {
                                         required={field.required && !previewAnswers[field.id]}
                                         className="text-blue-600 focus:ring-blue-500 h-4 w-4"
                                       />
-                                      <span className="text-xs font-semibold text-slate-800">{opt}</span>
+                                      <span className="text-xs font-semibold text-slate-800">{renderOptionLabel(opt, t, field.id?.includes("industry"))}</span>
                                     </label>
                                     {isOtherOpt && isChecked && (
-                                      <div className="ml-6 animate-fade-in">
+                                      <div className="ms-6 animate-fade-in">
                                         <input
                                           type="text"
                                           required={field.required}
                                           value={getOtherTextForPreview(field.id, previewAnswers[field.id])}
                                           onChange={(e) => handlePreviewOtherText(field.id, e.target.value)}
-                                          placeholder="Please specify / Type what's other..."
+                                          placeholder={t("forms.pleaseSpecifyOther", "Please specify / Type what's other...")}
                                           className="w-full px-3 py-1.5 bg-white border border-blue-300 focus:border-blue-600 rounded-lg text-xs font-semibold text-slate-900 outline-none shadow-2xs placeholder:text-slate-400"
                                           autoFocus
                                         />
@@ -2027,15 +2117,15 @@ function generateUuid() {
                                         onChange={(e) => handlePreviewCheckbox(field.id, opt, e.target.checked)}
                                         className="rounded text-blue-600 focus:ring-blue-500 h-4 w-4"
                                       />
-                                      <span className="text-xs font-semibold text-slate-800">{opt}</span>
+                                      <span className="text-xs font-semibold text-slate-800">{renderOptionLabel(opt, t, field.id?.includes("industry"))}</span>
                                     </label>
                                     {isOtherOpt && isChecked && (
-                                      <div className="ml-6 animate-fade-in">
+                                      <div className="ms-6 animate-fade-in">
                                         <input
                                           type="text"
                                           value={previewOtherTexts[`${field.id}__other`] || (otherItem && isOtherValue(otherItem) && otherItem.startsWith("Other: ") ? otherItem.slice(7) : "")}
                                           onChange={(e) => handlePreviewCheckboxOtherText(field.id, opt, e.target.value)}
-                                          placeholder="Please specify / Type what's other..."
+                                          placeholder={t("forms.pleaseSpecifyOther", "Please specify / Type what's other...")}
                                           className="w-full px-3 py-1.5 bg-white border border-blue-300 focus:border-blue-600 rounded-lg text-xs font-semibold text-slate-900 outline-none shadow-2xs placeholder:text-slate-400"
                                           autoFocus
                                         />
@@ -2073,8 +2163,8 @@ function generateUuid() {
                                 );
                               })}
                               {previewAnswers[field.id] && (
-                                <span className="text-xs font-bold text-amber-600 ml-2">
-                                  {previewAnswers[field.id]} / 5 Stars
+                                <span className="text-xs font-bold text-amber-600 ms-2">
+                                  <bdi dir="ltr">{previewAnswers[field.id]} / 5</bdi> {t("forms.stars", "Stars")} ⭐
                                 </span>
                               )}
                             </div>
@@ -2108,8 +2198,8 @@ function generateUuid() {
                                 })}
                               </div>
                               <div className="flex justify-between text-[10px] font-bold text-slate-400 px-1 mt-1">
-                                <span>Not Likely</span>
-                                <span>Extremely Likely</span>
+                                <span>{t("forms.notLikely", "Not Likely")}</span>
+                                <span>{t("forms.extremelyLikely", "Extremely Likely")}</span>
                               </div>
                             </div>
                           )}
@@ -2130,7 +2220,7 @@ function generateUuid() {
                               />
                               <div className="w-10 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 relative"></div>
                               <span className="text-xs font-semibold text-slate-700">
-                                {previewAnswers[field.id] ? "Yes, consented" : "No"}
+                                {previewAnswers[field.id] ? t("forms.yesConsented", "Yes, consented") : t("forms.no", "No")}
                               </span>
                             </label>
                           )}
@@ -2142,7 +2232,7 @@ function generateUuid() {
                     {Object.keys(previewSectionErrors).length > 0 && (
                       <div className="p-3 bg-rose-50 border border-rose-200 rounded-2xl text-xs font-bold text-rose-700 flex items-center gap-2">
                         <AlertCircle size={15} className="shrink-0 text-rose-600" />
-                        <span>Please answer all required questions in this section before continuing.</span>
+                        <span>{t("forms.validationErrorSection", "Please answer all required questions in this section before continuing.")}</span>
                       </div>
                     )}
 
@@ -2155,7 +2245,7 @@ function generateUuid() {
                             onClick={handlePreviewPrevSection}
                             className="px-5 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-xs shadow-2xs transition-all cursor-pointer"
                           >
-                            Back
+                            {t("common.back", "Back")}
                           </button>
                         )}
 
@@ -2165,14 +2255,14 @@ function generateUuid() {
                             onClick={handlePreviewNextSection}
                             className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-md shadow-blue-600/20 transition-all cursor-pointer flex items-center gap-1.5"
                           >
-                            <span>Next</span>
+                            <span>{t("common.next", "Next")}</span>
                           </button>
                         ) : (
                           <button
                             type="submit"
                             className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-md shadow-blue-600/20 transition-all cursor-pointer flex items-center gap-1.5"
                           >
-                            <span>{editingForm.settings?.submitButtonText || "Submit Response"}</span>
+                            <span>{editingForm.settings?.submitButtonText || t("forms.defaultSubmitBtnText", "Submit Response")}</span>
                           </button>
                         )}
                       </div>
@@ -2182,7 +2272,7 @@ function generateUuid() {
                         onClick={handlePreviewClearForm}
                         className="text-xs font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
                       >
-                        Clear form
+                        {t("forms.clearForm", "Clear form")}
                       </button>
                     </div>
                   </form>
@@ -2201,10 +2291,10 @@ function generateUuid() {
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <h3 className="text-lg font-bold text-slate-900">
-                  Submissions & Analytics ({activeSubmissions.length})
+                  {t("forms.submissionsAnalyticsTitle", "Submissions & Analytics")} (<bdi dir="ltr">{activeSubmissions.length}</bdi>)
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Real-time responses submitted by attendees and ticket holders.
+                  {t("forms.submissionsAnalyticsSubtitle", "Real-time responses submitted by attendees and ticket holders.")}
                 </p>
               </div>
 
@@ -2214,7 +2304,7 @@ function generateUuid() {
                   disabled={activeSubmissions.length === 0}
                   className="px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-50 text-slate-800 rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
                 >
-                  Export CSV
+                  {t("forms.exportCsv", "Export CSV")}
                 </button>
               </div>
             </div>
@@ -2234,11 +2324,11 @@ function generateUuid() {
                     <div key={rf.id} className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs flex flex-col justify-between">
                       <div>
                         <span className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">
-                          Average Rating
+                          {t("forms.avgRating", "Average Rating")}
                         </span>
                         <h4 className="text-xs font-bold text-slate-800 mt-1 line-clamp-1">{rf.label}</h4>
                         <div className="flex items-center gap-3 mt-3">
-                          <span className="text-3xl font-extrabold text-slate-900">{avg}</span>
+                          <span className="text-3xl font-extrabold text-slate-900"><bdi dir="ltr">{avg}</bdi></span>
                           <div className="flex items-center text-amber-500">
                             {[1, 2, 3, 4, 5].map(s => (
                               <Star
@@ -2251,7 +2341,7 @@ function generateUuid() {
                         </div>
                       </div>
                       <span className="text-[11px] text-slate-400 font-semibold mt-4">
-                        Based on {ratings.length} attendee reviews
+                        {t("forms.basedOnReviews", "Based on {count} attendee reviews").replace("{count}", ratings.length)}
                       </span>
                     </div>
                   );
@@ -2261,12 +2351,12 @@ function generateUuid() {
                 <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs flex flex-col justify-between">
                   <div>
                     <span className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">
-                      Total Responses
+                      {t("forms.totalResponsesUpper", "Total Responses")}
                     </span>
-                    <div className="text-3xl font-extrabold text-slate-900 mt-2">{activeSubmissions.length}</div>
+                    <div className="text-3xl font-extrabold text-slate-900 mt-2"><bdi dir="ltr">{activeSubmissions.length}</bdi></div>
                   </div>
                   <span className="text-xs font-semibold text-emerald-600 flex items-center gap-1 mt-4">
-                    100% submission integrity
+                    <bdi dir="ltr">100%</bdi> {t("forms.submissionIntegrity", "submission integrity")}
                   </span>
                 </div>
               </div>
@@ -2276,26 +2366,26 @@ function generateUuid() {
             <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-xs">
               {activeSubmissions.length === 0 ? (
                 <div className="p-12 text-center text-slate-400 text-xs font-semibold">
-                  No submissions have been recorded for this form yet.
+                  {t("forms.noSubmissionsYet", "No submissions have been recorded for this form yet.")}
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
+                  <table className="w-full text-start rtl:text-right text-left text-xs">
                     <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-[10px] font-extrabold tracking-wider">
                       <tr>
-                        <th className="py-3.5 px-5">Respondent</th>
-                        <th className="py-3.5 px-4">Ticket Tier</th>
-                        <th className="py-3.5 px-4">Date & Time</th>
-                        <th className="py-3.5 px-4">Sample Answers</th>
-                        <th className="py-3.5 px-4 text-right">Actions</th>
+                        <th className="py-3.5 px-5">{t("forms.thRespondent", "Respondent")}</th>
+                        <th className="py-3.5 px-4">{t("forms.thTicketTier", "Ticket Tier")}</th>
+                        <th className="py-3.5 px-4">{t("forms.thDateTime", "Date & Time")}</th>
+                        <th className="py-3.5 px-4">{t("forms.thSampleAnswers", "Sample Answers")}</th>
+                        <th className="py-3.5 px-4 text-end">{t("forms.thActions", "Actions")}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {activeSubmissions.map(sub => (
                         <tr key={sub.id} className="hover:bg-slate-50/70 transition-colors">
                           <td className="py-3.5 px-5">
-                            <div className="font-bold text-slate-900">{sub.respondentName || "Anonymous"}</div>
-                            <div className="text-[11px] text-slate-400">{sub.respondentEmail || "No email provided"}</div>
+                            <div className="font-bold text-slate-900">{sub.respondentName || t("forms.anonymousRespondent", "Anonymous")}</div>
+                            <div className="text-[11px] text-slate-400">{sub.respondentEmail || t("forms.noEmailProvided", "No email provided")}</div>
                           </td>
                           <td className="py-3.5 px-4">
                             <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md font-bold text-[10px]">
@@ -2313,12 +2403,12 @@ function generateUuid() {
                                 .join(' · ')
                             ) : "—"}
                           </td>
-                          <td className="py-3.5 px-4 text-right">
+                          <td className="py-3.5 px-4 text-end">
                             <button
                               onClick={() => setInspectSubmission(sub)}
                               className="px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg font-bold text-[11px] transition-colors cursor-pointer"
                             >
-                              View Full Details
+                              {t("forms.viewFullDetails", "View Full Details")}
                             </button>
                           </td>
                         </tr>
@@ -2337,9 +2427,9 @@ function generateUuid() {
             <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-lg w-full shadow-2xl flex flex-col gap-5 animate-scale-up max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">Submission Details</h3>
+                  <h3 className="text-base font-bold text-slate-900">{t("forms.submissionDetailsModalTitle", "Submission Details")}</h3>
                   <p className="text-xs text-slate-400">
-                    Recorded {new Date(inspectSubmission.createdAt).toLocaleString()}
+                    {t("forms.recordedAt", "Recorded {date}").replace("{date}", new Date(inspectSubmission.createdAt).toLocaleString())}
                   </p>
                 </div>
                 <button
@@ -2364,7 +2454,7 @@ function generateUuid() {
               {/* Answer breakdown */}
               <div className="flex flex-col gap-3">
                 <span className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">
-                  Submitted Question Responses
+                  {t("forms.submittedQuestionResponses", "Submitted Question Responses")}
                 </span>
                 {(editingForm.fields || []).filter(f => f.type !== "section").map(f => {
                   const val = inspectSubmission.answers ? inspectSubmission.answers[f.id] : null;
@@ -2373,12 +2463,12 @@ function generateUuid() {
                       <div className="text-xs font-bold text-slate-700">{f.label}</div>
                       <div className="text-xs font-semibold text-slate-900 mt-1">
                         {val === null || val === undefined ? (
-                          <span className="text-slate-400 italic">No response</span>
+                          <span className="text-slate-400 italic">{t("forms.noResponse", "No response")}</span>
                         ) : typeof val === "boolean" ? (
-                          val ? "Yes / Confirmed" : "No"
+                          val ? t("forms.yesConfirmed", "Yes / Confirmed") : t("forms.no", "No")
                         ) : f.type === "rating" ? (
                           <span className="flex items-center gap-1 text-amber-500 font-bold">
-                            {val} / 5 Stars ⭐
+                            <bdi dir="ltr">{val} / 5</bdi> {t("forms.stars", "Stars")} ⭐
                           </span>
                         ) : f.type === "picture" ? (
                           <div className="mt-1">
@@ -2410,7 +2500,7 @@ function generateUuid() {
                                 target="_blank"
                                 rel="noreferrer"
                                 className="p-1.5 text-blue-600 hover:bg-blue-100/60 rounded-lg transition-colors cursor-pointer"
-                                title="Download Document"
+                                title={t("forms.downloadDocument", "Download Document")}
                               >
                                 <Download size={14} />
                               </a>
@@ -2431,7 +2521,7 @@ function generateUuid() {
                 onClick={() => setInspectSubmission(null)}
                 className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
               >
-                Close
+                {t("common.close", "Close")}
               </button>
             </div>
           </div>
@@ -2448,9 +2538,9 @@ function generateUuid() {
       {/* Top Header */}
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Forms & Surveys Builder</h2>
+          <h2 className="text-2xl font-bold text-slate-900">{t("forms.hub", "Forms & Surveys Builder")}</h2>
           <p className="text-sm text-slate-500">
-            Build custom ticket registration intake questionnaires, feedback CSAT forms, and speaker proposals.
+            {t("forms.noFormsDesc", "Build custom ticket registration intake questionnaires, feedback CSAT forms, and speaker proposals.")}
           </p>
         </div>
 
@@ -2459,7 +2549,7 @@ function generateUuid() {
             onClick={handleOpenCreateBlank}
             className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs shadow-md shadow-blue-600/20 transition-all cursor-pointer"
           >
-            Create Form
+            {t("forms.createForm", "Create Form")}
           </button>
         </div>
       </header>
@@ -2469,56 +2559,55 @@ function generateUuid() {
         <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-slate-400">
-              <span className="text-[10px] font-extrabold uppercase tracking-wider">Total Forms</span>
+              <span className="text-[10px] font-extrabold uppercase tracking-wider">{t("forms.totalFormsUpper", "TOTAL FORMS")}</span>
               <FileText size={18} className="text-blue-600" />
             </div>
-            <div className="text-2xl font-extrabold text-slate-900 mt-2">{stats.total}</div>
+            <div className="text-2xl font-extrabold text-slate-900 mt-2"><bdi dir="ltr">{stats.total}</bdi></div>
           </div>
           <span className="text-[11px] text-emerald-600 font-bold mt-4 flex items-center gap-1">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            {stats.activeCount} active & accepting responses
+            <bdi dir="ltr">{stats.activeCount}</bdi> {t("forms.activeAccepting", "active & accepting responses")}
           </span>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-slate-400">
-              <span className="text-[10px] font-extrabold uppercase tracking-wider">Ticket Questionnaires</span>
+              <span className="text-[10px] font-extrabold uppercase tracking-wider">{t("forms.ticketQuestionnairesUpper", "TICKET QUESTIONNAIRES")}</span>
               <UserCheck size={18} className="text-emerald-600" />
             </div>
-            <div className="text-2xl font-extrabold text-slate-900 mt-2">{stats.ticketForms}</div>
+            <div className="text-2xl font-extrabold text-slate-900 mt-2"><bdi dir="ltr">{stats.ticketForms}</bdi></div>
           </div>
           <span className="text-[11px] text-slate-400 font-semibold mt-4">
-            Linked to ticket checkout flows
+            {t("forms.linkedToCheckout", "Linked to ticket checkout flows")}
           </span>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-slate-400">
-              <span className="text-[10px] font-extrabold uppercase tracking-wider">Total Submissions</span>
+              <span className="text-[10px] font-extrabold uppercase tracking-wider">{t("forms.totalSubmissionsUpper", "TOTAL SUBMISSIONS")}</span>
               <MessageSquare size={18} className="text-indigo-600" />
             </div>
-            <div className="text-2xl font-extrabold text-slate-900 mt-2">{stats.totalSubs}</div>
+            <div className="text-2xl font-extrabold text-slate-900 mt-2"><bdi dir="ltr">{stats.totalSubs}</bdi></div>
           </div>
           <span className="text-[11px] text-slate-400 font-semibold mt-4">
-            Responses saved in database
+            {t("forms.responsesSaved", "Responses saved in database")}
           </span>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-slate-400">
-              <span className="text-[10px] font-extrabold uppercase tracking-wider">Avg Attendee Rating</span>
+              <span className="text-[10px] font-extrabold uppercase tracking-wider">{t("forms.avgRatingUpper", "AVG ATTENDEE RATING")}</span>
               <Star size={18} className="text-amber-500 fill-amber-500" />
             </div>
             <div className="text-2xl font-extrabold text-slate-900 mt-2 flex items-center gap-1.5">
-              <span>{stats.avgRating}</span>
-              <span className="text-xs font-semibold text-slate-400">/ 5.0</span>
+              <bdi dir="ltr"><span>{stats.avgRating}</span> <span className="text-xs font-semibold text-slate-400">/ 5.0</span></bdi>
             </div>
           </div>
           <span className="text-[11px] text-amber-600 font-bold mt-4">
-            ⭐ CSAT Score: {((Number(stats.avgRating) / 5) * 100).toFixed(0)}% Positive
+            ⭐ {t("forms.csatScore", "CSAT Score:")} <bdi dir="ltr">{((Number(stats.avgRating) / 5) * 100).toFixed(0)}%</bdi> {t("forms.positive", "Positive")}
           </span>
         </div>
       </div>
@@ -2527,46 +2616,56 @@ function generateUuid() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         {/* Search */}
         <div className="relative flex-1 min-w-[260px] max-w-md">
-          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search size={15} className="absolute start-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search forms by title or question..."
-            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 focus:border-blue-600 rounded-2xl text-xs font-semibold text-slate-900 outline-none shadow-xs transition-all"
+            placeholder={t("forms.searchFormsPlaceholder", "Search forms by title or question...")}
+            className="w-full ps-10 pe-4 py-2.5 bg-white border border-slate-200 focus:border-blue-600 rounded-2xl text-xs font-semibold text-slate-900 outline-none shadow-xs transition-all"
           />
         </div>
 
         {/* Category & Status Filter Pills */}
         <div className="flex items-center gap-3 overflow-x-auto flex-wrap">
           <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
-            {["All", "Active", "Draft", "Archived"].map(st => (
+            {[
+              { id: "All", label: t("common.all", "All") },
+              { id: "Active", label: t("forms.statusActive", "Active") },
+              { id: "Draft", label: t("forms.statusDraft", "Draft") },
+              { id: "Archived", label: t("forms.statusArchived", "Archived") }
+            ].map(st => (
               <button
-                key={st}
-                onClick={() => setSelectedStatus(st)}
+                key={st.id}
+                onClick={() => setSelectedStatus(st.id)}
                 className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  selectedStatus === st
-                    ? st === "Archived" ? "bg-slate-700 text-white shadow-xs" : "bg-white text-slate-900 shadow-xs"
+                  selectedStatus === st.id
+                    ? st.id === "Archived" ? "bg-slate-700 text-white shadow-xs" : "bg-white text-slate-900 shadow-xs"
                     : "text-slate-500 hover:text-slate-800"
                 }`}
               >
-                {st} {st === "Archived" ? `(${stats.archivedCount})` : st === "Active" ? `(${stats.activeCount})` : ""}
+                <span>{st.label}</span> {st.id === "Archived" ? <bdi dir="ltr">({stats.archivedCount})</bdi> : st.id === "Active" ? <bdi dir="ltr">({stats.activeCount})</bdi> : ""}
               </button>
             ))}
           </div>
 
           <div className="flex items-center gap-1.5">
-            {["All", "Ticket Registration", "Feedback & Survey", "Inquiries & Proposals"].map(cat => (
+            {[
+              { id: "All", label: t("common.all", "All") },
+              { id: "Ticket Registration", label: t("forms.catTicketRegistration", "Ticket Registration") },
+              { id: "Feedback & Survey", label: t("forms.catFeedbackSurvey", "Feedback & Survey") },
+              { id: "Inquiries & Proposals", label: t("forms.catInquiriesProposals", "Inquiries & Proposals") }
+            ].map(cat => (
               <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.id)}
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  selectedCategory === cat
+                  selectedCategory === cat.id
                     ? "bg-slate-900 text-white shadow-xs"
                     : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
                 }`}
               >
-                {cat}
+                {cat.label}
               </button>
             ))}
           </div>
@@ -2581,12 +2680,12 @@ function generateUuid() {
           </div>
           <div>
             <h3 className="text-base font-bold text-slate-900">
-              {selectedStatus === "Archived" ? "No archived forms" : "No forms found"}
+              {selectedStatus === "Archived" ? t("forms.noArchivedForms", "No archived forms") : t("forms.noFormsFound", "No forms found")}
             </h3>
             <p className="text-xs text-slate-400 mt-1 max-w-sm">
               {selectedStatus === "Archived" 
-                ? "Archived forms will appear here safely preserved." 
-                : "Create a custom form to start collecting responses."}
+                ? t("forms.noArchivedFormsDesc", "Archived forms will appear here safely preserved.") 
+                : t("forms.noFormsFoundDesc", "Create a custom form to start collecting responses.")}
             </p>
           </div>
           {selectedStatus !== "Archived" && (
@@ -2594,7 +2693,7 @@ function generateUuid() {
               onClick={handleOpenCreateBlank}
               className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-md shadow-blue-600/20 cursor-pointer transition-all"
             >
-              Create Form
+              {t("forms.createForm", "Create Form")}
             </button>
           )}
         </div>
@@ -2622,14 +2721,14 @@ function generateUuid() {
                       isFeedback ? "bg-violet-100 text-violet-700" :
                       "bg-blue-100 text-blue-700"
                     }`}>
-                      {formTypeStr.replace(/_/g, " ")}
+                      {getFormTypeBadgeText(formTypeStr, t)}
                     </span>
 
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
                       isArchived ? "bg-slate-200 text-slate-700 font-extrabold" :
                       form.status === "active" ? "bg-emerald-50 text-emerald-700 font-extrabold" : "bg-slate-100 text-slate-500"
                     }`}>
-                      {isArchived ? "Archived" : form.status === "active" ? "● Active" : "Draft"}
+                      {isArchived ? t("forms.badgeArchived", "Archived") : form.status === "active" ? `● ${t("forms.badgeActive", "Active")}` : t("forms.badgeDraft", "Draft")}
                     </span>
                   </div>
 
@@ -2638,14 +2737,14 @@ function generateUuid() {
                       {form.title}
                     </h3>
                     <p className="text-xs text-slate-500 font-medium line-clamp-2 mt-1">
-                      {form.description || "No description provided."}
+                      {form.description || t("forms.enterInstructionsFallback", "Enter instructions or context for this form...")}
                     </p>
                   </div>
 
                   <div className="flex items-center gap-3 text-xs text-slate-400 font-semibold pt-2 border-t border-slate-100">
-                    <span>{form.fields?.length || 0} Questions</span>
+                    <span><bdi dir="ltr">{form.fields?.length || 0}</bdi> {t("forms.questionsLabel", "Questions")}</span>
                     <span>·</span>
-                    <span className="text-slate-700 font-bold">{formSubs.length} Submissions</span>
+                    <span className="text-slate-700 font-bold"><bdi dir="ltr">{formSubs.length}</bdi> {t("forms.submissionsLabel", "Submissions")}</span>
                   </div>
                 </div>
 
@@ -2654,8 +2753,8 @@ function generateUuid() {
                   <button
                     onClick={() => handleEditForm(form)}
                     className="p-2 bg-blue-50 hover:bg-blue-100/80 text-blue-600 rounded-xl transition-all cursor-pointer flex items-center justify-center"
-                    title="Edit Form"
-                    aria-label="Edit Form"
+                    title={t("forms.editForm", "Edit Form")}
+                    aria-label={t("forms.editForm", "Edit Form")}
                   >
                     <Pencil size={15} />
                   </button>
@@ -2663,8 +2762,8 @@ function generateUuid() {
                   <button
                     onClick={() => handleViewResponses(form)}
                     className="p-2 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer flex items-center justify-center"
-                    title="Analytics & Responses"
-                    aria-label="Analytics & Responses"
+                    title={t("forms.analyticsResponses", "Analytics & Responses")}
+                    aria-label={t("forms.analyticsResponses", "Analytics & Responses")}
                   >
                     <BarChart2 size={15} />
                   </button>
@@ -2673,8 +2772,8 @@ function generateUuid() {
                     <button
                       onClick={() => handleOpenShare(form)}
                       className="p-2 rounded-xl text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer flex items-center justify-center"
-                      title="Share / QR Code"
-                      aria-label="Share Form"
+                      title={t("forms.shareQrCode", "Share / QR Code")}
+                      aria-label={t("forms.shareQrCode", "Share / QR Code")}
                     >
                       <Share2 size={15} />
                     </button>
@@ -2684,8 +2783,8 @@ function generateUuid() {
                     <button
                       onClick={() => handleDuplicateForm(form)}
                       className="p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer flex items-center justify-center"
-                      title="Duplicate Form"
-                      aria-label="Duplicate Form"
+                      title={t("forms.duplicateForm", "Duplicate Form")}
+                      aria-label={t("forms.duplicateForm", "Duplicate Form")}
                     >
                       <Copy size={15} />
                     </button>
@@ -2699,21 +2798,21 @@ function generateUuid() {
                           else if (onRestoreForm) onRestoreForm(form.id);
                         }}
                         className="p-2 rounded-xl text-emerald-600 hover:bg-emerald-50 transition-colors cursor-pointer flex items-center justify-center"
-                        title="Restore Form"
-                        aria-label="Restore Form"
+                        title={t("forms.restoreForm", "Restore Form")}
+                        aria-label={t("forms.restoreForm", "Restore Form")}
                       >
                         <RotateCcw size={15} />
                       </button>
                       <button
                         onClick={() => {
-                          if (confirm(`Permanently delete form "${form.title}" and all associated responses? This action cannot be undone.`)) {
+                          if (confirm(t("forms.confirmPermanentDelete", "Permanently delete form \"{title}\" and all associated responses? This action cannot be undone.").replace("{title}", form.title))) {
                             if (onPermanentDeleteForm) onPermanentDeleteForm(form.id);
                             else if (onDeleteForm) onDeleteForm(form.id);
                           }
                         }}
                         className="p-2 rounded-xl text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition-colors cursor-pointer flex items-center justify-center"
-                        title="Delete Form Permanently"
-                        aria-label="Delete Form Permanently"
+                        title={t("forms.deletePermanently", "Delete Form Permanently")}
+                        aria-label={t("forms.deletePermanently", "Delete Form Permanently")}
                       >
                         <Trash2 size={15} />
                       </button>
@@ -2721,14 +2820,14 @@ function generateUuid() {
                   ) : (
                     <button
                       onClick={() => {
-                        if (confirm(`Archive "${form.title}"? (Form and submission records safely preserved in archives)`)) {
+                        if (confirm(t("forms.confirmArchive", "Archive \"{title}\"? (Form and submission records safely preserved in archives)").replace("{title}", form.title))) {
                           if (onArchiveForm) onArchiveForm(form.id);
                           else if (onDeleteForm) onDeleteForm(form.id);
                         }
                       }}
                       className="p-2 rounded-xl text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors cursor-pointer flex items-center justify-center"
-                      title="Archive Form"
-                      aria-label="Archive Form"
+                      title={t("forms.archiveForm", "Archive Form")}
+                      aria-label={t("forms.archiveForm", "Archive Form")}
                     >
                       <Archive size={15} />
                     </button>
@@ -2746,9 +2845,9 @@ function generateUuid() {
       {shareModalForm && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
           <div className="bg-white border border-slate-200 rounded-3xl p-7 max-w-md w-full shadow-2xl flex flex-col gap-6 text-center animate-scale-up">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3 text-left">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 text-start rtl:text-right text-left">
               <div>
-                <h3 className="text-base font-bold text-slate-900">Share Form & QR Code</h3>
+                <h3 className="text-base font-bold text-slate-900">{t("forms.shareModalTitle", "Share Form & QR Code")}</h3>
                 <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">{shareModalForm.title}</p>
               </div>
               <button
@@ -2765,11 +2864,11 @@ function generateUuid() {
                 <img src={shareQrUrl} alt="Form QR Code" className="w-48 h-48 rounded-xl shadow-xs" />
               ) : (
                 <div className="w-48 h-48 bg-slate-200 rounded-xl flex items-center justify-center text-slate-400 text-xs">
-                  Generating QR...
+                  {t("forms.generatingQr", "Generating QR...")}
                 </div>
               )}
               <span className="text-xs text-slate-500 font-semibold">
-                Scan on mobile to open live feedback form
+                {t("forms.scanOnMobileToOpen", "Scan on mobile to open live feedback form")}
               </span>
             </div>
 
@@ -2778,7 +2877,7 @@ function generateUuid() {
               onClick={handleCopyShareLink}
               className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-md shadow-blue-600/20 transition-all flex items-center justify-center cursor-pointer"
             >
-              <span>{copiedLink ? "Link Copied to Clipboard!" : "Copy Direct Public Link"}</span>
+              <span>{copiedLink ? t("forms.linkCopied", "Link Copied to Clipboard!") : t("forms.copyDirectPublicLink", "Copy Direct Public Link")}</span>
             </button>
           </div>
         </div>

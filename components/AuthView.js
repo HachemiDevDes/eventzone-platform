@@ -381,7 +381,7 @@ export default function AuthView({
                     setLang(item.code);
                     setLangMenuOpen(false);
                   }}
-                  className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
+                  className={`w-full text-start px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
                     lang === item.code 
                       ? "bg-blue-50 text-blue-600 font-bold" 
                       : "text-slate-700 hover:bg-slate-50"
@@ -439,7 +439,7 @@ export default function AuthView({
           </div>
         ) : authMode === "forgot-password" ? (
           /* Forgot Password View */
-          <div className="space-y-5 text-left animate-fade-in">
+          <div className="space-y-5 text-start animate-fade-in">
             <div>
               <button 
                 onClick={() => { setAuthMode("signin"); setErrorMsg(""); setSuccessMsg(""); }} 
@@ -496,7 +496,7 @@ export default function AuthView({
           </div>
         ) : (
           /* Standard Sign In / Create Account */
-          <div className="space-y-5 text-left animate-fade-in">
+          <div className="space-y-5 text-start animate-fade-in">
             {/* Clean Switcher Tabs */}
             <div className="grid grid-cols-2 bg-slate-100 p-1 rounded-2xl">
               <button

@@ -212,10 +212,10 @@ export default function OrganizerAttendeePortalSettings({
       <header className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 select-none">
         <div>
           <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
-            Attendee Portal
+            {t("portalSettings.title", "Attendee Portal")}
           </h2>
           <p className="text-xs sm:text-sm text-slate-500">
-            Control attendee portal availability, customize welcome announcements, and distribute direct access links.
+            {t("portalSettings.subtitle", "Control attendee portal availability, customize welcome announcements, and distribute direct access links.")}
           </p>
         </div>
 
@@ -223,10 +223,10 @@ export default function OrganizerAttendeePortalSettings({
           <button
             onClick={onPreviewAttendeePortal}
             className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl text-xs sm:text-sm transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
-            title="Open Attendee Preview"
+            title={t("portalSettings.openPreviewTooltip", "Open Attendee Preview")}
           >
             <Eye size={14} />
-            <span>Preview as Attendee</span>
+            <span>{t("portalSettings.previewAsAttendee", "Preview as Attendee")}</span>
             <ArrowUpRight size={13} className="text-slate-400" />
           </button>
 
@@ -242,7 +242,7 @@ export default function OrganizerAttendeePortalSettings({
             ) : (
               <Save size={15} />
             )}
-            <span>{isSaving ? "Saving..." : saveSuccess ? "Settings Saved!" : "Save Portal Settings"}</span>
+            <span>{isSaving ? t("common.saving", "Saving...") : saveSuccess ? t("portalSettings.settingsSaved", "Settings Saved!") : t("portalSettings.saveSettings", "Save Portal Settings")}</span>
           </button>
         </div>
       </header>
@@ -255,7 +255,7 @@ export default function OrganizerAttendeePortalSettings({
         {/* Card 1: Registered Attendees */}
         <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Registered Attendees</span>
+            <span className="text-xs font-bold text-slate-500">{t("portalSettings.registeredAttendees", "Registered Attendees")}</span>
             <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
               <Users size={16} />
             </div>
@@ -263,7 +263,7 @@ export default function OrganizerAttendeePortalSettings({
           <div className="mt-3">
             <div className="text-2xl font-black text-slate-900">{attendees.length}</div>
             <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-slate-500">
-              <span className="text-blue-600 font-bold">{attendees.length}</span> eligible for portal access
+              <><span className="text-blue-600 font-bold"><bdi dir="ltr">{attendees.length}</bdi></span> {t("portalSettings.eligibleAccess", "eligible for portal access")}</>
             </div>
           </div>
         </div>
@@ -271,7 +271,7 @@ export default function OrganizerAttendeePortalSettings({
         {/* Card 2: Interactive Sessions */}
         <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Interactive Sessions</span>
+            <span className="text-xs font-bold text-slate-500">{t("portalSettings.interactiveSessions", "Interactive Sessions")}</span>
             <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
               <Calendar size={16} />
             </div>
@@ -279,7 +279,7 @@ export default function OrganizerAttendeePortalSettings({
           <div className="mt-3">
             <div className="text-2xl font-black text-slate-900">{sessions.length}</div>
             <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-indigo-600">
-              <CheckCircle2 size={12} /> available for bookmarks
+              <CheckCircle2 size={12} /> {t("portalSettings.availableBookmarks", "available for bookmarks")}
             </div>
           </div>
         </div>
@@ -287,7 +287,7 @@ export default function OrganizerAttendeePortalSettings({
         {/* Card 3: Exhibitors & Sponsors */}
         <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Exhibitors & Sponsors</span>
+            <span className="text-xs font-bold text-slate-500">{t("portalSettings.exhibitorsSponsors", "Exhibitors & Sponsors")}</span>
             <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
               <Building2 size={16} />
             </div>
@@ -295,7 +295,7 @@ export default function OrganizerAttendeePortalSettings({
           <div className="mt-3">
             <div className="text-2xl font-black text-slate-900">{sponsors.length + exhibitors.length}</div>
             <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-slate-500">
-              showcased with booth links
+              {t("portalSettings.showcasedBoothLinks", "showcased with booth links")}
             </div>
           </div>
         </div>
@@ -303,7 +303,7 @@ export default function OrganizerAttendeePortalSettings({
         {/* Card 4: Portal Availability Status */}
         <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Portal Availability</span>
+            <span className="text-xs font-bold text-slate-500">{t("portalSettings.portalAvailability", "Portal Availability")}</span>
             <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
               portalStatus === "open" ? "bg-emerald-50 text-emerald-600" :
               portalStatus === "scheduled" ? "bg-amber-50 text-amber-600" :
@@ -314,13 +314,13 @@ export default function OrganizerAttendeePortalSettings({
           </div>
           <div className="mt-3">
             <div className="flex items-center justify-between">
-              <span className="text-2xl font-black text-slate-900 capitalize">{portalStatus}</span>
+              <span className="text-2xl font-black text-slate-900">{portalStatus === "open" ? t("portalSettings.statusOpen", "Open") : portalStatus === "scheduled" ? t("portalSettings.statusScheduled", "Scheduled") : t("portalSettings.statusClosed", "Closed")}</span>
               <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider ${
                 portalStatus === "open" ? "bg-emerald-100 text-emerald-700" :
                 portalStatus === "scheduled" ? "bg-amber-100 text-amber-700" :
                 "bg-rose-100 text-rose-700"
               }`}>
-                {portalStatus === "open" ? "Live Access" : portalStatus === "scheduled" ? "Countdown" : "Locked"}
+                {portalStatus === "open" ? t("portalSettings.badgeLiveAccess", "Live Access") : portalStatus === "scheduled" ? t("portalSettings.badgeCountdown", "Countdown") : t("portalSettings.badgeLocked", "Locked")}
               </span>
             </div>
             {/* Active modules bar */}
@@ -350,11 +350,11 @@ export default function OrganizerAttendeePortalSettings({
           }`}
         >
           <Lock size={15} />
-          <span>Availability & Access</span>
+          <span>{t("portalSettings.tabAvailability", "Availability & Access")}</span>
           <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase ${
             activeTab === "availability" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"
           }`}>
-            {portalStatus}
+            {portalStatus === "open" ? t("portalSettings.statusOpen", "Open") : portalStatus === "scheduled" ? t("portalSettings.statusScheduled", "Scheduled") : t("portalSettings.statusClosed", "Closed")}
           </span>
           {activeTab === "availability" && (
             <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-blue-600" />
@@ -370,11 +370,11 @@ export default function OrganizerAttendeePortalSettings({
           }`}
         >
           <Sliders size={15} />
-          <span>Feature Modules</span>
+          <span>{t("portalSettings.tabModules", "Feature Modules")}</span>
           <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
             activeTab === "modules" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"
           }`}>
-            {activeModulesCount}/7
+            <bdi dir="ltr">{activeModulesCount}/7</bdi>
           </span>
           {activeTab === "modules" && (
             <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-blue-600" />
@@ -390,7 +390,7 @@ export default function OrganizerAttendeePortalSettings({
           }`}
         >
           <QrCode size={15} />
-          <span>Share & QR Code</span>
+          <span>{t("portalSettings.tabShare", "Share & QR Code")}</span>
           {activeTab === "share" && (
             <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-blue-600" />
           )}
@@ -405,7 +405,7 @@ export default function OrganizerAttendeePortalSettings({
           }`}
         >
           <Mail size={15} />
-          <span>Email Broadcast</span>
+          <span>{t("portalSettings.tabBroadcast", "Email Broadcast")}</span>
           <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
             activeTab === "broadcast" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"
           }`}>
@@ -425,7 +425,7 @@ export default function OrganizerAttendeePortalSettings({
           }`}
         >
           <UserCheck size={15} />
-          <span>Confirmed Delegates</span>
+          <span>{t("portalSettings.tabDelegates", "Confirmed Delegates")}</span>
           <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
             activeTab === "delegates" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"
           }`}>
@@ -450,8 +450,8 @@ export default function OrganizerAttendeePortalSettings({
           {/* Status Selection Cards */}
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
             <div>
-              <h3 className="text-base font-black text-slate-900">Portal Availability Status</h3>
-              <p className="text-xs text-slate-500 font-medium">Determine when registered attendees can access their interactive portal and start networking.</p>
+              <h3 className="text-base font-black text-slate-900">{t("portalSettings.availabilityStatusTitle", "Portal Availability Status")}</h3>
+              <p className="text-xs text-slate-500 font-medium">{t("portalSettings.availabilityStatusDesc", "Determine when registered attendees can access their interactive portal and start networking.")}</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
@@ -479,9 +479,9 @@ export default function OrganizerAttendeePortalSettings({
                 </div>
 
                 <div>
-                  <h4 className="text-sm font-black text-slate-900">Open Now</h4>
+                  <h4 className="text-sm font-black text-slate-900">{t("portalSettings.openNowTitle", "Open Now")}</h4>
                   <p className="text-xs text-slate-500 font-medium mt-0.5 leading-relaxed">
-                    Attendees can log in with their ticket email and access all interactive features immediately.
+                    {t("portalSettings.openNowDesc", "Attendees can log in with their ticket email and access all interactive features immediately.")}
                   </p>
                 </div>
               </div>
@@ -509,9 +509,9 @@ export default function OrganizerAttendeePortalSettings({
                 </div>
 
                 <div>
-                  <h4 className="text-sm font-black text-slate-900">Scheduled Launch</h4>
+                  <h4 className="text-sm font-black text-slate-900">{t("portalSettings.scheduledLaunchTitle", "Scheduled Launch")}</h4>
                   <p className="text-xs text-slate-500 font-medium mt-0.5 leading-relaxed">
-                    Displays a real-time countdown timer to attendees until the scheduled launch time arrives.
+                    {t("portalSettings.scheduledLaunchDesc", "Displays a real-time countdown timer to attendees until the scheduled launch time arrives.")}
                   </p>
                 </div>
               </div>
@@ -539,9 +539,9 @@ export default function OrganizerAttendeePortalSettings({
                 </div>
 
                 <div>
-                  <h4 className="text-sm font-black text-slate-900">Closed / Locked</h4>
+                  <h4 className="text-sm font-black text-slate-900">{t("portalSettings.closedLockedTitle", "Closed / Locked")}</h4>
                   <p className="text-xs text-slate-500 font-medium mt-0.5 leading-relaxed">
-                    Portal is paused. Visitors see a friendly locked screen with your customized notice message.
+                    {t("portalSettings.closedLockedDesc", "Portal is paused. Visitors see a friendly locked screen with your customized notice message.")}
                   </p>
                 </div>
               </div>
@@ -552,7 +552,7 @@ export default function OrganizerAttendeePortalSettings({
             {portalStatus === "scheduled" && (
               <div className="p-5 bg-amber-50/60 border border-amber-200/80 rounded-2xl space-y-2 animate-scale-up">
                 <label className="block text-xs font-bold text-amber-900 uppercase tracking-wider">
-                  Automatic Portal Opening Date & Time
+                  {t("portalSettings.autoOpeningDateTime", "Automatic Portal Opening Date & Time")}
                 </label>
                 <input
                   type="datetime-local"
@@ -561,7 +561,7 @@ export default function OrganizerAttendeePortalSettings({
                   className="px-4 py-2.5 bg-white border border-amber-300 rounded-xl text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-amber-500/30"
                 />
                 <p className="text-[11px] text-amber-700 font-medium">
-                  When this timestamp is reached, the portal will unlock automatically for all verified attendees.
+                  {t("portalSettings.autoOpeningHelp", "When this timestamp is reached, the portal will unlock automatically for all verified attendees.")}
                 </p>
               </div>
             )}
@@ -570,15 +570,15 @@ export default function OrganizerAttendeePortalSettings({
           {/* Welcome Message & Announcements */}
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-3">
             <div>
-              <h3 className="text-base font-black text-slate-900">Portal Welcome Message & Announcements</h3>
-              <p className="text-xs text-slate-500 font-medium">This announcement is pinned at the top of the attendee portal home screen and locked countdown screen.</p>
+              <h3 className="text-base font-black text-slate-900">{t("portalSettings.welcomeMessageTitle", "Portal Welcome Message & Announcements")}</h3>
+              <p className="text-xs text-slate-500 font-medium">{t("portalSettings.welcomeMessageDesc", "This announcement is pinned at the top of the attendee portal home screen and locked countdown screen.")}</p>
             </div>
 
             <textarea
               rows={4}
               value={portalMessage}
               onChange={(e) => setPortalMessage(e.target.value)}
-              placeholder="e.g. Welcome delegates! Please stop by Hall B at 10:00 AM for the opening keynote."
+              placeholder={t("portalSettings.welcomeMessagePlaceholder", "e.g. Welcome delegates! Please stop by Hall B at 10:00 AM for the opening keynote.")}
               className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium text-slate-800 outline-none focus:bg-white focus:border-blue-600 transition-all leading-relaxed"
             />
           </div>
@@ -594,8 +594,8 @@ export default function OrganizerAttendeePortalSettings({
           
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
             <div>
-              <h3 className="text-base font-black text-slate-900">Portal Feature Modules & Controls</h3>
-              <p className="text-xs text-slate-500 font-medium">Enable or disable specific modules available to attendees inside their portal.</p>
+              <h3 className="text-base font-black text-slate-900">{t("portalSettings.featureModulesTitle", "Portal Feature Modules & Controls")}</h3>
+              <p className="text-xs text-slate-500 font-medium">{t("portalSettings.featureModulesDesc", "Enable or disable specific modules available to attendees inside their portal.")}</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-1">
@@ -605,9 +605,9 @@ export default function OrganizerAttendeePortalSettings({
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <Users size={16} className="text-blue-600" />
-                    <h4 className="text-xs font-black text-slate-900">Delegate Directory & Networking</h4>
+                    <h4 className="text-xs font-black text-slate-900">{t("portalSettings.moduleNetworkingTitle", "Delegate Directory & Networking")}</h4>
                   </div>
-                  <p className="text-[11px] text-slate-500 font-medium">Allows delegates to browse attendees and send connection requests.</p>
+                  <p className="text-[11px] text-slate-500 font-medium">{t("portalSettings.moduleNetworkingDesc", "Allows delegates to browse attendees and send connection requests.")}</p>
                 </div>
                 <input
                   type="checkbox"
@@ -622,9 +622,9 @@ export default function OrganizerAttendeePortalSettings({
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <Calendar size={16} className="text-indigo-600" />
-                    <h4 className="text-xs font-black text-slate-900">Agenda & Schedule Bookmarking</h4>
+                    <h4 className="text-xs font-black text-slate-900">{t("portalSettings.moduleAgendaTitle", "Agenda & Schedule Bookmarking")}</h4>
                   </div>
-                  <p className="text-[11px] text-slate-500 font-medium">Enables interactive session browsing and personal agenda building.</p>
+                  <p className="text-[11px] text-slate-500 font-medium">{t("portalSettings.moduleAgendaDesc", "Enables interactive session browsing and personal agenda building.")}</p>
                 </div>
                 <input
                   type="checkbox"
@@ -639,9 +639,9 @@ export default function OrganizerAttendeePortalSettings({
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <Store size={16} className="text-amber-600" />
-                    <h4 className="text-xs font-black text-slate-900">Exhibitors & Sponsors Showcase</h4>
+                    <h4 className="text-xs font-black text-slate-900">{t("portalSettings.moduleExhibitorsTitle", "Exhibitors & Sponsors Showcase")}</h4>
                   </div>
-                  <p className="text-[11px] text-slate-500 font-medium">Showcases company demo pods, booth numbers, and partner tiers.</p>
+                  <p className="text-[11px] text-slate-500 font-medium">{t("portalSettings.moduleExhibitorsDesc", "Showcases company demo pods, booth numbers, and partner tiers.")}</p>
                 </div>
                 <input
                   type="checkbox"
@@ -656,9 +656,9 @@ export default function OrganizerAttendeePortalSettings({
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <Layers size={16} className="text-purple-600" />
-                    <h4 className="text-xs font-black text-slate-900">Interactive Venue Floor Plans</h4>
+                    <h4 className="text-xs font-black text-slate-900">{t("portalSettings.moduleFloorplansTitle", "Interactive Venue Floor Plans")}</h4>
                   </div>
-                  <p className="text-[11px] text-slate-500 font-medium">Displays 2D venue blueprints, halls, and booth locators.</p>
+                  <p className="text-[11px] text-slate-500 font-medium">{t("portalSettings.moduleFloorplansDesc", "Displays 2D venue blueprints, halls, and booth locators.")}</p>
                 </div>
                 <input
                   type="checkbox"
@@ -673,9 +673,9 @@ export default function OrganizerAttendeePortalSettings({
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <FileText size={16} className="text-emerald-600" />
-                    <h4 className="text-xs font-black text-slate-900">Downloadable Resources & PDFs</h4>
+                    <h4 className="text-xs font-black text-slate-900">{t("portalSettings.moduleResourcesTitle", "Downloadable Resources & PDFs")}</h4>
                   </div>
-                  <p className="text-[11px] text-slate-500 font-medium">Enables access to official summit documents, whitepapers, and guides.</p>
+                  <p className="text-[11px] text-slate-500 font-medium">{t("portalSettings.moduleResourcesDesc", "Enables access to official summit documents, whitepapers, and guides.")}</p>
                 </div>
                 <input
                   type="checkbox"
@@ -690,9 +690,9 @@ export default function OrganizerAttendeePortalSettings({
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <Megaphone size={16} className="text-rose-600" />
-                    <h4 className="text-xs font-black text-slate-900">Live Announcements Banner</h4>
+                    <h4 className="text-xs font-black text-slate-900">{t("portalSettings.moduleAnnouncementsTitle", "Live Announcements Banner")}</h4>
                   </div>
-                  <p className="text-[11px] text-slate-500 font-medium">Displays real-time organizer broadcast notices at the top of the portal.</p>
+                  <p className="text-[11px] text-slate-500 font-medium">{t("portalSettings.moduleAnnouncementsDesc", "Displays real-time organizer broadcast notices at the top of the portal.")}</p>
                 </div>
                 <input
                   type="checkbox"
@@ -719,10 +719,10 @@ export default function OrganizerAttendeePortalSettings({
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <Share2 size={18} className="text-blue-600" />
-                <h3 className="text-base font-black text-slate-900">Direct Attendee Portal Link</h3>
+                <h3 className="text-base font-black text-slate-900">{t("portalSettings.directLinkTitle", "Direct Attendee Portal Link")}</h3>
               </div>
               <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                Distribute this unique URL in your confirmation emails, website links, or SMS blasts. Attendees will sign in with their ticket email.
+                {t("portalSettings.directLinkDesc", "Distribute this unique URL in your confirmation emails, website links, or SMS blasts. Attendees will sign in with their ticket email.")}
               </p>
 
               <div className="flex items-center gap-2 pt-2">
@@ -737,7 +737,7 @@ export default function OrganizerAttendeePortalSettings({
                   className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0"
                 >
                   {copiedLink ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
-                  <span>{copiedLink ? "Copied!" : "Copy Link"}</span>
+                  <span>{copiedLink ? t("common.copied", "Copied!") : t("common.copyLink", "Copy Link")}</span>
                 </button>
               </div>
             </div>
@@ -745,10 +745,10 @@ export default function OrganizerAttendeePortalSettings({
             <div className="p-4 bg-blue-50/60 border border-blue-100 rounded-2xl text-xs text-blue-900 space-y-1">
               <div className="flex items-center gap-1.5 font-bold">
                 <ShieldCheck size={14} className="text-blue-600" />
-                <span>Security Access Guard</span>
+                <span>{t("portalSettings.securityGuardTitle", "Security Access Guard")}</span>
               </div>
               <p className="text-[11px] text-blue-700 leading-relaxed font-medium">
-                Only delegates with approved tickets matching their login email address are granted access.
+                {t("portalSettings.securityGuardDesc", "Only delegates with approved tickets matching their login email address are granted access.")}
               </p>
             </div>
           </div>
@@ -756,9 +756,9 @@ export default function OrganizerAttendeePortalSettings({
           {/* Card 2: High-Res QR Code */}
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4 text-center">
             <div className="space-y-1">
-              <h3 className="text-base font-black text-slate-900">Printable Portal QR Code</h3>
+              <h3 className="text-base font-black text-slate-900">{t("portalSettings.qrTitle", "Printable Portal QR Code")}</h3>
               <p className="text-xs text-slate-500 font-medium">
-                Place this QR code on event badges, roll-up banners, and badges for instant mobile ingress.
+                {t("portalSettings.qrDesc", "Place this QR code on event badges, roll-up banners, and badges for instant mobile ingress.")}
               </p>
             </div>
 
@@ -778,7 +778,7 @@ export default function OrganizerAttendeePortalSettings({
                 className="px-5 py-2.5 bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 rounded-xl text-xs font-bold transition-all shadow-xs inline-flex items-center gap-2 cursor-pointer"
               >
                 <Download size={14} />
-                <span>Download High-Res QR Image</span>
+                <span>{t("portalSettings.downloadQr", "Download High-Res QR Image")}</span>
               </button>
             </div>
           </div>
@@ -794,17 +794,17 @@ export default function OrganizerAttendeePortalSettings({
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <Mail size={18} className="text-blue-600" />
-              <h3 className="text-base font-black text-slate-900">Broadcast Portal Invitation to All Attendees</h3>
+              <h3 className="text-base font-black text-slate-900">{t("portalSettings.broadcastTitle", "Broadcast Portal Invitation to All Attendees")}</h3>
             </div>
             <p className="text-xs text-slate-500 font-medium">
-              Dispatch a personalized email notification containing the portal access link to all <strong>{attendees.length} confirmed delegates</strong>.
+              {t("portalSettings.broadcastDesc", "Dispatch a personalized email notification containing the portal access link to all {count} confirmed delegates.", { count: attendees.length })}
             </p>
           </div>
 
           <form onSubmit={handleDispatchBroadcast} className="space-y-4 pt-1">
             <div>
               <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                Email Subject Line
+                {t("portalSettings.emailSubjectLabel", "Email Subject Line")}
               </label>
               <input
                 type="text"
@@ -816,7 +816,7 @@ export default function OrganizerAttendeePortalSettings({
 
             <div>
               <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                Message Body
+                {t("portalSettings.messageBodyLabel", "Message Body")}
               </label>
               <textarea
                 rows={5}
@@ -826,14 +826,17 @@ export default function OrganizerAttendeePortalSettings({
               />
             </div>
 
-            <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-600 space-y-1">
-              <div className="flex justify-between font-semibold">
-                <span>Total Recipients:</span>
-                <span className="font-bold text-slate-900">{attendees.length} Confirmed Attendees</span>
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-600 space-y-2">
+              <div className="flex items-center justify-between font-semibold">
+                <span>{t("portalSettings.totalRecipients", "Total Recipients:")}</span>
+                <span className="font-bold text-slate-900 inline-flex items-center gap-1">
+                  <bdi dir="ltr">{attendees.length}</bdi>
+                  <span>{t("portalSettings.confirmedAttendeesSuffix", "Confirmed Attendees")}</span>
+                </span>
               </div>
-              <div className="flex justify-between font-semibold">
-                <span>Direct Access Button Link:</span>
-                <span className="font-mono text-blue-600 text-[11px] truncate max-w-xs">{portalUrl}</span>
+              <div className="flex items-center justify-between font-semibold">
+                <span>{t("portalSettings.directLinkButtonLabel", "Direct Access Button Link:")}</span>
+                <span className="font-mono text-blue-600 text-[11px] truncate max-w-xs" dir="ltr">{portalUrl}</span>
               </div>
             </div>
 
@@ -848,12 +851,12 @@ export default function OrganizerAttendeePortalSettings({
                 ) : broadcastDone ? (
                   <>
                     <CheckCircle2 size={16} className="text-emerald-300" />
-                    <span>Broadcast Sent Successfully!</span>
+                    <span>{t("portalSettings.broadcastSuccess", "Broadcast Sent Successfully!")}</span>
                   </>
                 ) : (
                   <>
                     <Send size={15} />
-                    <span>Send Portal Access Email to {attendees.length} Attendees</span>
+                    <span>{t("portalSettings.sendBroadcastBtn", "Send Portal Access Email to {count} Attendees", { count: attendees.length })}</span>
                   </>
                 )}
               </button>
@@ -870,37 +873,37 @@ export default function OrganizerAttendeePortalSettings({
           
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
             <div className="relative flex-1">
-              <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search size={15} className="absolute start-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search registered delegates by name, company, or email..."
+                placeholder={t("portalSettings.searchDelegatesPlaceholder", "Search registered delegates by name, company, or email...")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:border-blue-600 transition-all"
+                className="w-full ps-9 pe-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:border-blue-600 transition-all"
               />
             </div>
             <span className="text-xs font-bold text-slate-500 px-2">
-              Showing {filteredAttendees.length} of {attendees.length} delegates
+              {t("portalSettings.showingDelegates", "Showing {count} of {total} delegates", { count: filteredAttendees.length, total: attendees.length })}
             </span>
           </div>
 
           {filteredAttendees.length === 0 ? (
             <div className="p-12 text-center bg-white rounded-3xl border border-slate-200 shadow-xs space-y-2">
               <Users size={32} className="text-slate-300 mx-auto" />
-              <h4 className="text-sm font-bold text-slate-700">No attendees found</h4>
-              <p className="text-xs text-slate-400">Confirmed attendees will automatically appear here once registered.</p>
+              <h4 className="text-sm font-bold text-slate-700">{t("portalSettings.noAttendeesFound", "No attendees found")}</h4>
+              <p className="text-xs text-slate-400">{t("portalSettings.noAttendeesHelp", "Confirmed attendees will automatically appear here once registered.")}</p>
             </div>
           ) : (
             <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-xs">
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+                <table className="w-full text-start rtl:text-right text-left text-xs">
                   <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-200 text-[10px]">
                     <tr>
-                      <th className="py-3 px-4">Attendee Name</th>
-                      <th className="py-3 px-4">Registered Email</th>
-                      <th className="py-3 px-4">Company / Organization</th>
-                      <th className="py-3 px-4">Ticket Tier</th>
-                      <th className="py-3 px-4 text-right">Portal Status</th>
+                      <th className="py-3 px-4">{t("portalSettings.thName", "Attendee Name")}</th>
+                      <th className="py-3 px-4">{t("portalSettings.thEmail", "Registered Email")}</th>
+                      <th className="py-3 px-4">{t("portalSettings.thCompany", "Company / Organization")}</th>
+                      <th className="py-3 px-4">{t("portalSettings.thTier", "Ticket Tier")}</th>
+                      <th className="py-3 px-4 text-end">{t("portalSettings.thStatus", "Portal Status")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-medium">
@@ -916,10 +919,10 @@ export default function OrganizerAttendeePortalSettings({
                             {att.ticketType || att.ticket_type || "Standard"}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-right">
+                        <td className="py-3 px-4 text-end">
                           <span className="inline-flex items-center gap-1 text-emerald-600 font-bold text-[11px]">
                             <CheckCircle2 size={13} />
-                            <span>Authorized</span>
+                            <span>{t("portalSettings.statusAuthorized", "Authorized")}</span>
                           </span>
                         </td>
                       </tr>

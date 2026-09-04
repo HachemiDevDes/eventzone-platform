@@ -107,18 +107,84 @@ html[dir="rtl"],
 }
 
 /* ==========================================================================
-   RTL / Arabic Layout & Text Alignment Engine
+   Universal RTL Text Alignment Engine
+   In Arabic ([dir="rtl"]), all text that would naturally or explicitly be 
+   left-aligned in English/French MUST be aligned to the right.
    ========================================================================== */
 
 /* 1. Base RTL direction & default right text alignment */
 html[dir="rtl"],
+html[dir="rtl"] body,
 [dir="rtl"],
 [dir="rtl"] body {
   direction: rtl;
   text-align: right;
 }
 
-/* 2. Common layout blocks default to right alignment in RTL */
+/* 2. Force ALL text-left classes and responsive variants to align right in RTL */
+[dir="rtl"] .text-left,
+[dir="rtl"] [class*="text-left"],
+[dir="rtl"] .text-start,
+[dir="rtl"] [class*="text-start"] {
+  text-align: right !important;
+}
+
+@media (min-width: 640px) {
+  [dir="rtl"] .sm\:text-left,
+  [dir="rtl"] [class*="sm:text-left"],
+  [dir="rtl"] .sm\:text-start,
+  [dir="rtl"] [class*="sm:text-start"] {
+    text-align: right !important;
+  }
+}
+
+@media (min-width: 768px) {
+  [dir="rtl"] .md\:text-left,
+  [dir="rtl"] [class*="md:text-left"],
+  [dir="rtl"] .md\:text-start,
+  [dir="rtl"] [class*="md:text-start"] {
+    text-align: right !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  [dir="rtl"] .lg\:text-left,
+  [dir="rtl"] [class*="lg:text-left"],
+  [dir="rtl"] .lg\:text-start,
+  [dir="rtl"] [class*="lg:text-start"] {
+    text-align: right !important;
+  }
+}
+
+@media (min-width: 1280px) {
+  [dir="rtl"] .xl\:text-left,
+  [dir="rtl"] [class*="xl:text-left"],
+  [dir="rtl"] .xl\:text-start,
+  [dir="rtl"] [class*="xl:text-start"] {
+    text-align: right !important;
+  }
+}
+
+@media (min-width: 1536px) {
+  [dir="rtl"] .\32xl\:text-left,
+  [dir="rtl"] [class*="2xl:text-left"] {
+    text-align: right !important;
+  }
+}
+
+/* 3. Typography & Block containers: headers, paragraphs, labels, spans, lists in RTL */
+[dir="rtl"] h1:not(.text-center):not([class*="text-center"]),
+[dir="rtl"] h2:not(.text-center):not([class*="text-center"]),
+[dir="rtl"] h3:not(.text-center):not([class*="text-center"]),
+[dir="rtl"] h4:not(.text-center):not([class*="text-center"]),
+[dir="rtl"] h5:not(.text-center):not([class*="text-center"]),
+[dir="rtl"] h6:not(.text-center):not([class*="text-center"]),
+[dir="rtl"] p:not(.text-center):not([class*="text-center"]),
+[dir="rtl"] span:not(.text-center):not([class*="text-center"]):not([dir="ltr"]):not(.force-ltr),
+[dir="rtl"] a:not(.text-center):not([class*="text-center"]),
+[dir="rtl"] label:not(.text-center):not([class*="text-center"]),
+[dir="rtl"] legend:not(.text-center):not([class*="text-center"]),
+[dir="rtl"] li:not(.text-center):not([class*="text-center"]),
 [dir="rtl"] main,
 [dir="rtl"] header,
 [dir="rtl"] footer,
@@ -130,41 +196,28 @@ html[dir="rtl"],
   text-align: right;
 }
 
-/* 3. Typography: headings, paragraphs, labels, legends */
-[dir="rtl"] h1:not(.text-center):not([class*="text-center"]):not(.text-left):not([class*="text-left"]),
-[dir="rtl"] h2:not(.text-center):not([class*="text-center"]):not(.text-left):not([class*="text-left"]),
-[dir="rtl"] h3:not(.text-center):not([class*="text-center"]):not(.text-left):not([class*="text-left"]),
-[dir="rtl"] h4:not(.text-center):not([class*="text-center"]):not(.text-left):not([class*="text-left"]),
-[dir="rtl"] h5:not(.text-center):not([class*="text-center"]):not(.text-left):not([class*="text-left"]),
-[dir="rtl"] h6:not(.text-center):not([class*="text-center"]):not(.text-left):not([class*="text-left"]),
-[dir="rtl"] p:not(.text-center):not([class*="text-center"]):not(.text-left):not([class*="text-left"]),
-[dir="rtl"] label:not(.text-center):not([class*="text-center"]):not(.text-left):not([class*="text-left"]),
-[dir="rtl"] legend:not(.text-center):not([class*="text-center"]):not(.text-left):not([class*="text-left"]) {
-  text-align: right;
-}
-
 /* 4. Form inputs, textareas, and selects in RTL */
-[dir="rtl"] input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]):not([type="file"]):not([dir="ltr"]):not(.text-center):not([class*="text-center"]):not(.text-right):not([class*="text-right"]),
-[dir="rtl"] textarea:not([dir="ltr"]):not(.text-center):not([class*="text-center"]):not(.text-right):not([class*="text-right"]),
-[dir="rtl"] select:not([dir="ltr"]):not(.text-center):not([class*="text-center"]):not(.text-right):not([class*="text-right"]) {
-  text-align: right;
+[dir="rtl"] input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]):not([type="file"]):not([dir="ltr"]):not(.force-ltr):not(.text-center):not([class*="text-center"]),
+[dir="rtl"] textarea:not([dir="ltr"]):not(.force-ltr):not(.text-center):not([class*="text-center"]),
+[dir="rtl"] select:not([dir="ltr"]):not(.force-ltr):not(.text-center):not([class*="text-center"]) {
+  text-align: right !important;
   direction: rtl;
 }
 
 [dir="rtl"] input::placeholder,
 [dir="rtl"] textarea::placeholder {
-  text-align: right;
+  text-align: right !important;
   direction: rtl;
 }
 
 /* 5. Table alignment in RTL */
 [dir="rtl"] table:not(.text-center):not([class*="text-center"]) {
-  text-align: right;
+  text-align: right !important;
 }
 
-[dir="rtl"] th:not(.text-center):not(.text-right):not([class*="text-center"]):not([class*="text-right"]),
-[dir="rtl"] td:not(.text-center):not(.text-right):not([class*="text-center"]):not([class*="text-right"]) {
-  text-align: right;
+[dir="rtl"] th:not(.text-center):not([class*="text-center"]):not(.text-right):not([class*="text-right"]),
+[dir="rtl"] td:not(.text-center):not([class*="text-center"]):not(.text-right):not([class*="text-right"]) {
+  text-align: right !important;
 }
 
 /* 6. Drawers, modals, popovers, and dialogs in RTL */
@@ -177,47 +230,24 @@ html[dir="rtl"],
   text-align: right;
 }
 
-/* 7. Universal rule: Any text-left class automatically adapts to text-align: right in RTL */
-[dir="rtl"] .text-left {
-  text-align: right !important;
-}
-
-@media (min-width: 640px) {
-  [dir="rtl"] .sm\:text-left {
-    text-align: right !important;
-  }
-}
-
-@media (min-width: 768px) {
-  [dir="rtl"] .md\:text-left {
-    text-align: right !important;
-  }
-}
-
-@media (min-width: 1024px) {
-  [dir="rtl"] .lg\:text-left {
-    text-align: right !important;
-  }
-}
-
-@media (min-width: 1280px) {
-  [dir="rtl"] .xl\:text-left {
-    text-align: right !important;
-  }
-}
-
-@media (min-width: 1536px) {
-  [dir="rtl"] .\32xl\:text-left {
-    text-align: right !important;
-  }
-}
-
-/* 8. Interactive elements: buttons, menu triggers, and options with text-left */
+/* 7. Interactive elements: buttons, menu triggers, and options with text-left */
 [dir="rtl"] button.text-left,
 [dir="rtl"] button[class*="text-left"],
 [dir="rtl"] [role="button"].text-left,
 [dir="rtl"] [role="button"][class*="text-left"] {
   text-align: right !important;
+}
+
+/* 8. Explicit LTR Islands (Preserve numbers, codes, URLs, timestamps) */
+[dir="rtl"] [dir="ltr"],
+[dir="rtl"] .force-ltr,
+[dir="rtl"] .ltr-text,
+[dir="rtl"] code,
+[dir="rtl"] pre,
+[dir="rtl"] input[type="url"],
+[dir="rtl"] input[type="email"] {
+  direction: ltr !important;
+  text-align: left !important;
 }
 
 body {

@@ -16,6 +16,7 @@ import PublicRSVPModal from "./PublicRSVPModal";
 import CountryPhoneInput from "./CountryPhoneInput";
 import { CountrySelect, CitySelect } from "./LocationInputs";
 import SearchableSelect from "./SearchableSelect";
+import { getLocalizedIndustry } from "../lib/constants";
 import FormImageUploader from "./FormImageUploader";
 import FormFileUploader from "./FormFileUploader";
 import { getFormSections } from "../lib/formPresets";
@@ -690,6 +691,11 @@ export default function EventPublicLandingPage({
     };
   }, [matchedInfluencer, selectedTicket]);
 
+  const effectiveTicketPrice = referralDiscount?.finalPrice !== undefined
+    ? referralDiscount.finalPrice
+    : (parseFloat(selectedTicket?.price) || 0);
+  const isPaidTicket = effectiveTicketPrice > 0;
+
   // Lock body scroll when registration is open to eliminate background double-scroll
   useEffect(() => {
     if (typeof document !== "undefined") {
@@ -907,6 +913,47 @@ export default function EventPublicLandingPage({
           ...(activeRefCode ? { _referral_code: activeRefCode } : {}),
           ...(matchedInfluencer?.id ? { _influencer_id: matchedInfluencer.id } : {})
         };
+
+        // ── ONLINE PAYMENT REDIRECT VIA CHARGILY PAY (EDAHABIA / CIB) ──
+        if (effectiveTicketPrice > 0 && (selectedTicket?.id || selectedTier)) {
+          try {
+            const checkoutRes = await fetch("/api/payments/chargily/create-checkout", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                eventId: eventId || eventDetails?.id,
+                ticketId: selectedTicket?.id,
+                ticketType: selectedTier,
+                name: rsvpName || currentUser?.fullName || "Attendee",
+                email: rsvpEmail || currentUser?.email || "",
+                phone: rsvpPhone || "",
+                company: resolvedCompany || "",
+                jobTitle: resolvedJobTitle || "",
+                referralCode: activeRefCode,
+                answers: payloadCustomAnswers,
+                returnPath: typeof window !== "undefined" ? window.location.pathname : "",
+              }),
+            });
+
+            const checkoutData = await checkoutRes.json();
+            if (!checkoutRes.ok || !checkoutData.success || !checkoutData.checkoutUrl) {
+              setRsvpError(checkoutData.error || "Unable to initiate payment with Chargily Pay.");
+              setRsvpLoading(false);
+              return;
+            }
+
+            // Seamless redirect to hosted Chargily checkout (EDAHABIA & CIB)
+            if (typeof window !== "undefined") {
+              window.location.href = checkoutData.checkoutUrl;
+            }
+            return;
+          } catch (payErr) {
+            console.error("Chargily payment initiation error:", payErr);
+            setRsvpError(payErr.message || "Failed to initialize payment gateway.");
+            setRsvpLoading(false);
+            return;
+          }
+        }
 
         const pass = await onRegisterForEvent(eventId || eventDetails?.id, {
           name: rsvpName || currentUser?.fullName || "Attendee",
@@ -1190,7 +1237,7 @@ export default function EventPublicLandingPage({
                       setLang(item.code);
                       setLangMenuOpen(false);
                     }}
-                    className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
+                    className={`w-full text-start rtl:text-right text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
                       lang === item.code 
                         ? "bg-blue-50 text-blue-600 font-bold" 
                         : "text-slate-700 hover:bg-slate-50"
@@ -1334,7 +1381,7 @@ export default function EventPublicLandingPage({
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
             
             {/* ── LEFT COLUMN: TITLE, DATE, LOCATION & ORGANIZER DETAILS ── */}
-            <div className="lg:col-span-7 xl:col-span-8 space-y-6 text-left">
+            <div className="lg:col-span-7 xl:col-span-8 space-y-6 text-start rtl:text-right text-left">
               
               {/* Main Event Title */}
               <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-tight">
@@ -1390,7 +1437,7 @@ export default function EventPublicLandingPage({
 
             {/* ── RIGHT COLUMN: COMPACT TICKET CARD (IMAGE 1 STYLE) ── */}
             <div className="lg:col-span-5 xl:col-span-4 w-full">
-              <div className="sticky top-20 bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-lg shadow-slate-100/70 space-y-3.5 text-left">
+              <div className="sticky top-20 bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-lg shadow-slate-100/70 space-y-3.5 text-start rtl:text-right text-left">
                 
                 {/* Ticket Tier Selector (Direct list of up to 3 tickets, no dropdown menu) */}
                 {eventTickets.length > 0 && (
@@ -1410,7 +1457,7 @@ export default function EventPublicLandingPage({
                           onClick={() => {
                             setSelectedTier(tName);
                           }}
-                          className={`w-full border rounded-xl p-3 sm:p-3.5 flex items-center justify-between text-left transition-colors cursor-pointer group ${
+                          className={`w-full border rounded-xl p-3 sm:p-3.5 flex items-center justify-between text-start rtl:text-right text-left transition-colors cursor-pointer group ${
                             isSelected 
                               ? "border-blue-600 bg-blue-50/30" 
                               : "border-slate-200 hover:border-slate-300 bg-white"
@@ -1507,7 +1554,7 @@ export default function EventPublicLandingPage({
       {/* ==================================================================== */}
       <section id="about" className="py-16 max-w-6xl mx-auto px-6 sm:px-8 w-full">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-          <div className="lg:col-span-7 space-y-6 text-left">
+          <div className="lg:col-span-7 space-y-6 text-start rtl:text-right text-left">
             <div>
               <span className="text-xs font-extrabold text-blue-600 uppercase tracking-wider">Event Overview</span>
               <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1">
@@ -1560,7 +1607,7 @@ export default function EventPublicLandingPage({
           </div>
 
           {/* Organizer Card */}
-          <div className="lg:col-span-5 bg-white border border-slate-200 rounded-3xl p-6 sm:p-7 shadow-xs space-y-5 text-left">
+          <div className="lg:col-span-5 bg-white border border-slate-200 rounded-3xl p-6 sm:p-7 shadow-xs space-y-5 text-start rtl:text-right text-left">
             <div className="flex items-center gap-3.5 pb-4 border-b border-slate-100">
               {organizerLogo ? (
                 <img
@@ -1703,7 +1750,7 @@ export default function EventPublicLandingPage({
       {/* 6. INTERACTIVE AGENDA & SCHEDULE SESSIONS                            */}
       {/* ==================================================================== */}
       <section id="schedule" className="py-16 max-w-6xl mx-auto px-6 sm:px-8 w-full space-y-10">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 text-left">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 text-start rtl:text-right text-left">
           <div>
             <span className="text-xs font-extrabold text-blue-600 uppercase tracking-wider">Event Schedule</span>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1">
@@ -1748,7 +1795,7 @@ export default function EventPublicLandingPage({
                 return (
                   <div
                     key={session.id || idx}
-                    className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-7 shadow-xs hover:shadow-md transition-all flex flex-col gap-4 text-left"
+                    className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-7 shadow-xs hover:shadow-md transition-all flex flex-col gap-4 text-start rtl:text-right text-left"
                   >
                     {/* Time & Date Badges */}
                     <div className="flex flex-wrap items-center gap-2.5">
@@ -1876,7 +1923,7 @@ export default function EventPublicLandingPage({
       {/* 7. INTERACTIVE 2D FLOOR PLAN BANNER SECTION                          */}
       {/* ==================================================================== */}
       <section id="floorplan" className="py-12 bg-blue-600 text-white relative overflow-hidden">
-        <div className="max-w-6xl mx-auto px-6 sm:px-8 relative z-10 flex flex-col md:flex-row items-center justify-between gap-8 text-left">
+        <div className="max-w-6xl mx-auto px-6 sm:px-8 relative z-10 flex flex-col md:flex-row items-center justify-between gap-8 text-start rtl:text-right text-left">
           <div className="space-y-3 max-w-xl">
             <span className="px-3 py-1 rounded-full bg-white/20 text-white text-[10px] font-extrabold uppercase tracking-wider backdrop-blur-md">
               Venue Navigation
@@ -1920,7 +1967,7 @@ export default function EventPublicLandingPage({
               {eventExhibitors.map((ex, idx) => (
                 <div 
                   key={ex.id || idx}
-                  className="bg-slate-50 border border-slate-200 rounded-3xl p-5 text-left flex flex-col justify-between space-y-4 hover:shadow-md hover:border-blue-300 transition-all"
+                  className="bg-slate-50 border border-slate-200 rounded-3xl p-5 text-start rtl:text-right text-left flex flex-col justify-between space-y-4 hover:shadow-md hover:border-blue-300 transition-all"
                 >
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
@@ -1934,7 +1981,7 @@ export default function EventPublicLandingPage({
 
                     <div>
                       <h4 className="text-sm font-bold text-slate-900">{ex.name}</h4>
-                      <span className="text-[11px] text-blue-600 font-semibold block">{ex.industry || "Industry Partner"}</span>
+                      <span className="text-[11px] text-blue-600 font-semibold block">{getLocalizedIndustry(ex.industry, t) || t("public.industryPartner", "Industry Partner")}</span>
                       {ex.description && (
                         <p className="text-xs text-slate-500 line-clamp-2 mt-1.5 leading-relaxed">
                           {ex.description}
@@ -2027,7 +2074,7 @@ export default function EventPublicLandingPage({
                       </div>
                     )}
 
-                    <div className="space-y-5 text-left">
+                    <div className="space-y-5 text-start rtl:text-right text-left">
                       <div>
                         <h3 className="text-lg font-bold text-slate-900">{ticket.name || ticket.tier}</h3>
                         {ticket.description && <p className="text-xs text-slate-500 mt-1 leading-relaxed">{ticket.description}</p>}
@@ -2079,7 +2126,7 @@ export default function EventPublicLandingPage({
         <div className="max-w-6xl mx-auto px-6 sm:px-8 space-y-12">
           {/* Top Row: Brand & Quick Newsletter */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pb-12 border-b border-slate-800/80 items-start">
-            <div className="lg:col-span-6 space-y-4 text-left">
+            <div className="lg:col-span-6 space-y-4 text-start rtl:text-right text-left">
               <div className="flex items-center gap-3">
                 <img src="https://i.imgur.com/jFDrQbM.png" alt="eventzone" style={{ height: '28px', width: 'auto', maxWidth: '160px', objectFit: 'contain' }} className="h-7 w-auto object-contain brightness-0 invert" />
                 <span className="px-2.5 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-[10px] font-extrabold uppercase tracking-wider">
@@ -2111,7 +2158,7 @@ export default function EventPublicLandingPage({
           </div>
 
           {/* Bottom Grid: Navigation Links */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-xs text-left">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-xs text-start rtl:text-right text-left">
             <div className="space-y-3">
               <h4 className="text-xs font-extrabold text-white uppercase tracking-wider">Navigation</h4>
               <ul className="space-y-2 text-slate-400">
@@ -2129,15 +2176,15 @@ export default function EventPublicLandingPage({
                 <li><a href="#exhibitors" onClick={handleScrollTo("#exhibitors")} className="hover:text-white transition-colors cursor-pointer">Exhibitor Directory</a></li>
                 <li><a href="#exhibitors" onClick={handleScrollTo("#exhibitors")} className="hover:text-white transition-colors cursor-pointer">Booth Locations</a></li>
                 <li><a href="#sponsors" onClick={handleScrollTo("#sponsors")} className="hover:text-white transition-colors cursor-pointer">Diamond &amp; Gold Sponsors</a></li>
-                <li><button onClick={() => openRegistration(eventTickets[0]?.name || "General Admission")} className="hover:text-white transition-colors text-left cursor-pointer">Become a Sponsor</button></li>
-                <li><button onClick={() => openRegistration(eventTickets[0]?.name || "General Admission")} className="hover:text-white transition-colors text-left cursor-pointer">Exhibitor Inquiries</button></li>
+                <li><button onClick={() => openRegistration(eventTickets[0]?.name || "General Admission")} className="hover:text-white transition-colors text-start rtl:text-right text-left cursor-pointer">Become a Sponsor</button></li>
+                <li><button onClick={() => openRegistration(eventTickets[0]?.name || "General Admission")} className="hover:text-white transition-colors text-start rtl:text-right text-left cursor-pointer">Exhibitor Inquiries</button></li>
               </ul>
             </div>
 
             <div className="space-y-3">
               <h4 className="text-xs font-extrabold text-white uppercase tracking-wider">Platform Features</h4>
               <ul className="space-y-2 text-slate-400">
-                <li><button onClick={onBackToHome} className="hover:text-white transition-colors text-left cursor-pointer">Explore All Summits</button></li>
+                <li><button onClick={onBackToHome} className="hover:text-white transition-colors text-start rtl:text-right text-left cursor-pointer">Explore All Summits</button></li>
                 <li><span className="text-slate-500">2D Drag-and-Drop Floor Plan</span></li>
                 <li><span className="text-slate-500">Instant QR Badge Generation</span></li>
                 <li><span className="text-slate-500">Real-Time Attendee Analytics</span></li>
@@ -2219,7 +2266,7 @@ export default function EventPublicLandingPage({
                         setLang(item.code);
                         setLangMenuOpen(false);
                       }}
-                      className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
+                      className={`w-full text-start rtl:text-right text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
                         lang === item.code 
                           ? "bg-blue-50 text-blue-600 font-bold" 
                           : "text-slate-700 hover:bg-slate-50"
@@ -2249,7 +2296,7 @@ export default function EventPublicLandingPage({
                 return (
                   <div className="max-w-xl mx-auto w-full">
                     {/* Confirmation Message & Action Suite */}
-                    <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-10 shadow-xs text-left space-y-6">
+                    <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-10 shadow-xs text-start rtl:text-right text-left space-y-6">
                       {isPendingRegistration ? (
                         <div className="space-y-2">
                           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
@@ -2373,7 +2420,7 @@ export default function EventPublicLandingPage({
               /* REGISTRATION IN PROGRESS: CLEAN FORM LEFT, A6 BADGE RIGHT    */
               /* ============================================================ */
               <div>
-                <div className="mb-6 space-y-1.5 text-left max-w-2xl mx-auto">
+                <div className="mb-6 space-y-1.5 text-start rtl:text-right text-left max-w-2xl mx-auto">
                   <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
                     {t("reg.title", "Event Registration")}
                   </h1>
@@ -2383,7 +2430,7 @@ export default function EventPublicLandingPage({
                 </div>
 
                 <div className="max-w-2xl mx-auto w-full">
-                  <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-xs text-left">
+                  <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-xs text-start rtl:text-right text-left">
                     <form onSubmit={isCheckoutLast ? handleRsvpSubmit : handleCheckoutNext} className="space-y-5">
                       
 
@@ -3077,6 +3124,24 @@ export default function EventPublicLandingPage({
                               <span>Next</span>
                               <ChevronRight size={16} />
                             </button>
+                          ) : isPaidTicket ? (
+                            <button
+                              type="submit"
+                              disabled={rsvpLoading}
+                              className="flex-1 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-2xl font-black text-xs sm:text-sm shadow-xl shadow-emerald-600/25 transition-all flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50"
+                            >
+                              {rsvpLoading ? (
+                                <>
+                                  <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                                  <span>Connecting to Chargily Pay...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <ShieldCheck size={18} className="text-emerald-200" />
+                                  <span>Pay with EDAHABIA / CIB ({Math.round(effectiveTicketPrice).toLocaleString()} DZD)</span>
+                                </>
+                              )}
+                            </button>
                           ) : (
                             <button
                               type="submit"
@@ -3095,6 +3160,14 @@ export default function EventPublicLandingPage({
                           )}
                         </div>
                       </div>
+
+                      {/* Chargily Security Badge */}
+                      {isPaidTicket && isCheckoutLast && (
+                        <div className="pt-2 flex items-center justify-center gap-2 text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                          <ShieldCheck size={12} className="text-emerald-600" />
+                          <span>100% Secure Payment via Chargily Pay (CIB &amp; EDAHABIA)</span>
+                        </div>
+                      )}
                     </form>
                   </div>
                 </div>
@@ -3141,7 +3214,7 @@ export default function EventPublicLandingPage({
                 </button>
               </div>
             ) : (
-              <form onSubmit={handleFeedbackSubmit} className="space-y-4 text-left">
+              <form onSubmit={handleFeedbackSubmit} className="space-y-4 text-start rtl:text-right text-left">
                 {activeFeedbackForm.fields.map(field => {
                   if (field.type === "section") {
                     return (

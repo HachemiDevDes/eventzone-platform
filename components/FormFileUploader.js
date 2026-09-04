@@ -6,6 +6,7 @@ import {
   Download, Eye, Trash2, FileSpreadsheet, Paperclip 
 } from "lucide-react";
 import { uploadMedia, deleteMedia } from "@/lib/storage";
+import { useLanguage } from "../lib/i18n";
 
 // Configuration for file types, accepted MIME/extensions, and visual styling
 export const FILE_TYPE_CONFIGS = {
@@ -92,6 +93,7 @@ export default function FormFileUploader({
   maxSizeMb = 10,
   eventId = null
 }) {
+  const { t } = useLanguage ? useLanguage() : { t: (k, d) => d };
   const fileInputRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState(null);
@@ -239,7 +241,7 @@ export default function FormFileUploader({
                   </span>
                 )}
                 <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
-                  <Check size={11} /> Ready
+                  <Check size={11} /> {t("forms.readyBadge", "Ready")}
                 </span>
               </div>
             </div>
@@ -253,7 +255,7 @@ export default function FormFileUploader({
                 target="_blank"
                 rel="noreferrer"
                 className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors"
-                title="Download / View document"
+                title={t("forms.downloadDocument", "Download / View document")}
               >
                 <Download size={15} />
               </a>
@@ -263,7 +265,7 @@ export default function FormFileUploader({
                 type="button"
                 onClick={handleRemove}
                 className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
-                title="Remove document"
+                title={t("forms.removeDocument", "Remove document")}
               >
                 <Trash2 size={15} />
               </button>
@@ -288,14 +290,14 @@ export default function FormFileUploader({
           </div>
 
           <div className="text-xs font-bold text-slate-800">
-            {placeholder || `Click to upload or drag & drop ${config.label}`}
+            {placeholder || t("forms.clickToUploadOrDrag", "Click to upload or drag & drop {label}").replace("{label}", config.label)}
           </div>
 
           <div className="text-[11px] text-slate-400 mt-1 flex items-center gap-2 flex-wrap justify-center font-medium">
             <span>{config.hint}</span>
             <span>•</span>
             <span className="inline-flex items-center gap-1 font-bold text-blue-700 bg-blue-50/80 px-2 py-0.5 rounded-full border border-blue-200/60">
-              Max 10 MB
+              <bdi dir="ltr">{t("forms.max10Mb", "Max 10 MB")}</bdi>
             </span>
           </div>
         </div>

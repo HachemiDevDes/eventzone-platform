@@ -311,7 +311,7 @@ export default function MainHomePage({
       >
         {heroEvents.length === 0 ? (
           <div className="relative z-10 max-w-7xl w-full mx-auto px-6 sm:px-8 py-16 flex flex-col md:flex-row items-center justify-between gap-10">
-            <div className="max-w-4xl space-y-5 text-left">
+            <div className="max-w-4xl space-y-5 text-start rtl:text-right text-left">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="px-3 py-1 rounded-full bg-blue-600/20 text-blue-400 border border-blue-500/30 text-xs font-extrabold uppercase tracking-wider flex items-center gap-1.5 shadow-xs backdrop-blur-md">
                   <Sparkles size={12} className="text-blue-400" />
@@ -347,7 +347,7 @@ export default function MainHomePage({
             </div>
 
             <div className="hidden lg:block w-96 shrink-0">
-              <div className="bg-slate-900/90 backdrop-blur-xl border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4 text-left">
+              <div className="bg-slate-900/90 backdrop-blur-xl border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4 text-start rtl:text-right text-left">
                 <div className="w-12 h-12 rounded-2xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
                   <Calendar size={24} />
                 </div>
@@ -384,7 +384,7 @@ export default function MainHomePage({
             {/* Hero Content Container */}
             <div className="relative z-10 max-w-7xl w-full mx-auto px-6 sm:px-8 py-16 sm:py-20 flex flex-col items-start justify-center">
               {/* Slide Details */}
-              <div className="max-w-5xl w-full space-y-6 text-left animate-fade-in">
+              <div className="max-w-5xl w-full space-y-6 text-start rtl:text-right text-left animate-fade-in">
 
 
                 {/* Title & Tagline */}
@@ -600,7 +600,7 @@ export default function MainHomePage({
                     </div>
 
                     {/* Card Content */}
-                    <div className="p-6 space-y-3 text-left rtl:text-right">
+                    <div className="p-6 space-y-3 text-start rtl:text-right text-left rtl:text-right">
                       <h3 
                         onClick={() => onViewLivePage(ev.id)}
                         className="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1 leading-snug cursor-pointer"
@@ -653,7 +653,7 @@ export default function MainHomePage({
 
           <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             {/* Left Content Column */}
-            <div className="lg:col-span-7 space-y-4 text-left">
+            <div className="lg:col-span-7 space-y-4 text-start rtl:text-right text-left">
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
                 {t("home.appShowcaseTitle", "Connect, Network & Scan in Real Time.")}
               </h2>
@@ -684,7 +684,7 @@ export default function MainHomePage({
         <div className="max-w-7xl mx-auto px-6 sm:px-8 space-y-12">
           {/* Top Row: Brand & Value + Newsletter */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pb-12 border-b border-slate-100 items-start">
-            <div className="lg:col-span-6 space-y-4 text-left">
+            <div className="lg:col-span-6 space-y-4 text-start rtl:text-right text-left">
               <div className="flex items-center gap-3">
                 <img src="https://i.imgur.com/jFDrQbM.png" alt="eventzone" style={{ height: '28px', width: 'auto', maxWidth: '160px', objectFit: 'contain' }} className="h-7 w-auto object-contain" />
                 <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-extrabold uppercase tracking-wider">
@@ -705,7 +705,7 @@ export default function MainHomePage({
             </div>
 
             {/* Newsletter Box */}
-            <div className="lg:col-span-6 bg-slate-50 border border-slate-200/90 rounded-3xl p-6 text-left space-y-3 shadow-xs">
+            <div className="lg:col-span-6 bg-slate-50 border border-slate-200/90 rounded-3xl p-6 text-start rtl:text-right text-left space-y-3 shadow-xs">
               <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
                 <Sparkles size={16} className="text-blue-600" />
                 <span>{t("footer.bulletinsTitle", "Get Early Access & Summit Bulletins")}</span>
@@ -731,7 +731,7 @@ export default function MainHomePage({
           </div>
 
           {/* Middle Row: Links Columns */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-left text-xs">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-start rtl:text-right text-left text-xs">
             <div className="space-y-3">
               <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">{t("footer.exploreGatherings", "Explore Gatherings")}</h4>
               <ul className="space-y-2 text-slate-500 font-medium">
@@ -746,19 +746,19 @@ export default function MainHomePage({
             <div className="space-y-3">
               <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">{t("footer.forOrganizers", "For Organizers")}</h4>
               <ul className="space-y-2 text-slate-500 font-medium">
-                <li><button onClick={() => onOpenEventsHub()} className="hover:text-blue-600 transition-colors text-left cursor-pointer">{t("eventsHub.title", "Organizer Event Center")}</button></li>
-                <li><button onClick={() => onOpenEventsHub()} className="hover:text-blue-600 transition-colors text-left cursor-pointer">{t("dash.floorPlans", "Floor Plans")}</button></li>
-                <li><button onClick={() => onOpenEventsHub()} className="hover:text-blue-600 transition-colors text-left cursor-pointer">{t("dash.checkIn", "Check-In Command")}</button></li>
-                <li><button onClick={() => onOpenEventsHub()} className="hover:text-blue-600 transition-colors text-left cursor-pointer">{t("dash.calendar", "Calendar & Agenda")}</button></li>
-                <li><button onClick={() => onOpenEventsHub()} className="hover:text-blue-600 transition-colors text-left cursor-pointer">{t("dash.tickets", "Ticket Passes")}</button></li>
+                <li><button onClick={() => onOpenEventsHub()} className="hover:text-blue-600 transition-colors text-start rtl:text-right text-left cursor-pointer">{t("eventsHub.title", "Organizer Event Center")}</button></li>
+                <li><button onClick={() => onOpenEventsHub()} className="hover:text-blue-600 transition-colors text-start rtl:text-right text-left cursor-pointer">{t("dash.floorPlans", "Floor Plans")}</button></li>
+                <li><button onClick={() => onOpenEventsHub()} className="hover:text-blue-600 transition-colors text-start rtl:text-right text-left cursor-pointer">{t("dash.checkIn", "Check-In Command")}</button></li>
+                <li><button onClick={() => onOpenEventsHub()} className="hover:text-blue-600 transition-colors text-start rtl:text-right text-left cursor-pointer">{t("dash.calendar", "Calendar & Agenda")}</button></li>
+                <li><button onClick={() => onOpenEventsHub()} className="hover:text-blue-600 transition-colors text-start rtl:text-right text-left cursor-pointer">{t("dash.tickets", "Ticket Passes")}</button></li>
               </ul>
             </div>
 
             <div className="space-y-3">
               <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">{t("footer.forAttendees", "For Attendees")}</h4>
               <ul className="space-y-2 text-slate-500 font-medium">
-                <li><button onClick={() => onOpenVisitorPasses && onOpenVisitorPasses()} className="hover:text-blue-600 transition-colors text-left cursor-pointer">{t("nav.myTickets", "My Tickets")}</button></li>
-                <li><button onClick={() => onOpenVisitorPasses && onOpenVisitorPasses()} className="hover:text-blue-600 transition-colors text-left cursor-pointer">{t("passes.downloadQR", "QR Code Passes")}</button></li>
+                <li><button onClick={() => onOpenVisitorPasses && onOpenVisitorPasses()} className="hover:text-blue-600 transition-colors text-start rtl:text-right text-left cursor-pointer">{t("nav.myTickets", "My Tickets")}</button></li>
+                <li><button onClick={() => onOpenVisitorPasses && onOpenVisitorPasses()} className="hover:text-blue-600 transition-colors text-start rtl:text-right text-left cursor-pointer">{t("passes.downloadQR", "QR Code Passes")}</button></li>
                 <li><a href="#explore" className="hover:text-blue-600 transition-colors">Claim Free Admission</a></li>
                 <li><a href="#explore" className="hover:text-blue-600 transition-colors">VIP Networking Lounges</a></li>
                 <li><a href="#explore" className="hover:text-blue-600 transition-colors">Venue Directions &amp; Transit</a></li>
@@ -807,7 +807,7 @@ export default function MainHomePage({
                   {t("home.passIssuedDesc", "Your digital ticket has been issued for")} <strong>{rsvpSuccess.eventTitle}</strong>.
                 </p>
 
-                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-left text-xs space-y-1.5">
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-start rtl:text-right text-left text-xs space-y-1.5">
                   <div className="flex justify-between"><span className="text-slate-500">{t("home.badgeId", "Badge ID")}:</span> <span className="font-mono font-bold text-blue-600">{rsvpSuccess.badgeCode}</span></div>
                   <div className="flex justify-between"><span className="text-slate-500">{t("home.tier", "Tier")}:</span> <span className="font-bold text-slate-900">{rsvpSuccess.ticketType}</span></div>
                   <div className="flex justify-between"><span className="text-slate-500">{t("home.status", "Status")}:</span> <span className="font-bold text-emerald-600">{t("home.confirmed", "Confirmed")}</span></div>
@@ -844,7 +844,7 @@ export default function MainHomePage({
                   {t("home.registeringFor", "Registering for")}: <strong className="text-slate-900">{rsvpEvent.title}</strong>
                 </p>
 
-                <form onSubmit={handleRsvpSubmit} className="space-y-4 text-left">
+                <form onSubmit={handleRsvpSubmit} className="space-y-4 text-start rtl:text-right text-left">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                       {t("home.fullName", "Your Full Name")}

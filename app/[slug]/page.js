@@ -191,6 +191,8 @@ export default function DynamicEventLandingPage() {
     return res;
   };
 
+  const { t } = useLanguage();
+
   if (isLoading) {
     return <LandingPageSkeleton />;
   }
@@ -202,17 +204,17 @@ export default function DynamicEventLandingPage() {
           <AlertCircle size={32} />
         </div>
         <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-2">
-          Event Not Found
+          {t("notFound.title", "Event Not Found")}
         </h1>
         <p className="text-sm text-slate-400 max-w-md mb-8 leading-relaxed">
-          The event you are looking for at <code className="text-blue-400 bg-slate-800 px-2 py-0.5 rounded font-mono">/{slug}</code> could not be found or has been moved.
+          {t("notFound.desc", "The event you are looking for could not be found or has been moved.")}
         </p>
         <button
           onClick={() => router.push("/")}
           className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-blue-600/30"
         >
           <Home size={14} />
-          <span>Browse All Events</span>
+          <span>{t("notFound.backHome", "Browse All Events")}</span>
         </button>
       </div>
     );

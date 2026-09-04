@@ -27,6 +27,7 @@ export default function OrganizerEventsHub({
   onSignOut,
   user
 }) {
+  const { t, isRTL } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all"); // "all" | "published" | "draft" | "archived"
 
@@ -71,10 +72,10 @@ export default function OrganizerEventsHub({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                Organizer Event Center
+                {t("eventsHub.title", "Organizer Event Center")}
               </h1>
               <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
-                Manage your hosted conferences, custom floor plans, agendas, and door check-ins.
+                {t("eventsHub.subtitle", "Manage your hosted conferences, custom floor plans, agendas, and door check-ins.")}
               </p>
             </div>
 
@@ -82,7 +83,7 @@ export default function OrganizerEventsHub({
               onClick={onCreateEventClick}
               className="self-start sm:self-auto px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-xs font-bold shadow-lg shadow-blue-600/30 transition-all cursor-pointer"
             >
-              Host New Event
+              {t("eventsHub.hostNewEvent", "Host New Event")}
             </button>
           </div>
 
@@ -90,9 +91,9 @@ export default function OrganizerEventsHub({
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex items-center justify-between">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Hosted Events</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t("eventsHub.totalHosted", "Total Hosted Events")}</span>
                 <h3 className="text-2xl font-black text-slate-900 mt-1">{events.length}</h3>
-                <span className="text-[11px] font-semibold text-blue-600 mt-0.5 inline-block">{totalPublished} Published</span>
+                <span className="text-[11px] font-semibold text-blue-600 mt-0.5 inline-block">{totalPublished} {t("eventsHub.published", "Published")}</span>
               </div>
               <div className="w-11 h-11 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
                 <Building2 size={20} />
@@ -101,9 +102,9 @@ export default function OrganizerEventsHub({
 
             <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex items-center justify-between">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Registered</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t("eventsHub.totalRegistered", "Total Registered")}</span>
                 <h3 className="text-2xl font-black text-slate-900 mt-1">{totalAttendees}</h3>
-                <span className="text-[11px] font-semibold text-emerald-600 mt-0.5 inline-block">Across all summits</span>
+                <span className="text-[11px] font-semibold text-emerald-600 mt-0.5 inline-block">{t("eventsHub.acrossAllSummits", "Across all summits")}</span>
               </div>
               <div className="w-11 h-11 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600">
                 <Users size={20} />
@@ -112,10 +113,10 @@ export default function OrganizerEventsHub({
 
             <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex items-center justify-between">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Est. Revenue</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t("eventsHub.estRevenue", "Est. Revenue")}</span>
                 <h3 className="text-2xl font-black text-slate-900 mt-1">{totalRevenue.toLocaleString()} <span className="text-sm font-bold text-slate-400">DZD</span></h3>
                 <span className="text-[11px] font-semibold text-slate-500 mt-0.5 inline-block">
-                  {events.length === 0 ? "No active sales" : "VIP & Standard"}
+                  {events.length === 0 ? t("eventsHub.noActiveSales", "No active sales") : t("eventsHub.vipAndStandard", "VIP & Standard")}
                 </span>
               </div>
               <div className="w-11 h-11 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600">
@@ -125,10 +126,10 @@ export default function OrganizerEventsHub({
 
             <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex items-center justify-between">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Active Floor Plans</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t("eventsHub.activeFloorPlans", "Active Floor Plans")}</span>
                 <h3 className="text-2xl font-black text-slate-900 mt-1">{totalFloorPlans}</h3>
                 <span className="text-[11px] font-semibold text-blue-600 mt-0.5 inline-block">
-                  {events.length === 0 ? "No floor plans" : "With 2D editor"}
+                  {events.length === 0 ? t("eventsHub.noFloorPlans", "No floor plans") : t("eventsHub.with2dEditor", "With 2D editor")}
                 </span>
               </div>
               <div className="w-11 h-11 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
@@ -145,7 +146,7 @@ export default function OrganizerEventsHub({
             <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="Search events by title or city..."
+              placeholder={t("eventsHub.searchPlaceholder", "Search events by title, location or category...")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all shadow-xs"
@@ -160,7 +161,7 @@ export default function OrganizerEventsHub({
                 statusFilter === "all" ? "bg-blue-600 text-white shadow-xs" : "text-slate-500 hover:text-slate-800"
               }`}
             >
-              Active Events ({events.length - totalArchived})
+              {t("eventsHub.allStatuses", "All Statuses")} ({events.length - totalArchived})
             </button>
             <button
               onClick={() => setStatusFilter("published")}
@@ -168,7 +169,7 @@ export default function OrganizerEventsHub({
                 statusFilter === "published" ? "bg-blue-600 text-white shadow-xs" : "text-slate-500 hover:text-slate-800"
               }`}
             >
-              Published ({totalPublished})
+              {t("eventsHub.published", "Published")} ({totalPublished})
             </button>
             <button
               onClick={() => setStatusFilter("draft")}
@@ -176,7 +177,7 @@ export default function OrganizerEventsHub({
                 statusFilter === "draft" ? "bg-blue-600 text-white shadow-xs" : "text-slate-500 hover:text-slate-800"
               }`}
             >
-              Drafts ({totalDrafts})
+              {t("eventsHub.drafts", "Drafts")} ({totalDrafts})
             </button>
             <button
               onClick={() => setStatusFilter("archived")}
@@ -184,7 +185,7 @@ export default function OrganizerEventsHub({
                 statusFilter === "archived" ? "bg-slate-700 text-white shadow-xs" : "text-slate-500 hover:text-slate-800"
               }`}
             >
-              Archived ({totalArchived})
+              {t("eventsHub.archived", "Archived")} ({totalArchived})
             </button>
           </div>
         </div>
@@ -196,17 +197,17 @@ export default function OrganizerEventsHub({
               <Building2 size={28} />
             </div>
             <h3 className="text-base font-bold text-slate-800">
-              {statusFilter === "archived" ? "No archived events" : "No events found"}
+              {statusFilter === "archived" ? t("eventsHub.archived", "No archived events") : t("eventsHub.noEventsTitle", "No events found")}
             </h3>
             <p className="text-xs text-slate-400 max-w-sm">
-              {searchQuery ? "Try refining your search query or filter" : statusFilter === "archived" ? "You haven't archived any events yet." : "Get started by hosting your very first event conference on Eventzone!"}
+              {searchQuery ? t("home.adjustSearchFilters", "Try refining your search query or filter") : t("eventsHub.noEventsDesc", "Create your first conference or summit to start managing schedules, floor plans, and tickets.")}
             </p>
             {statusFilter !== "archived" && (
               <button
                 onClick={onCreateEventClick}
                 className="mt-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-600/30 transition-all cursor-pointer"
               >
-                Create Event Now
+                {t("eventsHub.hostNewEvent", "Create Event Now")}
               </button>
             )}
           </div>
@@ -230,7 +231,7 @@ export default function OrganizerEventsHub({
                     
                     <div className="absolute top-3 left-3 flex items-center gap-2">
                       <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-white/90 backdrop-blur-md text-blue-700 shadow-xs border border-white/50 uppercase tracking-wider">
-                        {ev.type || "Hybrid"}
+                        {ev.type === "In-Person" ? t("eventsHub.inPerson", "In-Person") : ev.type === "Virtual" ? t("eventsHub.virtual", "Virtual") : t("eventsHub.hybrid", "Hybrid")}
                       </span>
                     </div>
 
@@ -242,13 +243,13 @@ export default function OrganizerEventsHub({
                             ? "bg-emerald-500 text-white" 
                             : "bg-amber-500 text-white"
                       }`}>
-                        {(ev.status || "published").toUpperCase()}
+                        {isArchived ? t("table.archived", "Archived").toUpperCase() : (ev.status || "published") === "published" ? t("eventsHub.published", "Published").toUpperCase() : t("eventsHub.draft", "Draft").toUpperCase()}
                       </span>
                     </div>
 
                     <div className="absolute bottom-3 left-3 right-3">
                       <span className="text-[10px] font-bold text-blue-200 uppercase tracking-wider block drop-shadow-sm">
-                        {ev.category || "General"}
+                        {ev.category || t("common.general", "General")}
                       </span>
                     </div>
                   </div>
@@ -292,7 +293,7 @@ export default function OrganizerEventsHub({
                             title="Restore Event"
                           >
                             <RotateCcw size={13} />
-                            <span>Restore</span>
+                            <span>{t("common.restore", "Restore")}</span>
                           </button>
                         ) : (
                           (onArchiveEvent || onDeleteEvent) && ev.id !== "c251ee33-cf10-4b11-a87f-70925f7cac2c" && (
@@ -305,7 +306,7 @@ export default function OrganizerEventsHub({
                               title="Archive Event"
                             >
                               <Archive size={13} />
-                              <span>Archive</span>
+                              <span>{t("common.archive", "Archive")}</span>
                             </button>
                           )
                         )}
@@ -317,7 +318,7 @@ export default function OrganizerEventsHub({
                           target="_blank"
                           rel="noopener noreferrer"
                           className="h-8 w-8 flex items-center justify-center bg-slate-100 hover:bg-blue-50 text-slate-500 hover:text-blue-600 rounded-xl transition-all cursor-pointer border border-slate-200/60"
-                          title="View Public Landing Page"
+                          title={t("eventsHub.publicPage", "View Public Landing Page")}
                         >
                           <ExternalLink size={13} />
                         </a>
@@ -326,7 +327,7 @@ export default function OrganizerEventsHub({
                           onClick={() => onSelectEvent(ev.id)}
                           className="h-8 px-3.5 bg-blue-50 hover:bg-blue-600 text-blue-700 hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer border border-blue-200/80 hover:border-blue-600 shadow-xs"
                         >
-                          Open Dashboard
+                          {t("eventsHub.openEvent", "Open Dashboard")}
                         </button>
                       </div>
                     </div>

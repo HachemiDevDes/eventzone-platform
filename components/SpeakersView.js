@@ -952,13 +952,13 @@ export default function SpeakersView({
             </div>
             <div>
               <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-                Speakers &amp; Moderators
+                {t("speakers.title", "Speakers & Moderators")}
                 <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-                  {speakersDirectory.length} Total
+                  {speakersDirectory.length} {t("speakers.totalBadge", "Total")}
                 </span>
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Assign speakers from attendees, schedule across sessions, and manage comprehensive speaker profiles.
+                {t("speakers.subtitle", "Assign speakers from attendees, schedule across sessions, and manage comprehensive speaker profiles.")}
               </p>
             </div>
           </div>
@@ -971,7 +971,7 @@ export default function SpeakersView({
             title="Export Speakers Roster to CSV"
           >
             <Download size={13} />
-            <span>Export Roster</span>
+            <span>{t("speakers.exportRoster", "Export Roster")}</span>
           </button>
 
           {onSwitchView && (
@@ -980,7 +980,7 @@ export default function SpeakersView({
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100 text-indigo-700 transition-all cursor-pointer"
             >
               <Calendar size={13} />
-              <span>Agenda Timeline</span>
+              <span>{t("speakers.agendaTimeline", "Agenda Timeline")}</span>
             </button>
           )}
 
@@ -992,7 +992,7 @@ export default function SpeakersView({
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-indigo-650 hover:bg-indigo-700 text-white transition-all shadow-sm cursor-pointer"
           >
             <Plus size={14} />
-            <span>Add / Assign Speaker</span>
+            <span>{t("speakers.addSpeaker", "Add / Assign Speaker")}</span>
           </button>
         </div>
       </header>
@@ -1003,66 +1003,66 @@ export default function SpeakersView({
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
         <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs flex flex-col justify-between">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
-            Total Experts
+            {t("speakers.totalExperts", "Total Experts")}
             <Users size={14} className="text-slate-400" />
           </span>
           <div className="text-2xl font-black text-slate-800 mt-2">
             {metrics.totalSpeakers}
           </div>
           <span className="text-[11px] text-slate-400 font-medium mt-1">
-            Speakers &amp; moderators
+            {t("speakers.speakersAndMods", "Speakers & moderators")}
           </span>
         </div>
 
         <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs flex flex-col justify-between">
           <span className="text-[10px] font-bold text-purple-600 uppercase tracking-wider flex items-center justify-between">
-            Keynotes
+            {t("speakers.keynotes", "Keynotes")}
             <Award size={14} className="text-purple-500" />
           </span>
           <div className="text-2xl font-black text-purple-700 mt-2">
             {metrics.keynotes}
           </div>
           <span className="text-[11px] text-slate-400 font-medium mt-1">
-            Headline speakers
+            {t("speakers.headlineSpeakers", "Headline speakers")}
           </span>
         </div>
 
         <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs flex flex-col justify-between">
           <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider flex items-center justify-between">
-            Moderators
+            {t("speakers.moderators", "Moderators")}
             <Mic2 size={14} className="text-amber-500" />
           </span>
           <div className="text-2xl font-black text-amber-700 mt-2">
             {metrics.moderators}
           </div>
           <span className="text-[11px] text-slate-400 font-medium mt-1">
-            Session chairs &amp; hosts
+            {t("speakers.sessionChairs", "Session chairs & hosts")}
           </span>
         </div>
 
         <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs flex flex-col justify-between">
           <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider flex items-center justify-between">
-            Agenda Coverage
+            {t("speakers.agendaCoverage", "Agenda Coverage")}
             <Calendar size={14} className="text-indigo-500" />
           </span>
           <div className="text-2xl font-black text-indigo-700 mt-2">
             {metrics.sessionsWithSpeakers} <span className="text-xs font-semibold text-slate-400">/ {metrics.totalSessions}</span>
           </div>
           <span className="text-[11px] text-slate-400 font-medium mt-1">
-            Sessions with assigned experts
+            {t("speakers.assignedSessions", "Assigned Sessions")}
           </span>
         </div>
 
         <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs flex flex-col justify-between">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
-            Unassigned
+            {t("speakers.allSources", "All Sources")}
             <UserX size={14} className="text-slate-400" />
           </span>
           <div className="text-2xl font-black text-slate-800 mt-2">
             {metrics.unassigned}
           </div>
           <span className="text-[11px] text-slate-400 font-medium mt-1">
-            General directory speakers
+            {t("speakers.sourceCustom", "External / Custom Speaker")}
           </span>
         </div>
       </div>
@@ -1078,7 +1078,7 @@ export default function SpeakersView({
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search speaker by name, company, job title, topic, or session..."
+            placeholder={t("speakers.searchPlaceholder", "Search speaker by name, company, topic, or bio...")}
             className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all"
           />
           {searchTerm && (
@@ -1099,14 +1099,14 @@ export default function SpeakersView({
               value={roleFilter}
               onChange={(val) => setRoleFilter(val)}
               options={[
-                { value: "all", label: "All Roles" },
-                { value: "Keynote", label: "Keynotes" },
-                { value: "Speaker", label: "Speakers" },
-                { value: "Moderator", label: "Moderators" },
-                { value: "Panelist", label: "Panelists" },
-                { value: "Workshop", label: "Workshop Hosts" },
+                { value: "all", label: t("speakers.allRoles", "All Roles") },
+                { value: "Keynote", label: t("speakers.keynotes", "Keynotes") },
+                { value: "Speaker", label: t("speakers.roleSpeaker", "Speakers") },
+                { value: "Moderator", label: t("speakers.moderators", "Moderators") },
+                { value: "Panelist", label: t("speakers.rolePanelist", "Panelists") },
+                { value: "Workshop", label: t("speakers.roleWorkshopHost", "Workshop Hosts") },
               ]}
-              placeholder="Role"
+              placeholder={t("speakers.allRoles", "Role")}
             />
           </div>
 
@@ -1116,15 +1116,15 @@ export default function SpeakersView({
               value={sessionFilter}
               onChange={(val) => setSessionFilter(val)}
               options={[
-                { value: "all", label: "All Sessions" },
-                { value: "unassigned", label: "⚠️ Unassigned Only" },
+                { value: "all", label: t("speakers.allSessions", "All Sessions") },
+                { value: "unassigned", label: t("speakers.sourceCustom", "Unassigned Only") },
                 ...sessions.map((s) => ({
                   value: String(s.id),
                   label: `${s.title || "Untitled"} (${s.startTime || "TBD"})`,
                 })),
               ]}
-              placeholder="Filter by Session"
-              searchPlaceholder="Search session..."
+              placeholder={t("speakers.allSessions", "Filter by Session")}
+              searchPlaceholder={t("speakers.searchPlaceholder", "Search session...")}
             />
           </div>
 
@@ -1134,11 +1134,11 @@ export default function SpeakersView({
               value={sourceFilter}
               onChange={(val) => setSourceFilter(val)}
               options={[
-                { value: "all", label: "All Sources" },
-                { value: "attendee", label: "From Attendees" },
-                { value: "custom", label: "External / VIP" },
+                { value: "all", label: t("speakers.allSources", "All Sources") },
+                { value: "attendee", label: t("speakers.sourceAttendee", "From Attendees") },
+                { value: "custom", label: t("speakers.sourceCustom", "External / VIP") },
               ]}
-              placeholder="Source"
+              placeholder={t("speakers.allSources", "Source")}
             />
           </div>
 
@@ -1148,13 +1148,13 @@ export default function SpeakersView({
               value={sortBy}
               onChange={(val) => setSortBy(val)}
               options={[
-                { value: "name_asc", label: "Name (A → Z)" },
-                { value: "name_desc", label: "Name (Z → A)" },
-                { value: "sessions_desc", label: "Most Sessions" },
-                { value: "sessions_asc", label: "Least Sessions" },
-                { value: "role", label: "By Role" },
+                { value: "name_asc", label: t("speakers.sortNameAsc", "Name (A-Z)") },
+                { value: "name_desc", label: t("speakers.sortNameDesc", "Name (Z-A)") },
+                { value: "sessions_desc", label: t("speakers.sortSessionsDesc", "Most Sessions") },
+                { value: "sessions_asc", label: t("speakers.sortSessionsDesc", "Least Sessions") },
+                { value: "role", label: t("speakers.allRoles", "By Role") },
               ]}
-              placeholder="Sort By"
+              placeholder={t("speakers.sortNameAsc", "Sort By")}
             />
           </div>
 
@@ -1193,11 +1193,11 @@ export default function SpeakersView({
             <Mic size={28} />
           </div>
           <div>
-            <h3 className="text-base font-bold text-slate-800">No speakers found</h3>
+            <h3 className="text-base font-bold text-slate-800">{t("speakers.noSpeakers", "No speakers found")}</h3>
             <p className="text-xs text-slate-500 max-w-md mt-1">
               {searchTerm || roleFilter !== "all" || sessionFilter !== "all"
-                ? "No speakers match the current filter criteria. Try clearing search filters."
-                : "No experts or moderators have been assigned yet. You can promote registered attendees to speakers or add new keynote guests."}
+                ? t("speakers.noSpeakersDesc", "No speakers match the current filter criteria. Try clearing search filters.")
+                : t("speakers.subtitle", "No experts or moderators have been assigned yet. You can promote registered attendees to speakers or add new keynote guests.")}
             </p>
           </div>
           <div className="flex items-center gap-2.5 mt-2">
@@ -1211,7 +1211,7 @@ export default function SpeakersView({
                 }}
                 className="px-3.5 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl border border-slate-200 cursor-pointer"
               >
-                Clear Filters
+                {t("speakers.resetFilters", "Clear Filters")}
               </button>
             )}
             <button
@@ -1222,7 +1222,7 @@ export default function SpeakersView({
               className="px-4 py-2 text-xs font-bold text-white bg-indigo-650 hover:bg-indigo-700 rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5"
             >
               <UserPlus size={13} />
-              <span>Assign from Attendees</span>
+              <span>{t("speakers.addSpeakerBtn", "Assign from Attendees")}</span>
             </button>
           </div>
         </div>
@@ -1237,7 +1237,7 @@ export default function SpeakersView({
               {/* Top Row: Role badge & More Menu */}
               <div className="flex items-center justify-between w-full mb-3">
                 <span className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full border ${getRoleBadge(speaker.role)}`}>
-                  {speaker.role}
+                  {t("speakers.role_" + (speaker.role || "").toLowerCase().replace(/[^a-z0-9]/g, "_"), speaker.role)}
                 </span>
 
                 <div className="flex items-center gap-1">
@@ -1247,7 +1247,7 @@ export default function SpeakersView({
                       title="Linked to registered attendee profile"
                     >
                       <Check size={10} />
-                      <span>Attendee</span>
+                      <span>{t("table.attendee", "Attendee")}</span>
                     </span>
                   )}
 
@@ -1301,7 +1301,7 @@ export default function SpeakersView({
 
                 {/* Talk Topic Preview (if any) */}
                 {speaker.topic && (
-                  <div className="w-full bg-slate-50 border border-slate-100 rounded-xl p-2 text-left mt-1">
+                  <div className="w-full bg-slate-50 border border-slate-100 rounded-xl p-2 text-start rtl:text-right text-left mt-1">
                     <span className="text-[9px] font-extrabold uppercase text-slate-400 flex items-center gap-1">
                       <BookOpen size={10} /> Topic:
                     </span>
@@ -1359,9 +1359,9 @@ export default function SpeakersView({
               </div>
 
               {/* Assigned Sessions Preview */}
-              <div className="border-t border-slate-100 pt-3 mt-3 w-full flex flex-col gap-1.5 text-left">
+              <div className="border-t border-slate-100 pt-3 mt-3 w-full flex flex-col gap-1.5 text-start rtl:text-right text-left">
                 <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  <span>Assigned Sessions</span>
+                  <span>{t("speakers.assignedSessions", "Assigned Sessions")}</span>
                   <span className="font-extrabold text-slate-600">{speaker.assignedSessions.length}</span>
                 </div>
 
@@ -1369,13 +1369,13 @@ export default function SpeakersView({
                   <div className="flex items-center justify-between bg-amber-50/60 border border-amber-200/70 rounded-xl p-2 text-amber-800">
                     <span className="text-[10px] font-semibold flex items-center gap-1">
                       <AlertCircle size={12} className="text-amber-600 shrink-0" />
-                      Unassigned
+                      {t("speakers.sourceCustom", "Unassigned")}
                     </span>
                     <button
                       onClick={() => setAssigningSpeaker(speaker)}
                       className="text-[10px] font-bold text-amber-800 hover:text-amber-950 underline cursor-pointer"
                     >
-                      + Assign
+                      + {t("speakers.quickAssign", "Assign")}
                     </button>
                   </div>
                 ) : (
@@ -1406,7 +1406,7 @@ export default function SpeakersView({
                   className="px-2 py-1.5 text-[11px] font-bold rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 transition-colors flex items-center justify-center gap-1 cursor-pointer"
                 >
                   <Calendar size={12} />
-                  <span>Sessions</span>
+                  <span>{t("speakers.sessions", "Sessions")}</span>
                 </button>
 
                 <button
@@ -1414,7 +1414,7 @@ export default function SpeakersView({
                   className="px-2 py-1.5 text-[11px] font-bold rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition-colors flex items-center justify-center gap-1 cursor-pointer"
                 >
                   <Pencil size={12} />
-                  <span>Edit Profile</span>
+                  <span>{t("speakers.editSpeaker", "Edit Profile")}</span>
                 </button>
               </div>
             </div>
@@ -1424,16 +1424,16 @@ export default function SpeakersView({
         /* TABLE LIST VIEW */
         <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-2xs">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-start rtl:text-right text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50/75 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
-                  <th className="py-3.5 px-5">Expert / Speaker</th>
-                  <th className="py-3.5 px-4">Role</th>
-                  <th className="py-3.5 px-4">Job Title &amp; Company</th>
-                  <th className="py-3.5 px-4">Assigned Agenda Sessions</th>
-                  <th className="py-3.5 px-4">Contact</th>
-                  <th className="py-3.5 px-4">Source</th>
-                  <th className="py-3.5 px-5 text-right">Actions</th>
+                  <th className="py-3.5 px-5">{t("speakers.roleSpeaker", "Expert / Speaker")}</th>
+                  <th className="py-3.5 px-4">{t("speakers.allRoles", "Role")}</th>
+                  <th className="py-3.5 px-4">{t("drawer.jobTitle", "Job Title")} &amp; {t("drawer.company", "Company")}</th>
+                  <th className="py-3.5 px-4">{t("speakers.assignedSessions", "Assigned Agenda Sessions")}</th>
+                  <th className="py-3.5 px-4">{t("speakers.contact", "Contact")}</th>
+                  <th className="py-3.5 px-4">{t("speakers.allSources", "Source")}</th>
+                  <th className="py-3.5 px-5 text-right">{t("table.colActions", "Actions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs">
@@ -1458,10 +1458,10 @@ export default function SpeakersView({
                       </div>
                     </td>
 
-                    {/* Role */}
+                    {/* {t("speakers.role", "Role")} */}
                     <td className="py-3 px-4">
                       <span className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full border ${getRoleBadge(spk.role)}`}>
-                        {spk.role}
+                        {t("speakers.role_" + (spk.role || "").toLowerCase().replace(/[^a-z0-9]/g, "_"), spk.role)}
                       </span>
                     </td>
 
@@ -1481,7 +1481,7 @@ export default function SpeakersView({
                     <td className="py-3 px-4">
                       {spk.assignedSessions.length === 0 ? (
                         <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                          Unassigned
+                          {t("speakers.unassigned", "Unassigned")}
                         </span>
                       ) : (
                         <div className="flex flex-wrap gap-1 max-w-xs">
@@ -1546,11 +1546,11 @@ export default function SpeakersView({
                     <td className="py-3 px-4">
                       {spk.isAttendee ? (
                         <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 flex items-center gap-1 w-fit">
-                          <Check size={10} /> Attendee
+                          <Check size={10} /> {t("table.attendee", "Attendee")}
                         </span>
                       ) : (
                         <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md w-fit">
-                          External
+                          {t("speakers.external", "External")}
                         </span>
                       )}
                     </td>
@@ -1562,13 +1562,13 @@ export default function SpeakersView({
                           onClick={() => setAssigningSpeaker(spk)}
                           className="px-2.5 py-1 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
                         >
-                          Sessions
+                          {t("speakers.sessions", "Sessions")}
                         </button>
                         <button
                           onClick={() => setEditingSpeaker({ ...spk })}
                           className="px-2.5 py-1 text-indigo-650 hover:text-indigo-800 hover:bg-indigo-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
                         >
-                          Edit
+                          {t("common.edit", "Edit")}
                         </button>
                         <button
                           onClick={() => setSpeakerToDelete(spk)}
@@ -1596,9 +1596,9 @@ export default function SpeakersView({
             {/* Header */}
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
-                <h3 className="text-lg font-bold text-slate-900">Add / Assign Speaker</h3>
+                <h3 className="text-lg font-bold text-slate-900">{t("speakers.modalAddTitle", "Add / Assign Speaker")}</h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Promote a registered attendee to a speaker, or add an external keynote guest.
+                  {t("speakers.modalAddSubtitle", "Promote a registered attendee to a speaker, or add an external keynote guest.")}
                 </p>
               </div>
               <button
@@ -1621,7 +1621,7 @@ export default function SpeakersView({
                 }`}
               >
                 <UserCheck size={14} />
-                <span>Assign from Registered Attendees</span>
+                <span>{t("speakers.assignFromAttendees", "Assign from Registered Attendees")}</span>
               </button>
               <button
                 type="button"
@@ -1636,7 +1636,7 @@ export default function SpeakersView({
                 }`}
               >
                 <UserPlus size={14} />
-                <span>Create New Speaker (VIP / Guest)</span>
+                <span>{t("speakers.createNewSpeaker", "Create New Speaker (VIP / Guest)")}</span>
               </button>
             </div>
 
@@ -1645,7 +1645,7 @@ export default function SpeakersView({
               {addMode === "attendee" && (
                 <div className="flex flex-col gap-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    Select Registered Attendee *
+                    {t("speakers.selectAttendee", "Select Registered Attendee")} *
                   </label>
                   <SearchableSelect
                     value={selectedAttendeeId}
@@ -1654,12 +1654,12 @@ export default function SpeakersView({
                       value: String(a.id),
                       label: `${a.name || "Unnamed"} (${a.email || "No email"}) • ${a.ticketType || a.ticket_type || "Pass"}`,
                     }))}
-                    placeholder="-- Search & Choose Attendee --"
+                    placeholder={t("speakers.searchChooseAttendee", "-- Search & Choose Attendee --")}
                     searchPlaceholder="Search attendee by name, email, or ticket..."
                     required
                   />
                   <p className="text-[11px] text-slate-400 mt-0.5">
-                    Selecting an attendee will auto-populate their profile and grant them Speaker status.
+                    {t("speakers.attendeeAutoPopulateDesc", "Selecting an attendee will auto-populate their profile and grant them Speaker status.")}
                   </p>
                 </div>
               )}
@@ -1668,7 +1668,7 @@ export default function SpeakersView({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    Speaker Full Name *
+                    {t("speakers.fullName", "Speaker Full Name")} *
                   </label>
                   <input
                     type="text"
@@ -1687,7 +1687,7 @@ export default function SpeakersView({
                   <SearchableSelect
                     value={addRole}
                     onChange={(val) => setAddRole(val)}
-                    options={SPEAKER_ROLES}
+                    options={SPEAKER_ROLES.map(r => ({ ...r, label: t("speakers.role_" + r.value.toLowerCase().replace(/[^a-z0-9]/g, "_"), r.label) }))}
                     placeholder="Select Role"
                     required
                   />
@@ -1698,7 +1698,7 @@ export default function SpeakersView({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    Job Title / Headline
+                    {t("speakers.jobTitleHeadline", "Job Title / Headline")}
                   </label>
                   <input
                     type="text"
@@ -1711,7 +1711,7 @@ export default function SpeakersView({
 
                 <div className="flex flex-col gap-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    Organization / Company
+                    {t("table.companyOrg", "Organization / Company")}
                   </label>
                   <input
                     type="text"
@@ -1727,7 +1727,7 @@ export default function SpeakersView({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    Email Address
+                    {t("common.email", "Email Address")}
                   </label>
                   <input
                     type="email"
@@ -1740,7 +1740,7 @@ export default function SpeakersView({
 
                 <div className="flex flex-col gap-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    Phone Number (Optional)
+                    {t("speakers.phoneOptional", "Phone Number (Optional)")}
                   </label>
                   <input
                     type="tel"
@@ -1755,7 +1755,7 @@ export default function SpeakersView({
               {/* Presentation Topic / Keynote Title */}
               <div className="flex flex-col gap-1">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  Presentation / Keynote Topic
+                  {t("speakers.topicLabel", "Presentation / Keynote Topic")}
                 </label>
                 <input
                   type="text"
@@ -1766,7 +1766,7 @@ export default function SpeakersView({
                 />
               </div>
 
-              {/* Assign to Agenda Sessions */}
+              {/* {t("speakers.assignSessions", "Assign to Agenda Sessions")} */}
               <div className="flex flex-col gap-1">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                   Assign to Agenda Sessions
@@ -1816,7 +1816,7 @@ export default function SpeakersView({
               {/* Photo Upload & Preview */}
               <div className="flex flex-col gap-1">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
-                  <span>Speaker Photo</span>
+                  <span>{t("speakers.speakerPhoto", "Speaker Photo")}</span>
                   <span className="font-normal lowercase text-[10px] text-slate-400">PNG, JPG up to 5MB</span>
                 </label>
                 <div className="flex items-center gap-3">
@@ -1838,7 +1838,7 @@ export default function SpeakersView({
                     ) : (
                       <Camera size={14} />
                     )}
-                    <span>{isUploadingPhoto ? "Uploading..." : addPhoto ? "Change Photo" : "Upload High-Res Photo"}</span>
+                    <span>{isUploadingPhoto ? t("common.uploading", "Uploading...") : addPhoto ? t("common.changePhoto", "Change Photo") : t("speakers.uploadPhoto", "Upload High-Res Photo")}</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -1910,7 +1910,7 @@ export default function SpeakersView({
               {/* Bio / Description */}
               <div className="flex flex-col gap-1">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  Speaker Bio / Introduction
+                  {t("speakers.bioIntro", "Speaker Bio / Introduction")}
                 </label>
                 <textarea
                   rows={3}
@@ -1930,7 +1930,7 @@ export default function SpeakersView({
                     onChange={(e) => setAddCreatePass(e.target.checked)}
                     className="rounded border-slate-300 text-indigo-650 focus:ring-indigo-500"
                   />
-                  <span>Also generate a verified Speaker Pass in the Attendees list with badge code</span>
+                  <span>{t("speakers.generatePassNotice", "Also generate a verified Speaker Pass in the Attendees list with badge code")}</span>
                 </label>
               )}
 
@@ -1941,13 +1941,13 @@ export default function SpeakersView({
                   onClick={resetAddForm}
                   className="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold text-xs cursor-pointer"
                 >
-                  Cancel
+                  {t("common.cancel", "Cancel")}
                 </button>
                 <button
                   type="submit"
                   className="px-5 py-2.5 rounded-xl bg-indigo-650 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm cursor-pointer"
                 >
-                  Confirm &amp; Add Speaker
+                  {t("speakers.confirmAddSpeaker", "Confirm & Add Speaker")}
                 </button>
               </div>
             </form>
@@ -2032,7 +2032,7 @@ export default function SpeakersView({
                     <SearchableSelect
                       value={editingSpeaker.role}
                       onChange={(val) => setEditingSpeaker({ ...editingSpeaker, role: val })}
-                      options={SPEAKER_ROLES}
+                      options={SPEAKER_ROLES.map(r => ({ ...r, label: t("speakers.role_" + r.value.toLowerCase().replace(/[^a-z0-9]/g, "_"), r.label) }))}
                       placeholder="Select Role"
                       required
                     />
@@ -2427,7 +2427,7 @@ export default function SpeakersView({
               <button
                 type="button"
                 onClick={() => handleConfirmDelete("all_sessions")}
-                className="w-full text-left p-3 rounded-2xl border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/50 transition-all text-xs cursor-pointer group"
+                className="w-full text-start rtl:text-right text-left p-3 rounded-2xl border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/50 transition-all text-xs cursor-pointer group"
               >
                 <span className="font-bold text-slate-800 group-hover:text-indigo-700 block">
                   Remove from all sessions
@@ -2441,7 +2441,7 @@ export default function SpeakersView({
                 <button
                   type="button"
                   onClick={() => handleConfirmDelete("demote")}
-                  className="w-full text-left p-3 rounded-2xl border border-rose-200 hover:border-rose-300 hover:bg-rose-50/50 transition-all text-xs cursor-pointer group"
+                  className="w-full text-start rtl:text-right text-left p-3 rounded-2xl border border-rose-200 hover:border-rose-300 hover:bg-rose-50/50 transition-all text-xs cursor-pointer group"
                 >
                   <span className="font-bold text-rose-700 block">
                     Remove completely &amp; demote to Standard Attendee

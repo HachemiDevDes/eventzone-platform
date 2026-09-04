@@ -887,12 +887,11 @@ export default function ProfileView({
             </button>
           </div>
         </div>
-
         {/* ================================================================== */}
         {/* TAB 1: GENERAL INFORMATION                                         */}
         {/* ================================================================== */}
         {activeTab === "general" && (
-          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-4 sm:p-8 shadow-sm space-y-4 sm:space-y-6 text-left animate-fade-in">
+          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-4 sm:p-8 shadow-sm space-y-4 sm:space-y-6 text-start animate-fade-in">
             <div className="border-b border-slate-100 pb-3 sm:pb-4">
               <h2 className="text-sm font-bold text-slate-900">Personal &amp; Organization Details</h2>
               <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 leading-relaxed">
@@ -987,7 +986,7 @@ export default function ProfileView({
         {/* TAB 2: WHAT I'M LOOKING FOR                                         */}
         {/* ================================================================== */}
         {activeTab === "looking_for" && (
-          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-4 sm:p-8 shadow-sm space-y-4 sm:space-y-6 text-left animate-fade-in">
+          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-4 sm:p-8 shadow-sm space-y-4 sm:space-y-6 text-start animate-fade-in">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 border-b border-slate-100 pb-3 sm:pb-4">
               <div>
                 <h2 className="text-sm font-bold text-slate-900">
@@ -1044,7 +1043,7 @@ export default function ProfileView({
                   <div
                     key={opt.id}
                     onClick={() => toggleLookingFor(opt.id)}
-                    className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 text-left ${
+                    className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 text-start ${
                       isSelected
                         ? "bg-blue-50/50 border-blue-500 ring-1 ring-blue-500/20"
                         : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/50"
@@ -1100,7 +1099,7 @@ export default function ProfileView({
         {/* TAB 3: INTERESTS & MATCHMAKING                                     */}
         {/* ================================================================== */}
         {activeTab === "interests" && (
-          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-4 sm:p-8 shadow-sm space-y-4 sm:space-y-6 text-left animate-fade-in">
+          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-4 sm:p-8 shadow-sm space-y-4 sm:space-y-6 text-start animate-fade-in">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 border-b border-slate-100 pb-3 sm:pb-4">
               <div>
                 <h2 className="text-sm font-bold text-slate-900">Networking &amp; Matchmaking Interests</h2>
@@ -1196,7 +1195,7 @@ export default function ProfileView({
         {/* TAB 4: SOCIAL & WEB LINKS                                          */}
         {/* ================================================================== */}
         {activeTab === "socials" && (
-          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-4 sm:p-8 shadow-sm space-y-4 sm:space-y-6 text-left animate-fade-in">
+          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-4 sm:p-8 shadow-sm space-y-4 sm:space-y-6 text-start animate-fade-in">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-100 pb-3 sm:pb-4">
               <div>
                 <h2 className="text-sm font-bold text-slate-900">Social &amp; Web Links</h2>
@@ -1290,8 +1289,8 @@ export default function ProfileView({
         )}
 
         {/* BOTTOM SAVE BAR */}
-        <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 text-center sm:text-left">
-          <div className="text-center sm:text-left">
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 text-center sm:text-start rtl:text-right text-left">
+          <div className="text-center sm:text-start rtl:text-right text-left">
             {saveSuccess ? (
               <span className="text-xs font-semibold text-emerald-600 animate-fade-in block">
                 Profile updated &amp; synced across platform &amp; mobile app.
@@ -1326,7 +1325,7 @@ export default function ProfileView({
       {/* ==================================================================== */}
       {isSocialModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-3.5 sm:p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-5 sm:p-6 max-w-md w-full shadow-2xl space-y-4 sm:space-y-5 text-left animate-scale-up">
+          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-5 sm:p-6 max-w-md w-full shadow-2xl space-y-4 sm:space-y-5 text-start rtl:text-right text-left animate-scale-up">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-sm font-bold text-slate-900">
                 {editingSocialId ? "Edit Social Link" : "Add Social Link"}

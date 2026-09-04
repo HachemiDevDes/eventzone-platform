@@ -168,7 +168,7 @@ export default function UniversalTopBar({
                       setLang(item.code);
                       setLangMenuOpen(false);
                     }}
-                    className={`w-full text-left rtl:text-right px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
+                    className={`w-full text-start px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
                       lang === item.code 
                         ? "bg-blue-50 text-blue-600 font-bold" 
                         : "text-slate-700 hover:bg-slate-50"
@@ -221,7 +221,7 @@ export default function UniversalTopBar({
                     setProfileOpen(false);
                     if (onOpenProfile) onOpenProfile();
                   }}
-                  className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold text-slate-800 hover:bg-slate-50 flex items-center gap-2.5 transition-colors cursor-pointer"
+                  className="w-full text-start px-3 py-2.5 rounded-xl text-xs font-bold text-slate-800 hover:bg-slate-50 flex items-center gap-2.5 transition-colors cursor-pointer"
                 >
                   <User size={15} className="text-slate-500 shrink-0" />
                   <span>{t("nav.myProfile", "My Profile")}</span>
@@ -237,7 +237,7 @@ export default function UniversalTopBar({
                       window.location.href = "/?view=my-tickets";
                     }
                   }}
-                  className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold text-emerald-700 hover:bg-emerald-50 flex items-center justify-between transition-colors cursor-pointer"
+                  className="w-full text-start px-3 py-2.5 rounded-xl text-xs font-bold text-emerald-700 hover:bg-emerald-50 flex items-center justify-between transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
                     <Ticket size={15} className="text-emerald-600 shrink-0" />
@@ -258,7 +258,7 @@ export default function UniversalTopBar({
                       onOpenEventsHub();
                     }
                   }}
-                  className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold text-blue-600 hover:bg-blue-50 flex items-center gap-2.5 transition-colors cursor-pointer"
+                  className="w-full text-start px-3 py-2.5 rounded-xl text-xs font-bold text-blue-600 hover:bg-blue-50 flex items-center gap-2.5 transition-colors cursor-pointer"
                 >
                   <Plus size={15} className="text-blue-600 shrink-0 stroke-[2.5]" />
                   <span>{t("nav.addEvent", "Add an Event")}</span>
@@ -270,7 +270,7 @@ export default function UniversalTopBar({
                     setProfileOpen(false);
                     if (onOpenEventsHub) onOpenEventsHub();
                   }}
-                  className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold text-slate-800 hover:bg-slate-50 flex items-center gap-2.5 transition-colors cursor-pointer"
+                  className="w-full text-start px-3 py-2.5 rounded-xl text-xs font-bold text-slate-800 hover:bg-slate-50 flex items-center gap-2.5 transition-colors cursor-pointer"
                 >
                   <Building2 size={15} className="text-slate-600 shrink-0" />
                   <span>{t("nav.eventManagerCenter", "Event Manager Center")}</span>
@@ -284,7 +284,7 @@ export default function UniversalTopBar({
                     setProfileOpen(false);
                     if (onSignOut) onSignOut();
                   }}
-                  className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-2.5 transition-colors cursor-pointer"
+                  className="w-full text-start px-3 py-2 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-2.5 transition-colors cursor-pointer"
                 >
                   <LogOut size={15} className="text-rose-500 shrink-0" />
                   <span>{t("nav.signOut", "Sign Out")}</span>

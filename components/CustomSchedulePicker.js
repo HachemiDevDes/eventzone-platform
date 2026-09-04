@@ -86,7 +86,7 @@ export default function CustomSchedulePicker({
         type="button"
         disabled={disabled}
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full px-3.5 py-2.5 bg-slate-50 hover:bg-white border rounded-xl text-xs font-semibold text-left flex items-center justify-between transition-all cursor-pointer ${
+        className={`w-full px-3.5 py-2.5 bg-slate-50 hover:bg-white border rounded-xl text-xs font-semibold text-start rtl:text-right text-left flex items-center justify-between transition-all cursor-pointer ${
           isOpen 
             ? "border-blue-600 bg-white ring-4 ring-blue-50 shadow-xs" 
             : "border-slate-200 hover:border-slate-300"
@@ -147,7 +147,7 @@ export default function CustomSchedulePicker({
                   key={preset}
                   type="button"
                   onClick={() => handleSelectPreset(preset)}
-                  className={`w-full py-1.5 px-3 rounded-xl text-left text-xs font-bold transition-colors cursor-pointer ${
+                  className={`w-full py-1.5 px-3 rounded-xl text-start rtl:text-right text-left text-xs font-bold transition-colors cursor-pointer ${
                     value === preset
                       ? "bg-blue-50 text-blue-700 border border-blue-200"
                       : "bg-slate-50 hover:bg-slate-100 text-slate-700"

@@ -5,15 +5,17 @@ import { Globe, MapPin, Loader2 } from "lucide-react";
 import { COUNTRIES } from "./CountryPhoneInput";
 import { getCitiesForCountry, fetchCitiesForCountryOnline } from "../lib/formPresets";
 import SearchableSelect from "./SearchableSelect";
+import { useLanguage } from "../lib/i18n";
 
 export function CountrySelect({
   value = "",
   onChange,
   required = false,
   disabled = false,
-  placeholder = "Select your country...",
+  placeholder = "",
   className = ""
 }) {
+  const { t } = useLanguage ? useLanguage() : { t: (k, d) => d };
   const countryOptions = useMemo(() => {
     return COUNTRIES.map(c => ({
       value: c.name,
@@ -28,8 +30,8 @@ export function CountrySelect({
         value={value}
         onChange={(val) => onChange && onChange(val)}
         options={countryOptions}
-        placeholder={placeholder}
-        searchPlaceholder="Search country..."
+        placeholder={placeholder || t("forms.selectCountryPlaceholder", "Select your country...")}
+        searchPlaceholder={t("common.searchCountryCode", "Search country or code...")}
         required={required}
         disabled={disabled}
       />
@@ -43,9 +45,10 @@ export function CitySelect({
   country = "",
   required = false,
   disabled = false,
-  placeholder = "Select or enter your city...",
+  placeholder = "",
   className = ""
 }) {
+  const { t } = useLanguage ? useLanguage() : { t: (k, d) => d };
   const [dynamicCities, setDynamicCities] = useState([]);
   const [isLoadingCities, setIsLoadingCities] = useState(false);
   const [isCustomCity, setIsCustomCity] = useState(false);
@@ -81,13 +84,14 @@ export function CitySelect({
   }, [dynamicCities, country]);
 
   if (cityOptions.length > 0 && !isCustomCity) {
-    const fullOptions = [...cityOptions, "Other (Type custom city)"];
+    const otherCustomLabel = t("forms.otherCustomCity", "Other (Type custom city)");
+    const fullOptions = [...cityOptions, otherCustomLabel];
     return (
       <div className={`relative ${className}`}>
         <SearchableSelect
           value={value}
           onChange={(val) => {
-            if (val === "Other (Type custom city)") {
+            if (val === otherCustomLabel || val === "Other (Type custom city)") {
               setIsCustomCity(true);
               if (onChange) onChange("");
             } else {
@@ -95,13 +99,13 @@ export function CitySelect({
             }
           }}
           options={fullOptions}
-          placeholder={placeholder || (country ? `Select city in ${country}...` : "Select city...")}
-          searchPlaceholder={country ? `Search city in ${country}...` : "Search wilaya or city..."}
+          placeholder={placeholder || (country ? t("forms.selectCityInCountry", "Select city in {country}...").replace("{country}", country) : t("forms.selectCityFallback", "Select city..."))}
+          searchPlaceholder={country ? t("forms.searchCityInCountry", "Search city in {country}...").replace("{country}", country) : t("forms.searchCityPlaceholder", "Search wilaya or city...")}
           required={required}
           disabled={disabled}
         />
         {isLoadingCities && (
-          <div className="absolute right-9 top-1/2 -translate-y-1/2 pointer-events-none text-blue-500">
+          <div className="absolute end-9 top-1/2 -translate-y-1/2 pointer-events-none text-blue-500">
             <Loader2 size={12} className="animate-spin" />
           </div>
         )}
@@ -135,7 +139,7 @@ export function CitySelect({
           onClick={() => setIsCustomCity(false)}
           className="mt-1 text-[10px] font-bold text-blue-600 hover:underline cursor-pointer"
         >
-          ← Choose from searchable list
+          ← {t("forms.chooseFromList", "Choose from searchable list")}
         </button>
       )}
     </div>

@@ -8,6 +8,7 @@ import {
   Smartphone, Share2, Award, Tag, Info, ArrowUpRight
 } from "lucide-react";
 import CountryPhoneInput from "./CountryPhoneInput";
+import { useLanguage } from "../lib/i18n";
 
 // Social Brand SVG Icons
 const LinkedinIcon = ({ size = 14, className = "" }) => (
@@ -76,6 +77,7 @@ export default function ProfileModal({
   currentUser, 
   onSaveProfile 
 }) {
+  const { t, lang, isRTL } = useLanguage();
   const [activeTab, setActiveTab] = useState("general"); // 'general' | 'interests' | 'socials'
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -207,23 +209,21 @@ export default function ProfileModal({
             <div className="w-10 h-10 rounded-2xl bg-blue-600/10 text-blue-600 flex items-center justify-center border border-blue-200/60 shadow-xs">
               <User size={20} />
             </div>
-            <div className="text-left">
+            <div className="text-start">
               <div className="flex items-center gap-2">
-                <h3 className="text-base font-extrabold text-slate-900 leading-tight">My Networking Profile</h3>
+                <h3 className="text-base font-extrabold text-slate-900 leading-tight">{t("profile.title", "My Networking Profile")}</h3>
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[10px] font-bold text-emerald-700">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Cloud Sync Active
+                  {t("profile.cloudSync", "Cloud Sync Active")}
                 </span>
               </div>
-              <p className="text-xs text-slate-500">
-                Shared in real time between the Eventzone Web Platform and Mobile Companion App.
-              </p>
+              <p className="text-xs text-slate-500 font-medium">{t("profile.subtitle", "Control what fellow attendees and partners see during events")}</p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-white hover:bg-slate-100 border border-slate-200 text-slate-400 hover:text-slate-700 flex items-center justify-center transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-slate-700 flex items-center justify-center transition-colors cursor-pointer"
           >
             <X size={18} />
           </button>
@@ -242,7 +242,7 @@ export default function ProfileModal({
             }`}
           >
             <User size={14} />
-            <span>General Info</span>
+            <span>{t("profile.generalInfo", "General Info")}</span>
           </button>
 
           <button
@@ -254,7 +254,7 @@ export default function ProfileModal({
             }`}
           >
             <Tag size={14} />
-            <span>Interests &amp; Matchmaking</span>
+            <span>{t("profile.networkingInterests", "Interests & Matchmaking")}</span>
             <span className="ml-1 px-1.5 py-0.2 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black">
               {interests.length}
             </span>
@@ -269,7 +269,7 @@ export default function ProfileModal({
             }`}
           >
             <Globe size={14} />
-            <span>Social &amp; Web Links</span>
+            <span>{t("profile.socialProfiles", "Social & Web Links")}</span>
           </button>
         </div>
 
@@ -278,7 +278,7 @@ export default function ProfileModal({
         {/* ================================================================ */}
         <div className="p-6 overflow-y-auto flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Left Column: Form Controls */}
-          <div className="lg:col-span-7 space-y-6 text-left">
+          <div className="lg:col-span-7 space-y-6 text-start">
             {/* TAB 1: GENERAL INFO */}
             {activeTab === "general" && (
               <div className="space-y-4">
@@ -621,7 +621,7 @@ export default function ProfileModal({
             </div>
 
             {/* Mobile Card Preview Shell */}
-            <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 rounded-3xl p-5 border border-slate-800 text-white shadow-xl text-left space-y-4">
+            <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 rounded-3xl p-5 border border-slate-800 text-white shadow-xl text-start space-y-4">
               {/* App Status Header */}
               <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
                 <div className="flex items-center gap-1.5">
@@ -740,7 +740,7 @@ export default function ProfileModal({
             {saveSuccess ? (
               <span className="inline-flex items-center gap-1.5 text-emerald-600 font-bold animate-fade-in">
                 <Check size={15} />
-                Profile updated &amp; synced across platform &amp; app!
+                {t("profile.saveSuccess", "Profile updated successfully!")}
               </span>
             ) : (
               <span>All changes automatically sync with your QR pass.</span>
@@ -754,7 +754,7 @@ export default function ProfileModal({
               disabled={saving}
               className="px-4 py-2 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
             >
-              Cancel
+              {t("drawer.cancel", "Cancel")}
             </button>
 
             <button
@@ -766,12 +766,12 @@ export default function ProfileModal({
               {saving ? (
                 <>
                   <Loader2 size={14} className="animate-spin" />
-                  <span>Saving &amp; Syncing...</span>
+                  <span>{t("profile.saving", "Saving...")}</span>
                 </>
               ) : (
                 <>
                   <Check size={14} />
-                  <span>Save Changes</span>
+                  <span>{t("profile.save", "Save Profile")}</span>
                 </>
               )}
             </button>

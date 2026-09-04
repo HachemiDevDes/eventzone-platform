@@ -19,7 +19,7 @@ export function Skeleton({ className = "", ...props }) {
  */
 export function OverviewSkeleton() {
   return (
-    <div className="space-y-8 animate-fade-in text-left">
+    <div className="space-y-8 animate-fade-in text-start rtl:text-right text-left">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div className="space-y-2">
@@ -137,7 +137,7 @@ export function OverviewSkeleton() {
  */
 export function TableViewSkeleton({ rowsCount = 8 }) {
   return (
-    <div className="space-y-6 animate-fade-in text-left">
+    <div className="space-y-6 animate-fade-in text-start rtl:text-right text-left">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div className="space-y-2">
@@ -245,7 +245,7 @@ export function TableViewSkeleton({ rowsCount = 8 }) {
  */
 export function CalendarSkeleton() {
   return (
-    <div className="space-y-6 animate-fade-in text-left">
+    <div className="space-y-6 animate-fade-in text-start rtl:text-right text-left">
       {/* Header & Controls */}
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div className="space-y-2">
@@ -314,7 +314,7 @@ export function CalendarSkeleton() {
  */
 export function AnalyticsSkeleton() {
   return (
-    <div className="space-y-6 animate-fade-in text-left">
+    <div className="space-y-6 animate-fade-in text-start rtl:text-right text-left">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div className="space-y-2">
@@ -397,7 +397,7 @@ export function AnalyticsSkeleton() {
  */
 export function LogisticsSkeleton() {
   return (
-    <div className="space-y-6 animate-fade-in text-left">
+    <div className="space-y-6 animate-fade-in text-start rtl:text-right text-left">
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div className="space-y-2">
           <Skeleton className="h-8 w-52 rounded-2xl" />
@@ -456,7 +456,7 @@ export function LogisticsSkeleton() {
  */
 export function DocumentsSkeleton() {
   return (
-    <div className="space-y-6 animate-fade-in text-left">
+    <div className="space-y-6 animate-fade-in text-start rtl:text-right text-left">
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div className="space-y-2">
           <Skeleton className="h-8 w-52 rounded-2xl" />
@@ -503,7 +503,7 @@ export function DocumentsSkeleton() {
  */
 export function FormsSkeleton() {
   return (
-    <div className="space-y-6 animate-fade-in text-left">
+    <div className="space-y-6 animate-fade-in text-start rtl:text-right text-left">
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div className="space-y-2">
           <Skeleton className="h-8 w-56 rounded-2xl" />
@@ -540,7 +540,7 @@ export function FormsSkeleton() {
  */
 export function RSVPSkeleton() {
   return (
-    <div className="space-y-6 animate-fade-in text-left">
+    <div className="space-y-6 animate-fade-in text-start rtl:text-right text-left">
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div className="space-y-2">
           <Skeleton className="h-8 w-52 rounded-2xl" />
@@ -590,7 +590,7 @@ export function RSVPSkeleton() {
  */
 export function EventDetailsSkeleton() {
   return (
-    <div className="space-y-6 animate-fade-in text-left">
+    <div className="space-y-6 animate-fade-in text-start rtl:text-right text-left">
       <div className="flex justify-between items-center">
         <div className="space-y-2">
           <Skeleton className="h-8 w-56 rounded-2xl" />
@@ -648,7 +648,7 @@ export function EventDetailsSkeleton() {
  */
 export function FloorPlanSkeleton() {
   return (
-    <div className="space-y-6 animate-fade-in text-left">
+    <div className="space-y-6 animate-fade-in text-start rtl:text-right text-left">
       <div className="flex justify-between items-center">
         <div className="space-y-2">
           <Skeleton className="h-8 w-56 rounded-2xl" />
@@ -684,7 +684,7 @@ export function FloorPlanSkeleton() {
  */
 export function EventsHubSkeleton() {
   return (
-    <div className="min-h-screen bg-slate-50 p-6 md:p-10 space-y-8 animate-fade-in text-left">
+    <div className="min-h-screen bg-slate-50 p-6 md:p-10 space-y-8 animate-fade-in text-start rtl:text-right text-left">
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div className="space-y-2">
           <Skeleton className="h-9 w-64 rounded-2xl" />
@@ -739,7 +739,7 @@ export function EventsHubSkeleton() {
  */
 export function LandingPageSkeleton() {
   return (
-    <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-blue-600 selection:text-white flex flex-col animate-fade-in text-left">
+    <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-blue-600 selection:text-white flex flex-col animate-fade-in text-start rtl:text-right text-left">
       {/* 1. Sticky Top Navbar */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-xl border-b border-slate-200 px-6 py-3.5 flex items-center justify-between shadow-xs">
         <div className="flex items-center">
@@ -979,7 +979,7 @@ export function LandingPageSkeleton() {
  */
 export function HomePageSkeleton() {
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans animate-fade-in text-left">
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans animate-fade-in text-start rtl:text-right text-left">
       {/* Top Universal Nav */}
       <header className="bg-white border-b border-slate-200 px-6 py-3.5 flex items-center justify-between">
         <Skeleton className="h-7 w-32 rounded-lg" />
@@ -1066,7 +1066,7 @@ export function HomePageSkeleton() {
  */
 export function ProfileSkeleton() {
   return (
-    <div className="max-w-4xl mx-auto p-6 md:p-10 space-y-6 animate-fade-in text-left">
+    <div className="max-w-4xl mx-auto p-6 md:p-10 space-y-6 animate-fade-in text-start rtl:text-right text-left">
       <div className="bg-white rounded-3xl p-8 border border-slate-150 shadow-xs space-y-6">
         <div className="flex items-center gap-6 pb-6 border-b border-slate-100">
           <Skeleton className="w-24 h-24 rounded-full shrink-0" />
@@ -1096,7 +1096,7 @@ export function ProfileSkeleton() {
  */
 export function DevelopersSkeleton() {
   return (
-    <div className="space-y-6 animate-fade-in text-left w-full pb-16">
+    <div className="space-y-6 animate-fade-in text-start rtl:text-right text-left w-full pb-16">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-2">
@@ -1149,7 +1149,7 @@ export function DevelopersSkeleton() {
  */
 export function CertificatesSkeleton() {
   return (
-    <div className="space-y-6 animate-fade-in text-left">
+    <div className="space-y-6 animate-fade-in text-start rtl:text-right text-left">
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div className="space-y-2">
           <Skeleton className="h-8 w-64 rounded-xl" />

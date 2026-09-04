@@ -9,6 +9,11 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1124.0",
+    "@aws-sdk/s3-request-presigner": "^3.1124.0",
+    "@neon/config": "^1.1.0",
+    "@neon/env": "^1.1.6",
+    "@neondatabase/serverless": "^1.1.0",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.108.0",
     "country-state-city": "^3.2.1",

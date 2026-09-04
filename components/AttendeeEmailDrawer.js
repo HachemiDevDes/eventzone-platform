@@ -29,6 +29,7 @@ import {
 import QRCode from 'qrcode';
 import SearchableSelect from './SearchableSelect';
 import { logCommunication } from '../lib/db';
+import { useLanguage } from '../lib/i18n';
 
 const EMAIL_TEMPLATES = [
   {
@@ -162,6 +163,7 @@ export default function AttendeeEmailDrawer({
 
   const isBulk = attendeesList.length > 1;
   const primaryAttendee = attendeesList[0] || null;
+  const { t } = useLanguage();
 
   const [selectedTemplateId, setSelectedTemplateId] = useState("badge_pass");
   const [subject, setSubject] = useState("");
@@ -578,12 +580,12 @@ export default function AttendeeEmailDrawer({
         <header className="px-6 py-4.5 border-b border-slate-200 flex items-center justify-between bg-white shrink-0">
           <div>
             <h2 className="text-base font-extrabold text-slate-900 leading-tight">
-              {isBulk ? `Send Email to ${attendeesList.length} Attendees` : "Send Email to Attendee"}
+              {isBulk ? t("drawer.bulkEmailTitle", `Send Email to ${attendeesList.length} Attendees`) : t("drawer.emailDrawerTitle", "Send Email to Attendee")}
             </h2>
             <p className="text-xs text-slate-500 font-medium mt-0.5">
               {isBulk 
-                ? `Compose a personalized message or choose a template to dispatch to all ${attendeesList.length} recipients.`
-                : "Compose a direct message or select a pre-made template"
+                ? t("comm.subtitle", `Compose a personalized message or choose a template to dispatch to all ${attendeesList.length} recipients.`)
+                : t("drawer.chooseTemplate", "Compose a direct message or select a pre-made template")
               }
             </p>
           </div>
@@ -959,7 +961,7 @@ export default function AttendeeEmailDrawer({
                 }`}>
                   
                   {/* Email Header */}
-                  <div className={`p-5 text-left border-b transition-colors duration-200 ${
+                  <div className={`p-5 text-start rtl:text-right text-left border-b transition-colors duration-200 ${
                     previewTheme === "dark" 
                       ? "bg-slate-900 border-slate-800 text-white" 
                       : "bg-white border-slate-100 text-slate-900"
@@ -968,13 +970,13 @@ export default function AttendeeEmailDrawer({
                       <img 
                         src={attendeeData.eventLogo} 
                         alt="Event Logo" 
-                        className="max-h-10 max-w-[180px] object-contain mb-2.5 block text-left" 
+                        className="max-h-10 max-w-[180px] object-contain mb-2.5 block text-start rtl:text-right text-left" 
                       />
                     )}
-                    <h3 className={`text-base font-extrabold tracking-tight m-0 text-left ${
+                    <h3 className={`text-base font-extrabold tracking-tight m-0 text-start rtl:text-right text-left ${
                       previewTheme === "dark" ? "text-white" : "text-slate-900"
                     }`}>{attendeeData.eventTitle}</h3>
-                    <p className={`text-[10px] uppercase tracking-widest font-bold mt-1 text-left ${
+                    <p className={`text-[10px] uppercase tracking-widest font-bold mt-1 text-start rtl:text-right text-left ${
                       previewTheme === "dark" ? "text-blue-400" : "text-blue-600"
                     }`}>Official Event Notification</p>
                   </div>
@@ -1052,7 +1054,7 @@ export default function AttendeeEmailDrawer({
             disabled={isSending}
             className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold text-xs transition-colors cursor-pointer"
           >
-            Cancel
+            {t("drawer.cancel", "Cancel")}
           </button>
 
           <button
@@ -1066,16 +1068,16 @@ export default function AttendeeEmailDrawer({
                 <Loader2 size={14} className="animate-spin" />
                 <span>
                   {isBulk 
-                    ? `Sending (${sendingProgress}/${attendeesList.length})...`
-                    : "Sending Email..."
+                    ? `${t("comm.sending", "Sending...")} (${sendingProgress}/${attendeesList.length})`
+                    : t("comm.sending", "Sending...")
                   }
                 </span>
               </>
             ) : (
               <span>
                 {isBulk 
-                  ? `Send Email to ${attendeesList.length} Attendees`
-                  : `Send Email to ${attendeeData.name.split(" ")[0]}`
+                  ? t("drawer.sendBulk", `Send Broadcast to Selected (${attendeesList.length})`)
+                  : t("drawer.sendNow", "Send Email Now")
                 }
               </span>
             )}

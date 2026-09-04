@@ -1,5 +1,6 @@
 "use client";
 
+import { useLanguage } from "../lib/i18n";
 import React, { useState, useEffect, useRef } from "react";
 import { Stage, Layer, Rect, Circle, Text, Group, Line, Star, Image as KonvaImage, Transformer, Path, Wedge, Arrow } from "react-konva";
 import { MousePointer, Hand, Maximize } from "lucide-react";
@@ -554,6 +555,7 @@ const FloorPlanCanvas = React.forwardRef(({
   previewDeviceMode = "desktop",
 }, ref) => {
   const stageRef = useRef(null);
+  const { t } = useLanguage();
   const containerRef = useRef(null);
   const transformerRef = useRef(null);
   const isInitializedRef = useRef(false);
@@ -5591,7 +5593,7 @@ const FloorPlanCanvas = React.forwardRef(({
             title="Selection Tool (V)"
           >
             <MousePointer size={15} />
-            <span className="text-[10px] font-bold">Select (V)</span>
+            <span className="text-[10px] font-bold">{t("floor.toolSelect", "Select (V)")}</span>
           </button>
           <button
             onClick={() => onToolModeChange("pan")}
@@ -5603,7 +5605,7 @@ const FloorPlanCanvas = React.forwardRef(({
             title="Move / Pan Tool (M)"
           >
             <Hand size={15} />
-            <span className="text-[10px] font-bold">Move (M)</span>
+            <span className="text-[10px] font-bold">{t("floor.toolMove", "Move (M)")}</span>
           </button>
           <div className="w-px h-6 bg-slate-250 my-auto mx-0.5"></div>
           <button
@@ -5612,7 +5614,7 @@ const FloorPlanCanvas = React.forwardRef(({
             title="Fit Canvas to Screen"
           >
             <Maximize size={15} />
-            <span className="text-[10px] font-bold">Fit Screen</span>
+            <span className="text-[10px] font-bold">{t("floor.toolFitScreen", "Fit Screen")}</span>
           </button>
         </div>
       )}

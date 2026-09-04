@@ -6,8 +6,10 @@ import {
   X, FileText, Image as ImageIcon, Check, Loader2,
   Printer
 } from "lucide-react";
+import { useLanguage } from "../lib/i18n";
 
 export default function ExportModal({ isOpen, onClose, onExport, elements = [], exhibitors = [], attendees = [] }) {
+  const { t } = useLanguage();
   const [format, setFormat] = useState("pdf"); // 'pdf' | 'png' | 'booth_list_pdf' | 'booth_list_excel'
   const [loading, setLoading] = useState(false);
 
@@ -422,8 +424,8 @@ export default function ExportModal({ isOpen, onClose, onExport, elements = [], 
               <Printer size={18} />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-800">Export Floor Plan</h3>
-              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Configure settings for download</p>
+              <h3 className="text-sm font-bold text-slate-800">{t("export.title", "Export Floor Plan")}</h3>
+              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">{t("export.subtitle", "Configure settings for download")}</p>
             </div>
           </div>
           <button 
@@ -439,14 +441,14 @@ export default function ExportModal({ isOpen, onClose, onExport, elements = [], 
           {/* A. Format Selection */}
           <div className="space-y-3">
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-              A. Format Selection
+              {t("export.formatSelection", "A. Format Selection")}
             </label>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* PDF Card */}
               <button
                 type="button"
                 onClick={() => setFormat("pdf")}
-                className={`flex items-start gap-4 p-4 border rounded-2xl text-left transition-all cursor-pointer relative ${
+                className={`flex items-start gap-4 p-4 border rounded-2xl text-start rtl:text-right text-left transition-all cursor-pointer relative ${
                   format === "pdf"
                     ? "border-indigo-650 bg-indigo-50/20 shadow-sm shadow-indigo-50"
                     : "border-slate-200 bg-white hover:border-slate-300"
@@ -456,9 +458,9 @@ export default function ExportModal({ isOpen, onClose, onExport, elements = [], 
                   <FileText size={20} />
                 </div>
                 <div>
-                  <span className="text-xs font-bold text-slate-800 block">PDF Document (Layout)</span>
+                  <span className="text-xs font-bold text-slate-800 block">{t("export.pdfDoc", "PDF Document (Layout)")}</span>
                   <span className="text-[10px] text-slate-500 font-semibold leading-normal mt-0.5 block">
-                    High-resolution vector, best for printing.
+                    {t("export.pdfDocDesc", "High-resolution vector, best for printing.")}
                   </span>
                 </div>
                 {format === "pdf" && (
@@ -472,7 +474,7 @@ export default function ExportModal({ isOpen, onClose, onExport, elements = [], 
               <button
                 type="button"
                 onClick={() => setFormat("png")}
-                className={`flex items-start gap-4 p-4 border rounded-2xl text-left transition-all cursor-pointer relative ${
+                className={`flex items-start gap-4 p-4 border rounded-2xl text-start rtl:text-right text-left transition-all cursor-pointer relative ${
                   format === "png"
                     ? "border-indigo-650 bg-indigo-50/20 shadow-sm shadow-indigo-50"
                     : "border-slate-200 bg-white hover:border-slate-300"
@@ -482,9 +484,9 @@ export default function ExportModal({ isOpen, onClose, onExport, elements = [], 
                   <ImageIcon size={20} />
                 </div>
                 <div>
-                  <span className="text-xs font-bold text-slate-800 block">PNG Image (Layout)</span>
+                  <span className="text-xs font-bold text-slate-800 block">{t("export.pngImage", "PNG Image (Layout)")}</span>
                   <span className="text-[10px] text-slate-500 font-semibold leading-normal mt-0.5 block">
-                    Image format, best for web and sharing.
+                    {t("export.pngImageDesc", "Image format, best for web and sharing.")}
                   </span>
                 </div>
                 {format === "png" && (
@@ -498,7 +500,7 @@ export default function ExportModal({ isOpen, onClose, onExport, elements = [], 
               <button
                 type="button"
                 onClick={() => setFormat("booth_list_pdf")}
-                className={`flex items-start gap-4 p-4 border rounded-2xl text-left transition-all cursor-pointer relative ${
+                className={`flex items-start gap-4 p-4 border rounded-2xl text-start rtl:text-right text-left transition-all cursor-pointer relative ${
                   format === "booth_list_pdf"
                     ? "border-indigo-650 bg-indigo-50/20 shadow-sm shadow-indigo-50"
                     : "border-slate-200 bg-white hover:border-slate-300"
@@ -508,9 +510,9 @@ export default function ExportModal({ isOpen, onClose, onExport, elements = [], 
                   <FileText size={20} />
                 </div>
                 <div>
-                  <span className="text-xs font-bold text-slate-800 block">Booths Directory (PDF)</span>
+                  <span className="text-xs font-bold text-slate-800 block">{t("export.boothsPdf", "Booths Directory (PDF)")}</span>
                   <span className="text-[10px] text-slate-500 font-semibold leading-normal mt-0.5 block">
-                    Structured text table of booths and companies.
+                    {t("export.boothsPdfDesc", "Structured text table of booths and companies.")}
                   </span>
                 </div>
                 {format === "booth_list_pdf" && (
@@ -524,7 +526,7 @@ export default function ExportModal({ isOpen, onClose, onExport, elements = [], 
               <button
                 type="button"
                 onClick={() => setFormat("booth_list_excel")}
-                className={`flex items-start gap-4 p-4 border rounded-2xl text-left transition-all cursor-pointer relative ${
+                className={`flex items-start gap-4 p-4 border rounded-2xl text-start rtl:text-right text-left transition-all cursor-pointer relative ${
                   format === "booth_list_excel"
                     ? "border-indigo-650 bg-indigo-50/20 shadow-sm shadow-indigo-50"
                     : "border-slate-200 bg-white hover:border-slate-300"
@@ -534,9 +536,9 @@ export default function ExportModal({ isOpen, onClose, onExport, elements = [], 
                   <FileText size={20} />
                 </div>
                 <div>
-                  <span className="text-xs font-bold text-slate-800 block">Booths Directory (Excel/CSV)</span>
+                  <span className="text-xs font-bold text-slate-800 block">{t("export.boothsCsv", "Booths Directory (Excel/CSV)")}</span>
                   <span className="text-[10px] text-slate-500 font-semibold leading-normal mt-0.5 block">
-                    CSV spreadsheet, perfect for Excel database import.
+                    {t("export.boothsCsvDesc", "CSV spreadsheet, perfect for Excel database import.")}
                   </span>
                 </div>
                 {format === "booth_list_excel" && (
@@ -550,7 +552,7 @@ export default function ExportModal({ isOpen, onClose, onExport, elements = [], 
               <button
                 type="button"
                 onClick={() => setFormat("seating_list_pdf")}
-                className={`flex items-start gap-4 p-4 border rounded-2xl text-left transition-all cursor-pointer relative ${
+                className={`flex items-start gap-4 p-4 border rounded-2xl text-start rtl:text-right text-left transition-all cursor-pointer relative ${
                   format === "seating_list_pdf"
                     ? "border-indigo-650 bg-indigo-50/20 shadow-sm shadow-indigo-50"
                     : "border-slate-200 bg-white hover:border-slate-300"
@@ -560,9 +562,9 @@ export default function ExportModal({ isOpen, onClose, onExport, elements = [], 
                   <FileText size={20} />
                 </div>
                 <div>
-                  <span className="text-xs font-bold text-slate-800 block">Seating Directory (PDF)</span>
+                  <span className="text-xs font-bold text-slate-800 block">{t("export.seatingPdf", "Seating Directory (PDF)")}</span>
                   <span className="text-[10px] text-slate-500 font-semibold leading-normal mt-0.5 block">
-                    Structured print table of tables and assigned attendees.
+                    {t("export.seatingPdfDesc", "Structured print table of tables and assigned attendees.")}
                   </span>
                 </div>
                 {format === "seating_list_pdf" && (
@@ -576,7 +578,7 @@ export default function ExportModal({ isOpen, onClose, onExport, elements = [], 
               <button
                 type="button"
                 onClick={() => setFormat("seating_list_excel")}
-                className={`flex items-start gap-4 p-4 border rounded-2xl text-left transition-all cursor-pointer relative ${
+                className={`flex items-start gap-4 p-4 border rounded-2xl text-start rtl:text-right text-left transition-all cursor-pointer relative ${
                   format === "seating_list_excel"
                     ? "border-indigo-650 bg-indigo-50/20 shadow-sm shadow-indigo-50"
                     : "border-slate-200 bg-white hover:border-slate-300"
@@ -586,9 +588,9 @@ export default function ExportModal({ isOpen, onClose, onExport, elements = [], 
                   <FileText size={20} />
                 </div>
                 <div>
-                  <span className="text-xs font-bold text-slate-800 block">Seating Directory (Excel/CSV)</span>
+                  <span className="text-xs font-bold text-slate-800 block">{t("export.seatingCsv", "Seating Directory (Excel/CSV)")}</span>
                   <span className="text-[10px] text-slate-500 font-semibold leading-normal mt-0.5 block">
-                    CSV spreadsheet, perfect for Excel attendee tracking.
+                    {t("export.seatingCsvDesc", "CSV spreadsheet, perfect for Excel attendee tracking.")}
                   </span>
                 </div>
                 {format === "seating_list_excel" && (
@@ -600,7 +602,7 @@ export default function ExportModal({ isOpen, onClose, onExport, elements = [], 
             </div>
           </div>
 
-          {/* B. Content & Visibility Filters */}
+          {/* {t("export.contentFilters", "B. Content & Visibility Filters")} */}
           <div className={`space-y-3 transition-opacity duration-200 ${format.includes("_list_") ? "opacity-35 pointer-events-none" : ""}`}>
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
               B. Content & Visibility Filters
@@ -609,8 +611,8 @@ export default function ExportModal({ isOpen, onClose, onExport, elements = [], 
               {/* Filter 1 */}
               <div className="flex items-center justify-between p-1">
                 <div className="flex flex-col">
-                  <span className="text-xs font-bold text-slate-700">Available Booths Only</span>
-                  <span className="text-[9px] text-slate-450 font-semibold">Hide reserved or sold booths</span>
+                  <span className="text-xs font-bold text-slate-700">{t("export.availableBoothsOnly", "Available Booths Only")}</span>
+                  <span className="text-[9px] text-slate-450 font-semibold">{t("export.availableBoothsOnlyDesc", "Hide reserved or sold booths")}</span>
                 </div>
                 <button
                   type="button"
@@ -628,8 +630,8 @@ export default function ExportModal({ isOpen, onClose, onExport, elements = [], 
               {/* Filter 2 */}
               <div className="flex items-center justify-between p-1">
                 <div className="flex flex-col">
-                  <span className="text-xs font-bold text-slate-700">Hide Seating & Furniture</span>
-                  <span className="text-[9px] text-slate-450 font-semibold">Show structural blueprint only</span>
+                  <span className="text-xs font-bold text-slate-700">{t("export.hideFurniture", "Hide Seating & Furniture")}</span>
+                  <span className="text-[9px] text-slate-450 font-semibold">{t("export.hideFurnitureDesc", "Show structural blueprint only")}</span>
                 </div>
                 <button
                   type="button"
@@ -647,8 +649,8 @@ export default function ExportModal({ isOpen, onClose, onExport, elements = [], 
               {/* Filter 3 */}
               <div className="flex items-center justify-between p-1">
                 <div className="flex flex-col">
-                  <span className="text-xs font-bold text-slate-700">Show Dimensions & Labels</span>
-                  <span className="text-[9px] text-slate-450 font-semibold">Include labels and surfaces text</span>
+                  <span className="text-xs font-bold text-slate-700">{t("export.showDimensionsLabels", "Show Dimensions & Labels")}</span>
+                  <span className="text-[9px] text-slate-450 font-semibold">{t("export.showDimensionsLabelsDesc", "Include labels and surfaces text")}</span>
                 </div>
                 <button
                   type="button"
@@ -666,8 +668,8 @@ export default function ExportModal({ isOpen, onClose, onExport, elements = [], 
               {/* Filter 4 */}
               <div className="flex items-center justify-between p-1">
                 <div className="flex flex-col">
-                  <span className="text-xs font-bold text-slate-700">Show Background Grid</span>
-                  <span className="text-[9px] text-slate-450 font-semibold">Include venue layout guidelines grid</span>
+                  <span className="text-xs font-bold text-slate-700">{t("export.showBackgroundGrid", "Show Background Grid")}</span>
+                  <span className="text-[9px] text-slate-450 font-semibold">{t("export.showBackgroundGridDesc", "Include venue layout guidelines grid")}</span>
                 </div>
                 <button
                   type="button"
@@ -685,8 +687,8 @@ export default function ExportModal({ isOpen, onClose, onExport, elements = [], 
               {/* Filter 5: Safety and Compliance Layer Only */}
               <div className="flex items-center justify-between p-1">
                 <div className="flex flex-col">
-                  <span className="text-xs font-bold text-slate-700">Safety & Compliance Only</span>
-                  <span className="text-[9px] text-slate-450 font-semibold">Only export structural and safety elements</span>
+                  <span className="text-xs font-bold text-slate-700">{t("export.safetyComplianceOnly", "Safety & Compliance Only")}</span>
+                  <span className="text-[9px] text-slate-450 font-semibold">{t("export.safetyComplianceOnlyDesc", "Only export structural and safety elements")}</span>
                 </div>
                 <button
                   type="button"
@@ -704,8 +706,8 @@ export default function ExportModal({ isOpen, onClose, onExport, elements = [], 
               {/* Filter 6: Export visible viewport only */}
               <div className="flex items-center justify-between p-1">
                 <div className="flex flex-col">
-                  <span className="text-xs font-bold text-slate-700">Export Visible Viewport Only</span>
-                  <span className="text-[9px] text-slate-450 font-semibold">Only export the currently zoomed in/panned area</span>
+                  <span className="text-xs font-bold text-slate-700">{t("export.exportViewportOnly", "Export Visible Viewport Only")}</span>
+                  <span className="text-[9px] text-slate-450 font-semibold">{t("export.exportViewportOnlyDesc", "Only export the currently zoomed in/panned area")}</span>
                 </div>
                 <button
                   type="button"
@@ -733,7 +735,7 @@ export default function ExportModal({ isOpen, onClose, onExport, elements = [], 
             disabled={loading}
             className="px-4 py-2.5 border border-slate-200 bg-white hover:bg-slate-50 text-slate-650 rounded-xl font-bold text-xs transition-colors duration-200 cursor-pointer disabled:opacity-50"
           >
-            Cancel
+            {t("export.cancel", "Cancel")}
           </button>
           <button
             type="button"
@@ -744,12 +746,12 @@ export default function ExportModal({ isOpen, onClose, onExport, elements = [], 
             {loading ? (
               <>
                 <Loader2 size={14} className="animate-spin" />
-                <span>Preparing Export...</span>
+                <span>{t("export.generating", "Preparing Export...")}</span>
               </>
             ) : (
               <>
                 <FileText size={14} />
-                <span>Generate Export</span>
+                <span>{t("export.exportNow", "Generate Export")}</span>
               </>
             )}
           </button>

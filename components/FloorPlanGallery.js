@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useLanguage } from "../lib/i18n";
 import {
   Map, Plus, Edit3, Copy, Archive, RotateCcw, Grid, LayoutGrid,
   Clock, Layers, Trash2
@@ -52,6 +53,7 @@ function formatDate(iso) {
 
 // Single floor plan card
 function PlanCard({ plan, onEdit, onDuplicate, onDelete, onPermanentDelete, onArchive, onRestore, onRename }) {
+  const { t } = useLanguage();
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameVal, setNameVal] = useState(plan.name);
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
@@ -106,7 +108,7 @@ function PlanCard({ plan, onEdit, onDuplicate, onDelete, onPermanentDelete, onAr
               </h3>
               {isArchived && (
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md shrink-0">
-                  Archived
+                  {t("common.archived", "Archived")}
                 </span>
               )}
             </div>
@@ -120,7 +122,7 @@ function PlanCard({ plan, onEdit, onDuplicate, onDelete, onPermanentDelete, onAr
           </span>
           <span className="flex items-center gap-1">
             <Layers size={10} />
-            {plan.elements?.length ?? 0} items
+            {plan.elements?.length ?? 0} {t("floorPlan.items", "items")}
           </span>
         </div>
 
@@ -131,7 +133,7 @@ function PlanCard({ plan, onEdit, onDuplicate, onDelete, onPermanentDelete, onAr
             className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl font-semibold text-xs transition-all duration-200 cursor-pointer shadow-sm hover:shadow"
           >
             <Edit3 size={13} />
-            <span>Edit</span>
+            <span>{t("common.edit", "Edit")}</span>
           </button>
 
           {!isArchived && (
@@ -220,6 +222,7 @@ function PlanCard({ plan, onEdit, onDuplicate, onDelete, onPermanentDelete, onAr
 }
 
 export default function FloorPlanGallery({
+
   floorPlans = [],
   isLoading = false,
   onEdit,
@@ -231,6 +234,7 @@ export default function FloorPlanGallery({
   onRestore,
   onRename,
 }) {
+  const { t } = useLanguage();
   const [filter, setFilter] = useState("active"); // "active" | "archived" | "all"
 
   if (isLoading) {
@@ -248,11 +252,11 @@ export default function FloorPlanGallery({
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex flex-col gap-1">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Floor Plans</h1>
+            <h1 className="text-2xl font-bold text-slate-900">{t("floorPlan.title", "Floor Plans")}</h1>
             <p className="text-sm text-slate-500">
               {activePlans.length === 0
-                ? "No active floor plans — create your first one below"
-                : `${activePlans.length} active plan${activePlans.length !== 1 ? "s" : ""} · Double-click a name to rename`}
+                ? t("floorPlan.noActiveSubtitle", "No active floor plans — create your first one below")
+                : `${activePlans.length} ${t("floorPlan.activePlansCount", "active plan(s)")} · ${t("floorPlan.doubleClickRename", "Double-click a name to rename")}`}
             </p>
           </div>
         </div>
@@ -265,7 +269,7 @@ export default function FloorPlanGallery({
                 filter === "active" ? "bg-white text-slate-900 shadow-xs" : "text-slate-500 hover:text-slate-800"
               }`}
             >
-              Active ({activePlans.length})
+              {t("common.active", "Active")} ({activePlans.length})
             </button>
             <button
               onClick={() => setFilter("archived")}
@@ -273,7 +277,7 @@ export default function FloorPlanGallery({
                 filter === "archived" ? "bg-slate-700 text-white shadow-xs" : "text-slate-500 hover:text-slate-800"
               }`}
             >
-              Archived ({archivedPlans.length})
+              {t("common.archived", "Archived")} ({archivedPlans.length})
             </button>
           </div>
 
@@ -281,7 +285,7 @@ export default function FloorPlanGallery({
             onClick={() => onCreateNew && onCreateNew()}
             className="px-5 py-2.5 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs transition-all duration-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 cursor-pointer"
           >
-            New Floor Plan
+            {t("floorPlan.newFloorPlan", "New Floor Plan")}
           </button>
         </div>
       </div>
@@ -294,10 +298,10 @@ export default function FloorPlanGallery({
           </div>
           <div className="flex flex-col items-center gap-2 text-center">
             <h2 className="text-lg font-bold text-slate-700">
-              {filter === "archived" ? "No archived floor plans" : "No floor plans yet"}
+              {filter === "archived" ? t("floorPlan.noArchivedPlans", "No archived floor plans") : t("floorPlan.noPlansYet", "No floor plans yet")}
             </h2>
             <p className="text-xs font-semibold text-slate-400 max-w-xs">
-              {filter === "archived" ? "Archived floor plans will appear here." : "Create your first venue floor plan to start designing your event layout with booths, stages, and more."}
+              {filter === "archived" ? t("floorPlan.archivedDesc", "Archived floor plans will appear here.") : t("floorPlan.noPlansDesc", "Create your first venue floor plan to start designing your event layout with booths, stages, and more.")}
             </p>
           </div>
           {filter !== "archived" && (
@@ -306,7 +310,7 @@ export default function FloorPlanGallery({
               className="flex items-center gap-2 px-6 py-3 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm transition-all duration-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 cursor-pointer"
             >
               <Plus size={16} />
-              <span>Create First Floor Plan</span>
+              <span>{t("floorPlan.createFirstPlan", "Create First Floor Plan")}</span>
             </button>
           )}
         </div>
@@ -338,7 +342,7 @@ export default function FloorPlanGallery({
               <div className="w-10 h-10 rounded-xl bg-slate-100 group-hover:bg-indigo-100 group-hover:text-indigo-600 flex items-center justify-center transition-colors">
                 <Plus size={20} />
               </div>
-              <span className="text-xs font-bold">Add Another Plan</span>
+              <span className="text-xs font-bold">{t("floorPlan.addAnotherPlan", "Add Another Plan")}</span>
             </button>
           )}
         </div>
