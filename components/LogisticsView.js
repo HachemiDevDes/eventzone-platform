@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useLanguage } from "../lib/i18n";
 import SearchableSelect from "./SearchableSelect";
+import CountryPhoneInput from "./CountryPhoneInput";
 import { LogisticsSkeleton } from "./SkeletonLoaders";
 
 // ─────────────────────────────────────────────
@@ -144,6 +145,149 @@ export default function LogisticsView({
   onRefreshData
 }) {
   const { t, isRTL } = useLanguage();
+
+  const getCategoryLabel = (cat) => {
+    const map = {
+      "AV & Audio": "logistics.catAvAudio",
+      "Lighting & Stage": "logistics.catLightingStage",
+      "Displays & Projectors": "logistics.catDisplaysProjectors",
+      "Furniture & Decor": "logistics.catFurnitureDecor",
+      "Signage & Rollups": "logistics.catSignageRollups",
+      "Collateral & Swag": "logistics.catCollateralSwag",
+      "Tech & Cabling": "logistics.catTechCabling",
+      "Badges & Lanyards": "logistics.catBadgesLanyards",
+      "Power & Electrical": "logistics.catPowerElectrical",
+      "Other Equipment": "logistics.catOtherEquipment"
+    };
+    return map[cat] ? t(map[cat], cat) : cat;
+  };
+
+  const getConditionLabel = (cond) => {
+    const map = {
+      "New / Sealed": "logistics.condNewSealed",
+      "Good": "logistics.condGood",
+      "Fair": "logistics.condFair",
+      "Needs Inspection": "logistics.condNeedsInspection",
+      "Damaged / Repair": "logistics.condDamagedRepair"
+    };
+    return map[cond] ? t(map[cond], cond) : cond;
+  };
+
+  const getServiceTypeLabel = (st) => {
+    const map = {
+      "Catering & F&B": "logistics.serviceCatering",
+      "AV & Production": "logistics.serviceAvProduction",
+      "Staging & Rigging": "logistics.serviceStagingRigging",
+      "Security & Safety": "logistics.serviceSecuritySafety",
+      "Cleaning & Sanitation": "logistics.serviceCleaningSanitation",
+      "Photography & Video": "logistics.servicePhotoVideo",
+      "Live Streaming & Broadcasting": "logistics.serviceLiveStreaming",
+      "Hostesses & Staffing": "logistics.serviceHostessesStaffing",
+      "Translation & Interpretation": "logistics.serviceTranslation",
+      "Courier & Freight Transport": "logistics.serviceCourierTransport",
+      "Floral & Plant Decor": "logistics.serviceFloralDecor",
+      "Other Services": "logistics.serviceOther"
+    };
+    return map[st] ? t(map[st], st) : st;
+  };
+
+  const getVendorStatusLabel = (val) => {
+    const map = {
+      "scheduled": "logistics.statusScheduled",
+      "confirmed": "logistics.statusConfirmed",
+      "on-site": "logistics.statusOnSiteLoading",
+      "completed": "logistics.statusCompletedDelivered",
+      "delayed": "logistics.statusDelayedIssue"
+    };
+    return map[val] ? t(map[val], val) : val;
+  };
+
+  const getTravelRoleLabel = (role) => {
+    const map = {
+      "Keynote Speaker": "logistics.roleKeynoteSpeaker",
+      "Panelist / Speaker": "logistics.rolePanelist",
+      "VIP Delegate": "logistics.roleVipDelegate",
+      "Executive / Sponsor Guest": "logistics.roleExecutiveSponsor",
+      "Workshop Lead": "logistics.roleWorkshopLead",
+      "Moderator / Host": "logistics.roleModeratorHost",
+      "Event Staff / Crew": "logistics.roleEventStaff",
+      "Judge / Evaluator": "logistics.roleJudgeEvaluator"
+    };
+    return map[role] ? t(map[role], role) : role;
+  };
+
+  const getTravelTypeLabel = (type) => {
+    const map = {
+      "Flight": "logistics.travelFlight",
+      "Train / High-Speed Rail": "logistics.travelTrain",
+      "Private Shuttle / Driver": "logistics.travelPrivateShuttle",
+      "Rental Car": "logistics.travelRentalCar",
+      "Personal Vehicle": "logistics.travelPersonalVehicle",
+      "Hotel Walking Distance": "logistics.travelHotelWalking"
+    };
+    return map[type] ? t(map[type], type) : type;
+  };
+
+  const getPickupStatusLabel = (val) => {
+    const map = {
+      "scheduled": "logistics.pickupScheduled",
+      "confirmed": "logistics.pickupConfirmed",
+      "in_transit": "logistics.pickupInTransit",
+      "completed": "logistics.pickupCompleted",
+      "cancelled": "logistics.pickupCancelled"
+    };
+    return map[val] ? t(map[val], val) : val;
+  };
+
+  const getActionTypeLabel = (act) => {
+    const map = {
+      "Load-in": "logistics.actLoadIn",
+      "AV Check": "logistics.actAvCheck",
+      "Registration Desk": "logistics.actRegDesk",
+      "VIP Escort": "logistics.actVipEscort",
+      "Stage Cue": "logistics.actStageCue",
+      "Catering Break": "logistics.actCateringBreak",
+      "Workshop Prep": "logistics.actWorkshopPrep",
+      "Photo / Press Op": "logistics.actPhotoPress",
+      "Teardown": "logistics.actTeardown",
+      "Security Sweep": "logistics.actSecuritySweep"
+    };
+    return map[act] ? t(map[act], act) : act;
+  };
+
+  const getChecklistCategoryLabel = (cat) => {
+    const map = {
+      "AV & Tech": "logistics.chkAvTech",
+      "Signage & Wayfinding": "logistics.chkSignage",
+      "VIP Lounge": "logistics.chkVipLounge",
+      "Catering & F&B": "logistics.chkCatering",
+      "Safety & Security": "logistics.chkSafetySecurity",
+      "Check-in Desks": "logistics.chkCheckinDesks",
+      "Stage & Lectern": "logistics.chkStageLectern",
+      "Exhibitor Hall": "logistics.chkExhibitorHall"
+    };
+    return map[cat] ? t(map[cat], cat) : cat;
+  };
+
+  const getIncidentSeverityLabel = (val) => {
+    const map = {
+      "low": "logistics.sevLow",
+      "medium": "logistics.sevMedium",
+      "high": "logistics.sevHigh",
+      "urgent": "logistics.sevUrgent"
+    };
+    return map[val] ? t(map[val], val) : val;
+  };
+
+  const getIncidentStatusLabel = (val) => {
+    const map = {
+      "open": "logistics.incOpen",
+      "in_progress": "logistics.incInProgress",
+      "resolved": "logistics.incResolved"
+    };
+    return map[val] ? t(map[val], val) : val;
+  };
+
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -303,7 +447,7 @@ export default function LogisticsView({
         case "cue": return t("logistics.editCue", "Edit Run of Show Cue");
         case "checklist": return t("logistics.editChecklist", "Edit Checklist Task");
         case "incident": return t("logistics.editIncident", "Edit Incident Report");
-        default: return "Edit Record";
+        default: return t("common.edit", "Edit");
       }
     } else {
       switch (modalType) {
@@ -313,23 +457,23 @@ export default function LogisticsView({
         case "cue": return t("logistics.addCue", "Add Run of Show Cue");
         case "checklist": return t("logistics.addChecklist", "Add Checklist Task");
         case "incident": return t("logistics.addIncident", "Report Incident");
-        default: return "Add New Item";
+        default: return t("common.add", "Add");
       }
     }
   };
 
   const getDrawerButtonLabel = () => {
     if (editingItem) {
-      return "Save Changes";
+      return t("common.saveChanges", "Save Changes");
     }
     switch (modalType) {
-      case "inventory": return "Add Equipment";
-      case "vendor": return "Add Supplier";
-      case "travel": return "Save Travel Record";
-      case "cue": return "Add Cue";
-      case "checklist": return "Add Task";
-      case "incident": return "Submit Incident";
-      default: return "Create Record";
+      case "inventory": return t("logistics.addEquipmentBtn", "Add Equipment");
+      case "vendor": return t("logistics.addSupplierBtn", "Add Supplier");
+      case "travel": return t("logistics.saveTravelBtn", "Save Travel Record");
+      case "cue": return t("logistics.addCueBtn", "Add Cue");
+      case "checklist": return t("logistics.addTaskBtn", "Add Task");
+      case "incident": return t("logistics.submitIncidentBtn", "Submit Incident");
+      default: return t("logistics.createRecordBtn", "Create Record");
     }
   };
 
@@ -689,7 +833,7 @@ export default function LogisticsView({
   }
 
   return (
-    <div className="space-y-6 animate-fade-in text-slate-800 pb-16">
+    <div dir={isRTL ? "rtl" : "ltr"} className="space-y-6 animate-fade-in text-slate-800 pb-16">
       
       {/* ─────────────────────────────────────────────
           1. HEADER & GLOBAL ACTIONS
@@ -708,7 +852,7 @@ export default function LogisticsView({
           <button
             onClick={handleExportCSV}
             className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl text-xs sm:text-sm transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
-            title="Export CSV"
+            title={t("logistics.exportManifest", "Export Manifest (CSV)")}
           >
             <Download size={14} />
             <span>{t("logistics.exportManifest", "Export Manifest (CSV)")}</span>
@@ -775,9 +919,9 @@ export default function LogisticsView({
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-black text-slate-900">{stats.totalInventoryCount}</div>
+            <div className="text-2xl font-black text-slate-900"><bdi dir="ltr">{stats.totalInventoryCount}</bdi></div>
             <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-slate-500">
-              <span className="text-blue-600 font-bold">{stats.inUseInventoryCount}</span> in-use across stages
+              <span className="text-blue-600 font-bold"><bdi dir="ltr">{stats.inUseInventoryCount}</bdi></span> {t("logistics.inUseAcrossStages", "in-use across stages")}
             </div>
           </div>
         </div>
@@ -791,9 +935,9 @@ export default function LogisticsView({
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-black text-slate-900">{vendors.length}</div>
+            <div className="text-2xl font-black text-slate-900"><bdi dir="ltr">{vendors.length}</bdi></div>
             <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-emerald-600">
-              <CheckCircle2 size={12} /> {stats.activeVendorsCount} confirmed deliveries
+              <CheckCircle2 size={12} /> <bdi dir="ltr">{stats.activeVendorsCount}</bdi> {t("logistics.confirmedDeliveries", "confirmed deliveries")}
             </div>
           </div>
         </div>
@@ -807,9 +951,9 @@ export default function LogisticsView({
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-black text-slate-900">{stats.vipTravelCount}</div>
+            <div className="text-2xl font-black text-slate-900"><bdi dir="ltr">{stats.vipTravelCount}</bdi></div>
             <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-indigo-600">
-              Hotel & Airport Transfers Active
+              {t("logistics.hotelAirportTransfersActive", "Hotel & Airport Transfers Active")}
             </div>
           </div>
         </div>
@@ -817,21 +961,21 @@ export default function LogisticsView({
         {/* Card 4: Readiness / Issues */}
         <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Venue Readiness</span>
+            <span className="text-xs font-bold text-slate-500">{t("logistics.venueReadiness", "Venue Readiness")}</span>
             <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${stats.openIncidentsCount > 0 ? "bg-rose-50 text-rose-600" : "bg-teal-50 text-teal-600"}`}>
               {stats.openIncidentsCount > 0 ? <AlertTriangle size={16} /> : <ShieldCheck size={16} />}
             </div>
           </div>
           <div className="mt-3">
             <div className="flex items-center justify-between">
-              <span className="text-2xl font-black text-slate-900">{stats.readinessPct}%</span>
+              <span className="text-2xl font-black text-slate-900"><bdi dir="ltr">{stats.readinessPct}%</bdi></span>
               {stats.openIncidentsCount > 0 ? (
                 <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700">
-                  {stats.openIncidentsCount} Open Issues
+                  <bdi dir="ltr">{stats.openIncidentsCount}</bdi> {t("logistics.openIssues", "Open Issues")}
                 </span>
               ) : (
                 <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-teal-100 text-teal-700">
-                  All Systems Clear
+                  {t("logistics.allSystemsClear", "All Systems Clear")}
                 </span>
               )}
             </div>
@@ -861,7 +1005,7 @@ export default function LogisticsView({
           <Package size={15} />
           <span>{t("logistics.tabInventory", "Inventory & Equipment")}</span>
           <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${activeTab === "inventory" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"}`}>
-            {inventory.length}
+            <bdi dir="ltr">{inventory.length}</bdi>
           </span>
           {activeTab === "inventory" && (
             <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-blue-600" />
@@ -879,7 +1023,7 @@ export default function LogisticsView({
           <Truck size={15} />
           <span>{t("logistics.tabVendors", "Vendors & Deliveries")}</span>
           <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${activeTab === "vendors" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"}`}>
-            {vendors.length}
+            <bdi dir="ltr">{vendors.length}</bdi>
           </span>
           {activeTab === "vendors" && (
             <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-blue-600" />
@@ -897,7 +1041,7 @@ export default function LogisticsView({
           <Plane size={15} />
           <span>{t("logistics.tabTravel", "VIP Travel & Lodging")}</span>
           <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${activeTab === "travel" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"}`}>
-            {travel.length}
+            <bdi dir="ltr">{travel.length}</bdi>
           </span>
           {activeTab === "travel" && (
             <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-blue-600" />
@@ -915,7 +1059,7 @@ export default function LogisticsView({
           <Clock size={15} />
           <span>{t("logistics.tabRunOfShow", "Run of Show & Schedule")}</span>
           <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${activeTab === "runOfShow" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"}`}>
-            {runOfShow.length}
+            <bdi dir="ltr">{runOfShow.length}</bdi>
           </span>
           {activeTab === "runOfShow" && (
             <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-blue-600" />
@@ -934,7 +1078,7 @@ export default function LogisticsView({
           <span>{t("logistics.tabChecklists", "Checklists & Issues")}</span>
           {stats.openIncidentsCount > 0 && (
             <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-rose-500 text-white animate-pulse">
-              {stats.openIncidentsCount}
+              <bdi dir="ltr">{stats.openIncidentsCount}</bdi>
             </span>
           )}
           {activeTab === "checklists" && (
@@ -950,18 +1094,18 @@ export default function LogisticsView({
         <div className="flex flex-col sm:flex-row items-center gap-3 bg-white p-3 rounded-2xl border border-slate-150 shadow-xs">
           {/* Search Input */}
           <div className="relative flex-1 w-full">
-            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search size={15} className="absolute start-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t("logistics.searchPlaceholder", "Search items, suppliers, drivers, cues, or locations...")}
-              className="w-full pl-9 pr-4 py-2 text-xs font-medium bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 focus:outline-none transition-colors"
+              className="w-full ps-9 pe-8 py-2 text-xs font-medium bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 focus:outline-none transition-colors"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                className="absolute end-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 <X size={13} />
               </button>
@@ -976,10 +1120,10 @@ export default function LogisticsView({
                   value={categoryFilter}
                   onChange={(val) => setCategoryFilter(val || "all")}
                   options={[
-                    { value: "all", label: "All Categories" },
-                    ...INVENTORY_CATEGORIES.map(c => ({ value: c, label: c }))
+                    { value: "all", label: t("logistics.allCategories", "All Categories") },
+                    ...INVENTORY_CATEGORIES.map(c => ({ value: c, label: getCategoryLabel(c) }))
                   ]}
-                  placeholder="All Categories"
+                  placeholder={t("logistics.allCategories", "All Categories")}
                   buttonClassName="py-1.5 text-xs bg-slate-50 border-slate-200"
                 />
               </div>
@@ -991,10 +1135,10 @@ export default function LogisticsView({
                   value={categoryFilter}
                   onChange={(val) => setCategoryFilter(val || "all")}
                   options={[
-                    { value: "all", label: "All Services" },
-                    ...VENDOR_SERVICE_TYPES.map(v => ({ value: v, label: v }))
+                    { value: "all", label: t("logistics.allServices", "All Services") },
+                    ...VENDOR_SERVICE_TYPES.map(v => ({ value: v, label: getServiceTypeLabel(v) }))
                   ]}
-                  placeholder="All Services"
+                  placeholder={t("logistics.allServices", "All Services")}
                   buttonClassName="py-1.5 text-xs bg-slate-50 border-slate-200"
                 />
               </div>
@@ -1006,10 +1150,10 @@ export default function LogisticsView({
                   value={categoryFilter}
                   onChange={(val) => setCategoryFilter(val || "all")}
                   options={[
-                    { value: "all", label: "All Roles" },
-                    ...TRAVEL_ROLES.map(r => ({ value: r, label: r }))
+                    { value: "all", label: t("logistics.allRoles", "All Roles") },
+                    ...TRAVEL_ROLES.map(r => ({ value: r, label: getTravelRoleLabel(r) }))
                   ]}
-                  placeholder="All Roles"
+                  placeholder={t("logistics.allRoles", "All Roles")}
                   buttonClassName="py-1.5 text-xs bg-slate-50 border-slate-200"
                 />
               </div>
@@ -1021,10 +1165,10 @@ export default function LogisticsView({
                   value={categoryFilter}
                   onChange={(val) => setCategoryFilter(val || "all")}
                   options={[
-                    { value: "all", label: "All Action Types" },
-                    ...ACTION_TYPES.map(a => ({ value: a, label: a }))
+                    { value: "all", label: t("logistics.allActionTypes", "All Action Types") },
+                    ...ACTION_TYPES.map(a => ({ value: a, label: getActionTypeLabel(a) }))
                   ]}
-                  placeholder="All Action Types"
+                  placeholder={t("logistics.allActionTypes", "All Action Types")}
                   buttonClassName="py-1.5 text-xs bg-slate-50 border-slate-200"
                 />
               </div>
@@ -1043,15 +1187,15 @@ export default function LogisticsView({
               <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
                 <Package size={24} />
               </div>
-              <h3 className="text-base font-bold text-slate-800">No equipment items found</h3>
+              <h3 className="text-base font-bold text-slate-800">{t("logistics.noEquipmentFound", "No equipment items found")}</h3>
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                Track sound systems, laser projectors, microphones, roll-ups, and merchandise in real-time.
+                {t("logistics.noEquipmentDesc", "Track sound systems, laser projectors, microphones, roll-ups, and merchandise in real-time.")}
               </p>
               <button
                 onClick={handleOpenAddModal}
                 className="px-4 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-700 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
               >
-                <Plus size={14} /> Add First Item
+                <Plus size={14} /> {t("logistics.addFirstItem", "Add First Item")}
               </button>
             </div>
           ) : (
@@ -1070,7 +1214,7 @@ export default function LogisticsView({
                     <div className="space-y-2.5">
                       <div className="flex items-start justify-between gap-2">
                         <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
-                          {item.category || "Equipment"}
+                          {getCategoryLabel(item.category) || t("logistics.typeEquipment", "Equipment")}
                         </span>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                           item.condition === "Good" || item.condition === "New / Sealed"
@@ -1079,7 +1223,7 @@ export default function LogisticsView({
                             ? "bg-amber-50 text-amber-700 border border-amber-200"
                             : "bg-rose-50 text-rose-700 border border-rose-200"
                         }`}>
-                          {item.condition || "Good"}
+                          {getConditionLabel(item.condition) || t("logistics.condGood", "Good")}
                         </span>
                       </div>
 
@@ -1089,7 +1233,7 @@ export default function LogisticsView({
                         </h4>
                         <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-1">
                           <MapPin size={12} className="text-slate-400 shrink-0" />
-                          <span className="font-semibold text-slate-700">{item.location || "Unassigned"}</span>
+                          <span className="font-semibold text-slate-700">{item.location || t("logistics.unassigned", "Unassigned")}</span>
                           {item.supplier && (
                             <>
                               <span className="text-slate-300">•</span>
@@ -1109,9 +1253,9 @@ export default function LogisticsView({
                     {/* Stock Meter & Adjust Buttons */}
                     <div className="pt-3 border-t border-slate-100 space-y-2">
                       <div className="flex items-center justify-between text-xs font-bold">
-                        <span className="text-slate-500">Allocation:</span>
+                        <span className="text-slate-500">{t("logistics.allocation", "Allocation:")}</span>
                         <span className="text-slate-800">
-                          <span className="text-blue-600 font-extrabold">{inUse} in-use</span> / {total} total
+                          <span className="text-blue-600 font-extrabold"><bdi dir="ltr">{inUse}</bdi> {t("logistics.inUse", "in-use")}</span> / <bdi dir="ltr">{total}</bdi> {t("logistics.total", "total")}
                         </span>
                       </div>
 
@@ -1127,16 +1271,16 @@ export default function LogisticsView({
                           <button
                             onClick={() => handleAdjustInventoryStock(item, -1)}
                             disabled={inUse <= 0}
-                            title="Return 1 item"
+                            title={t("logistics.returnItemTooltip", "Return 1 item")}
                             className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-xs flex items-center justify-center disabled:opacity-30 cursor-pointer"
                           >
                             -
                           </button>
-                          <span className="text-[11px] font-bold text-slate-600 px-1">{available} left</span>
+                          <span className="text-[11px] font-bold text-slate-600 px-1"><bdi dir="ltr">{available}</bdi> {t("logistics.left", "left")}</span>
                           <button
                             onClick={() => handleAdjustInventoryStock(item, 1)}
                             disabled={inUse >= total}
-                            title="Deploy 1 item"
+                            title={t("logistics.deployItemTooltip", "Deploy 1 item")}
                             className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-xs flex items-center justify-center disabled:opacity-30 cursor-pointer"
                           >
                             +
@@ -1147,14 +1291,14 @@ export default function LogisticsView({
                           <button
                             onClick={() => handleEditItem("inventory", item)}
                             className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-colors cursor-pointer"
-                            title="Edit"
+                            title={t("common.edit", "Edit")}
                           >
                             <Edit3 size={13} />
                           </button>
                           <button
                             onClick={() => onDeleteLogisticsItem && onDeleteLogisticsItem("inventory", item.id)}
                             className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
-                            title="Delete"
+                            title={t("common.delete", "Delete")}
                           >
                             <Trash2 size={13} />
                           </button>
@@ -1179,15 +1323,15 @@ export default function LogisticsView({
               <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto">
                 <Truck size={24} />
               </div>
-              <h3 className="text-base font-bold text-slate-800">No vendor delivery records</h3>
+              <h3 className="text-base font-bold text-slate-800">{t("logistics.noVendorsFound", "No vendor delivery records")}</h3>
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                Keep track of caterers, AV production rigs, staging contractors, and cleaning teams with strict load-in windows.
+                {t("logistics.noVendorsDesc", "Keep track of caterers, AV production rigs, staging contractors, and cleaning teams with strict load-in windows.")}
               </p>
               <button
                 onClick={handleOpenAddModal}
                 className="px-4 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-700 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
               >
-                <Plus size={14} /> Add Supplier
+                <Plus size={14} /> {t("logistics.addSupplier", "Add Supplier")}
               </button>
             </div>
           ) : (
@@ -1204,32 +1348,32 @@ export default function LogisticsView({
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
-                            {vendor.serviceType || "Supplier"}
+                            {getServiceTypeLabel(vendor.serviceType) || t("logistics.typeSupplier", "Supplier")}
                           </span>
                           <h4 className="text-base font-bold text-slate-900 mt-2">
                             {vendor.name}
                           </h4>
                         </div>
                         <span className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full border ${statusObj.color}`}>
-                          {statusObj.label}
+                          {getVendorStatusLabel(statusObj.value)}
                         </span>
                       </div>
 
                       {/* Details Grid */}
                       <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-3 rounded-2xl border border-slate-100">
                         <div className="space-y-1">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Load-in Slot</span>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("logistics.loadInSlot", "Load-in Slot")}</span>
                           <div className="flex items-center gap-1.5 font-bold text-slate-800">
-                            <Clock size={13} className="text-blue-600" />
-                            <span>{vendor.deliveryTime || "08:00 AM"}</span>
+                            <Clock size={13} className="text-blue-600 shrink-0" />
+                            <span><bdi dir="ltr">{vendor.deliveryTime || "08:00 AM"}</bdi></span>
                           </div>
                         </div>
 
                         <div className="space-y-1">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Dock & Vehicle</span>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("logistics.dockVehicle", "Dock & Vehicle")}</span>
                           <div className="flex items-center gap-1.5 font-bold text-slate-800 truncate">
                             <MapPin size={13} className="text-emerald-600 shrink-0" />
-                            <span className="truncate">{vendor.loadInLocation || "Dock A"} ({vendor.vehiclePlate || "Plate N/A"})</span>
+                            <span className="truncate">{vendor.loadInLocation || "Dock A"} (<bdi dir="ltr">{vendor.vehiclePlate || "Plate N/A"}</bdi>)</span>
                           </div>
                         </div>
 
@@ -1242,7 +1386,7 @@ export default function LogisticsView({
                             <div className="flex items-center gap-3">
                               {vendor.phone && (
                                 <a href={`tel:${vendor.phone}`} className="text-blue-600 hover:underline flex items-center gap-1 font-bold">
-                                  <Phone size={11} /> {vendor.phone}
+                                  <Phone size={11} className="shrink-0" /> <bdi dir="ltr">{vendor.phone}</bdi>
                                 </a>
                               )}
                               {vendor.email && (
@@ -1266,9 +1410,9 @@ export default function LogisticsView({
                     <div className="flex items-center justify-between pt-2 border-t border-slate-100">
                       <div className="text-xs font-semibold text-slate-500">
                         {vendor.contractAmount ? (
-                          <span className="font-black text-slate-900">${Number(vendor.contractAmount).toLocaleString()} budget</span>
+                          <span className="font-black text-slate-900"><bdi dir="ltr">${Number(vendor.contractAmount).toLocaleString()}</bdi> {t("logistics.budget", "budget")}</span>
                         ) : (
-                          <span>Contract on file</span>
+                          <span>{t("logistics.contractOnFile", "Contract on file")}</span>
                         )}
                       </div>
 
@@ -1277,7 +1421,7 @@ export default function LogisticsView({
                           onClick={() => handleEditItem("vendor", vendor)}
                           className="px-2.5 py-1 text-xs font-bold text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
                         >
-                          Edit
+                          {t("common.edit", "Edit")}
                         </button>
                         <button
                           onClick={() => onDeleteLogisticsItem && onDeleteLogisticsItem("vendors", vendor.id)}
@@ -1305,15 +1449,15 @@ export default function LogisticsView({
               <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto">
                 <Plane size={24} />
               </div>
-              <h3 className="text-base font-bold text-slate-800">No VIP travel records</h3>
+              <h3 className="text-base font-bold text-slate-800">{t("logistics.noVipTravelFound", "No VIP travel records")}</h3>
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                Manage keynote speaker flights, airport pickup drivers, luxury hotel room allocations, and rider requirements.
+                {t("logistics.noVipTravelDesc", "Manage keynote speaker flights, airport pickup drivers, luxury hotel room allocations, and rider requirements.")}
               </p>
               <button
                 onClick={handleOpenAddModal}
                 className="px-4 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-700 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
               >
-                <Plus size={14} /> Add VIP Travel
+                <Plus size={14} /> {t("logistics.addVipTravel", "Add VIP Travel")}
               </button>
             </div>
           ) : (
@@ -1330,35 +1474,35 @@ export default function LogisticsView({
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
-                            {item.role || "VIP Guest"}
+                            {getTravelRoleLabel(item.role) || t("logistics.roleVipDelegate", "VIP Guest")}
                           </span>
                           <h4 className="text-base font-bold text-slate-900 mt-2">
                             {item.personName}
                           </h4>
                         </div>
                         <span className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full ${statusObj.color}`}>
-                          {statusObj.label}
+                          {getPickupStatusLabel(statusObj.value)}
                         </span>
                       </div>
 
                       {/* Travel & Flight details */}
                       <div className="space-y-2 bg-slate-50 p-3 rounded-2xl border border-slate-100 text-xs">
                         <div className="flex items-center justify-between">
-                          <span className="text-slate-400 font-bold text-[10px] uppercase">{item.travelType || "Flight"}</span>
-                          <span className="font-bold text-slate-800">{item.flightNumber || "Flight Pending"}</span>
+                          <span className="text-slate-400 font-bold text-[10px] uppercase">{getTravelTypeLabel(item.travelType) || t("logistics.travelFlight", "Flight")}</span>
+                          <span className="font-bold text-slate-800"><bdi dir="ltr">{item.flightNumber || t("logistics.flightPending", "Flight Pending")}</bdi></span>
                         </div>
 
                         {item.arrivalTime && (
                           <div className="flex items-center justify-between text-slate-600">
-                            <span>Arrival:</span>
-                            <span className="font-semibold text-slate-800">{item.arrivalTime}</span>
+                            <span>{t("logistics.arrival", "Arrival:")}</span>
+                            <span className="font-semibold text-slate-800"><bdi dir="ltr">{item.arrivalTime}</bdi></span>
                           </div>
                         )}
 
                         {item.hotelName && (
                           <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-slate-600">
                             <span className="font-medium truncate">{item.hotelName}</span>
-                            <span className="font-bold text-slate-900">{item.roomNumber || "Reserved"}</span>
+                            <span className="font-bold text-slate-900">{item.roomNumber || t("logistics.reserved", "Reserved")}</span>
                           </div>
                         )}
 
@@ -1366,11 +1510,11 @@ export default function LogisticsView({
                           <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-slate-600">
                             <div className="flex items-center gap-1.5">
                               <User size={12} className="text-indigo-600" />
-                              <span className="font-semibold">Driver: {item.driverName}</span>
+                              <span className="font-semibold">{t("logistics.driver", "Driver:")} {item.driverName}</span>
                             </div>
                             {item.driverPhone && (
                               <a href={`tel:${item.driverPhone}`} className="text-blue-600 hover:underline font-bold text-[11px]">
-                                {item.driverPhone}
+                                <bdi dir="ltr">{item.driverPhone}</bdi>
                               </a>
                             )}
                           </div>
@@ -1379,7 +1523,7 @@ export default function LogisticsView({
 
                       {item.specialRequests && (
                         <div className="bg-amber-50/60 p-2.5 rounded-xl border border-amber-100 text-[11px] text-amber-900 space-y-0.5">
-                          <span className="font-bold text-[10px] uppercase text-amber-700 tracking-wider">Rider / Notes:</span>
+                          <span className="font-bold text-[10px] uppercase text-amber-700 tracking-wider">{t("logistics.riderNotes", "Rider / Notes:")}</span>
                           <p>{item.specialRequests}</p>
                         </div>
                       )}
@@ -1390,7 +1534,7 @@ export default function LogisticsView({
                         onClick={() => handleEditItem("travel", item)}
                         className="px-2.5 py-1 text-xs font-bold text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
                       >
-                        Edit
+                        {t("common.edit", "Edit")}
                       </button>
                       <button
                         onClick={() => onDeleteLogisticsItem && onDeleteLogisticsItem("travel", item.id)}
@@ -1417,15 +1561,15 @@ export default function LogisticsView({
               <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
                 <Clock size={24} />
               </div>
-              <h3 className="text-base font-bold text-slate-800">No operational cues yet</h3>
+              <h3 className="text-base font-bold text-slate-800">{t("logistics.noCuesFound", "No operational cues yet")}</h3>
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                Create minute-by-minute technical cues for stage managers, mic technicians, VIP escorts, and catering dispatches.
+                {t("logistics.noCuesDesc", "Create minute-by-minute technical cues for stage managers, mic technicians, VIP escorts, and catering dispatches.")}
               </p>
               <button
                 onClick={handleOpenAddModal}
                 className="px-4 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-700 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
               >
-                <Plus size={14} /> Add First Cue
+                <Plus size={14} /> {t("logistics.addFirstCue", "Add First Cue")}
               </button>
             </div>
           ) : (
@@ -1433,10 +1577,10 @@ export default function LogisticsView({
               <div className="p-4 bg-slate-50 border-b border-slate-150 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Clock size={16} className="text-blue-600" />
-                  <span className="text-xs font-bold text-slate-800">Master Operational Cue Sheet</span>
+                  <span className="text-xs font-bold text-slate-800">{t("logistics.masterCueSheet", "Master Operational Cue Sheet")}</span>
                 </div>
                 <span className="text-xs font-bold text-slate-500">
-                  {stats.completedCuesCount} of {stats.totalCues} Cues Completed
+                  <bdi dir="ltr">{stats.completedCuesCount}</bdi> {t("common.of", "of")} <bdi dir="ltr">{stats.totalCues}</bdi> {t("logistics.cuesCompleted", "Cues Completed")}
                 </span>
               </div>
 
@@ -1455,14 +1599,14 @@ export default function LogisticsView({
                       <div className="flex items-start gap-3.5">
                         {/* Time Stamp Badge */}
                         <div className="flex flex-col items-center justify-center w-20 py-2 rounded-2xl bg-slate-100 border border-slate-200 shrink-0">
-                          <span className="text-xs font-black text-slate-900 tracking-tight">{cue.time || "00:00"}</span>
-                          <span className="text-[9px] font-bold text-slate-400 uppercase">Cue #{index + 1}</span>
+                          <span className="text-xs font-black text-slate-900 tracking-tight"><bdi dir="ltr">{cue.time || "00:00"}</bdi></span>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase">{t("logistics.cueNumber", "Cue #")}<bdi dir="ltr">{index + 1}</bdi></span>
                         </div>
 
                         <div className="space-y-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-blue-100 text-blue-800">
-                              {cue.actionType || "Action"}
+                              {getActionTypeLabel(cue.actionType) || t("logistics.cueAction", "Action")}
                             </span>
                             <span className="text-xs font-semibold text-slate-500 flex items-center gap-1">
                               <MapPin size={11} className="text-slate-400" /> {cue.stageOrLocation}
@@ -1500,7 +1644,7 @@ export default function LogisticsView({
                         >
                           {isCompleted && <CheckCircle2 size={13} />}
                           {isInProgress && <Clock size={13} />}
-                          <span>{isCompleted ? "Completed" : isInProgress ? "Live / Active" : "Mark Active"}</span>
+                          <span>{isCompleted ? t("logistics.completed", "Completed") : isInProgress ? t("logistics.liveActive", "Live / Active") : t("logistics.markActive", "Mark Active")}</span>
                         </button>
 
                         <button
@@ -1540,8 +1684,8 @@ export default function LogisticsView({
                     <ClipboardCheck size={16} />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900">Venue Readiness Checklists</h3>
-                    <p className="text-[11px] text-slate-500">Interactive operational checks before doors open</p>
+                    <h3 className="text-sm font-bold text-slate-900">{t("logistics.venueReadinessChecklists", "Venue Readiness Checklists")}</h3>
+                    <p className="text-[11px] text-slate-500">{t("logistics.venueReadinessSubtitle", "Interactive operational checks before doors open")}</p>
                   </div>
                 </div>
 
@@ -1559,14 +1703,14 @@ export default function LogisticsView({
                   }}
                   className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold text-xs flex items-center gap-1 cursor-pointer"
                 >
-                  <Plus size={14} /> Add Task
+                  <Plus size={14} /> {t("logistics.addTask", "Add Task")}
                 </button>
               </div>
 
               {/* Progress Summary */}
               <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 flex items-center justify-between text-xs">
-                <span className="font-bold text-slate-600">Completion Status</span>
-                <span className="font-extrabold text-blue-600">{stats.completedChecks} / {stats.totalChecks} Done ({stats.readinessPct}%)</span>
+                <span className="font-bold text-slate-600">{t("logistics.completionStatus", "Completion Status")}</span>
+                <span className="font-extrabold text-blue-600"><bdi dir="ltr">{stats.completedChecks} / {stats.totalChecks}</bdi> {t("logistics.done", "Done")} (<bdi dir="ltr">{stats.readinessPct}%</bdi>)</span>
               </div>
 
               {/* Tasks List */}
@@ -1591,9 +1735,9 @@ export default function LogisticsView({
                           {task.title}
                         </span>
                         <div className="flex items-center gap-2 text-[10px] font-semibold text-slate-400">
-                          <span className="px-1.5 py-0.2 rounded bg-slate-100 text-slate-600">{task.category}</span>
-                          {task.dueDate && <span>Due: {task.dueDate}</span>}
-                          {task.completedBy && <span className="text-emerald-700">Done by: {task.completedBy}</span>}
+                          <span className="px-1.5 py-0.2 rounded bg-slate-100 text-slate-600">{getChecklistCategoryLabel(task.category)}</span>
+                          {task.dueDate && <span>{t("logistics.due", "Due:")} <bdi dir="ltr">{task.dueDate}</bdi></span>}
+                          {task.completedBy && <span className="text-emerald-700">{t("logistics.doneBy", "Done by:")} {task.completedBy}</span>}
                         </div>
                       </div>
                     </div>
@@ -1622,8 +1766,8 @@ export default function LogisticsView({
                     <AlertTriangle size={16} />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900">On-Site Incident Dispatch</h3>
-                    <p className="text-[11px] text-slate-500">Live operational issues & equipment fixes</p>
+                    <h3 className="text-sm font-bold text-slate-900">{t("logistics.onSiteIncidentDispatch", "On-Site Incident Dispatch")}</h3>
+                    <p className="text-[11px] text-slate-500">{t("logistics.incidentDispatchSubtitle", "Live operational issues & equipment fixes")}</p>
                   </div>
                 </div>
 
@@ -1643,7 +1787,7 @@ export default function LogisticsView({
                   }}
                   className="px-2.5 py-1.5 rounded-xl bg-rose-600 text-white hover:bg-rose-700 font-bold text-xs flex items-center gap-1 cursor-pointer"
                 >
-                  <Plus size={13} /> Report
+                  <Plus size={13} /> {t("logistics.report", "Report")}
                 </button>
               </div>
 
@@ -1652,8 +1796,8 @@ export default function LogisticsView({
                 {incidents.length === 0 ? (
                   <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-100 text-slate-500 space-y-1">
                     <CheckCircle2 size={24} className="text-teal-500 mx-auto" />
-                    <p className="text-xs font-bold text-slate-800">Zero active incidents</p>
-                    <p className="text-[11px] text-slate-400">All equipment and venue spaces are operating normally.</p>
+                    <p className="text-xs font-bold text-slate-800">{t("logistics.noIncidentsFound", "Zero active incidents")}</p>
+                    <p className="text-[11px] text-slate-400">{t("logistics.noIncidentsDesc", "All equipment and venue spaces are operating normally.")}</p>
                   </div>
                 ) : (
                   incidents.map((inc) => {
@@ -1669,7 +1813,7 @@ export default function LogisticsView({
                       >
                         <div className="flex items-start justify-between gap-2">
                           <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full border ${sevObj.badge}`}>
-                            {sevObj.label}
+                            {getIncidentSeverityLabel(sevObj.value)}
                           </span>
                           
                           {/* Status toggle buttons */}
@@ -1680,7 +1824,7 @@ export default function LogisticsView({
                                 isResolved ? "bg-slate-200 text-slate-700" : "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
                               }`}
                             >
-                              {isResolved ? "Reopen" : "Mark Fixed"}
+                              {isResolved ? t("logistics.reopen", "Reopen") : t("logistics.markFixed", "Mark Fixed")}
                             </button>
 
                             <button
@@ -1702,7 +1846,7 @@ export default function LogisticsView({
                             {inc.assignedTo && (
                               <>
                                 <span className="text-slate-300">•</span>
-                                <span className="font-semibold text-blue-600">Assigned: {inc.assignedTo}</span>
+                                <span className="font-semibold text-blue-600">{t("logistics.assigned", "Assigned:")} {inc.assignedTo}</span>
                               </>
                             )}
                           </div>
@@ -1735,7 +1879,7 @@ export default function LogisticsView({
           />
           
           {/* Slide-over Panel on the Right */}
-          <div className="relative bg-white w-full max-w-xl md:max-w-2xl h-full shadow-2xl z-10 flex flex-col justify-between animate-slide-in-right overflow-hidden border-l border-slate-200">
+          <div dir={isRTL ? "rtl" : "ltr"} className="relative bg-white w-full max-w-xl md:max-w-2xl h-full shadow-2xl z-10 flex flex-col justify-between animate-slide-in-right overflow-hidden border-inline-start border-slate-200">
             
             {/* Drawer Sticky Header */}
             <header className="p-6 border-b border-slate-150 flex items-center justify-between sticky top-0 bg-white/95 backdrop-blur-md z-10 select-none">
@@ -1744,12 +1888,12 @@ export default function LogisticsView({
                   {getDrawerTitle()}
                 </h3>
                 <p className="text-xs text-slate-500 font-medium">
-                  {modalType === "inventory" && "Audio/Visual, Furniture, Decor, Signage & Swag Inventory"}
-                  {modalType === "vendor" && "External Supplier Contract, Delivery Window & Dock Access"}
-                  {modalType === "travel" && "Speaker Flights, Hotel Reservations & Driver Pickup"}
-                  {modalType === "cue" && "Minute-by-minute Backstage Operational Timeline Cue"}
-                  {modalType === "checklist" && "Venue Readiness Verification Task"}
-                  {modalType === "incident" && "On-Site Incident Ticket & Technical Dispatch"}
+                  {modalType === "inventory" && t("logistics.drawerSubtitleInventory", "Audio/Visual, Furniture, Decor, Signage & Swag Inventory")}
+                  {modalType === "vendor" && t("logistics.drawerSubtitleVendor", "External Supplier Contract, Delivery Window & Dock Access")}
+                  {modalType === "travel" && t("logistics.drawerSubtitleTravel", "Speaker Flights, Hotel Reservations & Driver Pickup")}
+                  {modalType === "cue" && t("logistics.drawerSubtitleCue", "Minute-by-minute Backstage Operational Timeline Cue")}
+                  {modalType === "checklist" && t("logistics.drawerSubtitleChecklist", "Venue Readiness Verification Task")}
+                  {modalType === "incident" && t("logistics.drawerSubtitleIncident", "On-Site Incident Ticket & Technical Dispatch")}
                 </p>
               </div>
 
@@ -1774,7 +1918,7 @@ export default function LogisticsView({
                     }`}
                   >
                     <Package size={13} />
-                    <span>Equipment</span>
+                    <span>{t("logistics.typeEquipment", "Equipment")}</span>
                   </button>
 
                   <button
@@ -1785,7 +1929,7 @@ export default function LogisticsView({
                     }`}
                   >
                     <Truck size={13} />
-                    <span>Supplier</span>
+                    <span>{t("logistics.typeSupplier", "Supplier")}</span>
                   </button>
 
                   <button
@@ -1796,7 +1940,7 @@ export default function LogisticsView({
                     }`}
                   >
                     <Plane size={13} />
-                    <span>VIP Travel</span>
+                    <span>{t("logistics.typeVipTravel", "VIP Travel")}</span>
                   </button>
 
                   <button
@@ -1807,7 +1951,7 @@ export default function LogisticsView({
                     }`}
                   >
                     <Clock size={13} />
-                    <span>Run of Show</span>
+                    <span>{t("logistics.typeRunOfShow", "Run of Show")}</span>
                   </button>
 
                   <button
@@ -1818,7 +1962,7 @@ export default function LogisticsView({
                     }`}
                   >
                     <ClipboardCheck size={13} />
-                    <span>Checklist</span>
+                    <span>{t("logistics.typeChecklist", "Checklist")}</span>
                   </button>
 
                   <button
@@ -1829,7 +1973,7 @@ export default function LogisticsView({
                     }`}
                   >
                     <AlertTriangle size={13} />
-                    <span>Incident</span>
+                    <span>{t("logistics.typeIncident", "Incident")}</span>
                   </button>
                 </div>
               </div>
@@ -1842,36 +1986,36 @@ export default function LogisticsView({
               {modalType === "inventory" && (
                 <div className="space-y-4 animate-fade-in">
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Equipment / Item Name *</label>
+                    <label className="font-bold text-slate-700">{t("logistics.itemNameLabel", "Equipment / Item Name *")}</label>
                     <input
                       type="text"
                       required
                       value={inventoryForm.name}
                       onChange={(e) => setInventoryForm({ ...inventoryForm, name: e.target.value })}
-                      placeholder="e.g. Shure Wireless Lapel Mic Set"
+                      placeholder={t("logistics.itemNamePlaceholder", "e.g. Shure Wireless Lapel Mic Set")}
                       className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-none font-medium"
                     />
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <label className="font-bold text-slate-700">Category</label>
+                      <label className="font-bold text-slate-700">{t("logistics.categoryLabel", "Category")}</label>
                       <SearchableSelect
                         value={inventoryForm.category}
                         onChange={(val) => setInventoryForm({ ...inventoryForm, category: val })}
-                        options={INVENTORY_CATEGORIES.map(c => ({ value: c, label: c }))}
-                        placeholder="Select Category"
+                        options={INVENTORY_CATEGORIES.map(c => ({ value: c, label: getCategoryLabel(c) }))}
+                        placeholder={t("logistics.selectCategoryPlaceholder", "Select Category")}
                         buttonClassName="py-2 text-xs bg-white border-slate-200"
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="font-bold text-slate-700">Condition Status</label>
+                      <label className="font-bold text-slate-700">{t("logistics.conditionStatusLabel", "Condition Status")}</label>
                       <SearchableSelect
                         value={inventoryForm.condition}
                         onChange={(val) => setInventoryForm({ ...inventoryForm, condition: val })}
-                        options={INVENTORY_CONDITIONS.map(c => ({ value: c, label: c }))}
-                        placeholder="Select Condition"
+                        options={INVENTORY_CONDITIONS.map(c => ({ value: c, label: getConditionLabel(c) }))}
+                        placeholder={t("logistics.selectConditionPlaceholder", "Select Condition")}
                         buttonClassName="py-2 text-xs bg-white border-slate-200"
                       />
                     </div>
@@ -1879,7 +2023,7 @@ export default function LogisticsView({
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <label className="font-bold text-slate-700">Total Quantity Available</label>
+                      <label className="font-bold text-slate-700">{t("logistics.totalQuantityLabel", "Total Quantity Available")}</label>
                       <input
                         type="number"
                         min="1"
@@ -1891,7 +2035,7 @@ export default function LogisticsView({
                     </div>
 
                     <div className="space-y-1">
-                      <label className="font-bold text-slate-700">Currently Deployed / In-Use</label>
+                      <label className="font-bold text-slate-700">{t("logistics.currentlyDeployedLabel", "Currently Deployed / In-Use")}</label>
                       <input
                         type="number"
                         min="0"
@@ -1903,34 +2047,34 @@ export default function LogisticsView({
                   </div>
 
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Assigned Room / Stage Location</label>
+                    <label className="font-bold text-slate-700">{t("logistics.assignedRoomLabel", "Assigned Room / Stage Location")}</label>
                     <SearchableSelect
                       value={inventoryForm.location}
                       onChange={(val) => setInventoryForm({ ...inventoryForm, location: val })}
                       options={availableLocations.map(l => ({ value: l, label: l }))}
-                      placeholder="Select Location"
+                      placeholder={t("logistics.selectLocationPlaceholder", "Select Location")}
                       buttonClassName="py-2 text-xs bg-white border-slate-200"
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Supplier / Rental Company</label>
+                    <label className="font-bold text-slate-700">{t("logistics.supplierCompanyLabel", "Supplier / Rental Company")}</label>
                     <input
                       type="text"
                       value={inventoryForm.supplier}
                       onChange={(e) => setInventoryForm({ ...inventoryForm, supplier: e.target.value })}
-                      placeholder="e.g. Apex AV Solutions"
+                      placeholder={t("logistics.supplierPlaceholder", "e.g. Apex AV Solutions")}
                       className="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-none font-medium"
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Operational Notes & Specs</label>
+                    <label className="font-bold text-slate-700">{t("logistics.operationalNotesLabel", "Operational Notes & Specs")}</label>
                     <textarea
                       rows={3}
                       value={inventoryForm.notes}
                       onChange={(e) => setInventoryForm({ ...inventoryForm, notes: e.target.value })}
-                      placeholder="e.g. Includes charging station, spare batteries, and 10m XLR cable"
+                      placeholder={t("logistics.operationalNotesPlaceholder", "e.g. Includes charging station, spare batteries, and 10m XLR cable")}
                       className="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-none font-medium"
                     />
                   </div>
@@ -1941,36 +2085,36 @@ export default function LogisticsView({
               {modalType === "vendor" && (
                 <div className="space-y-4 animate-fade-in">
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Company / Supplier Name *</label>
+                    <label className="font-bold text-slate-700">{t("logistics.supplierNameLabel", "Company / Supplier Name *")}</label>
                     <input
                       type="text"
                       required
                       value={vendorForm.name}
                       onChange={(e) => setVendorForm({ ...vendorForm, name: e.target.value })}
-                      placeholder="e.g. Gourmet Bistro Catering Inc."
+                      placeholder={t("logistics.supplierNamePlaceholder", "e.g. Gourmet Bistro Catering Inc.")}
                       className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-none font-medium"
                     />
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <label className="font-bold text-slate-700">Service Category</label>
+                      <label className="font-bold text-slate-700">{t("logistics.serviceCategoryLabel", "Service Category")}</label>
                       <SearchableSelect
                         value={vendorForm.serviceType}
                         onChange={(val) => setVendorForm({ ...vendorForm, serviceType: val })}
-                        options={VENDOR_SERVICE_TYPES.map(v => ({ value: v, label: v }))}
-                        placeholder="Select Service"
+                        options={VENDOR_SERVICE_TYPES.map(v => ({ value: v, label: getServiceTypeLabel(v) }))}
+                        placeholder={t("logistics.selectServicePlaceholder", "Select Service")}
                         buttonClassName="py-2 text-xs bg-white border-slate-200"
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="font-bold text-slate-700">Delivery / Contract Status</label>
+                      <label className="font-bold text-slate-700">{t("logistics.deliveryStatusLabel", "Delivery / Contract Status")}</label>
                       <SearchableSelect
                         value={vendorForm.status}
                         onChange={(val) => setVendorForm({ ...vendorForm, status: val })}
-                        options={VENDOR_STATUSES.map(s => ({ value: s.value, label: s.label }))}
-                        placeholder="Select Status"
+                        options={VENDOR_STATUSES.map(s => ({ value: s.value, label: getVendorStatusLabel(s.value) }))}
+                        placeholder={t("logistics.selectStatusPlaceholder", "Select Status")}
                         buttonClassName="py-2 text-xs bg-white border-slate-200"
                       />
                     </div>
@@ -1978,54 +2122,54 @@ export default function LogisticsView({
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <label className="font-bold text-slate-700">On-Site Contact Person</label>
+                      <label className="font-bold text-slate-700">{t("logistics.onSiteContactLabel", "On-Site Contact Person")}</label>
                       <input
                         type="text"
                         value={vendorForm.contactName}
                         onChange={(e) => setVendorForm({ ...vendorForm, contactName: e.target.value })}
-                        placeholder="e.g. Sarah Jenkins"
+                        placeholder={t("logistics.onSiteContactPlaceholder", "e.g. Sarah Jenkins")}
                         className="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-none font-medium"
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="font-bold text-slate-700">Direct Phone Number</label>
-                      <input
-                        type="text"
+                      <label className="font-bold text-slate-700">{t("logistics.directPhoneLabel", "Direct Phone Number")}</label>
+                      <CountryPhoneInput
                         value={vendorForm.phone}
-                        onChange={(e) => setVendorForm({ ...vendorForm, phone: e.target.value })}
-                        placeholder="+1 (555) 000-0000"
-                        className="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-none font-medium"
+                        onChange={(val) => setVendorForm({ ...vendorForm, phone: val })}
+                        defaultCountry="DZ"
+                        className="w-full"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <label className="font-bold text-slate-700">Load-In Window Time</label>
+                      <label className="font-bold text-slate-700">{t("logistics.loadInWindowLabel", "Load-In Window Time")}</label>
                       <input
                         type="text"
+                        dir="ltr"
                         value={vendorForm.deliveryTime}
                         onChange={(e) => setVendorForm({ ...vendorForm, deliveryTime: e.target.value })}
-                        placeholder="e.g. 07:30 AM"
+                        placeholder={t("logistics.loadInWindowPlaceholder", "e.g. 07:30 AM")}
                         className="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-none font-medium"
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="font-bold text-slate-700">Vehicle Plate / Loading Dock</label>
+                      <label className="font-bold text-slate-700">{t("logistics.vehiclePlateLabel", "Vehicle Plate / Loading Dock")}</label>
                       <input
                         type="text"
                         value={vendorForm.vehiclePlate}
                         onChange={(e) => setVendorForm({ ...vendorForm, vehiclePlate: e.target.value })}
-                        placeholder="e.g. Dock B / Plate NY-8492-LG"
+                        placeholder={t("logistics.vehiclePlatePlaceholder", "e.g. Dock B / Plate NY-8492-LG")}
                         className="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-none font-medium"
                       />
                     </div>
                   </div>
 
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Contract Budget / Value ($)</label>
+                    <label className="font-bold text-slate-700">{t("logistics.contractBudgetLabel", "Contract Budget / Value ($)")}</label>
                     <input
                       type="number"
                       value={vendorForm.contractAmount}
@@ -2036,12 +2180,12 @@ export default function LogisticsView({
                   </div>
 
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Scope of Deliverables & Notes</label>
+                    <label className="font-bold text-slate-700">{t("logistics.scopeDeliverablesLabel", "Scope of Deliverables & Notes")}</label>
                     <textarea
                       rows={3}
                       value={vendorForm.notes}
                       onChange={(e) => setVendorForm({ ...vendorForm, notes: e.target.value })}
-                      placeholder="e.g. Morning coffee break for 200 VIPs, hot buffet lunch, and teardown cleanup"
+                      placeholder={t("logistics.scopeDeliverablesPlaceholder", "e.g. Morning coffee break for 200 VIPs, hot buffet lunch, and teardown cleanup")}
                       className="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-none font-medium"
                     />
                   </div>
@@ -2056,7 +2200,7 @@ export default function LogisticsView({
                   {speakers.length > 0 && !editingItem && (
                     <div className="p-3 bg-blue-50/50 border border-blue-100 rounded-2xl space-y-1.5">
                       <span className="text-[10px] font-extrabold uppercase text-blue-700 tracking-wider">
-                        Quick Autofill from Event Speakers:
+                        {t("logistics.quickAutofillSpeakers", "Quick Autofill from Event Speakers:")}
                       </span>
                       <div className="flex items-center gap-1.5 flex-wrap">
                         {speakers.slice(0, 5).map((spk, idx) => {
@@ -2084,36 +2228,36 @@ export default function LogisticsView({
                   )}
 
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Guest / Speaker Full Name *</label>
+                    <label className="font-bold text-slate-700">{t("logistics.guestNameLabel", "Guest / Speaker Full Name *")}</label>
                     <input
                       type="text"
                       required
                       value={travelForm.personName}
                       onChange={(e) => setTravelForm({ ...travelForm, personName: e.target.value })}
-                      placeholder="e.g. Dr. Elena Vance"
+                      placeholder={t("logistics.guestNamePlaceholder", "e.g. Dr. Elena Vance")}
                       className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-none font-medium"
                     />
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <label className="font-bold text-slate-700">Event Role</label>
+                      <label className="font-bold text-slate-700">{t("logistics.eventRoleLabel", "Event Role")}</label>
                       <SearchableSelect
                         value={travelForm.role}
                         onChange={(val) => setTravelForm({ ...travelForm, role: val })}
-                        options={TRAVEL_ROLES.map(r => ({ value: r, label: r }))}
-                        placeholder="Select Role"
+                        options={TRAVEL_ROLES.map(r => ({ value: r, label: getTravelRoleLabel(r) }))}
+                        placeholder={t("logistics.selectRolePlaceholder", "Select Role")}
                         buttonClassName="py-2 text-xs bg-white border-slate-200"
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="font-bold text-slate-700">Travel Mode</label>
+                      <label className="font-bold text-slate-700">{t("logistics.travelModeLabel", "Travel Mode")}</label>
                       <SearchableSelect
                         value={travelForm.travelType}
                         onChange={(val) => setTravelForm({ ...travelForm, travelType: val })}
-                        options={TRAVEL_TYPES.map(t => ({ value: t, label: t }))}
-                        placeholder="Select Mode"
+                        options={TRAVEL_TYPES.map(t => ({ value: t, label: getTravelTypeLabel(t) }))}
+                        placeholder={t("logistics.selectModePlaceholder", "Select Mode")}
                         buttonClassName="py-2 text-xs bg-white border-slate-200"
                       />
                     </div>
@@ -2121,23 +2265,23 @@ export default function LogisticsView({
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <label className="font-bold text-slate-700">Flight / Train Number</label>
+                      <label className="font-bold text-slate-700">{t("logistics.flightNumberLabel", "Flight / Train Number")}</label>
                       <input
                         type="text"
                         value={travelForm.flightNumber}
                         onChange={(e) => setTravelForm({ ...travelForm, flightNumber: e.target.value })}
-                        placeholder="e.g. AF 1492"
+                        placeholder={t("logistics.flightNumberPlaceholder", "e.g. AF 1492")}
                         className="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-none font-medium"
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="font-bold text-slate-700">Airport Pickup Status</label>
+                      <label className="font-bold text-slate-700">{t("logistics.airportPickupLabel", "Airport Pickup Status")}</label>
                       <SearchableSelect
                         value={travelForm.pickupStatus}
                         onChange={(val) => setTravelForm({ ...travelForm, pickupStatus: val })}
-                        options={PICKUP_STATUSES.map(s => ({ value: s.value, label: s.label }))}
-                        placeholder="Select Status"
+                        options={PICKUP_STATUSES.map(s => ({ value: s.value, label: getPickupStatusLabel(s.value) }))}
+                        placeholder={t("logistics.selectStatusPlaceholder", "Select Status")}
                         buttonClassName="py-2 text-xs bg-white border-slate-200"
                       />
                     </div>
@@ -2145,23 +2289,23 @@ export default function LogisticsView({
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <label className="font-bold text-slate-700">Hotel Partner</label>
+                      <label className="font-bold text-slate-700">{t("logistics.hotelPartnerLabel", "Hotel Partner")}</label>
                       <input
                         type="text"
                         value={travelForm.hotelName}
                         onChange={(e) => setTravelForm({ ...travelForm, hotelName: e.target.value })}
-                        placeholder="e.g. Grand Hyatt Regency"
+                        placeholder={t("logistics.hotelPartnerPlaceholder", "e.g. Grand Hyatt Regency")}
                         className="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-none font-medium"
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="font-bold text-slate-700">Room / Suite #</label>
+                      <label className="font-bold text-slate-700">{t("logistics.roomSuiteLabel", "Room / Suite #")}</label>
                       <input
                         type="text"
                         value={travelForm.roomNumber}
                         onChange={(e) => setTravelForm({ ...travelForm, roomNumber: e.target.value })}
-                        placeholder="e.g. Suite 804"
+                        placeholder={t("logistics.roomSuitePlaceholder", "e.g. Suite 804")}
                         className="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-none font-medium"
                       />
                     </div>
@@ -2169,35 +2313,34 @@ export default function LogisticsView({
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <label className="font-bold text-slate-700">Assigned Driver Name</label>
+                      <label className="font-bold text-slate-700">{t("logistics.assignedDriverLabel", "Assigned Driver Name")}</label>
                       <input
                         type="text"
                         value={travelForm.driverName}
                         onChange={(e) => setTravelForm({ ...travelForm, driverName: e.target.value })}
-                        placeholder="e.g. Karim Meziani"
+                        placeholder={t("logistics.assignedDriverPlaceholder", "e.g. Karim Meziani")}
                         className="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-none font-medium"
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="font-bold text-slate-700">Driver Contact Phone</label>
-                      <input
-                        type="text"
+                      <label className="font-bold text-slate-700">{t("logistics.driverPhoneLabel", "Driver Contact Phone")}</label>
+                      <CountryPhoneInput
                         value={travelForm.driverPhone}
-                        onChange={(e) => setTravelForm({ ...travelForm, driverPhone: e.target.value })}
-                        placeholder="+1 (555) 000-0000"
-                        className="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-none font-medium"
+                        onChange={(val) => setTravelForm({ ...travelForm, driverPhone: val })}
+                        defaultCountry="DZ"
+                        className="w-full"
                       />
                     </div>
                   </div>
 
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Special Rider / Green Room Requests</label>
+                    <label className="font-bold text-slate-700">{t("logistics.specialRiderLabel", "Special Rider / Green Room Requests")}</label>
                     <textarea
                       rows={3}
                       value={travelForm.specialRequests}
                       onChange={(e) => setTravelForm({ ...travelForm, specialRequests: e.target.value })}
-                      placeholder="e.g. Halal meal preference, lactose-free milk in speaker lounge, early check-in"
+                      placeholder={t("logistics.specialRiderPlaceholder", "e.g. Halal meal preference, lactose-free milk in speaker lounge, early check-in")}
                       className="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-none font-medium"
                     />
                   </div>
@@ -2208,22 +2351,23 @@ export default function LogisticsView({
               {modalType === "cue" && (
                 <div className="space-y-4 animate-fade-in">
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Cue Title / Action Description *</label>
+                    <label className="font-bold text-slate-700">{t("logistics.cueTitleLabel", "Cue Title / Action Description *")}</label>
                     <input
                       type="text"
                       required
                       value={cueForm.title}
                       onChange={(e) => setCueForm({ ...cueForm, title: e.target.value })}
-                      placeholder="e.g. Stage Sound Check & Mic Dr. Elena Vance"
+                      placeholder={t("logistics.cueTitlePlaceholder", "e.g. Stage Sound Check & Mic Dr. Elena Vance")}
                       className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-none font-medium"
                     />
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <label className="font-bold text-slate-700">Cue Time (HH:MM AM/PM)</label>
+                      <label className="font-bold text-slate-700">{t("logistics.cueTimeLabel", "Cue Time (HH:MM AM/PM)")}</label>
                       <input
                         type="text"
+                        dir="ltr"
                         required
                         value={cueForm.time}
                         onChange={(e) => setCueForm({ ...cueForm, time: e.target.value })}
@@ -2233,12 +2377,12 @@ export default function LogisticsView({
                     </div>
 
                     <div className="space-y-1">
-                      <label className="font-bold text-slate-700">Action Type</label>
+                      <label className="font-bold text-slate-700">{t("logistics.actionTypeLabel", "Action Type")}</label>
                       <SearchableSelect
                         value={cueForm.actionType}
                         onChange={(val) => setCueForm({ ...cueForm, actionType: val })}
-                        options={ACTION_TYPES.map(a => ({ value: a, label: a }))}
-                        placeholder="Select Action Type"
+                        options={ACTION_TYPES.map(a => ({ value: a, label: getActionTypeLabel(a) }))}
+                        placeholder={t("logistics.selectActionTypePlaceholder", "Select Action Type")}
                         buttonClassName="py-2 text-xs bg-white border-slate-200"
                       />
                     </div>
@@ -2246,35 +2390,35 @@ export default function LogisticsView({
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <label className="font-bold text-slate-700">Stage / Room Location</label>
+                      <label className="font-bold text-slate-700">{t("logistics.stageRoomLocationLabel", "Stage / Room Location")}</label>
                       <SearchableSelect
                         value={cueForm.stageOrLocation}
                         onChange={(val) => setCueForm({ ...cueForm, stageOrLocation: val })}
                         options={availableLocations.map(l => ({ value: l, label: l }))}
-                        placeholder="Select Stage"
+                        placeholder={t("logistics.selectStagePlaceholder", "Select Stage")}
                         buttonClassName="py-2 text-xs bg-white border-slate-200"
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="font-bold text-slate-700">Responsible Person</label>
+                      <label className="font-bold text-slate-700">{t("logistics.responsiblePersonLabel", "Responsible Person")}</label>
                       <SearchableSelect
                         value={cueForm.responsiblePerson}
                         onChange={(val) => setCueForm({ ...cueForm, responsiblePerson: val })}
                         options={availableStaff.map(s => ({ value: s, label: s }))}
-                        placeholder="Select Person"
+                        placeholder={t("logistics.selectPersonPlaceholder", "Select Person")}
                         buttonClassName="py-2 text-xs bg-white border-slate-200"
                       />
                     </div>
                   </div>
 
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Technical Notes & Instructions</label>
+                    <label className="font-bold text-slate-700">{t("logistics.technicalNotesLabel", "Technical Notes & Instructions")}</label>
                     <textarea
                       rows={3}
                       value={cueForm.notes}
                       onChange={(e) => setCueForm({ ...cueForm, notes: e.target.value })}
-                      placeholder="e.g. Ensure slide clicker is tested with primary laptop before speaker introduction"
+                      placeholder={t("logistics.technicalNotesPlaceholder", "e.g. Ensure slide clicker is tested with primary laptop before speaker introduction")}
                       className="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-none font-medium"
                     />
                   </div>
@@ -2285,33 +2429,34 @@ export default function LogisticsView({
               {modalType === "checklist" && (
                 <div className="space-y-4 animate-fade-in">
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Checklist Task Title *</label>
+                    <label className="font-bold text-slate-700">{t("logistics.checklistTaskTitleLabel", "Checklist Task Title *")}</label>
                     <input
                       type="text"
                       required
                       value={checklistForm.title}
                       onChange={(e) => setChecklistForm({ ...checklistForm, title: e.target.value })}
-                      placeholder="e.g. Test audio feedback on Main Stage wireless lapels"
+                      placeholder={t("logistics.checklistTaskTitlePlaceholder", "e.g. Test audio feedback on Main Stage wireless lapels")}
                       className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-none font-medium"
                     />
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <label className="font-bold text-slate-700">Checklist Category</label>
+                      <label className="font-bold text-slate-700">{t("logistics.checklistCategoryLabel", "Checklist Category")}</label>
                       <SearchableSelect
                         value={checklistForm.category}
                         onChange={(val) => setChecklistForm({ ...checklistForm, category: val })}
-                        options={CHECKLIST_CATEGORIES.map(c => ({ value: c, label: c }))}
-                        placeholder="Select Category"
+                        options={CHECKLIST_CATEGORIES.map(c => ({ value: c, label: getChecklistCategoryLabel(c) }))}
+                        placeholder={t("logistics.selectCategoryPlaceholder", "Select Category")}
                         buttonClassName="py-2 text-xs bg-white border-slate-200"
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="font-bold text-slate-700">Due Time (Pre-Opening)</label>
+                      <label className="font-bold text-slate-700">{t("logistics.dueTimeLabel", "Due Time (Pre-Opening)")}</label>
                       <input
                         type="text"
+                        dir="ltr"
                         value={checklistForm.dueDate}
                         onChange={(e) => setChecklistForm({ ...checklistForm, dueDate: e.target.value })}
                         placeholder="08:00 AM"
@@ -2326,59 +2471,59 @@ export default function LogisticsView({
               {modalType === "incident" && (
                 <div className="space-y-4 animate-fade-in">
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Incident / Issue Summary *</label>
+                    <label className="font-bold text-slate-700">{t("logistics.incidentTitleLabel", "Incident / Issue Summary *")}</label>
                     <input
                       type="text"
                       required
                       value={incidentForm.title}
                       onChange={(e) => setIncidentForm({ ...incidentForm, title: e.target.value })}
-                      placeholder="e.g. Projector flicker on Main Auditorium Stage"
+                      placeholder={t("logistics.incidentTitlePlaceholder", "e.g. Projector flicker on Main Auditorium Stage")}
                       className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-none font-medium"
                     />
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <label className="font-bold text-slate-700">Urgency Level</label>
+                      <label className="font-bold text-slate-700">{t("logistics.urgencyLevelLabel", "Urgency Level")}</label>
                       <SearchableSelect
                         value={incidentForm.severity}
                         onChange={(val) => setIncidentForm({ ...incidentForm, severity: val })}
-                        options={INCIDENT_SEVERITIES.map(s => ({ value: s.value, label: s.label }))}
-                        placeholder="Select Urgency"
+                        options={INCIDENT_SEVERITIES.map(s => ({ value: s.value, label: getIncidentSeverityLabel(s.value) }))}
+                        placeholder={t("logistics.selectUrgencyPlaceholder", "Select Urgency")}
                         buttonClassName="py-2 text-xs bg-white border-slate-200"
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="font-bold text-slate-700">Venue Location</label>
+                      <label className="font-bold text-slate-700">{t("logistics.venueLocationLabel", "Venue Location")}</label>
                       <SearchableSelect
                         value={incidentForm.location}
                         onChange={(val) => setIncidentForm({ ...incidentForm, location: val })}
                         options={availableLocations.map(l => ({ value: l, label: l }))}
-                        placeholder="Select Location"
+                        placeholder={t("logistics.selectLocationPlaceholder", "Select Location")}
                         buttonClassName="py-2 text-xs bg-white border-slate-200"
                       />
                     </div>
                   </div>
 
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Assign To Staff / AV Technician</label>
+                    <label className="font-bold text-slate-700">{t("logistics.assignToStaffLabel", "Assign To Staff / AV Technician")}</label>
                     <SearchableSelect
                       value={incidentForm.assignedTo}
                       onChange={(val) => setIncidentForm({ ...incidentForm, assignedTo: val })}
                       options={availableStaff.map(s => ({ value: s, label: s }))}
-                      placeholder="Select Assignee"
+                      placeholder={t("logistics.selectAssigneePlaceholder", "Select Assignee")}
                       buttonClassName="py-2 text-xs bg-white border-slate-200"
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Detailed Description & Symptoms</label>
+                    <label className="font-bold text-slate-700">{t("logistics.detailedDescriptionLabel", "Detailed Description & Symptoms")}</label>
                     <textarea
                       rows={3}
                       value={incidentForm.description}
                       onChange={(e) => setIncidentForm({ ...incidentForm, description: e.target.value })}
-                      placeholder="Explain symptoms, cable swaps, or equipment needed to resolve the incident..."
+                      placeholder={t("logistics.detailedDescriptionPlaceholder", "Explain symptoms, cable swaps, or equipment needed to resolve the incident...")}
                       className="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-none font-medium"
                     />
                   </div>
@@ -2393,7 +2538,7 @@ export default function LogisticsView({
                 onClick={() => { setModalType(null); setEditingItem(null); }}
                 className="px-5 py-2.5 rounded-xl font-bold text-xs text-slate-600 hover:bg-slate-200 transition-colors cursor-pointer"
               >
-                Cancel
+                {t("common.cancel", "Cancel")}
               </button>
               <button
                 type="submit"
