@@ -132,106 +132,25 @@ export default function MyTicketsPage({
       {/* Main Container */}
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-8">
         
-        {/* Header Title & Breadcrumb */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-200">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <button 
-                onClick={onGoToHome}
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-blue-600 transition-colors cursor-pointer"
-              >
-                <ArrowLeft size={14} />
-                <span>{t("event.backToEvents", "Back to Events")}</span>
-              </button>
-              <span className="text-slate-300">•</span>
-              <span className="text-xs font-extrabold text-blue-600 uppercase tracking-wider">
-                {t("nav.myTickets", "My Tickets")}
-              </span>
-            </div>
+        {/* Header Title & Search Bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+            {t("passes.title", "My Digital Passes")}
+          </h1>
 
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100 shadow-xs shrink-0">
-                <Ticket size={22} className="stroke-[2.2]" />
-              </div>
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-                  {t("passes.title", "My Digital Passes")}
-                </h1>
-                <p className="text-xs sm:text-sm text-slate-500 font-medium">
-                  {t("passes.subtitle", "Your active credentials, QR codes, and entry badges.")}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Counter Badges */}
-          <div className="flex items-center gap-2 self-start md:self-auto">
-            <div className="px-4 py-2 bg-white border border-slate-200 rounded-2xl shadow-xs flex items-center gap-2.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-              <div className="text-left">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Verified Passes</span>
-                <span className="text-sm font-black text-slate-900">{registrations.length} Active</span>
-              </div>
-            </div>
-
-            <button
-              onClick={onGoToHome}
-              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs font-bold shadow-sm shadow-blue-600/20 hover:shadow transition-all cursor-pointer flex items-center gap-1.5"
-            >
-              <Sparkles size={14} />
-              <span>{t("passes.browseEvents", "Browse Events")}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Search & Filter Bar */}
-        {registrations.length > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-xs">
-            <div className="relative w-full sm:w-80">
+          {registrations.length > 0 && (
+            <div className="relative w-full sm:w-80 md:w-96">
               <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t("tickets.searchPlaceholder", "Search tickets by event, venue, badge code...")}
-                className="w-full pl-9 pr-4 py-2 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-blue-600 outline-none transition-all"
+                className="w-full pl-9 pr-4 py-2.5 text-xs font-semibold bg-white border border-slate-200 rounded-2xl text-slate-800 placeholder:text-slate-400 shadow-xs focus:border-blue-600 outline-none transition-all"
               />
             </div>
-
-            <div className="flex items-center gap-1.5 w-full sm:w-auto">
-              <button
-                onClick={() => setFilterTier("all")}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  filterTier === "all"
-                    ? "bg-slate-900 text-white shadow-xs"
-                    : "text-slate-600 hover:bg-slate-100"
-                }`}
-              >
-                All ({registrations.length})
-              </button>
-              <button
-                onClick={() => setFilterTier("vip")}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  filterTier === "vip"
-                    ? "bg-amber-500 text-white shadow-xs"
-                    : "text-slate-600 hover:bg-slate-100"
-                }`}
-              >
-                VIP Passes
-              </button>
-              <button
-                onClick={() => setFilterTier("standard")}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  filterTier === "standard"
-                    ? "bg-blue-600 text-white shadow-xs"
-                    : "text-slate-600 hover:bg-slate-100"
-                }`}
-              >
-                Standard
-              </button>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Empty State */}
         {registrations.length === 0 ? (
@@ -257,7 +176,7 @@ export default function MyTicketsPage({
           </div>
         ) : filteredRegistrations.length === 0 ? (
           <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center space-y-2">
-            <p className="text-xs text-slate-500 font-bold">No tickets match your search filters.</p>
+            <p className="text-xs text-slate-500 font-bold">{t("tickets.noMatchingTickets", "No tickets match your search filters.")}</p>
             <button
               onClick={() => {
                 setSearchQuery("");
@@ -305,12 +224,12 @@ export default function MyTicketsPage({
                       {isPending ? (
                         <span className="text-[10px] font-bold text-amber-700 bg-amber-100/80 px-2.5 py-1 rounded-lg border border-amber-200/80 flex items-center gap-1.5">
                           <Clock size={11} className="stroke-[2.5]" />
-                          <span>Pending Review</span>
+                          <span>{t("tickets.pendingReview", "Pending Review")}</span>
                         </span>
                       ) : (
                         <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200/80 flex items-center gap-1.5">
                           <CheckCircle2 size={11} className="stroke-[2.5] text-emerald-600" />
-                          <span>Confirmed</span>
+                          <span>{t("tickets.confirmedStatus", "Confirmed")}</span>
                         </span>
                       )}
                     </div>
@@ -325,7 +244,7 @@ export default function MyTicketsPage({
                   {/* Main Ticket Body */}
                   <div className="p-6 flex flex-col sm:flex-row items-center sm:items-start justify-between gap-6">
                     {/* Left: Event Details & Attendee */}
-                    <div className="space-y-4 flex-1 text-left min-w-0">
+                    <div className="space-y-4 flex-1 text-start rtl:text-right text-left min-w-0">
                       <div>
                         <h3 className="text-lg font-black text-slate-900 leading-snug group-hover:text-indigo-650 transition-colors truncate">
                           {reg.eventTitle}
@@ -370,8 +289,8 @@ export default function MyTicketsPage({
                           title="Door QR pass will be unlocked upon organizer approval"
                         >
                           <Lock size={22} className="stroke-[2.3] mb-1 text-amber-600" />
-                          <span className="text-[9px] font-black uppercase tracking-tight">QR Locked</span>
-                          <span className="text-[8px] text-amber-800/80 leading-tight mt-0.5">Awaiting Review</span>
+                          <span className="text-[9px] font-black uppercase tracking-tight">{t("tickets.qrLocked", "QR Locked")}</span>
+                          <span className="text-[8px] text-amber-800/80 leading-tight mt-0.5">{t("tickets.awaitingReview", "Awaiting Review")}</span>
                         </div>
                         <span className="text-[9px] font-bold text-amber-700 uppercase tracking-widest mt-1.5 flex items-center gap-0.5">
                           <Clock size={10} /> Under Review
@@ -397,7 +316,7 @@ export default function MyTicketsPage({
                           )}
                           <div className="absolute inset-0 bg-slate-900/60 rounded-2xl opacity-0 group-hover/qr:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold gap-1">
                             <Eye size={13} />
-                            <span>Enlarge</span>
+                            <span>{t("tickets.enlarge", "Enlarge")}</span>
                           </div>
                         </div>
                         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">
@@ -418,7 +337,7 @@ export default function MyTicketsPage({
                           title="Printable badge is locked while application is under review"
                         >
                           <Lock size={12} className="text-amber-600" />
-                          <span>Badge Locked</span>
+                          <span>{t("tickets.badgeLocked", "Badge Locked")}</span>
                         </button>
                       ) : (
                         <button
@@ -525,7 +444,7 @@ export default function MyTicketsPage({
                 className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center justify-center gap-1.5"
               >
                 <Download size={14} />
-                <span>Save QR Image</span>
+                <span>{t("tickets.saveQrImage", "Save QR Image")}</span>
               </button>
               <button
                 onClick={() => {
@@ -536,7 +455,7 @@ export default function MyTicketsPage({
                 className="flex-1 py-2.5 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md shadow-indigo-650/20 flex items-center justify-center gap-1.5"
               >
                 <Printer size={14} />
-                <span>Print Badge</span>
+                <span>{t("tickets.printBadgeBtn", "Print Badge")}</span>
               </button>
             </div>
           </div>
@@ -604,7 +523,7 @@ export default function MyTicketsPage({
 
               <div className="flex items-center justify-center gap-2">
                 <Printer size={20} className="text-indigo-650" />
-                <h3 className="text-lg font-black text-slate-900">Official A4 4-Fold Badge Sheet</h3>
+                <h3 className="text-lg font-black text-slate-900">{t("tickets.officialA4Sheet", "Official A4 4-Fold Badge Sheet")}</h3>
               </div>
 
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
@@ -643,7 +562,7 @@ export default function MyTicketsPage({
                   className="flex-1 py-2.5 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-650/20 transition-all cursor-pointer flex items-center justify-center gap-2"
                 >
                   <Printer size={15} />
-                  <span>Print Document</span>
+                  <span>{t("tickets.printDocument", "Print Document")}</span>
                 </button>
               </div>
             </div>
