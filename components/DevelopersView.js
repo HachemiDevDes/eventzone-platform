@@ -1177,7 +1177,7 @@ fun main() {
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-black text-slate-900">{tickets.length}</div>
+            <div className="text-2xl font-black text-slate-900"><bdi dir="ltr">{tickets.length}</bdi></div>
             <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-slate-500">
               <span className="text-blue-600 font-bold"><bdi dir="ltr">{tickets.filter(t => !t.isSoldOut).length}</bdi></span> {t("dev.activeTicketFormsReady", "active ticket forms ready")}
             </div>
@@ -1193,7 +1193,7 @@ fun main() {
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-black text-slate-900">{apiKeys.length}</div>
+            <div className="text-2xl font-black text-slate-900"><bdi dir="ltr">{apiKeys.length}</bdi></div>
             <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-emerald-600">
               <CheckCircle2 size={12} className="shrink-0" />
               <span><bdi dir="ltr">{apiKeys.filter(k => k.is_active !== false).length}</bdi> {t("dev.activeCredentials", "active credentials")}</span>
@@ -1210,7 +1210,7 @@ fun main() {
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-black text-slate-900">{webhooks.length}</div>
+            <div className="text-2xl font-black text-slate-900"><bdi dir="ltr">{webhooks.length}</bdi></div>
             <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-indigo-600">
               {t("dev.realtimeDeliveryActive", "Real-time delivery active")}
             </div>
@@ -1227,7 +1227,7 @@ fun main() {
           </div>
           <div className="mt-3">
             <div className="flex items-center justify-between">
-              <span className="text-2xl font-black text-slate-900">100%</span>
+              <span className="text-2xl font-black text-slate-900"><bdi dir="ltr">100%</bdi></span>
               <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-teal-100 text-teal-700">
                 {t("dev.onlineStatus", "Online")}
               </span>
@@ -1279,7 +1279,7 @@ fun main() {
                       : "bg-slate-100 text-slate-600"
                   }`}
                 >
-                  {tab.badge}
+                  <bdi dir="ltr">{tab.badge}</bdi>
                 </span>
               )}
               {isActive && (
@@ -1705,7 +1705,7 @@ fun main() {
         <div className="space-y-6 animate-fade-in">
           {/* Search bar & filter */}
           <div className="bg-white p-4 rounded-2xl border border-slate-150 shadow-xs flex items-center gap-3">
-            <Search size={16} className="text-slate-400 shrink-0 ml-1" />
+            <Search size={16} className="text-slate-400 shrink-0 ms-1" />
             <input
               type="text"
               value={searchQuery}
@@ -1985,7 +1985,7 @@ fun main() {
         <div className="space-y-6 animate-fade-in">
           {/* Search bar */}
           <div className="bg-white p-4 rounded-2xl border border-slate-150 shadow-xs flex items-center gap-3">
-            <Search size={16} className="text-slate-400 shrink-0 ml-1" />
+            <Search size={16} className="text-slate-400 shrink-0 ms-1" />
             <input
               type="text"
               value={searchQuery}
@@ -2092,7 +2092,7 @@ fun main() {
         <div className="space-y-6 animate-fade-in">
           {/* Search bar */}
           <div className="bg-white p-4 rounded-2xl border border-slate-150 shadow-xs flex items-center gap-3">
-            <Search size={16} className="text-slate-400 shrink-0 ml-1" />
+            <Search size={16} className="text-slate-400 shrink-0 ms-1" />
             <input
               type="text"
               value={searchQuery}
@@ -2125,31 +2125,31 @@ fun main() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-start rtl:text-right text-left text-xs">
+                <table className="w-full text-start text-xs">
                   <thead className="bg-slate-50 border-b border-slate-150 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
                     <tr>
-                      <th className="p-4 pl-6">{t("dev.colAttendee", "Attendee")}</th>
-                      <th className="p-4">{t("dev.colTicketPass", "Ticket Pass")}</th>
-                      <th className="p-4">{t("dev.colOriginSource", "Origin / Source")}</th>
-                      <th className="p-4">{t("dev.colStatus", "Status")}</th>
-                      <th className="p-4">{t("dev.colTimestamp", "Timestamp")}</th>
-                      <th className="p-4 pr-6 text-right">{t("dev.colPayload", "Payload")}</th>
+                      <th className="p-4 ps-6 text-start">{t("dev.colAttendee", "Attendee")}</th>
+                      <th className="p-4 text-start">{t("dev.colTicketPass", "Ticket Pass")}</th>
+                      <th className="p-4 text-start">{t("dev.colOriginSource", "Origin / Source")}</th>
+                      <th className="p-4 text-start">{t("dev.colStatus", "Status")}</th>
+                      <th className="p-4 text-start">{t("dev.colTimestamp", "Timestamp")}</th>
+                      <th className="p-4 pe-6 text-end">{t("dev.colPayload", "Payload")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-slate-700 font-semibold">
                     {filteredRegistrations.map((item) => (
                       <tr key={item.id} className="hover:bg-slate-50/60 transition-colors">
-                        <td className="p-4 pl-6">
+                        <td className="p-4 ps-6 text-start">
                           <div className="font-extrabold text-slate-900">{item.name}</div>
                           <div className="text-[11px] text-slate-400 font-mono">{item.email}</div>
                         </td>
-                        <td className="p-4 font-bold text-blue-600">{item.ticketType}</td>
-                        <td className="p-4">
+                        <td className="p-4 font-bold text-blue-600 text-start">{item.ticketType}</td>
+                        <td className="p-4 text-start">
                           <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
                             {item.source === "Direct Form Embed" ? t("dev.originDirectForm", "Direct Form Embed") : item.source}
                           </span>
                         </td>
-                        <td className="p-4">
+                        <td className="p-4 text-start">
                           <span
                             className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
                               item.status === "registered"
@@ -2160,10 +2160,21 @@ fun main() {
                             {item.status === "registered" ? t("dev.statusRegistered", "registered") : item.status === "pending" ? t("dev.statusPending", "pending") : item.status}
                           </span>
                         </td>
-                        <td className="p-4 text-slate-400 text-[11px]">
-                          <bdi dir="ltr">{item.date ? new Date(item.date).toLocaleString(lang === "ar" ? "ar-DZ" : (lang === "fr" ? "fr-FR" : "en-US")) : t("dev.recentlyCreated", "Recently")}</bdi>
+                        <td className="p-4 text-slate-400 text-[11px] text-start">
+                          <bdi dir="ltr">
+                            {item.date
+                              ? new Date(item.date).toLocaleString(lang === "fr" ? "fr-FR" : "en-US", {
+                                  year: "numeric",
+                                  month: "numeric",
+                                  day: "numeric",
+                                  hour: "numeric",
+                                  minute: "2-digit",
+                                  second: "2-digit",
+                                })
+                              : t("dev.recentlyCreated", "Recently")}
+                          </bdi>
                         </td>
-                        <td className="p-4 pr-6 text-right">
+                        <td className="p-4 pe-6 text-end">
                           <button
                             type="button"
                             onClick={() => setSelectedLogPayload(item.raw)}
