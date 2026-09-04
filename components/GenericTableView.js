@@ -1082,25 +1082,26 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
     const rect = e.currentTarget.getBoundingClientRect();
     const spaceBelow = window.innerHeight - rect.bottom;
     const openUpwards = spaceBelow < 250;
-    const menuWidth = 200; // w-48 is 192px + margins
+    const menuWidth = 208; // w-52 is 208px
+    const margin = 12;
 
     let left = undefined;
     let right = undefined;
 
     // Check boundary & direction:
     // In RTL, the Actions column is typically near the left edge of the screen.
-    // If opening towards the left would clip off-screen, open towards the right.
-    if (isRTL || rect.right - menuWidth < 12) {
-      if (rect.left + menuWidth <= window.innerWidth - 12) {
-        left = Math.max(12, rect.left);
+    // Opening towards the right avoids clipping against the left edge.
+    if (isRTL) {
+      if (rect.left + menuWidth <= window.innerWidth - margin) {
+        left = Math.max(margin, rect.left);
       } else {
-        right = 12;
+        right = margin;
       }
     } else {
-      if (rect.right - menuWidth >= 12) {
-        right = Math.max(12, window.innerWidth - rect.right);
+      if (rect.right - menuWidth >= margin) {
+        right = Math.max(margin, window.innerWidth - rect.right);
       } else {
-        left = 12;
+        left = margin;
       }
     }
 
@@ -1754,7 +1755,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                               ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' 
                               : 'bg-indigo-50 text-indigo-700 border border-indigo-100'
                         }`}>
-                          {isArchived ? 'ARCHIVED' : (isCheckedIn ? 'Checked In' : 'Registered')}
+                          {isArchived ? t("table.statusArchived", "ARCHIVED") : (isCheckedIn ? t("table.statusCheckedIn", "Checked In") : t("table.statusRegistered", "Registered"))}
                         </span>
                       </td>
                       <td className="py-4 px-6 text-slate-400 font-medium whitespace-nowrap">{a.registeredDate || "/"}</td>
@@ -1772,7 +1773,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                                 ? "bg-blue-50 text-blue-600 border border-blue-200 shadow-xs"
                                 : "text-slate-400 hover:text-slate-800 hover:bg-slate-100 border border-transparent hover:border-slate-200"
                             }`}
-                            title="Actions"
+                            title={t("table.actions", "Actions")}
                           >
                             <MoreVertical size={16} />
                           </button>
@@ -1864,7 +1865,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
 
               <div className="flex items-center justify-center gap-2">
                 <Printer size={20} className="text-blue-600" />
-                <h3 className="text-lg font-black text-slate-900">Print Attendee Badge</h3>
+                <h3 className="text-lg font-black text-slate-900">{t("table.printAttendeeBadge", "Print Attendee Badge")}</h3>
               </div>
 
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
@@ -1905,7 +1906,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                   className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-600/20 transition-all cursor-pointer flex items-center justify-center gap-2"
                 >
                   <Printer size={15} />
-                  <span>Print Badge (A4)</span>
+                  <span>{t("table.printBadgeA4", "Print Badge (A4)")}</span>
                 </button>
               </div>
             </div>
@@ -2059,13 +2060,12 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
             style={{
               position: 'fixed',
               top: activeActionsMenu.top,
-              bottom: activeActionsMenu.bottom,
-              left: activeActionsMenu.left,
+                left: activeActionsMenu.left,
               right: activeActionsMenu.right,
               zIndex: 99999
             }}
             dir={isRTL ? "rtl" : "ltr"}
-            className="portaled-actions-menu w-48 bg-white border border-slate-200/90 rounded-2xl shadow-2xl shadow-slate-900/20 p-1.5 flex flex-col gap-0.5 text-start select-none animate-in fade-in"
+            className="portaled-actions-menu w-52 bg-white border border-slate-200/90 rounded-2xl shadow-2xl shadow-slate-900/20 p-1.5 flex flex-col gap-0.5 text-start select-none animate-in fade-in"
             onClick={(e) => e.stopPropagation()}
           >
             {(() => {
@@ -4464,36 +4464,36 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
 
   const handleArchive = (id) => {
     if (confirm("Archive this ticket tier? (Tickets and attendee data are safely preserved)")) {
-      onUpdateState("tickets", tickets.map(t => t.id === id ? { ...t, status: 'Archived', isArchived: true } : t));
+      onUpdateState("tickets", tickets.map(ticketItem => ticketItem.id === id ? { ...ticketItem, status: 'Archived', isArchived: true } : ticketItem));
     }
   };
 
   const handleRestore = (id) => {
-    onUpdateState("tickets", tickets.map(t => t.id === id ? { ...t, status: 'Active', isArchived: false } : t));
+    onUpdateState("tickets", tickets.map(ticketItem => ticketItem.id === id ? { ...ticketItem, status: 'Active', isArchived: false } : ticketItem));
   };
 
   const handleDeletePermanent = (id) => {
     if (confirm("Permanently delete this ticket tier? This action cannot be undone.")) {
-      onUpdateState("tickets", tickets.filter(t => t.id !== id));
+      onUpdateState("tickets", tickets.filter(ticketItem => ticketItem.id !== id));
     }
   };
 
-  const filteredTickets = tickets.filter(t => {
-    const isArchived = t.isArchived || t.status === 'Archived';
+  const filteredTickets = tickets.filter(ticketItem => {
+    const isArchived = ticketItem.isArchived || ticketItem.status === 'Archived';
     if (ticketFilter === "active") return !isArchived;
     if (ticketFilter === "archived") return isArchived;
     return true;
   });
 
-  const activeCount = tickets.filter(t => !t.isArchived && t.status !== 'Archived').length;
-  const archivedCount = tickets.filter(t => t.isArchived || t.status === 'Archived').length;
+  const activeCount = tickets.filter(ticketItem => !ticketItem.isArchived && ticketItem.status !== 'Archived').length;
+  const archivedCount = tickets.filter(ticketItem => ticketItem.isArchived || ticketItem.status === 'Archived').length;
 
-  const totalCap = tickets.reduce((sum, t) => sum + (t.maxQty || 100), 0);
+  const totalCap = tickets.reduce((sum, ticketItem) => sum + (ticketItem.maxQty || 100), 0);
   const totalSold = attendees.length;
   const totalSoldPct = totalCap > 0 ? (totalSold / totalCap) * 100 : 0;
 
   const totalRev = attendees.reduce((sum, a) => {
-    const matchingTicket = tickets.find(t => t.name === a.ticketType);
+    const matchingTicket = tickets.find(ticketItem => ticketItem.name === a.ticketType);
     return sum + (matchingTicket ? matchingTicket.price : 0);
   }, 0);
 
@@ -4551,7 +4551,7 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
             <div className="text-2xl font-extrabold text-slate-800 mt-2">{activeCount}</div>
           </div>
           <span className="text-[10px] text-slate-450 font-semibold mt-4">
-            {tickets.filter(t => !t.isArchived && t.status !== 'Archived').map(t => t.name).join(', ')}
+            {tickets.filter(ticketItem => !ticketItem.isArchived && ticketItem.status !== 'Archived').map(ticketItem => ticketItem.name).join(', ')}
           </span>
         </div>
       </div>
@@ -4593,15 +4593,15 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredTickets.map((t, idx) => {
-            const isArchived = t.isArchived || t.status === 'Archived';
-            const tierSold = attendees.filter(a => a.ticketType === t.name).length;
-            const linkedForm = forms.find(f => f.id === t.formId);
-            const badgeType = t.badgeType || "thermal_qr";
-            const itemKey = t.id ? `ticket-${t.id}` : `ticket-idx-${idx}-${t.name || 'unnamed'}`;
+          {filteredTickets.map((ticket, idx) => {
+            const isArchived = ticket.isArchived || ticket.status === 'Archived';
+            const tierSold = attendees.filter(a => a.ticketType === ticket.name).length;
+            const linkedForm = forms.find(f => f.id === ticket.formId);
+            const badgeType = ticket.badgeType || "thermal_qr";
+            const itemKey = ticket.id ? `ticket-${ticket.id}` : `ticket-idx-${idx}-${ticket.name || 'unnamed'}`;
 
             return (
-              <div key={itemKey} className={`bg-white border-2 rounded-3xl p-6 sm:p-7 flex flex-col gap-4 relative shadow-xs hover:shadow-lg transition-all duration-300 ${isArchived ? 'border-slate-300 bg-slate-50/50 opacity-75' : t.isPopular ? 'border-amber-400 bg-gradient-to-b from-white to-amber-50/15 ring-2 ring-amber-400/20' : 'border-slate-200'}`}>
+              <div key={itemKey} className={`bg-white border-2 rounded-3xl p-6 sm:p-7 flex flex-col gap-4 relative shadow-xs hover:shadow-lg transition-all duration-300 ${isArchived ? 'border-slate-300 bg-slate-50/50 opacity-75' : ticket.isPopular ? 'border-amber-400 bg-gradient-to-b from-white to-amber-50/15 ring-2 ring-amber-400/20' : 'border-slate-200'}`}>
                 {/* Top Badge Strip */}
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5 flex-wrap">
@@ -4615,14 +4615,14 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
                         Archived
                       </span>
                     )}
-                    {t.requiresApproval && (
+                    {ticket.requiresApproval && (
                       <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
                         Approval Required
                       </span>
                     )}
                   </div>
 
-                  {!isArchived && t.isPopular && (
+                  {!isArchived && ticket.isPopular && (
                     <span className="bg-amber-500 text-white text-[9px] font-extrabold uppercase py-0.5 px-2.5 rounded-full shadow-xs flex items-center gap-1 shrink-0">
                       ★ {t("tickets.bestSeller", "Best Seller")}
                     </span>
@@ -4632,19 +4632,19 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
                 {/* Ticket Name (Bigger) & Price (Smaller) */}
                 <div className="flex flex-col gap-1">
                   <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-tight">
-                    {t.name}
+                    {ticket.name}
                   </h3>
                   <div className="flex items-baseline gap-1.5 text-sm font-bold">
                     <span className="text-slate-850 font-black">
-                      {t.price === 0 ? t("tickets.free", "Free") : <><bdi dir="ltr">{t.price.toLocaleString()}</bdi> {t("common.dzd", "DZD")}</>}
+                      {ticket.price === 0 ? t("tickets.free", "Free") : <><bdi dir="ltr">{ticket.price.toLocaleString()}</bdi> {t("common.dzd", "DZD")}</>}
                     </span>
                     <span className="text-xs font-semibold text-slate-400">
-                      • {t.price > 0 ? t("tickets.perAttendee", "per attendee") : t("tickets.admission", "Admission")}
+                      • {ticket.price > 0 ? t("tickets.perAttendee", "per attendee") : t("tickets.admission", "Admission")}
                     </span>
                   </div>
-                  {t.description && (
+                  {ticket.description && (
                     <p className="text-xs text-slate-500 mt-1.5 line-clamp-2 leading-relaxed">
-                      {t.description}
+                      {ticket.description}
                     </p>
                   )}
                 </div>
@@ -4658,17 +4658,17 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
                 )}
 
                 {/* Perks List */}
-                {(t.features || []).length > 0 && (
+                {(ticket.features || []).length > 0 && (
                   <ul className="flex flex-col gap-2 text-xs text-slate-600 font-medium border-t border-slate-100 pt-3.5">
-                    {(t.features || []).slice(0, 4).map((feature, fIdx) => (
+                    {(ticket.features || []).slice(0, 4).map((feature, fIdx) => (
                       <li key={fIdx} className="flex items-center gap-2">
                         <Check size={13} className="text-emerald-600 shrink-0" />
                         <span className="truncate">{feature}</span>
                       </li>
                     ))}
-                    {(t.features || []).length > 4 && (
+                    {(ticket.features || []).length > 4 && (
                       <li className="text-[11px] text-slate-400 font-semibold pl-5">
-                        <span className="inline-flex items-center gap-1"><bdi dir="ltr">+ {(t.features || []).length - 4}</bdi> {t("tickets.moreInclusions", "more inclusions")}</span>
+                        <span className="inline-flex items-center gap-1"><bdi dir="ltr">+ {(ticket.features || []).length - 4}</bdi> {t("tickets.moreInclusions", "more inclusions")}</span>
                       </li>
                     )}
                   </ul>
@@ -4677,14 +4677,14 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
                 {/* Card Footer: Sold Count Left, Action Icon Buttons Right */}
                 <div className="mt-auto border-t border-slate-100 pt-3.5 flex items-center justify-between text-xs text-slate-400 font-semibold">
                   <span className="font-bold text-slate-500">
-                    {t("tickets.soldLabel", "Sold")}: <bdi dir="ltr">{tierSold} / {t.maxQty >= 99999 ? "∞" : t.maxQty}</bdi>
+                    {t("tickets.soldLabel", "Sold")}: <bdi dir="ltr">{tierSold} / {ticket.maxQty >= 99999 ? "∞" : ticket.maxQty}</bdi>
                   </span>
                   
                   <div className="flex items-center gap-1">
                     {!isArchived && (
                       <button 
                         type="button"
-                        onClick={() => onOpenModal("ticket", t)}
+                        onClick={() => onOpenModal("ticket", ticket)}
                         className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 border border-transparent hover:border-indigo-100 rounded-xl transition-all cursor-pointer flex items-center justify-center"
                         title={t("tickets.editTierTooltip", "Edit & Design Ticket Tier")}
                       >
@@ -4695,7 +4695,7 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
                       <div className="flex items-center gap-1">
                         <button 
                           type="button"
-                          onClick={() => handleRestore(t.id)}
+                          onClick={() => handleRestore(ticket.id)}
                           className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 border border-transparent hover:border-emerald-100 rounded-xl transition-all cursor-pointer flex items-center justify-center"
                           title={t("tickets.restoreTierTooltip", "Restore Ticket Tier")}
                         >
@@ -4703,7 +4703,7 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
                         </button>
                         <button 
                           type="button"
-                          onClick={() => handleDeletePermanent(t.id)}
+                          onClick={() => handleDeletePermanent(ticket.id)}
                           className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-100 rounded-xl transition-all cursor-pointer flex items-center justify-center"
                           title={t("tickets.deleteTierPermanentTooltip", "Delete Ticket Tier Permanently")}
                         >
@@ -4713,7 +4713,7 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
                     ) : (
                       <button 
                         type="button"
-                        onClick={() => handleArchive(t.id)}
+                        onClick={() => handleArchive(ticket.id)}
                         className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 border border-transparent hover:border-amber-100 rounded-xl transition-all cursor-pointer flex items-center justify-center"
                         title={t("tickets.archiveTierTooltip", "Archive Ticket Tier")}
                       >
@@ -5269,7 +5269,7 @@ function CheckInView({ state, onUpdateState }) {
 
               <div className="flex items-center justify-center gap-2">
                 <Printer size={20} className="text-blue-600" />
-                <h3 className="text-lg font-black text-slate-900">Print Attendee Badge</h3>
+                <h3 className="text-lg font-black text-slate-900">{t("table.printAttendeeBadge", "Print Attendee Badge")}</h3>
               </div>
 
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
@@ -5310,7 +5310,7 @@ function CheckInView({ state, onUpdateState }) {
                   className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-600/20 transition-all cursor-pointer flex items-center justify-center gap-2"
                 >
                   <Printer size={15} />
-                  <span>Print Badge (A4)</span>
+                  <span>{t("table.printBadgeA4", "Print Badge (A4)")}</span>
                 </button>
               </div>
             </div>
