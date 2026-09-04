@@ -1081,14 +1081,36 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
 
     const rect = e.currentTarget.getBoundingClientRect();
     const spaceBelow = window.innerHeight - rect.bottom;
-    const openUpwards = spaceBelow < 240;
+    const openUpwards = spaceBelow < 250;
+    const menuWidth = 200; // w-48 is 192px + margins
+
+    let left = undefined;
+    let right = undefined;
+
+    // Check boundary & direction:
+    // In RTL, the Actions column is typically near the left edge of the screen.
+    // If opening towards the left would clip off-screen, open towards the right.
+    if (isRTL || rect.right - menuWidth < 12) {
+      if (rect.left + menuWidth <= window.innerWidth - 12) {
+        left = Math.max(12, rect.left);
+      } else {
+        right = 12;
+      }
+    } else {
+      if (rect.right - menuWidth >= 12) {
+        right = Math.max(12, window.innerWidth - rect.right);
+      } else {
+        left = 12;
+      }
+    }
 
     setActiveActionsMenu({
       key: attendeeKey,
       attendee,
       top: openUpwards ? undefined : rect.bottom + 6,
       bottom: openUpwards ? (window.innerHeight - rect.top + 6) : undefined,
-      right: Math.max(12, window.innerWidth - rect.right),
+      left,
+      right,
       openUpwards
     });
   };
@@ -2016,9 +2038,11 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
               position: 'fixed',
               top: activeActionsMenu.top,
               bottom: activeActionsMenu.bottom,
+              left: activeActionsMenu.left,
               right: activeActionsMenu.right,
               zIndex: 99999
             }}
+            dir={isRTL ? "rtl" : "ltr"}
             className="portaled-actions-menu w-48 bg-white border border-slate-200/90 rounded-2xl shadow-2xl shadow-slate-900/20 p-1.5 flex flex-col gap-0.5 text-start select-none animate-in fade-in"
             onClick={(e) => e.stopPropagation()}
           >
@@ -2044,11 +2068,11 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                         size={15}
                         className={isCheckedIn ? "text-slate-600 fill-slate-100" : "text-slate-400 group-hover:text-slate-600 transition-colors"}
                       />
-                      <span>{isCheckedIn ? "Undo Check-In" : "Check In"}</span>
+                      <span>{isCheckedIn ? t("table.bulkUndoCheckIn", "Undo Check-In") : t("table.checkInBtn", "Check In")}</span>
                     </div>
                     {isCheckedIn && (
                       <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-700 uppercase tracking-wider">
-                        Active
+                        {t("common.active", "Active")}
                       </span>
                     )}
                   </button>
@@ -2064,7 +2088,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                     className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer text-start group"
                   >
                     <Printer size={15} className="text-slate-400 group-hover:text-slate-600 transition-colors" />
-                    <span>Print badge</span>
+                    <span>{t("table.printBadge", "Print badge")}</span>
                   </button>
 
                   {/* 3. Send Email */}
@@ -2078,7 +2102,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                     className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer text-start group"
                   >
                     <Mail size={15} className="text-slate-400 group-hover:text-slate-600 transition-colors" />
-                    <span>Send Email</span>
+                    <span>{t("table.bulkEmail", "Send Email")}</span>
                   </button>
 
                   {/* 4. Edit */}
@@ -2108,7 +2132,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                     className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer text-start group"
                   >
                     <Archive size={15} className="text-rose-500 group-hover:scale-105 transition-transform" />
-                    <span>Archive</span>
+                    <span>{t("common.archive", "Archive")}</span>
                   </button>
                 </>
               ) : (
@@ -2124,7 +2148,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                     className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer text-start group"
                   >
                     <RotateCcw size={15} className="text-slate-400 group-hover:text-slate-600 transition-colors" />
-                    <span>Restore</span>
+                    <span>{t("common.restore", "Restore")}</span>
                   </button>
 
                   {/* Edit */}
@@ -2154,7 +2178,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                     className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer text-start group"
                   >
                     <Trash2 size={15} className="text-rose-500 group-hover:scale-105 transition-transform" />
-                    <span>Delete</span>
+                    <span>{t("common.delete", "Delete")}</span>
                   </button>
                 </>
               );
