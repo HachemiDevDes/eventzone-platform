@@ -176,28 +176,28 @@ export default function PublicRSVPModal({
     setErrorMessage("");
 
     if (!fullName.trim()) {
-      setErrorMessage("Please enter your full name.");
+      setErrorMessage(t("rsvp.errorEnterFullName", "Please enter your full name."));
       return;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email.trim() || !emailRegex.test(email.trim())) {
-      setErrorMessage("Please provide a valid email address.");
+      setErrorMessage(t("rsvp.errorValidEmail", "Please provide a valid email address."));
       return;
     }
 
     if (isDeadlinePassed) {
-      setErrorMessage(t("rsvp.deadlinePassed", "The RSVP deadline for this event has passed."));
+      setErrorMessage(t("rsvp.errorDeadlinePassed", "The RSVP deadline for this event has passed."));
       return;
     }
 
     if (!isEnabled) {
-      setErrorMessage("RSVP is currently closed for this event.");
+      setErrorMessage(t("rsvp.errorRsvpClosed", "RSVP is currently closed for this event."));
       return;
     }
 
     if (isFull && !allowWaitlist && status === "attending") {
-      setErrorMessage("This event is at maximum capacity and not accepting further responses.");
+      setErrorMessage(t("rsvp.errorAtCapacity", "This event is at maximum capacity and not accepting further responses."));
       return;
     }
 
@@ -229,7 +229,7 @@ export default function PublicRSVPModal({
         });
         result = await res.json();
         if (!res.ok) {
-          throw new Error(result.error || "Failed to submit RSVP");
+          throw new Error(result.error || t("rsvp.errorUnexpected", "Failed to submit RSVP"));
         }
       }
 
@@ -237,7 +237,7 @@ export default function PublicRSVPModal({
       setIsSubmitted(true);
     } catch (err) {
       console.error("Public RSVP submission error:", err);
-      setErrorMessage(err.message || "An unexpected error occurred while submitting your RSVP.");
+      setErrorMessage(err.message || t("rsvp.errorUnexpected", "An unexpected error occurred while submitting your RSVP."));
     } finally {
       setIsSubmitting(false);
     }
@@ -261,7 +261,7 @@ export default function PublicRSVPModal({
                 <div className="mb-1.5">
                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200/60">
                     <Clock size={11} />
-                    <span>Waitlist Priority</span>
+                    <span>{t("rsvp.waitlistPriority", "Waitlist Priority")}</span>
                   </span>
                 </div>
               )}
@@ -324,29 +324,29 @@ export default function PublicRSVPModal({
                   {submitResult?.assignedStatus === 'waitlisted' || submitResult?.isWaitlisted
                     ? t("rsvp.waitlistSuccess", "Added to Priority Waitlist!")
                     : status === "declined"
-                    ? "Response Recorded"
+                    ? t("rsvp.responseRecorded", "Response Recorded")
                     : t("rsvp.submitSuccess", "RSVP Confirmed!")}
                 </h3>
                 <p className="text-xs text-slate-500 leading-relaxed">
                   {submitResult?.assignedStatus === 'waitlisted' || submitResult?.isWaitlisted
                     ? t("rsvp.waitlistSuccessDesc", "The event is currently at full capacity. We've reserved your priority waitlist place and will notify you as soon as a spot opens.")
                     : status === "declined"
-                    ? "Thank you for letting us know. We hope to see you at future events."
+                    ? t("rsvp.declineRecordedDesc", "Thank you for letting us know. We hope to see you at future events.")
                     : t("rsvp.submitSuccessDesc", "Your attendance has been registered. A digital confirmation pass has been created for your entry.")}
                 </p>
               </div>
 
               {/* Digital Pass Card */}
               {status !== "declined" && (
-                <div className="w-full bg-slate-50 border border-slate-200/90 rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-5 text-left shadow-2xs">
+                <div className="w-full bg-slate-50 border border-slate-200/90 rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-5 text-start rtl:text-right text-left shadow-2xs">
                   <div className="space-y-2 flex-1 min-w-0">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Digital Guest Pass</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">{t("rsvp.digitalGuestPass", "Digital Guest Pass")}</span>
                     <div className="text-sm font-bold text-slate-900 truncate">{fullName}</div>
                     <div className="text-xs text-slate-500 truncate">{email}</div>
                     
                     <div className="flex flex-wrap items-center gap-2 pt-1">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200/60">
-                        {1 + plusOnes} {1 + plusOnes === 1 ? "Guest" : "Guests (You + " + plusOnes + ")"}
+                        <bdi dir="ltr">{1 + plusOnes}</bdi> {1 + plusOnes === 1 ? t("rsvp.heads", "Guest") : t("rsvp.heads", "Guests") + " (" + t("rsvp.soloCount", "You") + " + " + plusOnes + ")"}
                       </span>
                     </div>
                   </div>
@@ -354,7 +354,7 @@ export default function PublicRSVPModal({
                   {qrCodeDataUrl && (
                     <div className="flex flex-col items-center shrink-0 bg-white p-2.5 rounded-2xl border border-slate-200 shadow-xs">
                       <img src={qrCodeDataUrl} alt="RSVP QR Code" className="w-24 h-24 object-contain" />
-                      <span className="text-[9px] font-mono font-bold text-slate-400 mt-1 uppercase tracking-wider">Pass QR</span>
+                      <span className="text-[9px] font-mono font-bold text-slate-400 mt-1 uppercase tracking-wider">{t("rsvp.passQr", "Pass QR")}</span>
                     </div>
                   )}
                 </div>
@@ -377,7 +377,7 @@ export default function PublicRSVPModal({
                   onClick={onClose}
                   className="w-full sm:flex-1 py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
                 >
-                  {t("common.done", "Done")}
+                  {t("rsvp.closeWindow", "Done")}
                 </button>
               </div>
             </div>
@@ -392,7 +392,7 @@ export default function PublicRSVPModal({
                 <div className="p-3.5 bg-rose-50/80 border border-rose-200/80 rounded-2xl flex items-start gap-3 text-rose-800 text-xs">
                   <AlertCircle size={16} className="shrink-0 text-rose-600 mt-0.5" />
                   <div>
-                    <span className="font-bold">RSVP Deadline Passed:</span> Submissions for this event ended on {new Date(deadline).toLocaleDateString()}.
+                    <span className="font-bold">{t("rsvp.rsvpDeadlinePassedPrefix", "RSVP Deadline Passed:")}</span> {t("rsvp.errorDeadlinePassed", "Submissions for this event ended on")} {new Date(deadline).toLocaleDateString()}.
                   </div>
                 </div>
               )}
@@ -401,7 +401,7 @@ export default function PublicRSVPModal({
                 <div className="p-3.5 bg-amber-50/80 border border-amber-200/80 rounded-2xl flex items-start gap-3 text-amber-900 text-xs">
                   <Clock size={16} className="shrink-0 text-amber-600 mt-0.5" />
                   <div>
-                    <span className="font-bold">Capacity Notice:</span> Confirmed capacity is reached ({existingHeadcount}/{capacityLimit}). New submissions are routed to the <span className="font-bold">Priority Waitlist</span>.
+                    <span className="font-bold">{t("rsvp.capacityNoticePrefix", "Capacity Notice:")}</span> {t("rsvp.atCapacityWaitlistNotice", "Confirmed capacity is reached. New submissions are routed to the Priority Waitlist.")} (<bdi dir="ltr">{existingHeadcount}/{capacityLimit}</bdi>).
                   </div>
                 </div>
               )}
@@ -416,8 +416,8 @@ export default function PublicRSVPModal({
               {/* 1. ATTENDANCE STATUS SELECTOR */}
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-800 flex items-center justify-between">
-                  <span>Will you be attending?</span>
-                  <span className="text-[10px] text-blue-600 font-semibold">* Required</span>
+                  <span>{t("rsvp.willYouBeAttending", "Will you be attending?")}</span>
+                  <span className="text-[10px] text-blue-600 font-semibold">* {t("rsvp.required", "Required")}</span>
                 </label>
                 <div className="grid grid-cols-3 gap-2.5">
                   {/* Attending */}
@@ -432,8 +432,8 @@ export default function PublicRSVPModal({
                   >
                     <CheckCircle2 size={18} className={status === "attending" ? "text-blue-600" : "text-slate-400"} />
                     <div className="leading-tight">
-                      <span className="text-xs font-bold block">{t("rsvp.attending", "Attending")}</span>
-                      <span className="text-[10px] text-slate-400 font-medium">I will be there</span>
+                      <span className="text-xs font-bold block">{t("rsvp.attendingCardTitle", "Attending")}</span>
+                      <span className="text-[10px] text-slate-400 font-medium">{t("rsvp.attendingCardSubtitle", "I will be there")}</span>
                     </div>
                   </button>
 
@@ -449,8 +449,8 @@ export default function PublicRSVPModal({
                   >
                     <HelpCircle size={18} className={status === "tentative" ? "text-amber-500" : "text-slate-400"} />
                     <div className="leading-tight">
-                      <span className="text-xs font-bold block">{t("rsvp.tentative", "Tentative")}</span>
-                      <span className="text-[10px] text-slate-400 font-medium">Maybe / Undecided</span>
+                      <span className="text-xs font-bold block">{t("rsvp.maybeCardTitle", "Tentative")}</span>
+                      <span className="text-[10px] text-slate-400 font-medium">{t("rsvp.maybeCardSubtitle", "Maybe / Undecided")}</span>
                     </div>
                   </button>
 
@@ -466,8 +466,8 @@ export default function PublicRSVPModal({
                   >
                     <XCircle size={18} className={status === "declined" ? "text-rose-500" : "text-slate-400"} />
                     <div className="leading-tight">
-                      <span className="text-xs font-bold block">{t("rsvp.declined", "Declined")}</span>
-                      <span className="text-[10px] text-slate-400 font-medium">Cannot attend</span>
+                      <span className="text-xs font-bold block">{t("rsvp.declinedCardTitle", "Declined")}</span>
+                      <span className="text-[10px] text-slate-400 font-medium">{t("rsvp.declinedCardSubtitle", "Cannot attend")}</span>
                     </div>
                   </button>
                 </div>
@@ -478,28 +478,28 @@ export default function PublicRSVPModal({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div>
                     <label className="text-xs font-bold text-slate-700 block mb-1.5">
-                      {t("rsvp.guestName", "Full Name")} <span className="text-rose-500">*</span>
+                      {t("rsvp.fullNameLabel", "Full Name")} <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="text"
                       required
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      placeholder="e.g. Dr. Elena Rostova"
+                      placeholder={t("rsvp.fullNamePlaceholder", "e.g. Dr. Elena Rostova")}
                       className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all shadow-2xs"
                     />
                   </div>
 
                   <div>
                     <label className="text-xs font-bold text-slate-700 block mb-1.5">
-                      {t("rsvp.email", "Email Address")} <span className="text-rose-500">*</span>
+                      {t("rsvp.emailAddressLabel", "Email Address")} <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="email"
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="e.g. elena@domain.com"
+                      placeholder={t("rsvp.emailAddressPlaceholder", "e.g. elena@domain.com")}
                       className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all shadow-2xs"
                     />
                   </div>
@@ -508,7 +508,7 @@ export default function PublicRSVPModal({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div>
                     <label className="text-xs font-bold text-slate-700 block mb-1.5">
-                      {t("rsvp.phone", "Phone Number")}
+                      {t("rsvp.phoneLabel", "Phone Number")}
                     </label>
                     <CountryPhoneInput
                       value={phone}
@@ -519,13 +519,13 @@ export default function PublicRSVPModal({
 
                   <div>
                     <label className="text-xs font-bold text-slate-700 block mb-1.5">
-                      {t("rsvp.company", "Company / Organization")}
+                      {t("rsvp.organizationLabel", "Company / Organization")}
                     </label>
                     <input
                       type="text"
                       value={company}
                       onChange={(e) => setCompany(e.target.value)}
-                      placeholder="e.g. Energy Transition Corp"
+                      placeholder={t("rsvp.organizationPlaceholder", "e.g. Energy Transition Corp")}
                       className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all shadow-2xs"
                     />
                   </div>
@@ -537,8 +537,8 @@ export default function PublicRSVPModal({
                 <div className="p-4 bg-slate-50/90 border border-slate-200/90 rounded-2xl space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="text-xs font-bold text-slate-800">{t("rsvp.bringingGuests", "Bringing Companion Guests (+1s)?")}</div>
-                      <div className="text-[11px] text-slate-500">Up to {maxPlusOnes} additional guests allowed with your RSVP</div>
+                      <div className="text-xs font-bold text-slate-800">{t("rsvp.bringingCompanionsQuestion", "Will you be bringing companions (+1)?")}</div>
+                      <div className="text-[11px] text-slate-500">{t("rsvp.plusOnesAllowedSubtitle", "You may bring up to {n} companion(s)").replace("{n}", maxPlusOnes)}</div>
                     </div>
                     <div className="flex items-center gap-1 bg-white border border-slate-200 p-1 rounded-xl shadow-2xs">
                       {[...Array(maxPlusOnes + 1).keys()].map((n) => (
@@ -561,7 +561,7 @@ export default function PublicRSVPModal({
                   {plusOnes > 0 && (
                     <div className="space-y-2 pt-2.5 border-t border-slate-200/60">
                       <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">
-                        {t("rsvp.companionNames", "Companion Full Names")}
+                        {t("rsvp.companionFullNamesLabel", "Companion Full Names")}
                       </label>
                       {plusOnesNames.map((name, idx) => (
                         <div key={idx} className="flex items-center gap-2">
@@ -572,7 +572,7 @@ export default function PublicRSVPModal({
                             type="text"
                             value={name}
                             onChange={(e) => handleCompanionNameChange(idx, e.target.value)}
-                            placeholder={`Companion #${idx + 1} Full Name`}
+                            placeholder={t("rsvp.companionNPlaceholder", "Companion {n} name...").replace("{n}", idx + 1)}
                             className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all shadow-2xs"
                           />
                         </div>
@@ -585,13 +585,13 @@ export default function PublicRSVPModal({
               {/* 4. SPECIAL REQUESTS */}
               <div className="space-y-1.5 pt-1">
                 <label className="text-xs font-bold text-slate-700 block">
-                  {t("rsvp.specialRequests", "Special Requests or Notes")} <span className="text-slate-400 font-normal text-[11px]">(Optional)</span>
+                  {t("rsvp.specialRequestsLabel", "Special Requests & Dietary Requirements")} <span className="text-slate-400 font-normal text-[11px]">{t("rsvp.optional", "(Optional)")}</span>
                 </label>
                 <textarea
                   rows={2}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Accessibility needs, question for speakers, arrival notes..."
+                  placeholder={t("rsvp.specialRequestsPlaceholder", "Accessibility needs, question for speakers, arrival notes...")}
                   className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all shadow-2xs resize-none"
                 />
               </div>
@@ -603,17 +603,17 @@ export default function PublicRSVPModal({
               <div className="text-[11px] font-semibold text-slate-500">
                 {status === "attending" && (
                   <span className="text-emerald-700 flex items-center gap-1">
-                    <CheckCircle2 size={13} /> {1 + plusOnes} Attendee{1 + plusOnes > 1 ? "s" : ""}
+                    <CheckCircle2 size={13} /> <bdi dir="ltr">{1 + plusOnes}</bdi> {t("rsvp.heads", "Attendees")}
                   </span>
                 )}
                 {status === "tentative" && (
                   <span className="text-amber-700 flex items-center gap-1">
-                    <HelpCircle size={13} /> Tentative Response
+                    <HelpCircle size={13} /> {t("rsvp.tentative", "Tentative Response")}
                   </span>
                 )}
                 {status === "declined" && (
                   <span className="text-slate-500 flex items-center gap-1">
-                    <XCircle size={13} /> Not Attending
+                    <XCircle size={13} /> {t("rsvp.declined", "Not Attending")}
                   </span>
                 )}
               </div>
@@ -639,17 +639,17 @@ export default function PublicRSVPModal({
                   {isSubmitting ? (
                     <>
                       <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>Submitting...</span>
+                      <span>{t("rsvp.submitting", "Submitting...")}</span>
                     </>
                   ) : (
                     <>
                       <Send size={13} />
                       <span>
                         {status === "declined"
-                          ? "Submit Decline"
+                          ? t("rsvp.submitDecline", "Submit Decline")
                           : willBeWaitlisted
-                          ? "Join Waitlist"
-                          : t("rsvp.publicRsvpNow", "Confirm RSVP")}
+                          ? t("rsvp.joinWaitlist", "Join Waitlist")
+                          : t("rsvp.confirmRsvpNow", "Confirm RSVP Now")}
                       </span>
                     </>
                   )}

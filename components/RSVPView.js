@@ -230,8 +230,7 @@ export default function RSVPView({
       setIsSettingsOpen(false);
     } catch (err) {
       console.error("Save settings error:", err);
-      alert("Failed to save RSVP settings: " + err.message);
-    } finally {
+      alert(t("rsvp.failedToSaveSettings", "Failed to save RSVP settings: ") + err.message);
       setIsSavingSettings(false);
     }
   };
@@ -239,7 +238,7 @@ export default function RSVPView({
   const handleManualSubmit = async (e) => {
     e.preventDefault();
     if (!manualForm.fullName.trim() || !manualForm.email.trim()) {
-      alert("Please enter full name and a valid email.");
+      alert(t("rsvp.errorEnterNameAndEmail", "Please enter full name and a valid email."));
       return;
     }
 
@@ -270,7 +269,7 @@ export default function RSVPView({
       });
     } catch (err) {
       console.error("Manual RSVP error:", err);
-      alert("Failed to add RSVP: " + err.message);
+      alert(t("rsvp.failedToAdd", "Failed to add RSVP: ") + err.message);
     } finally {
       setIsSubmittingManual(false);
     }
@@ -283,7 +282,7 @@ export default function RSVPView({
       }
     } catch (err) {
       console.error("Status update error:", err);
-      alert("Failed to update status: " + err.message);
+      alert(t("rsvp.failedToUpdate", "Failed to update status: ") + err.message);
     }
   };
 
@@ -314,7 +313,7 @@ export default function RSVPView({
       setIsEditingPartyNames(false);
     } catch (err) {
       console.error("Failed to update companion names:", err);
-      alert("Failed to update companion names: " + err.message);
+      alert(t("rsvp.failedToUpdateCompanions", "Failed to update companion names: ") + err.message);
     } finally {
       setIsSavingParty(false);
     }
@@ -460,7 +459,7 @@ export default function RSVPView({
                   : 'bg-emerald-100 text-emerald-800'
                 : 'bg-rose-100 text-rose-800'
             }`}>
-              {!settingsForm.isEnabled ? "RSVP Closed" : analytics.isAtCapacity ? "At Capacity (Waitlist)" : "RSVP Open"}
+              {!settingsForm.isEnabled ? t("rsvp.closedBadge", "RSVP Closed") : analytics.isAtCapacity ? t("rsvp.atCapacityBadge", "At Capacity (Waitlist)") : t("rsvp.openBadge", "RSVP Open")}
             </span>
           </div>
           <p className="text-sm text-slate-500">
@@ -489,7 +488,7 @@ export default function RSVPView({
           <button
             onClick={handleExportCSV}
             className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-xs transition-colors cursor-pointer shadow-2xs"
-            title="Export CSV"
+            title={t("rsvp.exportCsv", "Export CSV")}
           >
             <Download size={13} />
             <span>{t("rsvp.export", "Export CSV")}</span>
@@ -498,7 +497,7 @@ export default function RSVPView({
           <button
             onClick={() => setIsSettingsOpen(true)}
             className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-xs transition-colors cursor-pointer shadow-2xs"
-            title="RSVP Settings"
+            title={t("rsvp.rsvpSettings", "RSVP Settings")}
           >
             <Settings size={14} />
           </button>
@@ -507,7 +506,7 @@ export default function RSVPView({
             <button
               onClick={onRefreshData}
               className="p-2.5 rounded-2xl bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 transition-colors cursor-pointer shadow-2xs"
-              title="Refresh Data"
+              title={t("rsvp.refreshData", "Refresh Data")}
             >
               <RefreshCw size={14} />
             </button>
@@ -533,8 +532,8 @@ export default function RSVPView({
 
           <div className="mt-3">
             <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl sm:text-3xl font-black text-slate-900">{analytics.attendingHeadcount}</span>
-              <span className="text-xs text-slate-400 font-bold">/ {analytics.capacityLimit} max</span>
+              <span className="text-2xl sm:text-3xl font-black text-slate-900"><bdi dir="ltr">{analytics.attendingHeadcount}</bdi></span>
+              <span className="text-xs text-slate-400 font-bold"><bdi dir="ltr">/ {analytics.capacityLimit}</bdi> {t("rsvp.maxLimit", "max limit")}</span>
             </div>
             
             {/* Progress Bar */}
@@ -552,8 +551,8 @@ export default function RSVPView({
             </div>
 
             <div className="flex items-center justify-between text-[11px] text-slate-500 font-semibold mt-1.5">
-              <span>{analytics.capacityUsedPct}% filled</span>
-              <span>{analytics.spotsRemaining} spots left</span>
+              <span><bdi dir="ltr">{analytics.capacityUsedPct}%</bdi> {t("rsvp.filled", "filled")}</span>
+              <span><bdi dir="ltr">{analytics.spotsRemaining}</bdi> {t("rsvp.spotsLeft", "spots left")}</span>
             </div>
           </div>
         </div>
@@ -570,13 +569,13 @@ export default function RSVPView({
           </div>
 
           <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-black text-slate-900">{analytics.totalResponses}</div>
+            <div className="text-2xl sm:text-3xl font-black text-slate-900"><bdi dir="ltr">{analytics.totalResponses}</bdi></div>
             <div className="flex items-center gap-3 text-xs font-semibold mt-2 pt-1 border-t border-slate-100">
-              <span className="text-emerald-600 font-bold">{analytics.attendingResponses} Yes</span>
+              <span className="text-emerald-600 font-bold"><bdi dir="ltr">{analytics.attendingResponses}</bdi> {t("rsvp.yes", "Yes")}</span>
               <span className="text-slate-400">•</span>
-              <span className="text-rose-500 font-bold">{analytics.declinedResponses} No</span>
+              <span className="text-rose-500 font-bold"><bdi dir="ltr">{analytics.declinedResponses}</bdi> {t("rsvp.no", "No")}</span>
               <span className="text-slate-400">•</span>
-              <span className="text-amber-600 font-bold">{analytics.tentativeResponses} Maybe</span>
+              <span className="text-amber-600 font-bold"><bdi dir="ltr">{analytics.tentativeResponses}</bdi> {t("rsvp.maybe", "Maybe")}</span>
             </div>
           </div>
         </div>
@@ -598,18 +597,18 @@ export default function RSVPView({
 
           <div className="mt-3">
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-black text-slate-900">{analytics.waitlistHeadcount}</span>
-              <span className="text-xs text-amber-700 font-bold">guests ({analytics.waitlistResponses} RSVPs)</span>
+              <span className="text-2xl sm:text-3xl font-black text-slate-900"><bdi dir="ltr">{analytics.waitlistHeadcount}</bdi></span>
+              <span className="text-xs text-amber-700 font-bold"><bdi dir="ltr">{analytics.waitlistHeadcount}</bdi> {t("rsvp.guests", "guests")} (<bdi dir="ltr">{analytics.waitlistResponses}</bdi> {t("rsvp.rsvps", "RSVPs")})</span>
             </div>
             
             <div className="mt-2 pt-1 border-t border-slate-100 flex items-center justify-between">
-              <span className="text-[11px] text-slate-500 font-medium">Auto-waitlist: {settingsForm.allowWaitlist ? "Enabled" : "Disabled"}</span>
+              <span className="text-[11px] text-slate-500 font-medium">{t("rsvp.autoWaitlistEnabled", "Auto-waitlist")}: {settingsForm.allowWaitlist ? t("common.enabled", "Enabled") : t("common.disabled", "Disabled")}</span>
               {analytics.waitlistResponses > 0 && (
                 <button
                   onClick={() => setActiveTab("waitlisted")}
                   className="text-[11px] font-bold text-amber-700 hover:underline cursor-pointer"
                 >
-                  Review
+                  {t("rsvp.review", "Review")}
                 </button>
               )}
             </div>
@@ -628,11 +627,11 @@ export default function RSVPView({
           </div>
 
           <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-black text-slate-900">{analytics.acceptanceRate}%</div>
+            <div className="text-2xl sm:text-3xl font-black text-slate-900"><bdi dir="ltr">{analytics.acceptanceRate}%</bdi></div>
             <div className="flex items-center justify-between text-xs text-slate-500 font-medium mt-2 pt-1 border-t border-slate-100">
-              <span>Solo: {analytics.plusOnesDist.solo}</span>
-              <span>+1: {analytics.plusOnesDist.plus1}</span>
-              <span>+2+: {analytics.plusOnesDist.plus2Plus}</span>
+              <span>{t("rsvp.soloCount", "Solo")}: <bdi dir="ltr">{analytics.plusOnesDist.solo}</bdi></span>
+              <span>+1: <bdi dir="ltr">{analytics.plusOnesDist.plus1}</bdi></span>
+              <span>+2+: <bdi dir="ltr">{analytics.plusOnesDist.plus2Plus}</bdi></span>
             </div>
           </div>
         </div>
@@ -654,34 +653,34 @@ export default function RSVPView({
               </h3>
             </div>
             <span className="text-[11px] font-semibold text-slate-400">
-              {analytics.totalResponses} Total Responses
+              <><bdi dir="ltr">{analytics.totalResponses}</bdi> {t("rsvp.totalResponses", "Total Responses")}</>
             </span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <div className="p-3 bg-blue-50/70 border border-blue-100 rounded-2xl">
-              <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider block">Confirmed Heads</span>
-              <div className="text-xl font-black text-blue-900 mt-0.5">{analytics.attendingHeadcount}</div>
-              <span className="text-[10px] text-blue-500 font-medium">of {analytics.capacityLimit} max limit</span>
+              <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider block">{t("rsvp.confirmedHeadsUpper", "Confirmed Heads")}</span>
+              <div className="text-xl font-black text-blue-900 mt-0.5"><bdi dir="ltr">{analytics.attendingHeadcount}</bdi></div>
+              <span className="text-[10px] text-blue-500 font-medium">{t("common.of", "of")} <bdi dir="ltr">{analytics.capacityLimit}</bdi> {t("rsvp.maxLimit", "max limit")}</span>
             </div>
 
             <div className="p-3 bg-emerald-50/70 border border-emerald-100 rounded-2xl">
-              <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block">Capacity Used</span>
-              <div className="text-xl font-black text-emerald-900 mt-0.5">{analytics.capacityUsedPct}%</div>
-              <span className="text-[10px] text-emerald-600 font-medium">{analytics.spotsRemaining} spots open</span>
+              <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block">{t("rsvp.capacityUsedUpper", "Capacity Used")}</span>
+              <div className="text-xl font-black text-emerald-900 mt-0.5"><bdi dir="ltr">{analytics.capacityUsedPct}%</bdi></div>
+              <span className="text-[10px] text-emerald-600 font-medium"><bdi dir="ltr">{analytics.spotsRemaining}</bdi> {t("rsvp.spotsOpen", "spots open")}</span>
             </div>
 
             <div className="p-3 bg-slate-50 border border-slate-150 rounded-2xl">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Checked In</span>
-              <div className="text-xl font-black text-slate-900 mt-0.5">{analytics.checkedInCount}</div>
-              <span className="text-[10px] text-slate-500 font-medium">{analytics.attendingHeadcount > 0 ? Math.round((analytics.checkedInCount / analytics.attendingHeadcount) * 100) : 0}% of confirmed</span>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">{t("rsvp.checkedInUpper", "Checked In")}</span>
+              <div className="text-xl font-black text-slate-900 mt-0.5"><bdi dir="ltr">{analytics.checkedInCount}</bdi></div>
+              <span className="text-[10px] text-slate-500 font-medium"><bdi dir="ltr">{analytics.attendingHeadcount > 0 ? Math.round((analytics.checkedInCount / analytics.attendingHeadcount) * 100) : 0}%</bdi> {t("rsvp.ofConfirmed", "of confirmed")}</span>
             </div>
           </div>
 
           <div className="space-y-1.5 pt-1">
             <div className="flex items-center justify-between text-xs font-semibold text-slate-600">
-              <span>Overall Capacity Progress</span>
-              <span className="font-bold text-slate-900">{analytics.attendingHeadcount} / {analytics.capacityLimit} Guests</span>
+              <span>{t("rsvp.overallCapacityProgress", "Overall Capacity Progress")}</span>
+              <span className="font-bold text-slate-900"><bdi dir="ltr">{analytics.attendingHeadcount} / {analytics.capacityLimit}</bdi> {t("rsvp.guests", "Guests")}</span>
             </div>
             <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
               <div 
@@ -708,15 +707,15 @@ export default function RSVPView({
               </h3>
             </div>
             <span className="text-[11px] font-semibold text-slate-400">
-              Max {settingsForm.maxPlusOnes} companions / attendee
+              {t("rsvp.maxCompanionsPerAttendee", "Max companions allowed per attendee:")} <bdi dir="ltr">{settingsForm.maxPlusOnes}</bdi>
             </span>
           </div>
 
           <div className="space-y-3">
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-xs font-semibold text-slate-600">
-                <span>Solo Attendees (No +1)</span>
-                <span className="font-bold text-slate-900">{analytics.plusOnesDist.solo} ({analytics.attendingResponses > 0 ? Math.round((analytics.plusOnesDist.solo / analytics.attendingResponses) * 100) : 0}%)</span>
+                <span>{t("rsvp.soloAttendeesNoPlusOne", "Solo Attendees (No +1)")}</span>
+                <span className="font-bold text-slate-900"><bdi dir="ltr">{analytics.plusOnesDist.solo}</bdi> (<bdi dir="ltr">{analytics.attendingResponses > 0 ? Math.round((analytics.plusOnesDist.solo / analytics.attendingResponses) * 100) : 0}%</bdi>)</span>
               </div>
               <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                 <div 
@@ -728,8 +727,8 @@ export default function RSVPView({
 
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-xs font-semibold text-slate-600">
-                <span>Bringing 1 Companion (+1)</span>
-                <span className="font-bold text-slate-900">{analytics.plusOnesDist.plus1}</span>
+                <span>{t("rsvp.bringingOneCompanion", "Bringing 1 Companion (+1)")}</span>
+                <span className="font-bold text-slate-900"><bdi dir="ltr">{analytics.plusOnesDist.plus1}</bdi></span>
               </div>
               <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                 <div 
@@ -741,8 +740,8 @@ export default function RSVPView({
 
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-xs font-semibold text-slate-600">
-                <span>Bringing 2+ Companions</span>
-                <span className="font-bold text-slate-900">{analytics.plusOnesDist.plus2Plus}</span>
+                <span>{t("rsvp.bringingTwoPlusCompanions", "Bringing 2+ Companions")}</span>
+                <span className="font-bold text-slate-900"><bdi dir="ltr">{analytics.plusOnesDist.plus2Plus}</bdi></span>
               </div>
               <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                 <div 
@@ -754,7 +753,7 @@ export default function RSVPView({
           </div>
 
           <div className="pt-2 border-t border-slate-100 text-[11px] text-slate-400 font-medium">
-            Allowed: up to {settingsForm.maxPlusOnes} plus-ones per attendee
+            {t("rsvp.maxCompanionsPerAttendee", "Max companions allowed per attendee:")} <bdi dir="ltr">{settingsForm.maxPlusOnes}</bdi>
           </div>
         </div>
 
@@ -776,7 +775,7 @@ export default function RSVPView({
                 activeTab === "all" ? "bg-white text-slate-900 shadow-xs" : "text-slate-500 hover:text-slate-800"
               }`}
             >
-              All ({analytics.totalResponses})
+              {t("rsvp.filterAll", "All")} (<bdi dir="ltr">{analytics.totalResponses}</bdi>)
             </button>
             <button
               onClick={() => setActiveTab("attending")}
@@ -784,7 +783,7 @@ export default function RSVPView({
                 activeTab === "attending" ? "bg-blue-600 text-white shadow-xs" : "text-slate-500 hover:text-slate-800"
               }`}
             >
-              Attending ({analytics.attendingResponses})
+              {t("rsvp.filterAttending", "Attending")} (<bdi dir="ltr">{analytics.attendingResponses}</bdi>)
             </button>
             <button
               onClick={() => setActiveTab("waitlisted")}
@@ -792,7 +791,7 @@ export default function RSVPView({
                 activeTab === "waitlisted" ? "bg-amber-500 text-white shadow-xs" : "text-slate-500 hover:text-slate-800"
               }`}
             >
-              Waitlisted ({analytics.waitlistResponses})
+              {t("rsvp.filterWaitlisted", "Waitlisted")} (<bdi dir="ltr">{analytics.waitlistResponses}</bdi>)
             </button>
             <button
               onClick={() => setActiveTab("tentative")}
@@ -800,7 +799,7 @@ export default function RSVPView({
                 activeTab === "tentative" ? "bg-slate-700 text-white shadow-xs" : "text-slate-500 hover:text-slate-800"
               }`}
             >
-              Tentative ({analytics.tentativeResponses})
+              {t("rsvp.filterTentative", "Tentative")} (<bdi dir="ltr">{analytics.tentativeResponses}</bdi>)
             </button>
             <button
               onClick={() => setActiveTab("declined")}
@@ -808,7 +807,7 @@ export default function RSVPView({
                 activeTab === "declined" ? "bg-rose-600 text-white shadow-xs" : "text-slate-500 hover:text-slate-800"
               }`}
             >
-              Declined ({analytics.declinedResponses})
+              {t("rsvp.filterDeclined", "Declined")} (<bdi dir="ltr">{analytics.declinedResponses}</bdi>)
             </button>
             <button
               onClick={() => setActiveTab("archived")}
@@ -816,25 +815,25 @@ export default function RSVPView({
                 activeTab === "archived" ? "bg-slate-700 text-white shadow-xs" : "text-slate-500 hover:text-slate-800"
               }`}
             >
-              Archived ({analytics.archivedResponses})
+              {t("rsvp.filterArchived", "Archived")} (<bdi dir="ltr">{analytics.archivedResponses}</bdi>)
             </button>
           </div>
 
           {/* Search and Filters */}
           <div className="flex items-center gap-2">
             <div className="relative w-full sm:w-64">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search size={14} className="absolute start-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search guest, email, company..."
-                className="w-full pl-9 pr-3.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white transition-colors"
+                placeholder={t("rsvp.searchGuestPlaceholder", "Search guest, email, company...")}
+                className="w-full ps-9 pe-8 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white transition-colors"
               />
               {searchQuery && (
                 <button 
                   onClick={() => setSearchQuery("")}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs"
+                  className="absolute end-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs"
                 >
                   ✕
                 </button>
@@ -845,15 +844,15 @@ export default function RSVPView({
 
         {/* Table View */}
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-600">
+          <table className="w-full text-start rtl:text-right text-left text-xs text-slate-600">
             <thead className="bg-slate-50/70 border-b border-slate-150 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
               <tr>
-                <th className="py-3 px-4">{t("rsvp.guestName", "Guest Info")}</th>
-                <th className="py-3 px-4">{t("rsvp.status", "Status")}</th>
-                <th className="py-3 px-4">{t("rsvp.companionCount", "Headcount")}</th>
-                <th className="py-3 px-4">{t("rsvp.specialRequests", "Notes")}</th>
-                <th className="py-3 px-4">{t("rsvp.submittedAt", "Submitted")}</th>
-                <th className="py-3 px-4 text-right">{t("rsvp.actions", "Actions")}</th>
+                <th className="py-3 px-4 text-start rtl:text-right text-left">{t("rsvp.thGuestName", "GUEST NAME")}</th>
+                <th className="py-3 px-4 text-start rtl:text-right text-left">{t("rsvp.thStatus", "STATUS")}</th>
+                <th className="py-3 px-4 text-start rtl:text-right text-left">{t("rsvp.thCompanions", "COMPANIONS")}</th>
+                <th className="py-3 px-4 text-start rtl:text-right text-left">{t("rsvp.thSpecialRequests", "SPECIAL REQUESTS")}</th>
+                <th className="py-3 px-4 text-start rtl:text-right text-left">{t("rsvp.thDateSubmitted", "DATE SUBMITTED")}</th>
+                <th className="py-3 px-4 text-end rtl:text-left text-right">{t("rsvp.thActions", "ACTIONS")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -886,7 +885,7 @@ export default function RSVPView({
                             <div className="font-bold text-slate-900 flex items-center gap-1.5">
                               <span>{rsvp.fullName || rsvp.full_name}</span>
                               {(rsvp.checkedIn || rsvp.checked_in) && (
-                                <span className="text-emerald-600" title="Checked In">
+                                <span className="text-emerald-600" title={t("rsvp.checkedInTooltip", "Checked In")}>
                                   <ShieldCheck size={13} />
                                 </span>
                               )}
@@ -895,7 +894,7 @@ export default function RSVPView({
                             {(rsvp.company || rsvp.phone) && (
                               <div className="text-[10px] text-slate-400 flex items-center gap-2 mt-0.5">
                                 {rsvp.company && <span>{rsvp.company}</span>}
-                                {rsvp.phone && <span>• {rsvp.phone}</span>}
+                                {rsvp.phone && <span>• <bdi dir="ltr">{rsvp.phone}</bdi></span>}
                               </div>
                             )}
                           </div>
@@ -917,10 +916,10 @@ export default function RSVPView({
                               : "bg-slate-100 border-slate-300 text-slate-700"
                           }`}
                         >
-                          <option value="attending">✓ Attending</option>
-                          <option value="waitlisted">⏱ Waitlisted</option>
-                          <option value="tentative">? Tentative</option>
-                          <option value="declined">✕ Declined</option>
+                          <option value="attending">{t("rsvp.statusAttendingCheck", "✓ Attending")}</option>
+                          <option value="waitlisted">{t("rsvp.statusWaitlistedClock", "⏱ Waitlisted")}</option>
+                          <option value="tentative">{t("rsvp.statusTentativeQuestion", "? Tentative")}</option>
+                          <option value="declined">{t("rsvp.statusDeclinedCross", "✕ Declined")}</option>
                         </select>
                       </td>
 
@@ -929,17 +928,17 @@ export default function RSVPView({
                         <div className="flex flex-col gap-1 items-start">
                           <div className="flex items-center gap-1.5">
                             <span className="font-bold text-slate-900">
-                              {1 + pOnes} {1 + pOnes === 1 ? "Head" : "Heads"}
+                              <bdi dir="ltr">{1 + pOnes}</bdi> {t("rsvp.heads", "heads")}
                             </span>
                             {pOnes > 0 && (
                               <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-md bg-blue-50 text-blue-700 border border-blue-200/60">
-                                +{pOnes}
+                                <bdi dir="ltr">+{pOnes}</bdi>
                               </span>
                             )}
                           </div>
 
                           {pOnes === 0 ? (
-                            <span className="text-[10px] text-slate-400 font-medium">Solo Guest</span>
+                            <span className="text-[10px] text-slate-400 font-medium">{t("rsvp.soloGuest", "Solo Guest")}</span>
                           ) : (
                             <div className="flex flex-col gap-1 items-start">
                               {companionList.length > 0 && companionList.some(n => n && n.trim()) ? (
@@ -949,7 +948,7 @@ export default function RSVPView({
                                       key={i}
                                       type="button"
                                       onClick={() => openPartyModal(rsvp)}
-                                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-blue-50 hover:bg-blue-100/80 text-blue-700 border border-blue-200/70 text-[11px] font-medium transition-colors cursor-pointer text-left max-w-[170px] truncate group shadow-2xs"
+                                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-blue-50 hover:bg-blue-100/80 text-blue-700 border border-blue-200/70 text-[11px] font-medium transition-colors cursor-pointer text-start rtl:text-right text-left max-w-[170px] truncate group shadow-2xs"
                                       title={`Companion #${i + 1}: ${name} (Click to view party details)`}
                                     >
                                       <UserCheck size={11} className="text-blue-600 shrink-0 group-hover:scale-110 transition-transform" />
@@ -962,10 +961,10 @@ export default function RSVPView({
                                   type="button"
                                   onClick={() => openPartyModal(rsvp)}
                                   className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 border border-transparent text-slate-600 text-[10px] font-semibold transition-colors cursor-pointer shadow-2xs"
-                                  title="Click to view or specify companion names"
+                                  title={t("rsvp.viewCompanionNamesTooltip", "Click to view or specify companion names")}
                                 >
                                   <Users size={11} className="text-slate-400" />
-                                  <span>View {pOnes} Companion{pOnes > 1 ? "s" : ""}</span>
+                                  <span>{t("rsvp.viewCompanions", "View")} <bdi dir="ltr">{pOnes}</bdi> {t("rsvp.companions", "Companions")}</span>
                                 </button>
                               )}
                             </div>
@@ -992,9 +991,9 @@ export default function RSVPView({
                             <button
                               onClick={() => handlePromoteFromWaitlist(rsvp)}
                               className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] transition-colors cursor-pointer"
-                              title="Promote to Attending"
+                              title={t("rsvp.promoteToAttendingTooltip", "Promote to Attending")}
                             >
-                              Promote
+                              {t("rsvp.promoteBtn", "Promote")}
                             </button>
                           )}
 
@@ -1003,25 +1002,25 @@ export default function RSVPView({
                               <button
                                 onClick={() => handleQuickStatusChange(rsvp.id, "attending")}
                                 className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 transition-colors cursor-pointer flex items-center gap-1 text-[11px] font-bold"
-                                title="Restore RSVP"
+                                title={t("rsvp.restoreRsvpTooltip", "Restore RSVP")}
                               >
                                 <RotateCcw size={13} />
-                                <span>Restore</span>
+                                <span>{t("rsvp.restoreBtn", "Restore")}</span>
                               </button>
                               <button
                                 onClick={() => handlePermanentDelete(rsvp.id, rsvp.fullName || rsvp.full_name)}
                                 className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition-colors cursor-pointer flex items-center gap-1 text-[11px] font-bold"
-                                title="Delete RSVP Permanently"
+                                title={t("rsvp.deletePermanentlyTooltip", "Delete RSVP Permanently")}
                               >
                                 <Trash2 size={13} />
-                                <span>Delete</span>
+                                <span>{t("rsvp.deleteBtn", "Delete")}</span>
                               </button>
                             </div>
                           ) : (
                             <button
                               onClick={() => handleArchive(rsvp.id, rsvp.fullName || rsvp.full_name)}
                               className="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors cursor-pointer"
-                              title="Archive RSVP (Data preserved)"
+                              title={t("rsvp.archiveRsvpTooltip", "Archive RSVP (Data preserved)")}
                             >
                               <Archive size={13} />
                             </button>
@@ -1048,7 +1047,7 @@ export default function RSVPView({
             <div className="flex items-center justify-between border-b border-slate-150 pb-4">
               <div className="flex items-center gap-2">
                 <Settings size={18} className="text-blue-600" />
-                <h3 className="text-base font-black text-slate-900">{t("rsvp.settings", "RSVP Configuration Settings")}</h3>
+                <h3 className="text-base font-black text-slate-900">{t("rsvp.settingsTitle", "RSVP & Capacity Settings")}</h3>
               </div>
               <button 
                 onClick={() => setIsSettingsOpen(false)}
@@ -1063,8 +1062,8 @@ export default function RSVPView({
               {/* Enable Toggle */}
               <div className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-200">
                 <div>
-                  <div className="font-bold text-slate-800">{t("rsvp.enableRsvp", "Enable Public RSVP")}</div>
-                  <div className="text-[11px] text-slate-500">Allow guests to submit attendance responses</div>
+                  <div className="font-bold text-slate-800">{t("rsvp.enableRsvpLabel", "Enable RSVP for this event")}</div>
+                  <div className="text-[11px] text-slate-500">{t("rsvp.enableRsvpDesc", "Allow guests to submit attendance responses")}</div>
                 </div>
                 <input
                   type="checkbox"
@@ -1092,8 +1091,8 @@ export default function RSVPView({
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-200">
                   <div>
-                    <div className="font-bold text-slate-800">Allow Plus-Ones</div>
-                    <div className="text-[10px] text-slate-500">Enable companions</div>
+                    <div className="font-bold text-slate-800">{t("rsvp.allowPlusOnesLabel", "Allow Plus-Ones")}</div>
+                    <div className="text-[10px] text-slate-500">{t("rsvp.enableCompanionsDesc", "Enable companions")}</div>
                   </div>
                   <input
                     type="checkbox"
@@ -1105,7 +1104,7 @@ export default function RSVPView({
 
                 <div>
                   <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
-                    Max +1s / Guest
+                    {t("rsvp.maxPlusOnesPerGuest", "Max +1s / Guest")}
                   </label>
                   <input
                     type="number"
@@ -1122,8 +1121,8 @@ export default function RSVPView({
               {/* Allow Waitlist */}
               <div className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-200">
                 <div>
-                  <div className="font-bold text-slate-800">{t("rsvp.enableWaitlist", "Automatic Priority Waitlist")}</div>
-                  <div className="text-[11px] text-slate-500">Route guests to waitlist when capacity is reached</div>
+                  <div className="font-bold text-slate-800">{t("rsvp.automaticWaitlistLabel", "Automatic Waitlist")}</div>
+                  <div className="text-[11px] text-slate-500">{t("rsvp.automaticWaitlistDesc", "Route guests to waitlist when capacity is reached")}</div>
                 </div>
                 <input
                   type="checkbox"
@@ -1149,7 +1148,7 @@ export default function RSVPView({
               {/* Custom Confirmation */}
               <div>
                 <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
-                  Confirmation Message for Guests
+                  {t("rsvp.confirmationMessageLabel", "Confirmation Message for Guests")}
                 </label>
                 <textarea
                   rows={2}
@@ -1166,14 +1165,14 @@ export default function RSVPView({
                   onClick={() => setIsSettingsOpen(false)}
                   className="px-4 py-2 rounded-xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
                 >
-                  Cancel
+                  {t("common.cancel", "Cancel")}
                 </button>
                 <button
                   type="submit"
                   disabled={isSavingSettings}
                   className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all cursor-pointer shadow-xs"
                 >
-                  {isSavingSettings ? "Saving..." : t("rsvp.saveSettings", "Save Settings")}
+                  {isSavingSettings ? t("rsvp.savingBtn", "Saving...") : t("rsvp.saveSettingsBtn", "Save Settings")}
                 </button>
               </div>
 
@@ -1192,7 +1191,7 @@ export default function RSVPView({
             <div className="flex items-center justify-between border-b border-slate-150 pb-4">
               <div className="flex items-center gap-2">
                 <UserPlus size={18} className="text-blue-600" />
-                <h3 className="text-base font-black text-slate-900">{t("rsvp.manualAdd", "Log Manual Guest RSVP")}</h3>
+                <h3 className="text-base font-black text-slate-900">{t("rsvp.addGuestRsvpTitle", "Add RSVP for Guest")}</h3>
               </div>
               <button 
                 onClick={() => setIsManualModalOpen(false)}
@@ -1206,7 +1205,7 @@ export default function RSVPView({
               
               {/* Status */}
               <div>
-                <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">Status</label>
+                <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">{t("rsvp.manualStatusLabel", "STATUS")}</label>
                 <div className="grid grid-cols-4 gap-2">
                   {["attending", "waitlisted", "tentative", "declined"].map(st => (
                     <button
@@ -1219,7 +1218,7 @@ export default function RSVPView({
                           : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
                       }`}
                     >
-                      {st}
+                      {st === "attending" ? t("rsvp.attending", "Attending") : st === "waitlisted" ? t("rsvp.waitlisted", "Waitlisted") : st === "tentative" ? t("rsvp.tentative", "Tentative") : t("rsvp.declined", "Declined")}
                     </button>
                   ))}
                 </div>
@@ -1228,25 +1227,25 @@ export default function RSVPView({
               {/* Name & Email */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">Full Name *</label>
+                  <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">{t("rsvp.manualFullNameLabel", "FULL NAME *")}</label>
                   <input
                     type="text"
                     required
                     value={manualForm.fullName}
                     onChange={(e) => setManualForm({ ...manualForm, fullName: e.target.value })}
-                    placeholder="Guest name..."
+                    placeholder={t("rsvp.guestNamePlaceholder", "Guest name...")}
                     className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:border-blue-600"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">Email Address *</label>
+                  <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">{t("rsvp.manualEmailLabel", "EMAIL ADDRESS *")}</label>
                   <input
                     type="email"
                     required
                     value={manualForm.email}
                     onChange={(e) => setManualForm({ ...manualForm, email: e.target.value })}
-                    placeholder="guest@domain.com"
+                    placeholder={t("rsvp.guestEmailPlaceholder", "guest@domain.com")}
                     className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:border-blue-600"
                   />
                 </div>
@@ -1255,23 +1254,23 @@ export default function RSVPView({
               {/* Phone & Company */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">Phone</label>
+                  <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">{t("rsvp.manualPhoneLabel", "PHONE")}</label>
                   <input
                     type="text"
                     value={manualForm.phone}
                     onChange={(e) => setManualForm({ ...manualForm, phone: e.target.value })}
-                    placeholder="+213..."
+                    placeholder={t("rsvp.guestPhonePlaceholder", "+213 555...")}
                     className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:border-blue-600"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">Company</label>
+                  <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">{t("rsvp.manualCompanyLabel", "COMPANY")}</label>
                   <input
                     type="text"
                     value={manualForm.company}
                     onChange={(e) => setManualForm({ ...manualForm, company: e.target.value })}
-                    placeholder="Company name..."
+                    placeholder={t("rsvp.companyNamePlaceholder", "Company name...")}
                     className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:border-blue-600"
                   />
                 </div>
@@ -1281,7 +1280,7 @@ export default function RSVPView({
               {manualForm.status === "attending" && (
                 <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2.5">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-800">Companions (+1s)</span>
+                    <span className="font-bold text-slate-800">{t("rsvp.manualCompanionsLabel", "COMPANIONS (+1S)")}</span>
                     <div className="flex items-center gap-1">
                       {[0, 1, 2, 3].map(n => (
                         <button
@@ -1309,7 +1308,7 @@ export default function RSVPView({
                   {manualForm.plusOnes > 0 && (
                     <div className="space-y-2 pt-2 border-t border-slate-200/80">
                       <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">
-                        Companion Full Names
+                        {t("rsvp.companionFullNamesLabel", "Companion Full Names")}
                       </label>
                       {[...Array(manualForm.plusOnes)].map((_, idx) => (
                         <div key={idx} className="flex items-center gap-2">
@@ -1325,7 +1324,7 @@ export default function RSVPView({
                               next[idx] = e.target.value;
                               setManualForm({ ...manualForm, plusOnesNames: next });
                             }}
-                            placeholder={`Companion #${idx + 1} Full Name`}
+                            placeholder={t("rsvp.companionNPlaceholder", "Companion {n} name...").replace("{n}", idx + 1)}
                             className="flex-1 px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-600 shadow-2xs"
                           />
                         </div>
@@ -1337,12 +1336,12 @@ export default function RSVPView({
 
               {/* Notes */}
               <div>
-                <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">Notes / VIP Request</label>
+                <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">{t("rsvp.manualNotesLabel", "NOTES / VIP REQUEST")}</label>
                 <textarea
                   rows={2}
                   value={manualForm.notes}
                   onChange={(e) => setManualForm({ ...manualForm, notes: e.target.value })}
-                  placeholder="Special notes or seating preferences..."
+                  placeholder={t("rsvp.specialNotesPlaceholder", "Special notes or seating preferences...")}
                   className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:border-blue-600 resize-none"
                 />
               </div>
@@ -1354,14 +1353,14 @@ export default function RSVPView({
                   onClick={() => setIsManualModalOpen(false)}
                   className="px-4 py-2 rounded-xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
                 >
-                  Cancel
+                  {t("common.cancel", "Cancel")}
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmittingManual}
                   className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all cursor-pointer shadow-xs"
                 >
-                  {isSubmittingManual ? "Saving..." : "Save RSVP"}
+                  {isSubmittingManual ? t("rsvp.savingRsvpBtn", "Saving...") : t("rsvp.saveRsvpBtn", "Save RSVP")}
                 </button>
               </div>
 
@@ -1377,14 +1376,14 @@ export default function RSVPView({
       {mounted && isShareModalOpen && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-md animate-fade-in font-sans">
           <div className="w-full max-w-lg bg-white border border-slate-200 rounded-3xl p-6 sm:p-7 shadow-2xl space-y-5 animate-scale-up text-center">
-            <div className="flex items-center justify-between border-b border-slate-150 pb-3.5 text-left">
+            <div className="flex items-center justify-between border-b border-slate-150 pb-3.5 text-start rtl:text-right text-left">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
                   <Share2 size={18} />
                 </div>
                 <div>
-                  <h3 className="text-base font-black text-slate-900">Share Public RSVP Link</h3>
-                  <p className="text-xs text-slate-400 font-medium">Allow guests to submit attendance responses and receive digital passes.</p>
+                  <h3 className="text-base font-black text-slate-900">{t("rsvp.shareModalTitle", "Share Public RSVP Link")}</h3>
+                  <p className="text-xs text-slate-400 font-medium">{t("rsvp.shareModalSubtitle", "Allow guests to submit attendance responses and receive digital passes.")}</p>
                 </div>
               </div>
               <button 
@@ -1401,26 +1400,26 @@ export default function RSVPView({
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 w-fit mx-auto shadow-2xs space-y-2.5">
                   <img src={shareQrUrl} alt="RSVP QR Code" className="w-48 h-48 object-contain mx-auto rounded-lg bg-white p-1" />
                   <div className="flex items-center justify-center gap-2">
-                    <span className="text-[11px] font-bold text-slate-500">Scan on mobile</span>
+                    <span className="text-[11px] font-bold text-slate-500">{t("rsvp.scanOnMobile", "Scan on mobile")}</span>
                     <span>•</span>
                     <button
                       onClick={handleDownloadQr}
                       className="text-[11px] font-bold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1 cursor-pointer"
                     >
                       <Download size={12} />
-                      <span>Download QR (PNG)</span>
+                      <span>{t("rsvp.downloadQrPng", "Download QR (PNG)")}</span>
                     </button>
                   </div>
                 </div>
               )}
 
               {/* Direct Copyable Link */}
-              <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-left space-y-1.5">
+              <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-start rtl:text-right text-left space-y-1.5">
                 <div className="flex justify-between items-center">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Direct Guest RSVP URL</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("rsvp.directUrlLabel", "DIRECT GUEST RSVP URL")}</label>
                   {copiedLink && (
                     <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1">
-                      <Check size={11} /> Link Copied to Clipboard!
+                      <Check size={11} /> {t("rsvp.copiedBtn", "Link Copied to Clipboard!")}
                     </span>
                   )}
                 </div>
@@ -1439,7 +1438,7 @@ export default function RSVPView({
                     }`}
                   >
                     {copiedLink ? <Check size={14} /> : <Copy size={14} />}
-                    <span>{copiedLink ? "Copied" : "Copy Link"}</span>
+                    <span>{copiedLink ? t("rsvp.copiedBtn", "Copied!") : t("rsvp.copyLinkBtn", "Copy Link")}</span>
                   </button>
                 </div>
               </div>
@@ -1455,7 +1454,7 @@ export default function RSVPView({
                   className="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <ExternalLink size={13} className="text-slate-600" />
-                  <span>Open RSVP Page</span>
+                  <span>{t("rsvp.openRsvpPageBtn", "Open RSVP Page")}</span>
                 </button>
 
                 <button
@@ -1463,7 +1462,7 @@ export default function RSVPView({
                   onClick={handleShareWhatsApp}
                   className="py-2.5 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                 >
-                  <span>💬 WhatsApp</span>
+                  <span>{t("rsvp.whatsappBtn", "💬 WhatsApp")}</span>
                 </button>
 
                 <button
@@ -1472,7 +1471,7 @@ export default function RSVPView({
                   className="py-2.5 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200/80 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <Mail size={13} className="text-indigo-600" />
-                  <span>Send Email</span>
+                  <span>{t("rsvp.sendEmailBtn", "Send Email")}</span>
                 </button>
               </div>
 
@@ -1484,7 +1483,7 @@ export default function RSVPView({
                   }}
                   className="text-xs font-semibold text-slate-400 hover:text-blue-600 pt-1 block mx-auto cursor-pointer"
                 >
-                  Test In-Modal Guest Response Form →
+                  {t("rsvp.testInModalForm", "Test In-Modal Guest Response Form →")}
                 </button>
               )}
             </div>
@@ -1507,9 +1506,9 @@ export default function RSVPView({
                   <Users size={18} />
                 </div>
                 <div>
-                  <h3 className="text-base font-black text-slate-900">Guest Party & Companions</h3>
+                  <h3 className="text-base font-black text-slate-900">{t("rsvp.guestPartyTitle", "Guest Party & Companions")}</h3>
                   <p className="text-xs text-slate-500 font-medium">
-                    Party of {1 + parseInt(selectedPartyRsvp.plusOnes || selectedPartyRsvp.plus_ones || 0, 10)} for {selectedPartyRsvp.fullName || selectedPartyRsvp.full_name}
+                    {t("rsvp.guestPartyTitle", "Party")} <bdi dir="ltr">{1 + parseInt(selectedPartyRsvp.plusOnes || selectedPartyRsvp.plus_ones || 0, 10)}</bdi> ({selectedPartyRsvp.fullName || selectedPartyRsvp.full_name})
                   </p>
                 </div>
               </div>
@@ -1528,7 +1527,7 @@ export default function RSVPView({
               {/* Primary Guest Card */}
               <div className="p-4 bg-slate-50/90 border border-slate-200/90 rounded-2xl space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Primary Guest</span>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">{t("rsvp.primaryGuest", "Primary Guest")}</span>
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold capitalize ${
                     (selectedPartyRsvp.status || 'attending') === 'attending' 
                       ? 'bg-emerald-100 text-emerald-800' 
@@ -1536,7 +1535,7 @@ export default function RSVPView({
                       ? 'bg-amber-100 text-amber-800'
                       : 'bg-rose-100 text-rose-800'
                   }`}>
-                    {selectedPartyRsvp.status || 'Attending'}
+                    {(selectedPartyRsvp.status || 'attending') === 'attending' ? t("rsvp.attending", "Attending") : (selectedPartyRsvp.status || '') === 'waitlisted' ? t("rsvp.waitlisted", "Waitlisted") : t("rsvp.declined", "Declined")}
                   </span>
                 </div>
 
@@ -1551,7 +1550,7 @@ export default function RSVPView({
                     <div className="text-slate-500 truncate text-[11px]">{selectedPartyRsvp.email}</div>
                     {(selectedPartyRsvp.phone || selectedPartyRsvp.company) && (
                       <div className="text-[10px] text-slate-400 mt-0.5 flex flex-wrap items-center gap-2">
-                        {selectedPartyRsvp.phone && <span>{selectedPartyRsvp.phone}</span>}
+                        {selectedPartyRsvp.phone && <span><bdi dir="ltr">{selectedPartyRsvp.phone}</bdi></span>}
                         {selectedPartyRsvp.company && <span>• {selectedPartyRsvp.company}</span>}
                       </div>
                     )}
@@ -1565,7 +1564,7 @@ export default function RSVPView({
                   <div className="flex items-center gap-1.5">
                     <UserPlus size={14} className="text-blue-600" />
                     <span className="font-bold text-slate-800">
-                      Companion Guests ({parseInt(selectedPartyRsvp.plusOnes || selectedPartyRsvp.plus_ones || 0, 10)})
+                      <>{t("rsvp.companionGuest", "Companion Guests")} (<bdi dir="ltr">{parseInt(selectedPartyRsvp.plusOnes || selectedPartyRsvp.plus_ones || 0, 10)}</bdi>)</>
                     </span>
                   </div>
 
@@ -1576,7 +1575,7 @@ export default function RSVPView({
                       className="text-[11px] font-bold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1 cursor-pointer"
                     >
                       <Edit3 size={12} />
-                      <span>{isEditingPartyNames ? "Cancel Edit" : "Edit Names"}</span>
+                      <span>{isEditingPartyNames ? t("common.cancel", "Cancel") : t("rsvp.editNamesBtn", "Edit Names")}</span>
                     </button>
                   )}
                 </div>
@@ -1584,13 +1583,13 @@ export default function RSVPView({
                 {parseInt(selectedPartyRsvp.plusOnes || selectedPartyRsvp.plus_ones || 0, 10) === 0 ? (
                   <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-center text-slate-400 space-y-1">
                     <Users size={20} className="mx-auto text-slate-300 stroke-[1.5]" />
-                    <p className="font-semibold text-xs text-slate-600">Solo Attendee</p>
-                    <p className="text-[11px] text-slate-400">This guest registered without additional companions (+1s).</p>
+                    <p className="font-semibold text-xs text-slate-600">{t("rsvp.soloAttendee", "Solo Attendee")}</p>
+                    <p className="text-[11px] text-slate-400">{t("rsvp.soloAttendeeDesc", "This guest registered without additional companions (+1s).")}</p>
                   </div>
                 ) : isEditingPartyNames ? (
                   <div className="p-4 bg-blue-50/50 border border-blue-200/70 rounded-2xl space-y-3">
                     <p className="text-[11px] text-blue-800 font-medium">
-                      Enter or update the full names for each companion in this party:
+                      {t("rsvp.enterPartyNamesDesc", "Enter or update the full names for each companion in this party:")}
                     </p>
                     <div className="space-y-2">
                       {partyNamesInput.map((name, idx) => (
@@ -1618,7 +1617,7 @@ export default function RSVPView({
                         onClick={() => setIsEditingPartyNames(false)}
                         className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 font-bold text-xs cursor-pointer"
                       >
-                        Cancel
+                        {t("common.cancel", "Cancel")}
                       </button>
                       <button
                         type="button"
@@ -1626,7 +1625,7 @@ export default function RSVPView({
                         disabled={isSavingParty}
                         className="px-4 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors cursor-pointer shadow-xs"
                       >
-                        {isSavingParty ? "Saving..." : "Save Companion Names"}
+                        {isSavingParty ? t("rsvp.savingBtn", "Saving...") : t("rsvp.saveNamesBtn", "Save Names")}
                       </button>
                     </div>
                   </div>
@@ -1645,14 +1644,14 @@ export default function RSVPView({
                             {name ? (
                               <div className="font-bold text-slate-900 truncate">{name}</div>
                             ) : (
-                              <div className="text-slate-400 italic text-[11px]">Name not specified yet</div>
+                              <div className="text-slate-400 italic text-[11px]">{t("rsvp.nameNotSpecifiedYet", "Name not specified yet")}</div>
                             )}
-                            <div className="text-[10px] text-slate-400">Companion Guest</div>
+                            <div className="text-[10px] text-slate-400">{t("rsvp.companionGuest", "Companion Guest")}</div>
                           </div>
                         </div>
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200/60 shrink-0">
                           <UserCheck size={10} />
-                          <span>Admitted with Party</span>
+                          <span>{t("rsvp.admittedWithParty", "Admitted with Party")}</span>
                         </span>
                       </div>
                     ))}
@@ -1663,7 +1662,7 @@ export default function RSVPView({
               {/* Notes or Special Requests */}
               {selectedPartyRsvp.notes && (
                 <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Party Notes / Requests</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">{t("rsvp.partyNotesRequests", "Party Notes / Requests")}</span>
                   <p className="text-slate-700 text-xs leading-relaxed">{selectedPartyRsvp.notes}</p>
                 </div>
               )}
@@ -1673,14 +1672,14 @@ export default function RSVPView({
             {/* Modal Footer */}
             <div className="p-4 sm:px-6 border-t border-slate-150 bg-slate-50/80 shrink-0 flex items-center justify-between gap-3">
               <div className="text-[11px] font-semibold text-slate-500">
-                Total Headcount: <span className="font-bold text-slate-900">{1 + parseInt(selectedPartyRsvp.plusOnes || selectedPartyRsvp.plus_ones || 0, 10)} Guests</span>
+                <>{t("rsvp.confirmedHeadcount", "Total Headcount")}: <span className="font-bold text-slate-900"><bdi dir="ltr">{1 + parseInt(selectedPartyRsvp.plusOnes || selectedPartyRsvp.plus_ones || 0, 10)}</bdi> {t("rsvp.guests", "Guests")}</span></>
               </div>
               <button
                 type="button"
                 onClick={() => setSelectedPartyRsvp(null)}
                 className="py-2 px-5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs transition-colors cursor-pointer"
               >
-                Close
+                {t("common.close", "Close")}
               </button>
             </div>
 
