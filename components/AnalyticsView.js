@@ -24,7 +24,7 @@ export default function AnalyticsView({
   onSwitchView,
   onOpenModal 
 }) {
-  const { t } = useLanguage();
+  const { t, isRTL } = useLanguage();
 
   // Extract all data domains from state
   const {
@@ -46,6 +46,16 @@ export default function AnalyticsView({
   } = state;
 
   const currency = eventDetails.currency || "DZD";
+
+  const getLocalizedSeniority = (level) => {
+    if (!level) return t("seniority.general", "General Delegates");
+    if (level.includes("C-Suite")) return t("seniority.cSuite", "C-Suite & Founders");
+    if (level.includes("Directors")) return t("seniority.directors", "Directors & Leads");
+    if (level.includes("Managers")) return t("seniority.managers", "Managers & Heads");
+    if (level.includes("Engineers")) return t("seniority.engineers", "Engineers & Specialists");
+    if (level.includes("Academics")) return t("seniority.academics", "Academics & Students");
+    return t("seniority.general", "General Delegates");
+  };
   const formatPrice = (amount) => {
     const num = Number(amount) || 0;
     return `${num.toLocaleString()} ${currency}`;
@@ -1215,12 +1225,12 @@ export default function AnalyticsView({
   }
 
   return (
-    <div className="space-y-6 animate-fade-in text-slate-800 pb-16">
+    <div dir={isRTL ? "rtl" : "ltr"} className="space-y-6 animate-fade-in text-slate-800 pb-16">
       
       {/* ─────────────────────────────────────────────
           1. HEADER & GLOBAL ACTIONS
       ───────────────────────────────────────────── */}
-      <header className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 select-none text-left">
+      <header className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 select-none text-start">
         <div>
           <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
             {t("analytics.title", "Event Analytics & Intelligence")}
@@ -1261,8 +1271,8 @@ export default function AnalyticsView({
 
       {/* ─────────────────────────────────────────────
           2. EXECUTIVE KPI CARDS STRIP
-      ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 text-left">
+       ───────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 text-start">
         {/* Card 1: Total Delegates */}
         <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
@@ -1272,9 +1282,11 @@ export default function AnalyticsView({
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-black text-slate-900">{totalAttendeesCount}</div>
+            <div className="text-2xl sm:text-3xl font-black text-slate-900">
+              <bdi dir="ltr">{totalAttendeesCount}</bdi>
+            </div>
             <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-slate-500">
-              <span className="text-blue-600 font-bold">{capacity > 0 ? `${capacityPct.toFixed(1)}%` : "100%"}</span> of {capacity > 0 ? `${capacity} cap` : "capacity"}
+              <bdi dir="ltr" className="text-blue-600 font-bold">{capacity > 0 ? `${capacityPct.toFixed(1)}%` : "100%"}</bdi> {capacity > 0 ? t("analytics.ofCapacityCap", "of {capacity} cap").replace("{capacity}", capacity) : t("analytics.ofCapacity", "of capacity")}
             </div>
           </div>
           <div className="w-full h-1.5 bg-slate-100 rounded-full mt-3 overflow-hidden">
@@ -1291,9 +1303,11 @@ export default function AnalyticsView({
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-black text-slate-900">{formatPrice(totalEstimatedRevenue)}</div>
+            <div className="text-2xl sm:text-3xl font-black text-slate-900">
+              <bdi dir="ltr">{formatPrice(totalEstimatedRevenue)}</bdi>
+            </div>
             <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-emerald-600">
-              {formatPrice(avgRevenuePerAttendee)} ARPA
+              <bdi dir="ltr">{formatPrice(avgRevenuePerAttendee)}</bdi> <span>{t("analytics.arpaLabel", "ARPA")}</span>
             </div>
           </div>
           <div className="w-full h-1.5 bg-slate-100 rounded-full mt-3 overflow-hidden">
@@ -1310,9 +1324,11 @@ export default function AnalyticsView({
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-black text-slate-900">{checkinPct.toFixed(1)}%</div>
+            <div className="text-2xl sm:text-3xl font-black text-slate-900">
+              <bdi dir="ltr">{checkinPct.toFixed(1)}%</bdi>
+            </div>
             <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-slate-500">
-              <span className="text-indigo-600 font-bold">{checkedInCount}</span> of {totalAttendeesCount} present
+              <bdi dir="ltr" className="text-indigo-600 font-bold">{checkedInCount} / {totalAttendeesCount}</bdi> <span>{t("analytics.presentRatio", "present")}</span>
             </div>
           </div>
           <div className="w-full h-1.5 bg-slate-100 rounded-full mt-3 overflow-hidden">
@@ -1329,9 +1345,11 @@ export default function AnalyticsView({
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-black text-slate-900">{demographics.uniqueCompaniesCount}</div>
+            <div className="text-2xl sm:text-3xl font-black text-slate-900">
+              <bdi dir="ltr">{demographics.uniqueCompaniesCount}</bdi>
+            </div>
             <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-amber-600">
-              Unique companies represented
+              {t("analytics.uniqueCompaniesRepresented", "Unique companies represented")}
             </div>
           </div>
           <div className="w-full h-1.5 bg-slate-100 rounded-full mt-3 overflow-hidden">
@@ -1348,9 +1366,11 @@ export default function AnalyticsView({
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-black text-slate-900">{exhibitionMetrics.totalSponsors}</div>
+            <div className="text-2xl sm:text-3xl font-black text-slate-900">
+              <bdi dir="ltr">{exhibitionMetrics.totalSponsors}</bdi>
+            </div>
             <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-purple-600">
-              {exhibitionMetrics.boothOccupancyPct.toFixed(0)}% booth occupancy
+              <bdi dir="ltr">{exhibitionMetrics.boothOccupancyPct.toFixed(0)}%</bdi> <span>{t("analytics.boothOccupancy", "booth occupancy")}</span>
             </div>
           </div>
           <div className="w-full h-1.5 bg-slate-100 rounded-full mt-3 overflow-hidden">
@@ -1365,11 +1385,11 @@ export default function AnalyticsView({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Left 2 Cols: Registration Velocity Chart */}
-        <div className="lg:col-span-2 bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs flex flex-col justify-between text-left">
+        <div className="lg:col-span-2 bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs flex flex-col justify-between text-start">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
             <div>
-              <h3 className="text-lg font-bold text-slate-900">Daily Registration Velocity</h3>
-              <p className="text-xs text-slate-500 mt-0.5">Track daily momentum vs cumulative ticket distribution</p>
+              <h3 className="text-lg font-bold text-slate-900">{t("analytics.velocityTitle", "Daily Registration Velocity")}</h3>
+              <p className="text-xs text-slate-500 mt-0.5">{t("analytics.velocitySubtitle", "Track daily momentum vs cumulative ticket distribution")}</p>
             </div>
             <div className="flex items-center bg-slate-100 p-1 rounded-xl self-start sm:self-auto">
               <button
@@ -1378,7 +1398,7 @@ export default function AnalyticsView({
                   velocityChartType === "cumulative" ? "bg-white text-blue-600 shadow-2xs" : "text-slate-500 hover:text-slate-800"
                 }`}
               >
-                Cumulative Curve
+                {t("analytics.cumulativeCurve", "Cumulative Curve")}
               </button>
               <button
                 onClick={() => setVelocityChartType("daily")}
@@ -1386,7 +1406,7 @@ export default function AnalyticsView({
                   velocityChartType === "daily" ? "bg-white text-blue-600 shadow-2xs" : "text-slate-500 hover:text-slate-800"
                 }`}
               >
-                Daily Cadence
+                {t("analytics.dailyCadence", "Daily Cadence")}
               </button>
             </div>
           </div>
@@ -1396,8 +1416,8 @@ export default function AnalyticsView({
             {filteredCount === 0 ? (
               <div className="w-full h-full flex flex-col items-center justify-center bg-slate-50/80 rounded-2xl border border-dashed border-slate-200 text-center p-6">
                 <TrendingUp size={32} className="text-slate-300 mb-2" />
-                <span className="text-xs font-bold text-slate-700">No registration activity in this timeframe</span>
-                <span className="text-[11px] text-slate-400 mt-1">Try selecting a broader date range or &ldquo;All Time&rdquo;</span>
+                <span className="text-xs font-bold text-slate-700">{t("analytics.noVelocityActivity", "No registration activity in this timeframe")}</span>
+                <span className="text-[11px] text-slate-400 mt-1">{t("analytics.noVelocityActivityDesc", "Try selecting a broader date range or “All Time”")}</span>
               </div>
             ) : (
               (() => {
@@ -1452,10 +1472,10 @@ export default function AnalyticsView({
                     </svg>
 
                     {hoveredDataPoint && (
-                      <div className="absolute top-2 right-4 bg-slate-900/90 text-white text-xs px-3 py-2 rounded-xl shadow-lg backdrop-blur-xs flex flex-col gap-0.5 z-10 pointer-events-none">
+                      <div className="absolute top-2 right-4 bg-slate-900/90 text-white text-xs px-3 py-2 rounded-xl shadow-lg backdrop-blur-xs flex flex-col gap-0.5 z-10 pointer-events-none text-start">
                         <span className="font-bold text-blue-300">{hoveredDataPoint.label}</span>
-                        <span>Daily: <b>+{hoveredDataPoint.daily}</b> registrations</span>
-                        <span>Cumulative: <b>{hoveredDataPoint.cumulative}</b> total</span>
+                        <span>{t("analytics.tooltipDaily", "Daily: +{count} registrations").replace("{count}", hoveredDataPoint.daily)}</span>
+                        <span>{t("analytics.tooltipCumulative", "Cumulative: {count} total").replace("{count}", hoveredDataPoint.cumulative)}</span>
                       </div>
                     )}
                   </div>
@@ -1466,31 +1486,47 @@ export default function AnalyticsView({
 
           <div className="grid grid-cols-3 gap-3 border-t border-slate-100 pt-4 text-center">
             <div>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Average Daily Pace</span>
-              <div className="text-sm sm:text-base font-extrabold text-slate-800 mt-0.5">+{velocityData.avgPace} / day</div>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Peak Velocity Day</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("analytics.avgDailyPace", "Average Daily Pace")}</span>
               <div className="text-sm sm:text-base font-extrabold text-slate-800 mt-0.5">
-                {velocityData.peakDay?.date ? `${new Date(velocityData.peakDay.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })} (+${velocityData.peakDay.count})` : "N/A"}
+                <bdi dir="ltr">+{velocityData.avgPace} / {t("analytics.dayUnit", "day")}</bdi>
               </div>
             </div>
             <div>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Capacity Projection</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("analytics.peakVelocityDay", "Peak Velocity Day")}</span>
               <div className="text-sm sm:text-base font-extrabold text-slate-800 mt-0.5">
-                {capacity > 0 ? (totalAttendeesCount >= capacity ? "Sold Out" : `${Math.ceil((capacity - totalAttendeesCount) / Math.max(1, parseFloat(velocityData.avgPace)))} days left`) : "Open"}
+                {velocityData.peakDay?.date ? (
+                  <bdi dir="ltr">
+                    {`${new Date(velocityData.peakDay.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })} (+${velocityData.peakDay.count})`}
+                  </bdi>
+                ) : "N/A"}
+              </div>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("analytics.capacityProjection", "Capacity Projection")}</span>
+              <div className="text-sm sm:text-base font-extrabold text-slate-800 mt-0.5">
+                {capacity > 0 ? (
+                  totalAttendeesCount >= capacity ? (
+                    t("analytics.soldOut", "Sold Out")
+                  ) : (
+                    <span>
+                      <bdi dir="ltr">{Math.ceil((capacity - totalAttendeesCount) / Math.max(1, parseFloat(velocityData.avgPace)))}</bdi> {t("analytics.daysLeft", "days left")}
+                    </span>
+                  )
+                ) : (
+                  t("analytics.openAdmission", "Open Admission")
+                )}
               </div>
             </div>
           </div>
         </div>
 
         {/* Right 1 Col: Ticket Tier Splits */}
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs flex flex-col justify-between text-left">
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs flex flex-col justify-between text-start">
           <div>
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
-                <h3 className="text-lg font-bold text-slate-900">Registration Split by Ticket</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Volume & revenue contribution by pass</p>
+                <h3 className="text-lg font-bold text-slate-900">{t("analytics.splitByTicketTitle", "Registration Split by Ticket")}</h3>
+                <p className="text-xs text-slate-500 mt-0.5">{t("analytics.splitByTicketSubtitle", "Volume & revenue contribution by pass")}</p>
               </div>
               <Ticket size={18} className="text-slate-400" />
             </div>
@@ -1498,14 +1534,16 @@ export default function AnalyticsView({
             <div className="flex flex-col gap-4 mt-6">
               {ticketPerformance.length === 0 ? (
                 <div className="text-center py-8 text-slate-400 text-xs font-semibold">
-                  No ticket tiers registered yet.
+                  {t("analytics.noTicketTiers", "No ticket tiers registered yet.")}
                 </div>
               ) : (
                 ticketPerformance.map((tier) => (
                   <div key={tier.id} className="flex flex-col gap-1.5">
                     <div className="flex items-center justify-between text-xs font-bold">
                       <span className="text-slate-800">{tier.name}</span>
-                      <span className="text-slate-500 font-semibold">{tier.count} ({tier.pctOfTotal.toFixed(1)}%)</span>
+                      <span className="text-slate-500 font-semibold">
+                        <bdi dir="ltr">{tier.count} ({tier.pctOfTotal.toFixed(1)}%)</bdi>
+                      </span>
                     </div>
                     <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
                       <div
@@ -1514,8 +1552,8 @@ export default function AnalyticsView({
                       />
                     </div>
                     <div className="flex justify-between text-[10px] text-slate-400 font-medium">
-                      <span>{tier.price > 0 ? formatPrice(tier.price) : "Free Admission"}</span>
-                      <span>{formatPrice(tier.revenue)} total</span>
+                      <span>{tier.price > 0 ? <bdi dir="ltr">{formatPrice(tier.price)}</bdi> : t("analytics.freeAdmission", "Free Admission")}</span>
+                      <span><bdi dir="ltr">{formatPrice(tier.revenue)}</bdi> {t("analytics.totalLabel", "total")}</span>
                     </div>
                   </div>
                 ))
@@ -1524,8 +1562,8 @@ export default function AnalyticsView({
           </div>
 
           <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 mt-6 flex items-center justify-between text-xs">
-            <span className="text-slate-500 font-medium">Average Revenue / Delegate</span>
-            <span className="font-extrabold text-slate-900">{formatPrice(avgRevenuePerAttendee)}</span>
+            <span className="text-slate-500 font-medium">{t("analytics.avgRevenuePerDelegate", "Average Revenue / Delegate")}</span>
+            <span className="font-extrabold text-slate-900"><bdi dir="ltr">{formatPrice(avgRevenuePerAttendee)}</bdi></span>
           </div>
         </div>
       </div>
@@ -1533,26 +1571,26 @@ export default function AnalyticsView({
       {/* ─────────────────────────────────────────────
           5. DETAILED TICKET ECONOMICS TABLE
       ───────────────────────────────────────────── */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs text-left">
+      <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs text-start">
         <div className="flex items-center justify-between border-b border-slate-100 pb-4">
           <div>
-            <h3 className="text-lg font-bold text-slate-900">Ticket Tier Economics & Inventory Quotas</h3>
-            <p className="text-xs text-slate-500 mt-0.5">Sales performance, inventory caps, and revenue yield per category</p>
+            <h3 className="text-lg font-bold text-slate-900">{t("analytics.ticketEconomicsTitle", "Ticket Tier Economics & Inventory Quotas")}</h3>
+            <p className="text-xs text-slate-500 mt-0.5">{t("analytics.ticketEconomicsSubtitle", "Sales performance, inventory caps, and revenue yield per category")}</p>
           </div>
           <DollarSign size={18} className="text-slate-400" />
         </div>
 
         <div className="overflow-x-auto mt-6">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="w-full text-start text-xs border-collapse">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
-                <th className="py-3 px-4 rounded-l-xl">Ticket Tier</th>
-                <th className="py-3 px-4">Price</th>
-                <th className="py-3 px-4">Sold</th>
-                <th className="py-3 px-4">Quota / Cap</th>
-                <th className="py-3 px-4">Sellout Progress</th>
-                <th className="py-3 px-4">Gross Revenue</th>
-                <th className="py-3 px-4 rounded-r-xl text-right">Checked In</th>
+                <th className="py-3 px-4 rounded-s-xl">{t("analytics.thTicketTier", "Ticket Tier")}</th>
+                <th className="py-3 px-4">{t("analytics.thPrice", "Price")}</th>
+                <th className="py-3 px-4">{t("analytics.thSold", "Sold")}</th>
+                <th className="py-3 px-4">{t("analytics.thQuotaCap", "Quota / Cap")}</th>
+                <th className="py-3 px-4">{t("analytics.thSelloutProgress", "Sellout Progress")}</th>
+                <th className="py-3 px-4">{t("analytics.thGrossRevenue", "Gross Revenue")}</th>
+                <th className="py-3 px-4 rounded-e-xl text-end">{t("analytics.thCheckedIn", "Checked In")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
@@ -1563,32 +1601,34 @@ export default function AnalyticsView({
                     <span>{tier.name}</span>
                   </td>
                   <td className="py-4 px-4 font-semibold text-slate-800">
-                    {tier.price > 0 ? formatPrice(tier.price) : "Free"}
+                    {tier.price > 0 ? <bdi dir="ltr">{formatPrice(tier.price)}</bdi> : t("common.free", "Free")}
                   </td>
-                  <td className="py-4 px-4 font-bold text-slate-900">{tier.count}</td>
+                  <td className="py-4 px-4 font-bold text-slate-900">
+                    <bdi dir="ltr">{tier.count}</bdi>
+                  </td>
                   <td className="py-4 px-4 text-slate-500">
-                    {tier.quota > 0 ? tier.quota : "Unlimited"}
+                    {tier.quota > 0 ? <bdi dir="ltr">{tier.quota}</bdi> : t("analytics.unlimited", "Unlimited")}
                   </td>
                   <td className="py-4 px-4 w-48">
                     {tier.quota > 0 ? (
                       <div className="flex flex-col gap-1">
                         <div className="flex justify-between text-[10px] font-bold">
-                          <span>{tier.quotaPct.toFixed(1)}%</span>
-                          <span>{tier.quota - tier.count} left</span>
+                          <span><bdi dir="ltr">{tier.quotaPct.toFixed(1)}%</bdi></span>
+                          <span><bdi dir="ltr">{tier.quota - tier.count}</bdi> {t("analytics.left", "left")}</span>
                         </div>
                         <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                           <div className={`h-full ${tier.color.bg} rounded-full`} style={{ width: `${tier.quotaPct}%` }} />
                         </div>
                       </div>
                     ) : (
-                      <span className="text-[11px] text-slate-400">Open Admission</span>
+                      <span className="text-[11px] text-slate-400">{t("analytics.openAdmission", "Open Admission")}</span>
                     )}
                   </td>
                   <td className="py-4 px-4 font-extrabold text-emerald-600">
-                    {formatPrice(tier.revenue)}
+                    <bdi dir="ltr">{formatPrice(tier.revenue)}</bdi>
                   </td>
-                  <td className="py-4 px-4 text-right font-semibold text-slate-600">
-                    {tier.checkedIn} ({tier.checkinPct.toFixed(0)}%)
+                  <td className="py-4 px-4 text-end font-semibold text-slate-600">
+                    <bdi dir="ltr">{tier.checkedIn} ({tier.checkinPct.toFixed(0)}%)</bdi>
                   </td>
                 </tr>
               ))}
@@ -1600,15 +1640,15 @@ export default function AnalyticsView({
       {/* ─────────────────────────────────────────────
           6. AUDIENCE & DEMOGRAPHICS MATRIX
       ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 text-left">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 text-start">
         
         {/* Top Companies / Organizations */}
         <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
-                <h3 className="text-lg font-bold text-slate-900">Top Represented Organizations</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Companies with highest delegate headcount</p>
+                <h3 className="text-lg font-bold text-slate-900">{t("analytics.topOrgsTitle", "Top Represented Organizations")}</h3>
+                <p className="text-xs text-slate-500 mt-0.5">{t("analytics.topOrgsSubtitle", "Companies with highest delegate headcount")}</p>
               </div>
               <Building2 size={18} className="text-slate-400" />
             </div>
@@ -1616,7 +1656,7 @@ export default function AnalyticsView({
             <div className="flex flex-col gap-4 mt-6">
               {demographics.topCompanies.length === 0 ? (
                 <div className="text-center py-10 text-slate-400 text-xs font-semibold">
-                  No organization demographic data recorded yet.
+                  {t("analytics.noOrgData", "No organization demographic data recorded yet.")}
                 </div>
               ) : (
                 demographics.topCompanies.map((comp, idx) => (
@@ -1628,7 +1668,9 @@ export default function AnalyticsView({
                         </span>
                         <span className="text-slate-800 truncate">{comp.name}</span>
                       </div>
-                      <span className="text-slate-500 font-semibold">{comp.count} delegates ({comp.pct.toFixed(1)}%)</span>
+                      <span className="text-slate-500 font-semibold flex items-center gap-1">
+                        <bdi dir="ltr">{comp.count}</bdi> <span>{t("analytics.delegatesLabel", "delegates")}</span> <bdi dir="ltr">({comp.pct.toFixed(1)}%)</bdi>
+                      </span>
                     </div>
                     <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
                       <div
@@ -1643,8 +1685,10 @@ export default function AnalyticsView({
           </div>
 
           <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 mt-6 flex items-center justify-between text-xs">
-            <span className="text-slate-500 font-medium">Total Unique Entities</span>
-            <span className="font-extrabold text-slate-900">{demographics.uniqueCompaniesCount} Organizations</span>
+            <span className="text-slate-500 font-medium">{t("analytics.totalUniqueEntities", "Total Unique Entities")}</span>
+            <span className="font-extrabold text-slate-900">
+              <bdi dir="ltr">{demographics.uniqueCompaniesCount}</bdi> <span>{t("analytics.organizationsLabel", "Organizations")}</span>
+            </span>
           </div>
         </div>
 
@@ -1653,8 +1697,8 @@ export default function AnalyticsView({
           <div>
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
-                <h3 className="text-lg font-bold text-slate-900">Seniority & Role Hierarchy</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Classification by management level and decision power</p>
+                <h3 className="text-lg font-bold text-slate-900">{t("analytics.seniorityHierarchyTitle", "Seniority & Role Hierarchy")}</h3>
+                <p className="text-xs text-slate-500 mt-0.5">{t("analytics.seniorityHierarchySubtitle", "Classification by management level and decision power")}</p>
               </div>
               <Briefcase size={18} className="text-slate-400" />
             </div>
@@ -1665,8 +1709,10 @@ export default function AnalyticsView({
                 return (
                   <div key={idx} className="flex flex-col gap-1.5">
                     <div className="flex items-center justify-between text-xs font-bold">
-                      <span className="text-slate-800">{tier.level}</span>
-                      <span className="text-slate-500 font-semibold">{tier.count} ({tier.pct.toFixed(1)}%)</span>
+                      <span className="text-slate-800">{getLocalizedSeniority(tier.level)}</span>
+                      <span className="text-slate-500 font-semibold">
+                        <bdi dir="ltr">{tier.count} ({tier.pct.toFixed(1)}%)</bdi>
+                      </span>
                     </div>
                     <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
                       <div
@@ -1681,12 +1727,14 @@ export default function AnalyticsView({
           </div>
 
           <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 mt-6 flex items-center justify-between text-xs">
-            <span className="text-slate-500 font-medium">Executive & Decision Maker Share</span>
+            <span className="text-slate-500 font-medium">{t("analytics.execShareLabel", "Executive & Decision Maker Share")}</span>
             <span className="font-extrabold text-purple-700">
-              {totalAttendeesCount > 0 
-                ? `${(((demographics.seniorityList.find(s => s.level.includes("C-Suite"))?.count || 0) + 
-                       (demographics.seniorityList.find(s => s.level.includes("Directors"))?.count || 0)) / totalAttendeesCount * 100).toFixed(1)}%` 
-                : "0.0%"}
+              <bdi dir="ltr">
+                {totalAttendeesCount > 0 
+                  ? `${(((demographics.seniorityList.find(s => s.level.includes("C-Suite"))?.count || 0) + 
+                         (demographics.seniorityList.find(s => s.level.includes("Directors"))?.count || 0)) / totalAttendeesCount * 100).toFixed(1)}%` 
+                  : "0.0%"}
+              </bdi>
             </span>
           </div>
         </div>
@@ -1696,8 +1744,8 @@ export default function AnalyticsView({
           <div>
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
-                <h3 className="text-lg font-bold text-slate-900">Geographic & Regional Footprint</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Attendee origins and international delegation</p>
+                <h3 className="text-lg font-bold text-slate-900">{t("analytics.geographicFootprintTitle", "Geographic & Regional Footprint")}</h3>
+                <p className="text-xs text-slate-500 mt-0.5">{t("analytics.geographicFootprintSubtitle", "Attendee origins and international delegation")}</p>
               </div>
               <Globe size={18} className="text-slate-400" />
             </div>
@@ -1708,9 +1756,11 @@ export default function AnalyticsView({
                   <div className="flex items-center justify-between text-xs font-bold">
                     <div className="flex items-center gap-2">
                       <MapPin size={14} className="text-slate-400" />
-                      <span className="text-slate-800">{geo.location}</span>
+                      <span className="text-slate-800">{geo.location === "Local / Regional" ? t("analytics.localRegional", "Local / Regional") : geo.location}</span>
                     </div>
-                    <span className="text-slate-500 font-semibold">{geo.count} ({geo.pct.toFixed(1)}%)</span>
+                    <span className="text-slate-500 font-semibold">
+                      <bdi dir="ltr">{geo.count} ({geo.pct.toFixed(1)}%)</bdi>
+                    </span>
                   </div>
                   <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
                     <div
@@ -1729,8 +1779,8 @@ export default function AnalyticsView({
           <div>
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
-                <h3 className="text-lg font-bold text-slate-900">Top Job Titles & Roles</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Specific professions attending</p>
+                <h3 className="text-lg font-bold text-slate-900">{t("analytics.topJobTitlesTitle", "Top Job Titles & Roles")}</h3>
+                <p className="text-xs text-slate-500 mt-0.5">{t("analytics.topJobTitlesSubtitle", "Specific professions attending")}</p>
               </div>
               <UserCheck size={18} className="text-slate-400" />
             </div>
@@ -1740,7 +1790,9 @@ export default function AnalyticsView({
                 <div key={idx} className="flex flex-col gap-1.5">
                   <div className="flex items-center justify-between text-xs font-bold">
                     <span className="text-slate-800 truncate">{role.title}</span>
-                    <span className="text-slate-500 font-semibold">{role.count} ({role.pct.toFixed(1)}%)</span>
+                    <span className="text-slate-500 font-semibold">
+                      <bdi dir="ltr">{role.count} ({role.pct.toFixed(1)}%)</bdi>
+                    </span>
                   </div>
                   <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
                     <div
@@ -1758,45 +1810,69 @@ export default function AnalyticsView({
       {/* ─────────────────────────────────────────────
           7. LIVE GATE CHECK-IN TELEMETRY
       ───────────────────────────────────────────── */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs text-left">
+      <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs text-start">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
           <div>
-            <h3 className="text-lg font-bold text-slate-900">Live Gate Check-In & Attendee Ingress</h3>
-            <p className="text-xs text-slate-500 mt-0.5">Real-time gate ingress and badge pickup telemetry</p>
+            <h3 className="text-lg font-bold text-slate-900">{t("analytics.liveGateCheckinTitle", "Live Gate Check-In & Attendee Ingress")}</h3>
+            <p className="text-xs text-slate-500 mt-0.5">{t("analytics.liveGateCheckinSubtitle", "Real-time gate ingress and badge pickup telemetry")}</p>
           </div>
           <button
             onClick={() => onSwitchView && onSwitchView("check-in")}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-blue-600/20 cursor-pointer self-start sm:self-auto flex items-center gap-2"
           >
             <CheckCircle2 size={14} />
-            <span>Open Check-in Scanner</span>
+            <span>{t("analytics.openCheckinScanner", "Open Check-in Scanner")}</span>
           </button>
         </div>
 
         {/* 4-Stage Ingress Funnel */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
           <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-5 flex flex-col justify-between">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">1. Registered Passes</span>
-            <div className="text-2xl font-black text-slate-900 mt-2">{totalAttendeesCount}</div>
-            <span className="text-[11px] text-slate-500 mt-2">100% of claimed passes</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              1. {t("analytics.registeredPasses", "REGISTERED PASSES")}
+            </span>
+            <div className="text-2xl font-black text-slate-900 mt-2">
+              <bdi dir="ltr">{totalAttendeesCount}</bdi>
+            </div>
+            <span className="text-[11px] text-slate-500 mt-2">
+              <bdi dir="ltr">100%</bdi> {t("analytics.ofClaimedPasses", "of claimed passes")}
+            </span>
           </div>
 
           <div className="bg-blue-50/70 border border-blue-200 rounded-2xl p-5 flex flex-col justify-between">
-            <span className="text-[10px] font-bold text-blue-500 uppercase tracking-wider">2. Approved / Validated</span>
-            <div className="text-2xl font-black text-blue-900 mt-2">{totalAttendeesCount}</div>
-            <span className="text-[11px] text-blue-600 mt-2">Active credentials</span>
+            <span className="text-[10px] font-bold text-blue-500 uppercase tracking-wider">
+              2. {t("analytics.approvedValidated", "APPROVED / VALIDATED")}
+            </span>
+            <div className="text-2xl font-black text-blue-900 mt-2">
+              <bdi dir="ltr">{totalAttendeesCount}</bdi>
+            </div>
+            <span className="text-[11px] text-blue-600 mt-2">
+              {t("analytics.activeCredentials", "Active credentials")}
+            </span>
           </div>
 
           <div className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-5 flex flex-col justify-between">
-            <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">3. Checked In</span>
-            <div className="text-2xl font-black text-emerald-900 mt-2">{checkedInCount}</div>
-            <span className="text-[11px] text-emerald-700 font-semibold mt-2">{checkinPct.toFixed(1)}% conversion</span>
+            <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">
+              3. {t("analytics.checkedInBox", "CHECKED IN")}
+            </span>
+            <div className="text-2xl font-black text-emerald-900 mt-2">
+              <bdi dir="ltr">{checkedInCount}</bdi>
+            </div>
+            <span className="text-[11px] text-emerald-700 font-semibold mt-2">
+              <bdi dir="ltr">{checkinPct.toFixed(1)}%</bdi> {t("analytics.conversionRate", "conversion")}
+            </span>
           </div>
 
           <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-5 flex flex-col justify-between">
-            <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">4. Awaiting Ingress</span>
-            <div className="text-2xl font-black text-amber-900 mt-2">{totalAttendeesCount - checkedInCount}</div>
-            <span className="text-[11px] text-amber-700 font-semibold mt-2">{(100 - checkinPct).toFixed(1)}% pending badge</span>
+            <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">
+              4. {t("analytics.awaitingIngress", "AWAITING INGRESS")}
+            </span>
+            <div className="text-2xl font-black text-amber-900 mt-2">
+              <bdi dir="ltr">{totalAttendeesCount - checkedInCount}</bdi>
+            </div>
+            <span className="text-[11px] text-amber-700 font-semibold mt-2">
+              <bdi dir="ltr">{(100 - checkinPct).toFixed(1)}%</bdi> {t("analytics.pendingBadge", "pending badge")}
+            </span>
           </div>
         </div>
 
@@ -1806,14 +1882,14 @@ export default function AnalyticsView({
             <div key={tier.id} className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4 flex flex-col justify-between">
               <div className="flex items-center justify-between">
                 <span className="font-bold text-slate-800 text-xs">{tier.name}</span>
-                <span className="text-xs font-extrabold text-blue-600">{tier.checkinPct.toFixed(0)}%</span>
+                <span className="text-xs font-extrabold text-blue-600"><bdi dir="ltr">{tier.checkinPct.toFixed(0)}%</bdi></span>
               </div>
               <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden my-2.5">
                 <div className="h-full bg-blue-600 rounded-full transition-all" style={{ width: `${tier.checkinPct}%` }} />
               </div>
               <div className="flex justify-between text-[11px] text-slate-500 font-medium">
-                <span>{tier.checkedIn} checked in</span>
-                <span>{tier.count} total</span>
+                <span><bdi dir="ltr">{tier.checkedIn}</bdi> {t("analytics.checkedInLower", "checked in")}</span>
+                <span><bdi dir="ltr">{tier.count}</bdi> {t("analytics.totalLower", "total")}</span>
               </div>
             </div>
           ))}
@@ -1823,28 +1899,30 @@ export default function AnalyticsView({
       {/* ─────────────────────────────────────────────
           8. CUSTOM SURVEY & FORM RESPONSES CROSS-TABULATION
       ───────────────────────────────────────────── */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs text-left">
+      <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs text-start">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
           <div>
-            <h3 className="text-lg font-bold text-slate-900">Custom Form Question Cross-Tabulation Analyzer</h3>
-            <p className="text-xs text-slate-500 mt-0.5">Inspect responses to custom registration questions & survey fields in real time</p>
+            <h3 className="text-lg font-bold text-slate-900">{t("analytics.formAnalyzerTitle", "Custom Form Question Cross-Tabulation Analyzer")}</h3>
+            <p className="text-xs text-slate-500 mt-0.5">{t("analytics.formAnalyzerSubtitle", "Inspect responses to custom registration questions & survey fields in real time")}</p>
           </div>
           <CheckSquare size={18} className="text-slate-400" />
         </div>
 
         <div className="max-w-xl mt-5">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 ml-1">Select Question to Analyze</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 ms-1">
+            {t("analytics.selectQuestionLabel", "SELECT QUESTION TO ANALYZE")}
+          </span>
           <div className="mt-1">
             {availableFormQuestions.length === 0 ? (
               <div className="text-xs text-slate-400 italic p-3 bg-slate-50 rounded-xl border border-slate-200">
-                No custom form questions or survey fields detected for this event yet.
+                {t("analytics.noFormQuestions", "No custom form questions or survey fields detected for this event yet.")}
               </div>
             ) : (
               <SearchableSelect
                 value={activeQuestionKey}
                 onChange={setSelectedQuestionKey}
                 options={availableFormQuestions}
-                placeholder="Choose a custom form question..."
+                placeholder={t("analytics.chooseQuestionPlaceholder", "Choose a custom form question...")}
               />
             )}
           </div>
@@ -1854,25 +1932,27 @@ export default function AnalyticsView({
           <div className="mt-5 flex flex-col gap-4">
             <div className="flex items-center justify-between bg-blue-50/60 border border-blue-100 p-4 rounded-2xl text-xs">
               <div>
-                <span className="font-bold text-blue-900">Question: </span>
+                <span className="font-bold text-blue-900">{t("analytics.questionPrefix", "Question:")} </span>
                 <span className="text-blue-800">{activeQuestionAnalysis.label}</span>
               </div>
               <div className="font-bold text-blue-700">
-                {activeQuestionAnalysis.totalAnswered} of {activeQuestionAnalysis.totalAttendees} answered ({activeQuestionAnalysis.responseRatePct.toFixed(1)}%)
+                <bdi dir="ltr">{activeQuestionAnalysis.totalAnswered} / {activeQuestionAnalysis.totalAttendees}</bdi> (<bdi dir="ltr">{activeQuestionAnalysis.responseRatePct.toFixed(1)}%</bdi>) {t("analytics.answered", "answered")}
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-1">
               {activeQuestionAnalysis.options.length === 0 ? (
                 <div className="text-center py-8 text-slate-400 text-xs font-semibold col-span-2">
-                  No response values submitted for this question yet.
+                  {t("analytics.noQuestionResponses", "No response values submitted for this question yet.")}
                 </div>
               ) : (
                 activeQuestionAnalysis.options.map((opt, idx) => (
                   <div key={idx} className="flex flex-col gap-1 bg-slate-50/70 p-3.5 rounded-2xl border border-slate-100">
                     <div className="flex items-center justify-between text-xs font-bold">
                       <span className="text-slate-800">{opt.answer}</span>
-                      <span className="text-slate-600 font-semibold">{opt.count} ({opt.pct.toFixed(1)}%)</span>
+                      <span className="text-slate-600 font-semibold">
+                        <bdi dir="ltr">{opt.count} ({opt.pct.toFixed(1)}%)</bdi>
+                      </span>
                     </div>
                     <div className="w-full h-2.5 bg-slate-200/80 rounded-full overflow-hidden mt-1">
                       <div className="h-full bg-blue-600 rounded-full transition-all duration-500" style={{ width: `${Math.max(opt.pct, 3)}%` }} />
@@ -1888,48 +1968,52 @@ export default function AnalyticsView({
       {/* ─────────────────────────────────────────────
           9. RSVP & GUEST HOSPITALITY MATRIX
       ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 text-left">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 text-start">
         {/* Response Breakdown */}
         <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
-                <h3 className="text-lg font-bold text-slate-900">RSVP Attendance Intentions</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Guest attendance declarations & plus-ones</p>
+                <h3 className="text-lg font-bold text-slate-900">{t("analytics.rsvpIntentionsTitle", "RSVP Attendance Intentions")}</h3>
+                <p className="text-xs text-slate-500 mt-0.5">{t("analytics.rsvpIntentionsSubtitle", "Guest attendance declarations & plus-ones")}</p>
               </div>
               <Calendar size={18} className="text-slate-400" />
             </div>
 
             <div className="grid grid-cols-2 gap-3.5 my-6">
               <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex flex-col">
-                <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Going</span>
-                <span className="text-2xl font-black text-emerald-900 mt-1">{rsvpMetrics.attending}</span>
-                <span className="text-[11px] text-emerald-700 mt-1">+{rsvpMetrics.totalPlusOnes} plus-ones</span>
+                <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">{t("analytics.rsvpGoing", "GOING")}</span>
+                <span className="text-2xl font-black text-emerald-900 mt-1"><bdi dir="ltr">{rsvpMetrics.attending}</bdi></span>
+                <span className="text-[11px] text-emerald-700 mt-1">
+                  <bdi dir="ltr">+{rsvpMetrics.totalPlusOnes}</bdi> {t("analytics.plusOnes", "plus-ones")}
+                </span>
               </div>
 
               <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col">
-                <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Maybe</span>
-                <span className="text-2xl font-black text-amber-900 mt-1">{rsvpMetrics.maybe}</span>
-                <span className="text-[11px] text-amber-700 mt-1">Tentative interest</span>
+                <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">{t("analytics.rsvpMaybe", "MAYBE")}</span>
+                <span className="text-2xl font-black text-amber-900 mt-1"><bdi dir="ltr">{rsvpMetrics.maybe}</bdi></span>
+                <span className="text-[11px] text-amber-700 mt-1">{t("analytics.tentativeInterest", "Tentative interest")}</span>
               </div>
 
               <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex flex-col">
-                <span className="text-[10px] font-bold text-rose-600 uppercase tracking-wider">Declined</span>
-                <span className="text-2xl font-black text-rose-900 mt-1">{rsvpMetrics.declined}</span>
-                <span className="text-[11px] text-rose-700 mt-1">Cannot attend</span>
+                <span className="text-[10px] font-bold text-rose-600 uppercase tracking-wider">{t("analytics.rsvpDeclined", "DECLINED")}</span>
+                <span className="text-2xl font-black text-rose-900 mt-1"><bdi dir="ltr">{rsvpMetrics.declined}</bdi></span>
+                <span className="text-[11px] text-rose-700 mt-1">{t("analytics.cannotAttend", "Cannot attend")}</span>
               </div>
 
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Pending</span>
-                <span className="text-2xl font-black text-slate-800 mt-1">{rsvpMetrics.pending}</span>
-                <span className="text-[11px] text-slate-500 mt-1">Awaiting reply</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("analytics.rsvpPending", "PENDING")}</span>
+                <span className="text-2xl font-black text-slate-800 mt-1"><bdi dir="ltr">{rsvpMetrics.pending}</bdi></span>
+                <span className="text-[11px] text-slate-500 mt-1">{t("analytics.awaitingReply", "Awaiting reply")}</span>
               </div>
             </div>
           </div>
 
           <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 flex items-center justify-between text-xs">
-            <span className="text-slate-500 font-medium">Total Expected Guest Headcount</span>
-            <span className="font-extrabold text-emerald-700">{rsvpMetrics.totalHeadcount} Attendees</span>
+            <span className="text-slate-500 font-medium">{t("analytics.totalExpectedHeadcount", "Total Expected Guest Headcount")}</span>
+            <span className="font-extrabold text-emerald-700">
+              <bdi dir="ltr">{rsvpMetrics.totalHeadcount}</bdi> {t("analytics.attendeesLabel", "Attendees")}
+            </span>
           </div>
         </div>
 
@@ -1938,8 +2022,8 @@ export default function AnalyticsView({
           <div>
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
-                <h3 className="text-lg font-bold text-slate-900">Dietary & Catering Requests</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Meal selections declared in RSVPs</p>
+                <h3 className="text-lg font-bold text-slate-900">{t("analytics.dietaryRequestsTitle", "Dietary & Catering Requests")}</h3>
+                <p className="text-xs text-slate-500 mt-0.5">{t("analytics.dietaryRequestsSubtitle", "Meal selections declared in RSVPs")}</p>
               </div>
               <Utensils size={18} className="text-slate-400" />
             </div>
@@ -1947,14 +2031,16 @@ export default function AnalyticsView({
             <div className="flex flex-col gap-4 mt-6">
               {rsvpMetrics.dietary.length === 0 ? (
                 <div className="text-center py-10 text-slate-400 text-xs font-semibold">
-                  No special dietary restrictions reported yet.
+                  {t("analytics.noDietaryRestrictions", "No special dietary restrictions reported yet.")}
                 </div>
               ) : (
                 rsvpMetrics.dietary.map((d, idx) => (
                   <div key={idx} className="flex flex-col gap-1.5">
                     <div className="flex items-center justify-between text-xs font-bold">
                       <span className="text-slate-800">{d.name}</span>
-                      <span className="text-slate-500 font-semibold">{d.count} meals ({d.pct.toFixed(1)}%)</span>
+                      <span className="text-slate-500 font-semibold">
+                        <bdi dir="ltr">{d.count}</bdi> <span>{t("analytics.mealsLabel", "meals")}</span> <bdi dir="ltr">({d.pct.toFixed(1)}%)</bdi>
+                      </span>
                     </div>
                     <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
                       <div className="h-full bg-amber-500 rounded-full transition-all" style={{ width: `${Math.max(d.pct, 4)}%` }} />
@@ -1970,14 +2056,14 @@ export default function AnalyticsView({
       {/* ─────────────────────────────────────────────
           10. SPONSORSHIP & FLOOR PLAN BOOTHS
       ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 text-left">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 text-start">
         {/* Sponsorship Tier Matrix */}
         <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
-                <h3 className="text-lg font-bold text-slate-900">Sponsorship Packages & Revenue</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Monetization by partnership tier</p>
+                <h3 className="text-lg font-bold text-slate-900">{t("analytics.sponsorshipRevenueTitle", "Sponsorship Packages & Revenue")}</h3>
+                <p className="text-xs text-slate-500 mt-0.5">{t("analytics.sponsorshipRevenueSubtitle", "Monetization by partnership tier")}</p>
               </div>
               <Award size={18} className="text-slate-400" />
             </div>
@@ -1989,10 +2075,12 @@ export default function AnalyticsView({
                     <span className={`px-2.5 py-1 rounded-lg text-xs font-extrabold border ${tier.color}`}>
                       {tier.name}
                     </span>
-                    <span className="text-xs font-bold text-slate-700">{tier.count} sponsor{tier.count !== 1 ? "s" : ""}</span>
+                    <span className="text-xs font-bold text-slate-700">
+                      <bdi dir="ltr">{tier.count}</bdi> <span>{tier.count === 1 ? t("analytics.sponsorSingle", "sponsor") : t("analytics.sponsorsPlural", "sponsors")}</span>
+                    </span>
                   </div>
                   <span className="font-extrabold text-emerald-600 text-sm">
-                    {formatPrice(tier.revenue)}
+                    <bdi dir="ltr">{formatPrice(tier.revenue)}</bdi>
                   </span>
                 </div>
               ))}
@@ -2000,8 +2088,8 @@ export default function AnalyticsView({
           </div>
 
           <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 mt-6 flex items-center justify-between text-xs">
-            <span className="text-slate-500 font-medium">Total Sponsorship Yield</span>
-            <span className="font-extrabold text-emerald-700">{formatPrice(exhibitionMetrics.totalSponsorRevenue)}</span>
+            <span className="text-slate-500 font-medium">{t("analytics.totalSponsorshipYield", "Total Sponsorship Yield")}</span>
+            <span className="font-extrabold text-emerald-700"><bdi dir="ltr">{formatPrice(exhibitionMetrics.totalSponsorRevenue)}</bdi></span>
           </div>
         </div>
 
@@ -2010,31 +2098,31 @@ export default function AnalyticsView({
           <div>
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
-                <h3 className="text-lg font-bold text-slate-900">Floor Plan & Booth Occupancy</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Expo floor space allocation & inventory</p>
+                <h3 className="text-lg font-bold text-slate-900">{t("analytics.floorPlanOccupancyTitle", "Floor Plan & Booth Occupancy")}</h3>
+                <p className="text-xs text-slate-500 mt-0.5">{t("analytics.floorPlanOccupancySubtitle", "Expo floor space allocation & inventory")}</p>
               </div>
               <Store size={18} className="text-slate-400" />
             </div>
 
             <div className="grid grid-cols-3 gap-3 my-6 text-center">
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Booths</span>
-                <div className="text-2xl font-black text-slate-900 mt-1">{exhibitionMetrics.totalBooths}</div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("analytics.totalBoothsUpper", "TOTAL BOOTHS")}</span>
+                <div className="text-2xl font-black text-slate-900 mt-1"><bdi dir="ltr">{exhibitionMetrics.totalBooths}</bdi></div>
               </div>
               <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4">
-                <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Booked</span>
-                <div className="text-2xl font-black text-emerald-900 mt-1">{exhibitionMetrics.bookedBooths}</div>
+                <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">{t("analytics.bookedBooths", "BOOKED")}</span>
+                <div className="text-2xl font-black text-emerald-900 mt-1"><bdi dir="ltr">{exhibitionMetrics.bookedBooths}</bdi></div>
               </div>
               <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
-                <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Available</span>
-                <div className="text-2xl font-black text-blue-900 mt-1">{exhibitionMetrics.availableBooths}</div>
+                <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">{t("analytics.availableBooths", "AVAILABLE")}</span>
+                <div className="text-2xl font-black text-blue-900 mt-1"><bdi dir="ltr">{exhibitionMetrics.availableBooths}</bdi></div>
               </div>
             </div>
 
             <div className="flex flex-col gap-2">
               <div className="flex justify-between text-xs font-bold">
-                <span className="text-slate-700">Occupancy Rate</span>
-                <span className="text-emerald-600 font-extrabold">{exhibitionMetrics.boothOccupancyPct.toFixed(1)}%</span>
+                <span className="text-slate-700">{t("analytics.occupancyRate", "Occupancy Rate")}</span>
+                <span className="text-emerald-600 font-extrabold"><bdi dir="ltr">{exhibitionMetrics.boothOccupancyPct.toFixed(1)}%</bdi></span>
               </div>
               <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
                 <div className="h-full bg-emerald-500 rounded-full transition-all duration-500" style={{ width: `${exhibitionMetrics.boothOccupancyPct}%` }} />
@@ -2043,8 +2131,10 @@ export default function AnalyticsView({
           </div>
 
           <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 mt-6 flex items-center justify-between text-xs">
-            <span className="text-slate-500 font-medium">Exhibiting Companies</span>
-            <span className="font-extrabold text-slate-900">{exhibitionMetrics.totalExhibitors} Registered</span>
+            <span className="text-slate-500 font-medium">{t("analytics.exhibitingCompanies", "Exhibiting Companies")}</span>
+            <span className="font-extrabold text-slate-900">
+              <bdi dir="ltr">{exhibitionMetrics.totalExhibitors}</bdi> <span>{t("analytics.registeredLabel", "Registered")}</span>
+            </span>
           </div>
         </div>
       </div>
@@ -2052,36 +2142,36 @@ export default function AnalyticsView({
       {/* ─────────────────────────────────────────────
           11. LOGISTICS READINESS & PROGRAM DENSITY
       ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 text-left">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 text-start">
         {/* Logistics Health */}
         <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
-                <h3 className="text-lg font-bold text-slate-900">Operations & Logistics Health</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Task completion across catering, AV, transport & stage</p>
+                <h3 className="text-lg font-bold text-slate-900">{t("analytics.operationsHealthTitle", "Operations & Logistics Health")}</h3>
+                <p className="text-xs text-slate-500 mt-0.5">{t("analytics.operationsHealthSubtitle", "Task completion across catering, AV, transport & stage")}</p>
               </div>
               <Truck size={18} className="text-slate-400" />
             </div>
 
             <div className="grid grid-cols-2 gap-3.5 my-6">
               <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex flex-col">
-                <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Completed Tasks</span>
-                <span className="text-2xl font-black text-emerald-900 mt-1">{logisticsMetrics.completedTasks}</span>
-                <span className="text-[11px] text-emerald-700 mt-1">Delivered & confirmed</span>
+                <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">{t("analytics.completedTasksUpper", "COMPLETED TASKS")}</span>
+                <span className="text-2xl font-black text-emerald-900 mt-1"><bdi dir="ltr">{logisticsMetrics.completedTasks}</bdi></span>
+                <span className="text-[11px] text-emerald-700 mt-1">{t("analytics.deliveredConfirmed", "Delivered & confirmed")}</span>
               </div>
 
               <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col">
-                <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Pending Work</span>
-                <span className="text-2xl font-black text-amber-900 mt-1">{logisticsMetrics.pendingTasks}</span>
-                <span className="text-[11px] text-amber-700 mt-1">In progress</span>
+                <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">{t("analytics.pendingWorkUpper", "PENDING WORK")}</span>
+                <span className="text-2xl font-black text-amber-900 mt-1"><bdi dir="ltr">{logisticsMetrics.pendingTasks}</bdi></span>
+                <span className="text-[11px] text-amber-700 mt-1">{t("analytics.inProgress", "In progress")}</span>
               </div>
             </div>
 
             <div className="flex flex-col gap-2">
               <div className="flex justify-between text-xs font-bold">
-                <span className="text-slate-700">Operational Readiness Score</span>
-                <span className="text-blue-600 font-extrabold">{logisticsMetrics.taskReadinessPct.toFixed(0)}%</span>
+                <span className="text-slate-700">{t("analytics.operationalReadinessScore", "Operational Readiness Score")}</span>
+                <span className="text-blue-600 font-extrabold"><bdi dir="ltr">{logisticsMetrics.taskReadinessPct.toFixed(0)}%</bdi></span>
               </div>
               <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
                 <div className="h-full bg-blue-600 rounded-full transition-all duration-500" style={{ width: `${logisticsMetrics.taskReadinessPct}%` }} />
@@ -2090,8 +2180,8 @@ export default function AnalyticsView({
           </div>
 
           <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 mt-6 flex items-center justify-between text-xs">
-            <span className="text-slate-500 font-medium">Logistics Budget Allocated</span>
-            <span className="font-extrabold text-slate-900">{formatPrice(logisticsMetrics.totalBudget)}</span>
+            <span className="text-slate-500 font-medium">{t("analytics.logisticsBudgetAllocated", "Logistics Budget Allocated")}</span>
+            <span className="font-extrabold text-slate-900"><bdi dir="ltr">{formatPrice(logisticsMetrics.totalBudget)}</bdi></span>
           </div>
         </div>
 
@@ -2100,32 +2190,32 @@ export default function AnalyticsView({
           <div>
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
-                <h3 className="text-lg font-bold text-slate-900">Agenda & Program Density</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Sessions, speakers, and schedule capacity</p>
+                <h3 className="text-lg font-bold text-slate-900">{t("analytics.agendaDensityTitle", "Agenda & Program Density")}</h3>
+                <p className="text-xs text-slate-500 mt-0.5">{t("analytics.agendaDensitySubtitle", "Sessions, speakers, and schedule capacity")}</p>
               </div>
               <Clock size={18} className="text-slate-400" />
             </div>
 
             <div className="grid grid-cols-2 gap-3.5 my-6">
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Sessions</span>
-                <span className="text-2xl font-black text-slate-900 mt-1">{sessions.length}</span>
-                <span className="text-[11px] text-slate-500 mt-1">Keynotes & panels</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("analytics.totalSessionsUpper", "TOTAL SESSIONS")}</span>
+                <span className="text-2xl font-black text-slate-900 mt-1"><bdi dir="ltr">{sessions.length}</bdi></span>
+                <span className="text-[11px] text-slate-500 mt-1">{t("analytics.keynotesPanels", "Keynotes & panels")}</span>
               </div>
 
               <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-4 flex flex-col">
-                <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">Keynote Speakers</span>
+                <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">{t("analytics.keynoteSpeakersUpper", "KEYNOTE SPEAKERS")}</span>
                 <span className="text-2xl font-black text-indigo-900 mt-1">
-                  {sessions.reduce((acc, s) => acc + (s.speakers?.length || 0), 0)}
+                  <bdi dir="ltr">{sessions.reduce((acc, s) => acc + (s.speakers?.length || 0), 0)}</bdi>
                 </span>
-                <span className="text-[11px] text-indigo-700 mt-1">Across all tracks</span>
+                <span className="text-[11px] text-indigo-700 mt-1">{t("analytics.acrossAllTracks", "Across all tracks")}</span>
               </div>
             </div>
           </div>
 
           <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 mt-6 flex items-center justify-between text-xs">
-            <span className="text-slate-500 font-medium">Schedule Timeline</span>
-            <span className="font-extrabold text-slate-900">{eventDetails.scheduleTime || "09:00 AM – 05:00 PM"}</span>
+            <span className="text-slate-500 font-medium">{t("analytics.scheduleTimeline", "Schedule Timeline")}</span>
+            <span className="font-extrabold text-slate-900"><bdi dir="ltr">{eventDetails.scheduleTime || "09:00 AM – 05:00 PM"}</bdi></span>
           </div>
         </div>
       </div>
@@ -2133,21 +2223,28 @@ export default function AnalyticsView({
       {/* ─────────────────────────────────────────────
           12. SMART AI STRATEGIC ADVISOR BANNER
       ───────────────────────────────────────────── */}
-      <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-3xl p-6 sm:p-8 text-white text-left shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+      <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-3xl p-6 sm:p-8 text-white text-start shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold uppercase tracking-wider bg-white/20 px-2.5 py-0.5 rounded-full">
-              Intelligence Advisor
+              {t("analytics.intelligenceAdvisor", "INTELLIGENCE ADVISOR")}
             </span>
-            <span className="text-xs text-blue-100">Live Diagnostic</span>
+            <span className="text-xs text-blue-100">{t("analytics.liveDiagnostic", "Live Diagnostic")}</span>
           </div>
           <h4 className="text-lg font-black tracking-tight">
-            {capacityPct >= 80 ? "High Demand Velocity Detected — Consider Releasing Surge Quotas" : "Registration Momentum on Steady Target"}
+            {capacityPct >= 80 
+              ? t("analytics.advisorTitleSurge", "High Demand Velocity Detected — Consider Releasing Surge Quotas")
+              : t("analytics.advisorTitleSteady", "Registration Momentum on Steady Target")}
           </h4>
           <p className="text-xs sm:text-sm text-blue-100/90 max-w-2xl">
             {capacityPct >= 80 
-              ? `Your event has reached ${capacityPct.toFixed(0)}% capacity. At the current pace of +${velocityData.avgPace} registrations/day, passes will sell out shortly.` 
-              : `Currently tracking at ${totalAttendeesCount} confirmed delegates across ${demographics.uniqueCompaniesCount} unique organizations. Gate check-in conversion is at ${checkinPct.toFixed(0)}%.`}
+              ? t("analytics.advisorDescSurge", "Your event has reached {capacityPct}% capacity. At the current pace of +{pace} registrations/day, passes will sell out shortly.")
+                  .replace("{capacityPct}", capacityPct.toFixed(0))
+                  .replace("{pace}", velocityData.avgPace)
+              : t("analytics.advisorDescSteady", "Currently tracking at {attendees} confirmed delegates across {companies} unique organizations. Gate check-in conversion is at {checkinPct}%.")
+                  .replace("{attendees}", totalAttendeesCount)
+                  .replace("{companies}", demographics.uniqueCompaniesCount)
+                  .replace("{checkinPct}", checkinPct.toFixed(0))}
           </p>
         </div>
         <div className="flex items-center gap-2 self-end md:self-auto">
@@ -2155,7 +2252,7 @@ export default function AnalyticsView({
             onClick={() => onSwitchView && onSwitchView("tickets")}
             className="px-4 py-2.5 bg-white text-blue-600 hover:bg-blue-50 text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer whitespace-nowrap active:scale-95"
           >
-            Manage Tickets
+            {t("analytics.manageTicketsBtn", "Manage Tickets")}
           </button>
         </div>
       </div>
