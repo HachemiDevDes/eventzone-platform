@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Search, ChevronDown, Check, X } from "lucide-react";
+import { useLanguage } from "../lib/i18n";
 
 /**
  * SearchableSelect
@@ -24,8 +25,8 @@ export default function SearchableSelect({
   value = "",
   onChange,
   options = [],
-  placeholder = "-- Select an option --",
-  searchPlaceholder = "Type to search...",
+  placeholder = "",
+  searchPlaceholder = "",
   disabled = false,
   required = false,
   isClearable = true,
@@ -36,6 +37,10 @@ export default function SearchableSelect({
   name = "",
   id = "",
 }) {
+  const { t } = useLanguage();
+  const effectivePlaceholder = placeholder || t("common.selectOption", "-- Select an option --");
+  const effectiveSearchPlaceholder = searchPlaceholder || t("common.typeToSearch", "Type to search...");
+
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
@@ -72,8 +77,10 @@ export default function SearchableSelect({
   const selectedOption = useMemo(() => {
     const stringVal = String(value || "");
     if (!stringVal) return null;
-    return normalizedOptions.find((opt) => opt.value === stringVal) || { value: stringVal, label: stringVal };
-  }, [normalizedOptions, value]);
+    const found = normalizedOptions.find((opt) => opt.value === stringVal);
+    if (found) return found;
+    return { value: stringVal, label: getAutoLabel(stringVal, stringVal) };
+  }, [normalizedOptions, value, t]);
 
   // Filtered options based on search query
   const filteredOptions = useMemo(() => {
@@ -182,7 +189,7 @@ export default function SearchableSelect({
   return (
     <div
       ref={containerRef}
-      className={`relative w-full text-left font-sans select-none ${isOpen ? "z-50" : ""} ${className}`}
+      className={`relative w-full text-start font-sans select-none ${isOpen ? "z-50" : ""} ${className}`}
       onKeyDown={handleKeyDown}
     >
       {/* Hidden input for HTML form validation if required */}
@@ -205,7 +212,7 @@ export default function SearchableSelect({
         type="button"
         disabled={disabled}
         onClick={() => !disabled && setIsOpen((prev) => !prev)}
-        className={`w-full flex items-center justify-between px-3.5 py-2.5 bg-white border rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-2xs text-left ${
+        className={`w-full flex items-center justify-between px-3.5 py-2.5 bg-white border rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-2xs text-start ${
           disabled
             ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
             : error
@@ -217,12 +224,12 @@ export default function SearchableSelect({
         aria-haspopup="listbox"
         aria-expanded={isOpen}
       >
-        <div className="flex items-center gap-2 truncate pr-1">
+        <div className="flex items-center gap-2 truncate pe-1">
           {selectedOption?.icon && (
             <span className="shrink-0 text-slate-500">{selectedOption.icon}</span>
           )}
           <span className={`truncate ${selectedOption ? "font-bold text-slate-900" : "text-slate-400 font-normal"}`}>
-            {selectedOption ? selectedOption.label : placeholder}
+            {selectedOption ? selectedOption.label : effectivePlaceholder}
           </span>
           {selectedOption?.badge && (
             <span className="text-[10px] px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 font-bold border border-blue-200 shrink-0">
@@ -231,13 +238,13 @@ export default function SearchableSelect({
           )}
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0 ml-2">
+        <div className="flex items-center gap-1.5 shrink-0 ms-2">
           {isClearable && selectedOption && !disabled && (
             <span
               role="button"
               onClick={handleClear}
               className="p-0.5 text-slate-400 hover:text-rose-500 rounded hover:bg-rose-50 transition-colors"
-              title="Clear selection"
+              title={t("common.clearSelection", "Clear selection")}
             >
               <X size={13} />
             </span>
@@ -257,7 +264,7 @@ export default function SearchableSelect({
           {showSearch && normalizedOptions.length > 1 && (
             <div className="p-2 border-b border-slate-100 bg-slate-50/80 sticky top-0 z-10">
               <div className="relative flex items-center">
-                <Search size={14} className="absolute left-2.5 text-slate-400 pointer-events-none" />
+                <Search size={14} className="absolute start-2.5 text-slate-400 pointer-events-none" />
                 <input
                   ref={searchInputRef}
                   type="text"
@@ -266,15 +273,15 @@ export default function SearchableSelect({
                     setSearchTerm(e.target.value);
                     setHighlightedIndex(0);
                   }}
-                  placeholder={searchPlaceholder}
-                  className="w-full pl-8 pr-7 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 shadow-2xs"
+                  placeholder={effectiveSearchPlaceholder}
+                  className="w-full ps-8 pe-7 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 shadow-2xs text-start"
                   onClick={(e) => e.stopPropagation()}
                 />
                 {searchTerm && (
                   <button
                     type="button"
                     onClick={() => setSearchTerm("")}
-                    className="absolute right-2 text-slate-400 hover:text-slate-600 p-0.5"
+                    className="absolute end-2 text-slate-400 hover:text-slate-600 p-0.5"
                   >
                     <X size={12} />
                   </button>
@@ -291,7 +298,7 @@ export default function SearchableSelect({
           >
             {filteredOptions.length === 0 ? (
               <div className="py-6 px-4 text-center text-xs text-slate-400 font-medium">
-                No options found for &ldquo;<span className="text-slate-700 font-bold">{searchTerm}</span>&rdquo;
+                {t("common.noOptionsFound", "No options found")}{searchTerm ? ` for "${searchTerm}"` : ""}
               </div>
             ) : (
               filteredOptions.map((opt, idx) => {
@@ -317,7 +324,7 @@ export default function SearchableSelect({
                         : "text-slate-700 hover:bg-slate-50 font-medium cursor-pointer"
                     }`}
                   >
-                    <div className="flex items-center gap-2 min-w-0 pr-2">
+                    <div className="flex items-center gap-2 min-w-0 pe-2">
                       {opt.icon && <span className={`shrink-0 ${isDisabled ? "opacity-40" : ""}`}>{opt.icon}</span>}
                       <div className="flex flex-col min-w-0">
                         <span className="truncate">{opt.label}</span>
@@ -348,14 +355,14 @@ export default function SearchableSelect({
           {/* Footer count indicator if large list */}
           {normalizedOptions.length > 8 && (
             <div className="px-3 py-1.5 bg-slate-50 border-t border-slate-100 text-[10px] text-slate-400 font-semibold flex justify-between items-center">
-              <span>{filteredOptions.length} of {normalizedOptions.length} choices</span>
+              <span><bdi dir="ltr">{filteredOptions.length}</bdi> {t("common.of", "of")} <bdi dir="ltr">{normalizedOptions.length}</bdi> {t("common.choices", "choices")}</span>
               {searchTerm && (
                 <button
                   type="button"
                   onClick={() => setSearchTerm("")}
                   className="text-blue-600 hover:underline font-bold"
                 >
-                  Clear filter
+                  {t("common.clearFilter", "Clear filter")}
                 </button>
               )}
             </div>

@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import { 
-  Users, CheckCircle2, DollarSign, Calendar, Zap, ArrowRight, 
+  Users, CheckCircle2, DollarSign, Calendar, Zap, ArrowRight, ArrowLeft,
   MapPin, ExternalLink, Clock, TrendingUp,
   Building2, Award, Ticket, Sparkles, AlertCircle, ChevronRight,
   ShieldCheck, Smartphone, Eye, ArrowUpRight, BarChart3, Layers,
@@ -11,6 +11,7 @@ import {
   Briefcase, UserCheck2, PieChart, Store, UserCog
 } from "lucide-react";
 import { useLanguage } from "../lib/i18n";
+import { INDUSTRY_TRANSLATIONS } from "../lib/constants";
 import { OverviewSkeleton } from "./SkeletonLoaders";
 
 export default function Overview({ 
@@ -33,7 +34,7 @@ export default function Overview({
   onOpenModal,
   onPreviewLandingPage
 }) {
-  const { t } = useLanguage();
+  const { t, lang, isRTL } = useLanguage();
   const [chartMode, setChartMode] = useState("daily"); // "daily" | "cumulative"
   const [chartTimeframe, setChartTimeframe] = useState("7d"); // "7d" | "14d" | "30d"
   const [hoveredIndex, setHoveredIndex] = useState(null);
@@ -108,17 +109,17 @@ export default function Overview({
     if (now >= startCopy && now <= endCopy) {
       return { 
         daysRemaining: 0, 
-        eventStatusPill: { label: "Live Today", color: "bg-emerald-50 text-emerald-700 border-emerald-200 animate-pulse" } 
+        eventStatusPill: { label: t("overview.liveToday", "Live Today"), color: "bg-emerald-50 text-emerald-700 border-emerald-200 animate-pulse" } 
       };
     } else if (diffDays > 0) {
       return { 
         daysRemaining: diffDays, 
-        eventStatusPill: { label: `${diffDays} Day${diffDays === 1 ? '' : 's'} to Go`, color: "bg-blue-50 text-blue-700 border-blue-200" } 
+        eventStatusPill: { label: `${t("overview.daysToGo", "Days to Go")} ${diffDays}`, color: "bg-blue-50 text-blue-700 border-blue-200" } 
       };
     } else {
       return { 
         daysRemaining: diffDays, 
-        eventStatusPill: { label: "Completed", color: "bg-slate-100 text-slate-600 border-slate-200" } 
+        eventStatusPill: { label: t("overview.completed", "Completed"), color: "bg-slate-100 text-slate-600 border-slate-200" } 
       };
     }
   }, [startDate, endDate]);
@@ -158,8 +159,8 @@ export default function Overview({
       }];
     }
 
-    return tickets.map(t => {
-      const tierName = t.name || t.tier || "General";
+    return tickets.map(ticket => {
+      const tierName = ticket.name || ticket.tier || "General";
       const tierAttendees = attendees.filter(a => (a.ticketType || a.ticket_type || "").trim().toLowerCase() === tierName.trim().toLowerCase());
       const tierCheckedIn = tierAttendees.filter(a => a.status === 'checked-in' || a.status === 'checked_in' || a.checkedIn || a.checked_in).length;
       const count = tierAttendees.length;
@@ -381,62 +382,67 @@ export default function Overview({
     return [
       {
         id: "details",
-        label: "Event Basics & Venue",
+        label: t("overview.msEventBasics", "Event Basics & Venue"),
         completed: Boolean(title && startDate && location),
         view: "event-details",
-        detail: title && startDate ? `${location}` : "Configure basic info",
+        detail: title && startDate ? `${location}` : t("overview.msConfigureBasicInfo", "Configure basic info"),
         icon: MapPin
       },
       {
         id: "forms",
-        label: "Custom Forms & Survey",
+        label: t("overview.msCustomForms", "Custom Forms & Survey"),
         completed: forms.length > 0,
         view: "forms",
-        detail: `${forms.length} questionnaire${forms.length === 1 ? '' : 's'}`,
+        count: forms.length,
+        suffix: forms.length === 1 ? t("overview.msQuestionnaireSingular", "questionnaire") : t("overview.msQuestionnairePlural", "questionnaires"),
         icon: FileText
       },
       {
         id: "tickets",
-        label: "Ticket Tiers",
+        label: t("overview.msTicketTiers", "Ticket Tiers"),
         completed: tickets.length > 0,
         view: "tickets",
-        detail: `${tickets.length} tier${tickets.length === 1 ? '' : 's'} configured`,
+        count: tickets.length,
+        suffix: tickets.length === 1 ? t("overview.msTierConfiguredSingular", "tier configured") : t("overview.msTierConfiguredPlural", "tiers configured"),
         icon: Ticket
       },
       {
         id: "timeline",
-        label: "Schedule & Agenda",
+        label: t("overview.msScheduleAgenda", "Schedule & Agenda"),
         completed: sessions.length > 0,
         view: "calendar",
-        detail: `${sessions.length} session${sessions.length === 1 ? '' : 's'} scheduled`,
+        count: sessions.length,
+        suffix: sessions.length === 1 ? t("overview.msSessionScheduledSingular", "session scheduled") : t("overview.msSessionScheduledPlural", "sessions scheduled"),
         icon: Calendar
       },
       {
         id: "badges",
-        label: "Badges & QR Pass",
+        label: t("overview.msBadgesQr", "Badges & QR Pass"),
         completed: totalAttendees > 0 || (tickets.some(t => t.badgeUrl) || eventDetails?.badgeUrl),
         view: "tickets",
-        detail: "A4 4-Fold & Mobile QR Active",
+        detail: t("overview.msBadgesQrActive", "A4 4-Fold & Mobile QR Active"),
         icon: QrCode
       },
       {
         id: "floorplan",
-        label: "Floor Plan & Booths",
+        label: t("overview.msFloorPlan", "Floor Plan & Booths"),
         completed: floorPlans.length > 0,
         view: "floor-plan",
-        detail: `${floorPlans.length} plan${floorPlans.length === 1 ? '' : 's'} ready`,
+        count: floorPlans.length,
+        suffix: floorPlans.length === 1 ? t("overview.msPlanReadySingular", "plan ready") : t("overview.msPlanReadyPlural", "plans ready"),
         icon: Layers
       },
       {
         id: "sponsors",
-        label: "Sponsors & Exhibitors",
+        label: t("overview.msSponsorsExhibitors", "Sponsors & Exhibitors"),
         completed: sponsors.length > 0 || exhibitors.length > 0,
         view: "sponsors",
-        detail: `${sponsors.length + exhibitors.length} partners active`,
+        count: sponsors.length + exhibitors.length,
+        suffix: (sponsors.length + exhibitors.length) === 1 ? t("overview.msPartnerActiveSingular", "partner active") : t("overview.msPartnerActivePlural", "partners active"),
         icon: Award
       }
     ];
-  }, [title, startDate, location, tickets, sessions.length, floorPlans.length, sponsors.length, exhibitors.length, totalAttendees, eventDetails?.badgeUrl, forms.length]);
+  }, [t, title, startDate, location, tickets, sessions.length, floorPlans.length, sponsors.length, exhibitors.length, totalAttendees, eventDetails?.badgeUrl, forms.length]);
 
   const completedChecklistCount = readinessChecklist.filter(c => c.completed).length;
   const readinessScore = Math.round((completedChecklistCount / readinessChecklist.length) * 100);
@@ -451,7 +457,7 @@ export default function Overview({
   }, [startDate, endDate]);
 
   return (
-    <div className="flex flex-col gap-8 w-full text-left pb-24 font-sans relative">
+    <div className="flex flex-col gap-8 w-full text-start pb-24 font-sans relative">
       
       {/* ─────────────────────────────────────────────────────────────────── */}
       {/* 1. EXECUTIVE EVENT HERO HEADER                                    */}
@@ -465,10 +471,10 @@ export default function Overview({
               {eventStatusPill.label}
             </span>
             <span className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200/80">
-              {category}
+              {INDUSTRY_TRANSLATIONS[category]?.[lang] || category}
             </span>
             <span className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200/80">
-              {type}
+              {type === "In-Person" ? t("eventsHub.inPerson", "In-Person") : type === "Virtual" ? t("eventsHub.virtual", "Virtual") : t("eventsHub.hybrid", "Hybrid")}
             </span>
           </div>
 
@@ -485,13 +491,13 @@ export default function Overview({
 
             <span className="flex items-center gap-1.5">
               <Calendar size={15} className="text-blue-600 shrink-0" />
-              <span className="text-slate-800 font-bold">{formattedDateRange}</span>
+              <span className="text-slate-800 font-bold" dir="ltr">{formattedDateRange}</span>
             </span>
 
             {scheduleTime && (
               <span className="flex items-center gap-1.5">
                 <Clock size={15} className="text-slate-400 shrink-0" />
-                <span className="text-slate-600 font-semibold">{scheduleTime}</span>
+                <span className="text-slate-600 font-semibold" dir="ltr">{scheduleTime}</span>
               </span>
             )}
           </div>
@@ -509,13 +515,18 @@ export default function Overview({
             </div>
             <div>
               <div className="text-sm font-bold text-amber-950 flex items-center gap-2">
-                <span>{pendingCount} Applicant{pendingCount === 1 ? '' : 's'} Awaiting Organizer Review</span>
+                <span>
+                  <bdi dir="ltr">{pendingCount}</bdi>{" "}
+                  {pendingCount === 1
+                    ? t("overview.applicantAwaitingReview", "Applicant Awaiting Organizer Review")
+                    : t("overview.applicantsAwaitingReview", "Applicants Awaiting Organizer Review")}
+                </span>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-200/80 text-amber-900 uppercase">
-                  Action Required
+                  {t("overview.actionRequired", "Action Required")}
                 </span>
               </div>
               <p className="text-xs text-amber-800/90 mt-0.5">
-                Review pending applicant profiles, approve their access passes, or decline submissions.
+                {t("overview.pendingApplicantsBannerDesc", "Review pending applicant profiles, approve their access passes, or decline submissions.")}
               </p>
             </div>
           </div>
@@ -525,8 +536,8 @@ export default function Overview({
             onClick={() => onSwitchView("pending")}
             className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-sm shadow-amber-600/25 transition-all cursor-pointer shrink-0 flex items-center gap-1.5"
           >
-            <span>Review Applications</span>
-            <ArrowRight size={14} />
+            <span>{t("overview.reviewApps", "Review Applications")}</span>
+            {isRTL ? <ArrowLeft size={14} /> : <ArrowRight size={14} />}
           </button>
         </div>
       )}
@@ -544,7 +555,7 @@ export default function Overview({
           <div>
             <div className="flex justify-between items-start mb-3">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Total Registrations
+                {t("dash.totalAttendees", "Total Registrations")}
               </span>
               <div className="p-2.5 bg-blue-50 text-blue-600 rounded-2xl group-hover:scale-110 transition-transform">
                 <Users size={18} />
@@ -556,7 +567,7 @@ export default function Overview({
                 {totalAttendees}
               </span>
               <span className="text-xs font-bold text-slate-400">
-                / {capacity} capacity
+                / {capacity} {t("details.capacity", "capacity")}
               </span>
             </div>
           </div>
@@ -569,14 +580,14 @@ export default function Overview({
               />
             </div>
             <div className="flex justify-between items-center text-[11px] font-semibold text-slate-500">
-              <span>{capacityPct}% target filled</span>
+              <span>{capacityPct}% {t("overview.targetFilled", "target filled")}</span>
               {pendingCount > 0 ? (
                 <span className="text-amber-600 font-bold flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                  {pendingCount} pending
+                  {pendingCount} {t("dash.pending", "pending")}
                 </span>
               ) : (
-                <span className="text-emerald-600 font-bold">Registration open</span>
+                <span className="text-emerald-600 font-bold">{t("overview.regOpen", "Registration open")}</span>
               )}
             </div>
           </div>
@@ -590,7 +601,7 @@ export default function Overview({
           <div>
             <div className="flex justify-between items-start mb-3">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Gross Revenue
+                {t("dash.totalRevenue", "Gross Revenue")}
               </span>
               <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-2xl group-hover:scale-110 transition-transform">
                 <DollarSign size={18} />
@@ -602,15 +613,15 @@ export default function Overview({
                 {totalRev.toLocaleString()}
               </span>
               <span className="text-xs font-semibold text-emerald-600">
-                DZD
+                {t("common.currencyDzd", "DZD")}
               </span>
             </div>
           </div>
 
           <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-medium text-slate-500">
-            <span>{tickets.length} Ticket Tier{tickets.length === 1 ? '' : 's'}</span>
+            <span>{tickets.length} {t("dash.tickets", "Tickets")}</span>
             <span className="text-blue-600 font-bold flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
-              Manage Tiers <ChevronRight size={13} />
+              {t("tickets.title", "Manage Tiers")} <ChevronRight size={13} />
             </span>
           </div>
         </div>
@@ -623,7 +634,7 @@ export default function Overview({
           <div>
             <div className="flex justify-between items-start mb-3">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Door Check-Ins
+                {t("checkin.title", "Door Check-Ins")}
               </span>
               <div className="p-2.5 bg-purple-50 text-purple-600 rounded-2xl group-hover:scale-110 transition-transform">
                 <CheckCircle2 size={18} />
@@ -635,7 +646,7 @@ export default function Overview({
                 {checkedInCount}
               </span>
               <span className="text-xs font-bold text-slate-400">
-                / {totalAttendees} checked in
+                / {totalAttendees} {t("table.checkedIn", "checked in")}
               </span>
             </div>
           </div>
@@ -648,9 +659,9 @@ export default function Overview({
               />
             </div>
             <div className="flex justify-between items-center text-[11px] font-semibold text-slate-500">
-              <span>{checkinPct.toFixed(0)}% attendance rate</span>
+              <span>{checkinPct.toFixed(0)}% {t("checkin.attendanceRate", "attendance rate")}</span>
               <span className="text-purple-600 font-bold flex items-center gap-0.5">
-                Open Scanner <ChevronRight size={13} />
+                {t("checkin.launchScanner", "Open Scanner")} <ChevronRight size={13} />
               </span>
             </div>
           </div>
@@ -664,7 +675,7 @@ export default function Overview({
           <div>
             <div className="flex justify-between items-start mb-3">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Agenda &amp; Ecosystem
+                {t("calendar.title", "Agenda & Ecosystem")}
               </span>
               <div className="p-2.5 bg-amber-50 text-amber-600 rounded-2xl group-hover:scale-110 transition-transform">
                 <Calendar size={18} />
@@ -676,15 +687,15 @@ export default function Overview({
                 {sessions.length}
               </span>
               <span className="text-xs font-bold text-slate-400">
-                Sessions
+                {t("dash.sessionsCount", "Sessions")}
               </span>
             </div>
           </div>
 
           <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-semibold">
-            <span>{uniqueSpeakers.length} Speaker{uniqueSpeakers.length === 1 ? '' : 's'}</span>
+            <span>{uniqueSpeakers.length} {t("dash.speakers", "Speakers")}</span>
             <span>•</span>
-            <span>{sponsors.length + exhibitors.length} Partner{sponsors.length + exhibitors.length === 1 ? '' : 's'}</span>
+            <span>{sponsors.length + exhibitors.length} {t("dash.sponsors", "Partners")}</span>
           </div>
         </div>
 
@@ -702,10 +713,10 @@ export default function Overview({
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <h3 className="text-base font-bold text-slate-900">
-                Registration Velocity
+                {t("overview.velocityTitle", "Registration Velocity")}
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Delegate sign-up inflow over the active campaign period.
+                {t("overview.velocityDesc", "Delegate sign-up inflow over the active campaign period.")}
               </p>
             </div>
 
@@ -744,7 +755,7 @@ export default function Overview({
                     chartMode === "daily" ? "bg-white text-blue-600 shadow-2xs" : "text-slate-500 hover:text-slate-800"
                   }`}
                 >
-                  Daily Inflow
+                  {t("overview.dailyInflow", "Daily Inflow")}
                 </button>
                 <button
                   type="button"
@@ -756,7 +767,7 @@ export default function Overview({
                     chartMode === "cumulative" ? "bg-white text-blue-600 shadow-2xs" : "text-slate-500 hover:text-slate-800"
                   }`}
                 >
-                  Cumulative
+                  {t("overview.cumulativeGrowth", "Cumulative")}
                 </button>
               </div>
             </div>
@@ -767,8 +778,8 @@ export default function Overview({
             {totalAttendees === 0 ? (
               <div className="w-full h-full flex flex-col items-center justify-center bg-slate-50/70 rounded-2xl border border-dashed border-slate-200 text-center p-4">
                 <TrendingUp size={28} className="text-slate-300 mb-2" />
-                <span className="text-xs font-bold text-slate-600">No registration activity recorded yet</span>
-                <span className="text-[11px] text-slate-400 mt-0.5">Velocity curve will track delegate sign-ups in real-time as tickets are claimed</span>
+                <span className="text-xs font-bold text-slate-600">{t("overview.noActivityYet", "No registration activity recorded yet")}</span>
+                <span className="text-[11px] text-slate-400 mt-0.5">{t("overview.velocityCurveNotice", "Velocity curve will track delegate sign-ups in real-time as tickets are claimed")}</span>
               </div>
             ) : (
               <>
@@ -904,29 +915,29 @@ export default function Overview({
                         : 'translate(-50%, -105%)'
                     }}
                   >
-                    <div className="bg-slate-900/95 text-white backdrop-blur-md px-3.5 py-2.5 rounded-2xl shadow-xl border border-slate-700 text-left space-y-1 min-w-[170px]">
+                    <div className="bg-slate-900/95 text-white backdrop-blur-md px-3.5 py-2.5 rounded-2xl shadow-xl border border-slate-700 text-start space-y-1 min-w-[170px]">
                       <div className="flex items-center justify-between gap-2 border-b border-slate-700/80 pb-1 text-[11px] font-bold text-slate-300">
                         <span>{velocityData.isYear ? velocityData.points[hoveredIndex].fullDate : `${velocityData.points[hoveredIndex].dayName}, ${velocityData.points[hoveredIndex].monthName} ${velocityData.points[hoveredIndex].dayNum}`}</span>
                         <span className="text-[10px] text-blue-400 font-mono">
-                          {chartMode === 'cumulative' ? 'Total' : 'Daily'}
+                          {chartMode === 'cumulative' ? t("overview.totalLabel", "Total") : t("overview.dailyLabel", "Daily")}
                         </span>
                       </div>
                       
                       <div className="flex items-baseline justify-between gap-3 pt-0.5">
                         <span className="text-xs text-slate-400 font-medium">
-                          {chartMode === 'cumulative' ? 'Cumulative Total:' : 'Sign-ups:'}
+                          {chartMode === 'cumulative' ? t("overview.cumulativeTotalLabel", "Cumulative Total:") : t("overview.signUpsLabel", "Sign-ups:")}
                         </span>
                         <span className="text-xs font-black text-white">
                           {chartMode === 'cumulative' 
-                            ? `${velocityData.points[hoveredIndex].cumulative} delegates` 
-                            : `+${velocityData.points[hoveredIndex].count} delegates`}
+                            ? <><bdi dir="ltr">{velocityData.points[hoveredIndex].cumulative}</bdi> <span>{t("overview.delegates", "delegates")}</span></>
+                            : <><bdi dir="ltr">+{velocityData.points[hoveredIndex].count}</bdi> <span>{t("overview.delegates", "delegates")}</span></>}
                         </span>
                       </div>
 
                       {velocityData.points[hoveredIndex].revenue > 0 && (
                         <div className="flex items-baseline justify-between gap-3 text-[11px] text-emerald-400 font-semibold">
-                          <span>Revenue:</span>
-                          <span>+{velocityData.points[hoveredIndex].revenue.toLocaleString()} DZD</span>
+                          <span>{t("overview.chartRevenueLabel", "Revenue:")}</span>
+                          <span><bdi dir="ltr">+{velocityData.points[hoveredIndex].revenue.toLocaleString()}</bdi> DZD</span>
                         </div>
                       )}
                     </div>
@@ -958,8 +969,8 @@ export default function Overview({
         <div className="lg:col-span-4 bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-5 flex flex-col justify-between">
           <div className="flex justify-between items-center">
             <div>
-              <h3 className="text-base font-bold text-slate-900">Ticket Tiers</h3>
-              <p className="text-xs text-slate-500 mt-0.5">Allocation by tier</p>
+              <h3 className="text-base font-bold text-slate-900">{t("overview.ticketTiers", "Ticket Tiers")}</h3>
+              <p className="text-xs text-slate-500 mt-0.5">{t("overview.allocationByTier", "Allocation by tier")}</p>
             </div>
 
             <button
@@ -967,36 +978,36 @@ export default function Overview({
               onClick={() => onSwitchView("tickets")}
               className="text-xs font-bold text-blue-600 hover:text-blue-700 cursor-pointer"
             >
-              Manage
+              {t("overview.manage", "Manage")}
             </button>
           </div>
 
           {/* List of Ticket Tiers with Progress */}
-          <div className="space-y-3.5 flex-1 overflow-y-auto max-h-64 pr-1">
+          <div className="space-y-3.5 flex-1 overflow-y-auto max-h-64 pe-1">
             {tickets.length === 0 ? (
               <div className="text-center py-8 text-slate-400 space-y-2">
                 <Ticket size={28} className="mx-auto opacity-40" />
-                <p className="text-xs font-medium">No ticket tiers created yet.</p>
+                <p className="text-xs font-medium">{t("overview.noTiersYet", "No ticket tiers created yet.")}</p>
                 <button
                   type="button"
                   onClick={() => onOpenModal ? onOpenModal("ticket") : onSwitchView("tickets")}
                   className="px-3 py-1.5 bg-blue-600 text-white rounded-xl text-xs font-bold"
                 >
-                  Create First Ticket Tier
+                  {t("overview.createFirstTier", "Create First Ticket Tier")}
                 </button>
               </div>
             ) : (
-              tickets.map((t) => {
-                const sold = Number(t.sold) || 0;
-                const total = Number(t.maxQty || t.available || 100);
+              tickets.map((ticketItem) => {
+                const sold = Number(ticketItem.sold) || 0;
+                const total = Number(ticketItem.maxQty || ticketItem.available || 100);
                 const pct = total > 0 ? Math.min(100, Math.round((sold / total) * 100)) : 0;
-                const priceVal = typeof t.price === 'number' ? t.price : parseFloat(t.price) || 0;
+                const priceVal = typeof ticketItem.price === 'number' ? ticketItem.price : parseFloat(ticketItem.price) || 0;
 
                 return (
-                  <div key={t.id || t.name} className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2">
+                  <div key={ticketItem.id || ticketItem.name} className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2">
                     <div className="flex justify-between items-center text-xs">
-                      <span className="font-bold text-slate-900 truncate">{t.name || t.tier}</span>
-                      <span className="font-extrabold text-blue-600 shrink-0">{priceVal === 0 ? "Free" : `${priceVal.toLocaleString()} DZD`}</span>
+                      <span className="font-bold text-slate-900 truncate">{ticketItem.name || ticketItem.tier}</span>
+                      <span className="font-extrabold text-blue-600 shrink-0">{priceVal === 0 ? t("overview.free", "Free") : <><bdi dir="ltr">{priceVal.toLocaleString()}</bdi> DZD</>}</span>
                     </div>
 
                     <div className="w-full h-2 bg-slate-200/80 rounded-full overflow-hidden">
@@ -1004,8 +1015,8 @@ export default function Overview({
                     </div>
 
                     <div className="flex justify-between text-[11px] font-semibold text-slate-500">
-                      <span>{sold} sold</span>
-                      <span>{total} capacity ({pct}%)</span>
+                      <span><bdi dir="ltr">{sold}</bdi> {t("overview.sold", "sold")}</span>
+                      <span><bdi dir="ltr">{total}</bdi> {t("overview.capacity", "capacity")} (<bdi dir="ltr">{pct}%</bdi>)</span>
                     </div>
                   </div>
                 );
@@ -1014,8 +1025,8 @@ export default function Overview({
           </div>
 
           <div className="pt-3 border-t border-slate-100 flex justify-between items-center text-xs">
-            <span className="text-slate-500 font-medium">Total Passes Issued</span>
-            <span className="font-extrabold text-slate-900">{totalAttendees}</span>
+            <span className="text-slate-500 font-medium">{t("overview.totalPassesIssued", "Total Passes Issued")}</span>
+            <span className="font-extrabold text-slate-900"><bdi dir="ltr">{totalAttendees}</bdi></span>
           </div>
         </div>
 
@@ -1032,14 +1043,14 @@ export default function Overview({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-bold text-slate-900">
-                  Top Represented Companies
+                  {t("overview.topCompanies", "Top Represented Companies")}
                 </h3>
                 <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-700">
-                  Demographics
+                  {t("overview.demographics", "Demographics")}
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                Key organizations attending your summit
+                {t("overview.companiesSubtitle", "Key organizations attending your summit")}
               </p>
             </div>
 
@@ -1048,7 +1059,7 @@ export default function Overview({
               onClick={() => onSwitchView("attendees")}
               className="text-xs font-bold text-blue-600 hover:text-blue-700 cursor-pointer"
             >
-              All Delegates
+              {t("overview.allDelegates", "All Delegates")}
             </button>
           </div>
 
@@ -1056,7 +1067,7 @@ export default function Overview({
             {topCompanies.length === 0 ? (
               <div className="text-center py-8 text-slate-400 space-y-2">
                 <Building2 size={28} className="mx-auto opacity-30" />
-                <p className="text-xs font-medium">No delegate organization data recorded yet.</p>
+                <p className="text-xs font-medium">{t("overview.noOrgDataYet", "No delegate organization data recorded yet.")}</p>
               </div>
             ) : (
               topCompanies.map(([compName, count], idx) => {
@@ -1068,7 +1079,7 @@ export default function Overview({
                         <Building2 size={13} className="text-slate-400 shrink-0" />
                         <span>{compName}</span>
                       </span>
-                      <span className="font-extrabold text-indigo-600 shrink-0">{count} delegate{count === 1 ? '' : 's'}</span>
+                      <span className="font-extrabold text-indigo-600 shrink-0"><bdi dir="ltr">{count}</bdi> {count === 1 ? t("overview.delegate", "delegate") : t("overview.delegates", "delegates")}</span>
                     </div>
 
                     <div className="w-full h-1.5 bg-slate-200/80 rounded-full overflow-hidden">
@@ -1083,7 +1094,7 @@ export default function Overview({
           {/* Micro summary of job titles */}
           {topRoles.length > 0 && (
             <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center gap-1.5 text-[11px]">
-              <span className="text-slate-400 font-semibold">Key Roles:</span>
+              <span className="text-slate-400 font-semibold">{t("overview.keyRoles", "Key Roles")}:</span>
               {topRoles.map(([roleName, cnt]) => (
                 <span key={roleName} className="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 font-bold">
                   {roleName} ({cnt})
@@ -1099,14 +1110,14 @@ export default function Overview({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-bold text-slate-900">
-                  Gate Check-In by Pass Tier
+                  {t("overview.gateCheckIn", "Gate Check-In by Pass Tier")}
                 </h3>
                 <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-50 text-purple-700">
-                  Entrance Rate
+                  {t("overview.entranceRate", "Entrance Rate")}
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                Real-time door arrival metrics across ticket classes
+                {t("overview.gateSubtitle", "Real-time door arrival metrics across ticket classes")}
               </p>
             </div>
 
@@ -1124,7 +1135,7 @@ export default function Overview({
               <div key={tier.name} className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2">
                 <div className="flex justify-between items-center text-xs">
                   <span className="font-bold text-slate-900 truncate">{tier.name}</span>
-                  <span className="font-extrabold text-purple-600 shrink-0">{tier.checkedIn} / {tier.total} checked in</span>
+                  <span className="font-extrabold text-purple-600 shrink-0">{tier.checkedIn} / {tier.total} {t("overview.checkedIn", "checked in")}</span>
                 </div>
 
                 <div className="w-full h-2 bg-slate-200/80 rounded-full overflow-hidden">
@@ -1132,15 +1143,15 @@ export default function Overview({
                 </div>
 
                 <div className="flex justify-between text-[11px] font-semibold text-slate-500">
-                  <span>{tier.pct}% checked in</span>
-                  <span>{tier.total - tier.checkedIn} pending entrance</span>
+                  <span>{tier.pct}% {t("overview.checkedIn", "checked in")}</span>
+                  <span>{tier.total - tier.checkedIn} {t("overview.pendingEntrance", "pending entrance")}</span>
                 </div>
               </div>
             ))}
           </div>
 
           <div className="pt-3 border-t border-slate-100 flex justify-between items-center text-xs">
-            <span className="text-slate-500 font-medium">Total Venue Attendance</span>
+            <span className="text-slate-500 font-medium">{t("overview.totalVenueAttendance", "Total Venue Attendance")}</span>
             <span className="font-extrabold text-purple-700">{checkinPct.toFixed(0)}% ({checkedInCount} / {totalAttendees})</span>
           </div>
         </div>
@@ -1157,10 +1168,10 @@ export default function Overview({
           <div className="flex justify-between items-center">
             <div>
               <h3 className="text-base font-bold text-slate-900">
-                Upcoming Agenda Sessions
+                {t("overview.upcomingSessions", "Upcoming Agenda Sessions")}
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Keynotes, panels, and breakout tracks
+                {t("overview.upcomingSessionsSubtitle", "Keynotes, panels, and breakout tracks")}
               </p>
             </div>
 
@@ -1169,7 +1180,7 @@ export default function Overview({
               onClick={() => onSwitchView("calendar")}
               className="text-xs font-bold text-blue-600 hover:text-blue-700 cursor-pointer flex items-center"
             >
-              <span>Full Agenda</span>
+              <span>{t("overview.fullAgenda", "Full Agenda")}</span>
             </button>
           </div>
 
@@ -1177,13 +1188,13 @@ export default function Overview({
             {upcomingSessions.length === 0 ? (
               <div className="text-center py-10 text-slate-400 space-y-2">
                 <Calendar size={32} className="mx-auto opacity-30" />
-                <p className="text-xs font-medium">No timeline sessions scheduled yet.</p>
+                <p className="text-xs font-medium">{t("overview.noSessionsYet", "No timeline sessions scheduled yet.")}</p>
                 <button
                   type="button"
                   onClick={() => onSwitchView("calendar")}
                   className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold cursor-pointer transition-colors"
                 >
-                  Add First Session
+                  {t("overview.addFirstSession", "Add First Session")}
                 </button>
               </div>
             ) : (
@@ -1224,14 +1235,14 @@ export default function Overview({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-bold text-slate-900">
-                  Partners &amp; Expo Floor
+                  {t("overview.partnersExpo", "Partners & Expo Floor")}
                 </h3>
                 <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-700">
-                  Ecosystem
+                  {t("overview.ecosystem", "Ecosystem")}
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                Sponsors, exhibitors, and booth assignments
+                {t("overview.partnersSubtitle", "Sponsors, exhibitors, and booth assignments")}
               </p>
             </div>
 
@@ -1240,7 +1251,7 @@ export default function Overview({
               onClick={() => onSwitchView("sponsors")}
               className="text-xs font-bold text-amber-600 hover:text-amber-700 cursor-pointer"
             >
-              Manage
+              {t("common.manage", "Manage")}
             </button>
           </div>
 
@@ -1250,12 +1261,12 @@ export default function Overview({
               className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between cursor-pointer hover:border-amber-300 transition-colors"
             >
               <div className="flex justify-between items-start">
-                <span className="text-[11px] font-bold text-slate-400 uppercase">Sponsors</span>
+                <span className="text-[11px] font-bold text-slate-400 uppercase">{t("dash.sponsors", "Sponsors")}</span>
                 <Award size={16} className="text-amber-500" />
               </div>
               <div>
                 <div className="text-2xl font-extrabold text-slate-900">{sponsors.length}</div>
-                <div className="text-[11px] text-slate-500 font-medium">Active event partners</div>
+                <div className="text-[11px] text-slate-500 font-medium">{t("overview.activePartners", "Active event partners")}</div>
               </div>
             </div>
 
@@ -1264,12 +1275,12 @@ export default function Overview({
               className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between cursor-pointer hover:border-blue-300 transition-colors"
             >
               <div className="flex justify-between items-start">
-                <span className="text-[11px] font-bold text-slate-400 uppercase">Exhibitors</span>
+                <span className="text-[11px] font-bold text-slate-400 uppercase">{t("dash.exhibitors", "Exhibitors")}</span>
                 <Store size={16} className="text-blue-500" />
               </div>
               <div>
                 <div className="text-2xl font-extrabold text-slate-900">{exhibitors.length}</div>
-                <div className="text-[11px] text-slate-500 font-medium">Exhibitor companies</div>
+                <div className="text-[11px] text-slate-500 font-medium">{t("overview.exhibitorCompanies", "Exhibitor companies")}</div>
               </div>
             </div>
 
@@ -1278,23 +1289,23 @@ export default function Overview({
               className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between cursor-pointer hover:border-indigo-300 transition-colors col-span-2"
             >
               <div className="flex justify-between items-start">
-                <span className="text-[11px] font-bold text-slate-400 uppercase">Expo Floor Layout</span>
+                <span className="text-[11px] font-bold text-slate-400 uppercase">{t("overview.expoFloorLayout", "Expo Floor Layout")}</span>
                 <Layers size={16} className="text-indigo-500" />
               </div>
               <div className="flex justify-between items-center mt-1">
                 <div>
-                  <div className="text-base font-extrabold text-slate-900">{floorPlans.length} Floor Plan{floorPlans.length === 1 ? '' : 's'}</div>
-                  <div className="text-[11px] text-slate-500 font-medium">{totalBooths} total interactive booths configured</div>
+                  <div className="text-base font-extrabold text-slate-900">{floorPlans.length} {t("overview.floorPlan", "Floor Plan")}</div>
+                  <div className="text-[11px] text-slate-500 font-medium">{totalBooths} {t("overview.totalBoothsConfigured", "total interactive booths configured")}</div>
                 </div>
                 <span className="text-xs font-bold text-indigo-600 flex items-center gap-0.5">
-                  View Layout <ChevronRight size={13} />
+                  {t("overview.viewLayout", "View Layout")} <ChevronRight size={13} />
                 </span>
               </div>
             </div>
           </div>
 
           <div className="pt-3 border-t border-slate-100 flex justify-between items-center text-xs">
-            <span className="text-slate-500 font-medium">Total Commercial Stakeholders</span>
+            <span className="text-slate-500 font-medium">{t("overview.totalCommercialStakeholders", "Total Commercial Stakeholders")}</span>
             <span className="font-extrabold text-slate-900">{sponsors.length + exhibitors.length}</span>
           </div>
         </div>
@@ -1311,10 +1322,10 @@ export default function Overview({
           <div className="flex justify-between items-center">
             <div>
               <h3 className="text-base font-bold text-slate-900">
-                Recent Registrations
+                {t("overview.recentRegistrations", "Recent Registrations")}
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Latest attendees registered for this summit
+                {t("overview.recentRegistrationsSubtitle", "Latest attendees registered for this summit")}
               </p>
             </div>
 
@@ -1323,7 +1334,7 @@ export default function Overview({
               onClick={() => onSwitchView("attendees")}
               className="text-xs font-bold text-blue-600 hover:text-blue-700 cursor-pointer flex items-center"
             >
-              <span>View All ({totalAttendees})</span>
+              <span>{t("overview.viewAll", "View All")} (<bdi dir="ltr">{totalAttendees}</bdi>)</span>
             </button>
           </div>
 
@@ -1331,13 +1342,13 @@ export default function Overview({
             {recentAttendees.length === 0 ? (
               <div className="text-center py-10 text-slate-400 space-y-2">
                 <Users size={32} className="mx-auto opacity-30" />
-                <p className="text-xs font-medium">No attendees registered yet.</p>
+                <p className="text-xs font-medium">{t("overview.noAttendeesYet", "No attendees registered yet.")}</p>
                 <button
                   type="button"
                   onClick={() => onOpenModal ? onOpenModal("attendee") : onSwitchView("attendees")}
                   className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold cursor-pointer transition-colors"
                 >
-                  Register Attendee
+                  {t("overview.registerAttendeeBtn", "Register Attendee")}
                 </button>
               </div>
             ) : (
@@ -1376,7 +1387,7 @@ export default function Overview({
                         ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                         : "bg-blue-50 text-blue-700 border border-blue-200"
                     }`}>
-                      {isCheckedIn ? "Checked In" : "Confirmed"}
+                      {isCheckedIn ? t("table.checkedIn", "Checked In") : t("overview.confirmedBadge", "Confirmed")}
                     </span>
                   </div>
                 );
@@ -1390,10 +1401,10 @@ export default function Overview({
           <div className="flex justify-between items-center">
             <div>
               <h3 className="text-base font-bold text-slate-900">
-                Audience Pulse &amp; Team
+                {t("overview.audiencePulse", "Audience Pulse & Team")}
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Feedback surveys &amp; active event crew
+                {t("overview.audienceSubtitle", "Feedback surveys & active event crew")}
               </p>
             </div>
 
@@ -1402,7 +1413,7 @@ export default function Overview({
               onClick={() => onSwitchView("forms")}
               className="text-xs font-bold text-rose-600 hover:text-rose-700 cursor-pointer"
             >
-              Forms
+              {t("overview.customForms", "Forms")}
             </button>
           </div>
 
@@ -1417,8 +1428,8 @@ export default function Overview({
                   <FileText size={18} />
                 </div>
                 <div>
-                  <div className="text-xs font-bold text-slate-900">{forms.length} Survey Questionnaires</div>
-                  <div className="text-[11px] text-slate-500">{formSubmissions.length} responses collected</div>
+                  <div className="text-xs font-bold text-slate-900">{forms.length} {t("overview.surveyQuestionnaires", "Survey Questionnaires")}</div>
+                  <div className="text-[11px] text-slate-500">{formSubmissions.length} {t("overview.responsesCollected", "responses collected")}</div>
                 </div>
               </div>
               <ChevronRight size={14} className="text-rose-400" />
@@ -1434,8 +1445,8 @@ export default function Overview({
                   <UserCog size={18} />
                 </div>
                 <div>
-                  <div className="text-xs font-bold text-slate-900">{team.length || 1} Active Team Staff</div>
-                  <div className="text-[11px] text-slate-500">Organizers, gate scanners &amp; stage crew</div>
+                  <div className="text-xs font-bold text-slate-900">{team.length || 1} {t("overview.activeStaff", "Active Team Staff")}</div>
+                  <div className="text-[11px] text-slate-500">{t("overview.staffDesc", "Organizers, gate scanners & stage crew")}</div>
                 </div>
               </div>
               <ChevronRight size={14} className="text-blue-400" />
@@ -1451,8 +1462,8 @@ export default function Overview({
                   <ShieldCheck size={18} />
                 </div>
                 <div>
-                  <div className="text-xs font-bold text-slate-900">A4 Badges &amp; Pass Dispatch</div>
-                  <div className="text-[11px] text-slate-500">QR security credentials ready</div>
+                  <div className="text-xs font-bold text-slate-900">{t("overview.a4BadgesDispatch", "A4 Badges & Pass Dispatch")}</div>
+                  <div className="text-[11px] text-slate-500">{t("overview.credentialsReady", "QR security credentials ready")}</div>
                 </div>
               </div>
               <ChevronRight size={14} className="text-emerald-400" />
@@ -1460,10 +1471,10 @@ export default function Overview({
           </div>
 
           <div className="pt-3 border-t border-slate-100 flex justify-between items-center text-xs">
-            <span className="text-slate-500 font-medium">Platform Operations</span>
+            <span className="text-slate-500 font-medium">{t("overview.platformOperations", "Platform Operations")}</span>
             <span className="font-bold text-emerald-600 flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              All Systems Operational
+              {t("overview.allSystemsOperational", "All Systems Operational")}
             </span>
           </div>
         </div>
@@ -1477,10 +1488,10 @@ export default function Overview({
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
             <h3 className="text-base font-bold text-slate-900">
-              Organizer Quick Operations
+              {t("overview.quickOperations", "Organizer Quick Operations")}
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Instant shortcuts to design spaces, launch door check-in, broadcast emails, and manage participants.
+              {t("overview.quickOperationsSubtitle", "Instant shortcuts to design spaces, launch door check-in, broadcast emails, and manage participants.")}
             </p>
           </div>
         </div>
@@ -1491,14 +1502,14 @@ export default function Overview({
           <button
             type="button"
             onClick={() => onSwitchView("check-in")}
-            className="p-4 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-left transition-all cursor-pointer space-y-2 group hover:border-slate-300"
+            className="p-4 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-start transition-all cursor-pointer space-y-2 group hover:border-slate-300"
           >
             <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center group-hover:scale-105 transition-transform">
               <QrCode size={16} />
             </div>
             <div>
-              <div className="text-xs font-bold text-slate-900">Door Scanner</div>
-              <div className="text-[11px] text-slate-500">Fast QR check-in</div>
+              <div className="text-xs font-bold text-slate-900">{t("overview.doorScanner", "Door Scanner")}</div>
+              <div className="text-[11px] text-slate-500">{t("overview.doorScannerDesc", "Fast QR check-in")}</div>
             </div>
           </button>
 
@@ -1506,14 +1517,14 @@ export default function Overview({
           <button
             type="button"
             onClick={() => onSwitchView("attendees")}
-            className="p-4 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-left transition-all cursor-pointer space-y-2 group hover:border-slate-300"
+            className="p-4 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-start transition-all cursor-pointer space-y-2 group hover:border-slate-300"
           >
             <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-105 transition-transform">
               <Mail size={16} />
             </div>
             <div>
-              <div className="text-xs font-bold text-slate-900">Send Email</div>
-              <div className="text-[11px] text-slate-500">Bulk &amp; pass dispatch</div>
+              <div className="text-xs font-bold text-slate-900">{t("overview.sendEmail", "Send Email")}</div>
+              <div className="text-[11px] text-slate-500">{t("overview.sendEmailDesc", "Bulk & pass dispatch")}</div>
             </div>
           </button>
 
@@ -1521,14 +1532,14 @@ export default function Overview({
           <button
             type="button"
             onClick={() => onSwitchView("attendees")}
-            className="p-4 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-left transition-all cursor-pointer space-y-2 group hover:border-slate-300"
+            className="p-4 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-start transition-all cursor-pointer space-y-2 group hover:border-slate-300"
           >
             <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-105 transition-transform">
               <Printer size={16} />
             </div>
             <div>
-              <div className="text-xs font-bold text-slate-900">Print Badges</div>
-              <div className="text-[11px] text-slate-500">A4 4-fold sheets</div>
+              <div className="text-xs font-bold text-slate-900">{t("overview.printBadges", "Print Badges")}</div>
+              <div className="text-[11px] text-slate-500">{t("overview.printBadgesDesc", "A4 4-fold sheets")}</div>
             </div>
           </button>
 
@@ -1536,14 +1547,14 @@ export default function Overview({
           <button
             type="button"
             onClick={() => onSwitchView("floor-plan")}
-            className="p-4 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-left transition-all cursor-pointer space-y-2 group hover:border-slate-300"
+            className="p-4 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-start transition-all cursor-pointer space-y-2 group hover:border-slate-300"
           >
             <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:scale-105 transition-transform">
               <Layers size={16} />
             </div>
             <div>
-              <div className="text-xs font-bold text-slate-900">Floor Plan</div>
-              <div className="text-[11px] text-slate-500">Design expo spaces</div>
+              <div className="text-xs font-bold text-slate-900">{t("overview.floorPlan", "Floor Plan")}</div>
+              <div className="text-[11px] text-slate-500">{t("overview.floorPlanDesc", "Design expo spaces")}</div>
             </div>
           </button>
 
@@ -1551,14 +1562,14 @@ export default function Overview({
           <button
             type="button"
             onClick={() => onOpenModal ? onOpenModal("attendee") : onSwitchView("attendees")}
-            className="p-4 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-left transition-all cursor-pointer space-y-2 group hover:border-slate-300"
+            className="p-4 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-start transition-all cursor-pointer space-y-2 group hover:border-slate-300"
           >
             <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-105 transition-transform">
               <UserPlus size={16} />
             </div>
             <div>
-              <div className="text-xs font-bold text-slate-900">Add Attendee</div>
-              <div className="text-[11px] text-slate-500">Manual entry</div>
+              <div className="text-xs font-bold text-slate-900">{t("overview.addAttendee", "Add Attendee")}</div>
+              <div className="text-[11px] text-slate-500">{t("overview.addAttendeeDesc", "Manual entry")}</div>
             </div>
           </button>
 
@@ -1566,14 +1577,14 @@ export default function Overview({
           <button
             type="button"
             onClick={() => onSwitchView("forms")}
-            className="p-4 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-left transition-all cursor-pointer space-y-2 group hover:border-slate-300"
+            className="p-4 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-start transition-all cursor-pointer space-y-2 group hover:border-slate-300"
           >
             <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center group-hover:scale-105 transition-transform">
               <FileText size={16} />
             </div>
             <div>
-              <div className="text-xs font-bold text-slate-900">Custom Forms</div>
-              <div className="text-[11px] text-slate-500">Surveys &amp; feedback</div>
+              <div className="text-xs font-bold text-slate-900">{t("overview.customForms", "Custom Forms")}</div>
+              <div className="text-[11px] text-slate-500">{t("overview.customFormsDesc", "Surveys & feedback")}</div>
             </div>
           </button>
 
@@ -1581,14 +1592,14 @@ export default function Overview({
           <button
             type="button"
             onClick={() => onSwitchView("certificates")}
-            className="p-4 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-left transition-all cursor-pointer space-y-2 group hover:border-slate-300"
+            className="p-4 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-start transition-all cursor-pointer space-y-2 group hover:border-slate-300"
           >
             <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:scale-105 transition-transform">
               <Award size={16} />
             </div>
             <div>
-              <div className="text-xs font-bold text-slate-900">Certificates</div>
-              <div className="text-[11px] text-slate-500">Batch A4 generator</div>
+              <div className="text-xs font-bold text-slate-900">{t("overview.certificates", "Certificates")}</div>
+              <div className="text-[11px] text-slate-500">{t("overview.certificatesDesc", "Batch A4 generator")}</div>
             </div>
           </button>
 
@@ -1608,13 +1619,15 @@ export default function Overview({
                   <ListTodo size={16} />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-slate-900">Event Launch Readiness</h4>
-                  <p className="text-[10.5px] text-slate-400">{completedChecklistCount} of {readinessChecklist.length} Milestones Complete</p>
+                  <h4 className="text-xs font-bold text-slate-900">{t("overview.launchReadiness", "Event Launch Readiness")}</h4>
+                  <p className="text-[10.5px] text-slate-400">
+                    <bdi dir="ltr">{completedChecklistCount}</bdi> {t("overview.of", "of")} <bdi dir="ltr">{readinessChecklist.length}</bdi> {t("overview.milestonesComplete", "Milestones Complete")}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <span className={`text-xs font-black ${readinessScore === 100 ? 'text-emerald-600' : 'text-blue-600'}`}>
-                  {readinessScore}%
+                  <bdi dir="ltr">{readinessScore}%</bdi>
                 </span>
                 <button
                   type="button"
@@ -1635,7 +1648,7 @@ export default function Overview({
             </div>
 
             {/* Checklist Items */}
-            <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
+            <div className="space-y-1.5 max-h-72 overflow-y-auto pe-1">
               {readinessChecklist.map((item) => {
                 const IconComp = item.icon;
                 return (
@@ -1646,7 +1659,7 @@ export default function Overview({
                       onSwitchView(item.view);
                       setReadinessFloatingOpen(false);
                     }}
-                    className={`w-full p-2.5 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                    className={`w-full p-2.5 rounded-2xl border text-start transition-all cursor-pointer flex items-center justify-between gap-3 ${
                       item.completed 
                         ? "bg-slate-50/70 border-slate-200/80 hover:bg-slate-100/70"
                         : "bg-amber-50/50 border-amber-200 hover:bg-amber-50/80"
@@ -1658,14 +1671,22 @@ export default function Overview({
                       </div>
                       <div className="min-w-0">
                         <div className="text-xs font-bold text-slate-900 truncate">{item.label}</div>
-                        <div className="text-[10px] text-slate-400 truncate">{item.detail}</div>
+                        <div className="text-[10px] text-slate-400 truncate">
+                          {item.count !== undefined ? (
+                            <>
+                              <bdi dir="ltr">{item.count}</bdi> <span>{item.suffix}</span>
+                            </>
+                          ) : (
+                            item.detail
+                          )}
+                        </div>
                       </div>
                     </div>
 
                     <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md shrink-0 ${
                       item.completed ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60" : "bg-amber-100 text-amber-800 border border-amber-200"
                     }`}>
-                      {item.completed ? "Done" : "Pending"}
+                      {item.completed ? t("overview.milestoneDone", "DONE") : t("overview.milestonePending", "PENDING")}
                     </span>
                   </button>
                 );
@@ -1682,10 +1703,10 @@ export default function Overview({
         >
           <div className={`w-2 h-2 rounded-full ${readinessScore === 100 ? 'bg-emerald-400' : 'bg-blue-400 animate-ping'}`} />
           <span className="text-xs font-bold">
-            Launch Readiness ({completedChecklistCount}/{readinessChecklist.length})
+            {t("overview.launchReadiness", "Launch Readiness")} (<bdi dir="ltr">{completedChecklistCount}/{readinessChecklist.length}</bdi>)
           </span>
           <span className={`text-[11px] font-black px-1.5 py-0.5 rounded-full ${readinessScore === 100 ? 'bg-emerald-500/30 text-emerald-300' : 'bg-blue-500/30 text-blue-300'}`}>
-            {readinessScore}%
+            <bdi dir="ltr">{readinessScore}%</bdi>
           </span>
           <ChevronUp size={14} className={`text-slate-400 group-hover:text-white transition-transform duration-200 ${readinessFloatingOpen ? 'rotate-180' : ''}`} />
         </button>

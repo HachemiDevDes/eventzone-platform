@@ -55,7 +55,7 @@ export default function AttendeeDrawer({
   sponsors = [],
   exhibitors = []
 }) {
-  const { t } = useLanguage();
+  const { t, isRTL } = useLanguage();
 
   // Navigation Tabs: 'form' (Registration & Intake Form) | 'badge' (Badge & Check-in)
   const [activeTab, setActiveTab] = useState('form');
@@ -120,8 +120,8 @@ export default function AttendeeDrawer({
       list.push({
         value: trimmed,
         label: trimmed,
-        description: desc || 'Registered Organization',
-        badge: badge || 'Organization',
+        description: desc || t("drawer.registeredOrganization", "Registered Organization"),
+        badge: badge || t("drawer.organizationBadge", "Organization"),
         icon: logo ? (
           <img src={logo} alt={trimmed} className="w-4 h-4 rounded object-contain shrink-0" />
         ) : (
@@ -130,12 +130,12 @@ export default function AttendeeDrawer({
       });
     };
 
-    (localOrgs || []).forEach(o => addOrg(o.name || o.title, o.industry ? getLocalizedIndustry(o.industry, t) : (o.category || o.type), o.type || 'Organization', o.logo));
-    (sponsors || []).forEach(s => addOrg(s.name || s.company, s.tier || 'Sponsor', s.tier || 'Sponsor', s.logo));
-    (exhibitors || []).forEach(e => addOrg(e.name || e.company, e.booth ? `Booth ${e.booth}` : 'Exhibitor', 'Exhibitor', e.logo));
+    (localOrgs || []).forEach(o => addOrg(o.name || o.title, o.industry ? getLocalizedIndustry(o.industry, t) : (o.category || o.type), t("drawer.organizationBadge", "Organization"), o.logo));
+    (sponsors || []).forEach(s => addOrg(s.name || s.company, s.tier || t("drawer.sponsorBadge", "Sponsor"), t("drawer.sponsorBadge", "Sponsor"), s.logo));
+    (exhibitors || []).forEach(e => addOrg(e.name || e.company, e.booth ? `${t("drawer.boothPrefix", "Booth")} ${e.booth}` : t("drawer.exhibitorBadge", "Exhibitor"), t("drawer.exhibitorBadge", "Exhibitor"), e.logo));
 
     return list;
-  }, [localOrgs, sponsors, exhibitors]);
+  }, [localOrgs, sponsors, exhibitors, t]);
 
   const isOtherOption = (opt) => {
     if (!opt || typeof opt !== "string") return false;
@@ -769,7 +769,7 @@ export default function AttendeeDrawer({
                               }`}
                             >
                               <Building2 size={11} />
-                              <span>{t("drawer.chooseFromList", "Choose from List")} ({organizationOptions.length})</span>
+                              <span>{t("drawer.chooseFromList", "Choose from List")} (<bdi dir="ltr">{organizationOptions.length}</bdi>)</span>
                             </button>
                           </div>
                         ) : field.description ? (
@@ -796,18 +796,18 @@ export default function AttendeeDrawer({
                                 ...organizationOptions,
                                 {
                                   value: '__custom__',
-                                  label: '+ Type a custom company name...',
-                                  description: 'Switch to free-text typing input',
+                                  label: t("drawer.typeCustomCompanyName", "+ Type a custom company name..."),
+                                  description: t("drawer.switchToFreeTextInput", "Switch to free-text typing input"),
                                   icon: <Edit3 size={14} className="text-blue-600" />
                                 }
                               ]}
-                              placeholder="-- Choose from Registered Organisations --"
-                              searchPlaceholder="Search registered organisations..."
+                              placeholder={t("drawer.chooseRegisteredOrg", "-- Choose from Registered Organisations --")}
+                              searchPlaceholder={t("drawer.searchRegisteredOrgs", "Search registered organisations...")}
                               error={Boolean(fieldError)}
                             />
                           ) : (
                             <div className="relative flex items-center">
-                              <Building2 size={15} className="absolute left-3 text-slate-400 pointer-events-none" />
+                              <Building2 size={15} className="absolute start-3 text-slate-400 pointer-events-none" />
                               <input
                                 type="text"
                                 value={fieldVal || ''}
@@ -815,8 +815,8 @@ export default function AttendeeDrawer({
                                   handleAnswerChange(field.id, e.target.value);
                                   setCompany(e.target.value);
                                 }}
-                                placeholder={field.placeholder || "e.g. Acme Corporation, Google, MIT..."}
-                                className={`w-full pl-9 ${organizationOptions.length > 0 ? 'pr-28' : 'pr-3.5'} py-2.5 bg-white border rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-600 focus:ring-3 focus:ring-blue-50 shadow-2xs ${
+                                placeholder={field.placeholder || t("drawer.companyPlaceholder", "e.g. Acme Corporation, Google, MIT...")}
+                                className={`w-full ps-9 ${organizationOptions.length > 0 ? 'pe-28' : 'pe-3.5'} py-2.5 bg-white border rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-600 focus:ring-3 focus:ring-blue-50 shadow-2xs ${
                                   fieldError ? 'border-rose-400 ring-2 ring-rose-100' : 'border-slate-300'
                                 }`}
                               />
@@ -824,11 +824,11 @@ export default function AttendeeDrawer({
                                 <button
                                   type="button"
                                   onClick={() => setCompanyMode('select')}
-                                  className="absolute right-2 px-2.5 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-slate-600 border border-slate-200 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-2xs"
-                                  title="Choose from list of organisations"
+                                  className="absolute end-2 px-2.5 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-slate-600 border border-slate-200 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-2xs"
+                                  title={t("drawer.chooseFromListOfOrgs", "Choose from list of organisations")}
                                 >
                                   <Building2 size={12} className="text-blue-600" />
-                                  <span>Choose ({organizationOptions.length})</span>
+                                  <span>{t("drawer.choose", "Choose")} (<bdi dir="ltr">{organizationOptions.length}</bdi>)</span>
                                 </button>
                               )}
                             </div>
@@ -837,7 +837,7 @@ export default function AttendeeDrawer({
                           {/* Quick-select pills for 1-click selection */}
                           {organizationOptions.length > 0 && (
                             <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                              <span className="text-[10px] font-semibold text-slate-400">Quick select:</span>
+                              <span className="text-[10px] font-semibold text-slate-400">{t("drawer.quickSelect", "Quick select:")}</span>
                               {organizationOptions.slice(0, 5).map((orgOpt) => {
                                 const isCurrent = (fieldVal || '').trim().toLowerCase() === orgOpt.value.toLowerCase();
                                 return (
@@ -865,7 +865,7 @@ export default function AttendeeDrawer({
                                   onClick={() => setCompanyMode('select')}
                                   className="text-[10px] font-bold text-blue-600 hover:underline px-1 cursor-pointer"
                                 >
-                                  +{organizationOptions.length - 5} more
+                                  <bdi dir="ltr">+{organizationOptions.length - 5}</bdi> <span>{t("common.more", "more")}</span>
                                 </button>
                               )}
                             </div>
