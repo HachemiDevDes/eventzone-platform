@@ -14,18 +14,19 @@ import {
 import QRCode from "qrcode";
 import { useLanguage } from "../lib/i18n";
 import SearchableSelect from "./SearchableSelect";
+import CountryPhoneInput from "./CountryPhoneInput";
 import TablePagination from "./TablePagination";
 
 export const SOCIAL_PLATFORMS = [
-  { value: "Instagram", label: "Instagram", badgeColor: "bg-pink-50 text-pink-700 border-pink-200" },
-  { value: "TikTok", label: "TikTok", badgeColor: "bg-purple-50 text-purple-700 border-purple-200" },
-  { value: "YouTube", label: "YouTube", badgeColor: "bg-rose-50 text-rose-700 border-rose-200" },
-  { value: "LinkedIn", label: "LinkedIn", badgeColor: "bg-blue-50 text-blue-700 border-blue-200" },
-  { value: "X", label: "X / Twitter", badgeColor: "bg-slate-100 text-slate-800 border-slate-200" },
-  { value: "Facebook", label: "Facebook", badgeColor: "bg-indigo-50 text-indigo-700 border-indigo-200" },
-  { value: "Podcast", label: "Podcast / Audio", badgeColor: "bg-amber-50 text-amber-700 border-amber-200" },
-  { value: "Blog", label: "Blog / Website / Press", badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  { value: "Other", label: "Other / Community Group", badgeColor: "bg-slate-100 text-slate-700 border-slate-200" }
+  { value: "Instagram", label: "Instagram", labelKey: "Instagram", badgeColor: "bg-pink-50 text-pink-700 border-pink-200" },
+  { value: "TikTok", label: "TikTok", labelKey: "TikTok", badgeColor: "bg-purple-50 text-purple-700 border-purple-200" },
+  { value: "YouTube", label: "YouTube", labelKey: "YouTube", badgeColor: "bg-rose-50 text-rose-700 border-rose-200" },
+  { value: "LinkedIn", label: "LinkedIn", labelKey: "LinkedIn", badgeColor: "bg-blue-50 text-blue-700 border-blue-200" },
+  { value: "X", label: "X / Twitter", labelKey: "X / Twitter", badgeColor: "bg-slate-100 text-slate-800 border-slate-200" },
+  { value: "Facebook", label: "Facebook", labelKey: "Facebook", badgeColor: "bg-indigo-50 text-indigo-700 border-indigo-200" },
+  { value: "Podcast", label: "Podcast / Audio", labelKey: "inf.platPodcast", defaultLabel: "Podcast / Audio", badgeColor: "bg-amber-50 text-amber-700 border-amber-200" },
+  { value: "Blog", label: "Blog / Website / Press", labelKey: "inf.platBlog", defaultLabel: "Blog / Website / Press", badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  { value: "Other", label: "Other / Community Group", labelKey: "inf.platOther", defaultLabel: "Other / Community Group", badgeColor: "bg-slate-100 text-slate-700 border-slate-200" }
 ];
 
 export const PAYOUT_STATUS_OPTIONS = [
@@ -121,17 +122,38 @@ export default function InfluencersView({
     return opts;
   }, [tickets, currency, t]);
 
+  // Helper for platform display label
+  const getPlatformLabel = (platValue) => {
+    const p = SOCIAL_PLATFORMS.find(item => item.value === platValue);
+    if (!p) return platValue;
+    if (p.labelKey && p.labelKey.startsWith("inf.")) return t(p.labelKey, p.defaultLabel || p.label);
+    return p.label;
+  };
+
   // Platform options for filter and form
   const platformSelectOptions = useMemo(() => {
     return [
       { value: "all", label: t("inf.filterPlatform", "All Platforms") },
-      ...SOCIAL_PLATFORMS.map(p => ({ value: p.value, label: p.label }))
+      ...SOCIAL_PLATFORMS.map(p => ({
+        value: p.value,
+        label: p.labelKey && p.labelKey.startsWith("inf.") ? t(p.labelKey, p.defaultLabel || p.label) : p.label
+      }))
     ];
   }, [t]);
 
   const formPlatformOptions = useMemo(() => {
-    return SOCIAL_PLATFORMS.map(p => ({ value: p.value, label: p.label }));
-  }, []);
+    return SOCIAL_PLATFORMS.map(p => ({
+      value: p.value,
+      label: p.labelKey && p.labelKey.startsWith("inf.") ? t(p.labelKey, p.defaultLabel || p.label) : p.label
+    }));
+  }, [t]);
+
+  // Payout options with localized labels
+  const payoutStatusOptions = useMemo(() => [
+    { value: "unpaid", label: t("inf.payoutUnpaidPending", "Unpaid / Pending"), badgeColor: "bg-amber-50 text-amber-700 border-amber-200" },
+    { value: "partial", label: t("inf.payoutPartiallyPaid", "Partially Paid"), badgeColor: "bg-blue-50 text-blue-700 border-blue-200" },
+    { value: "paid", label: t("inf.payoutFullyPaid", "Fully Paid"), badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-200" }
+  ], [t]);
 
   // Compute live performance metrics for each influencer
   const enrichedInfluencers = useMemo(() => {
@@ -323,19 +345,27 @@ export default function InfluencersView({
     document.body.removeChild(link);
   };
 
-  // Copy Pre-Formatted Pitch Message
+  // Copy Pre-Formatted Pitch Message (Localized)
   const handleCopyPitchMessage = () => {
     if (!shareKitInfluencer) return;
-    const eventTitle = eventDetails?.title || "Our Upcoming Summit";
-    const eventDates = eventDetails?.startDate ? `${eventDetails.startDate}${eventDetails.endDate ? ` - ${eventDetails.endDate}` : ""}` : "";
+    const eventTitle = eventDetails?.title || (lang === "ar" ? "فعاليتنا القادمة" : lang === "fr" ? "Notre prochain événement" : "Our Upcoming Event");
+    const datesRaw = eventDetails?.startDate ? `${eventDetails.startDate}${eventDetails.endDate ? ` - ${eventDetails.endDate}` : ""}` : "";
+    const datesStr = datesRaw ? t("inf.onDates", " on {dates}").replace("{dates}", datesRaw) : "";
+    
     let discountText = "";
     if (shareKitInfluencer.discountPercent > 0) {
-      discountText = `Get an exclusive ${shareKitInfluencer.discountPercent}% OFF using my link! `;
+      discountText = t("inf.pitchExclusivePercent", "Get an exclusive {percent}% OFF using my link! ").replace("{percent}", shareKitInfluencer.discountPercent);
     } else if (shareKitInfluencer.discountAmount > 0) {
-      discountText = `Get an exclusive ${formatPrice(shareKitInfluencer.discountAmount)} discount using my link! `;
+      discountText = t("inf.pitchExclusiveFixed", "Get an exclusive {amount} discount using my link! ").replace("{amount}", formatPrice(shareKitInfluencer.discountAmount));
     }
 
-    const pitchText = `🎟️ Join me at *${eventTitle}*${eventDates ? ` on ${eventDates}` : ""}!\n\n${discountText}Get your official passes here:\n👉 ${referralUrl}\n\nCan't wait to see you there! ✨`;
+    const url = getReferralUrl(shareKitInfluencer.code);
+    const pitchTemplate = t("inf.pitchJoinMe", "🎟️ Join me at *{eventTitle}*{dates}!\n\n{discountText}Get your official passes here:\n👉 {url}\n\nCan't wait to see you there! ✨");
+    const pitchText = pitchTemplate
+      .replace("{eventTitle}", eventTitle)
+      .replace("{dates}", datesStr)
+      .replace("{discountText}", discountText)
+      .replace("{url}", url);
 
     if (navigator?.clipboard) {
       navigator.clipboard.writeText(pitchText);
@@ -440,7 +470,7 @@ export default function InfluencersView({
   const handleSaveSubmit = (e) => {
     e.preventDefault();
     const errors = {};
-    if (!formData.name.trim()) errors.name = "Influencer name is required";
+    if (!formData.name.trim()) errors.name = t("inf.nameRequired", "Influencer name is required");
 
     let cleanCode = (formData.code || "").trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "");
     if (!cleanCode) {
@@ -581,7 +611,7 @@ export default function InfluencersView({
   };
 
   return (
-    <div className="flex flex-col gap-6 w-full animate-fade-in">
+    <div className="flex flex-col gap-6 w-full animate-fade-in" dir={isRTL ? "rtl" : "ltr"}>
       
       {/* 1. HEADER & ACTIONS */}
       <header className="flex flex-wrap justify-between items-center gap-4 select-none">
@@ -626,10 +656,12 @@ export default function InfluencersView({
             </div>
           </div>
           <div className="mt-2">
-            <div className="text-xl font-extrabold text-slate-800">{summaryKpis.totalInf}</div>
+            <div className="text-xl font-extrabold text-slate-800">
+              <bdi dir="ltr">{summaryKpis.totalInf}</bdi>
+            </div>
             <span className="text-[10px] font-semibold text-emerald-600 flex items-center gap-1 mt-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span>
-              {summaryKpis.activeInf} {t("inf.activeInfluencers", "active")}
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block shrink-0"></span>
+              <span><bdi dir="ltr">{summaryKpis.activeInf}</bdi> {t("inf.activeCampaigns", "active")}</span>
             </span>
           </div>
         </div>
@@ -643,8 +675,12 @@ export default function InfluencersView({
             </div>
           </div>
           <div className="mt-2">
-            <div className="text-xl font-extrabold text-slate-800">{summaryKpis.totalClicks.toLocaleString()}</div>
-            <span className="text-[10px] font-semibold text-slate-400 mt-0.5 block">Attributed visits</span>
+            <div className="text-xl font-extrabold text-slate-800">
+              <bdi dir="ltr">{summaryKpis.totalClicks.toLocaleString()}</bdi>
+            </div>
+            <span className="text-[10px] font-semibold text-slate-400 mt-0.5 block">
+              {t("inf.attributedVisits", "Attributed visits")}
+            </span>
           </div>
         </div>
 
@@ -657,9 +693,11 @@ export default function InfluencersView({
             </div>
           </div>
           <div className="mt-2">
-            <div className="text-xl font-extrabold text-emerald-700">{summaryKpis.totalRegistrations}</div>
-            <span className="text-[10px] font-semibold text-emerald-600 mt-0.5 block">
-              {summaryKpis.overallConversion.toFixed(1)}% conversion
+            <div className="text-xl font-extrabold text-emerald-700">
+              <bdi dir="ltr">{summaryKpis.totalRegistrations}</bdi>
+            </div>
+            <span className="text-[10px] font-semibold text-emerald-600 mt-0.5 block flex items-center gap-1">
+              <bdi dir="ltr">{summaryKpis.overallConversion.toFixed(1)}%</bdi> <span>{t("inf.conversionRateSubtitle", "conversion")}</span>
             </span>
           </div>
         </div>
@@ -674,9 +712,11 @@ export default function InfluencersView({
           </div>
           <div className="mt-2">
             <div className="text-xl font-extrabold text-slate-800 truncate" title={formatPrice(summaryKpis.totalRevenue)}>
-              {summaryKpis.totalRevenue.toLocaleString()} <span className="text-[10px] text-slate-400 font-bold">{currency}</span>
+              <bdi dir="ltr">{summaryKpis.totalRevenue.toLocaleString()}</bdi> <span className="text-[10px] text-slate-400 font-bold">{currency}</span>
             </div>
-            <span className="text-[10px] font-semibold text-slate-400 mt-0.5 block">Ticket sales value</span>
+            <span className="text-[10px] font-semibold text-slate-400 mt-0.5 block">
+              {t("inf.ticketSalesValue", "Ticket sales value")}
+            </span>
           </div>
         </div>
 
@@ -690,9 +730,11 @@ export default function InfluencersView({
           </div>
           <div className="mt-2">
             <div className="text-xl font-extrabold text-rose-700 truncate" title={formatPrice(summaryKpis.totalCommissions)}>
-              {summaryKpis.totalCommissions.toLocaleString()} <span className="text-[10px] text-rose-400 font-bold">{currency}</span>
+              <bdi dir="ltr">{summaryKpis.totalCommissions.toLocaleString()}</bdi> <span className="text-[10px] text-rose-400 font-bold">{currency}</span>
             </div>
-            <span className="text-[10px] font-semibold text-slate-400 mt-0.5 block">Influencer rewards</span>
+            <span className="text-[10px] font-semibold text-slate-400 mt-0.5 block">
+              {t("inf.influencerRewards", "Influencer rewards")}
+            </span>
           </div>
         </div>
 
@@ -707,13 +749,13 @@ export default function InfluencersView({
               <>
                 <div className="text-sm font-extrabold truncate">{summaryKpis.topPerformer.name}</div>
                 <span className="text-[10px] font-bold text-blue-100 mt-0.5 block">
-                  {summaryKpis.topPerformer.registrationsCount} passes ({formatPrice(summaryKpis.topPerformer.grossRevenue)})
+                  <bdi dir="ltr">{summaryKpis.topPerformer.registrationsCount}</bdi> {t("inf.passesSold", "passes")} (<bdi dir="ltr">{formatPrice(summaryKpis.topPerformer.grossRevenue)}</bdi>)
                 </span>
               </>
             ) : (
               <>
-                <div className="text-xs font-semibold text-blue-100">No sales yet</div>
-                <span className="text-[9px] text-blue-200 mt-0.5 block">Share links to track</span>
+                <div className="text-xs font-semibold text-blue-100">{t("inf.noSalesYet", "No sales yet")}</div>
+                <span className="text-[9px] text-blue-200 mt-0.5 block">{t("inf.shareLinksToTrack", "Share links to track")}</span>
               </>
             )}
           </div>
@@ -728,18 +770,18 @@ export default function InfluencersView({
         <div className="flex items-center gap-2.5 flex-wrap">
           {/* Compact Search Bar */}
           <div className="relative w-60 sm:w-64">
-            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search size={14} className={`absolute top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none ${isRTL ? "right-3.5" : "left-3.5"}`} />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t("inf.searchPlaceholder", "Search influencers...")}
-              className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+              className={`w-full py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium ${isRTL ? "pr-9 pl-8" : "pl-9 pr-8"}`}
             />
             {searchQuery && (
               <button 
                 onClick={() => setSearchQuery("")} 
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                className={`absolute top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer ${isRTL ? "left-2.5" : "right-2.5"}`}
               >
                 <XCircle size={13} />
               </button>
@@ -762,9 +804,9 @@ export default function InfluencersView({
           {/* Status Tabs */}
           <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200">
             {[
-              { id: "active", label: "Active" },
-              { id: "paused", label: "Paused" },
-              { id: "all", label: "All" }
+              { id: "active", label: t("inf.statusActive", "Active") },
+              { id: "paused", label: t("inf.statusPaused", "Paused") },
+              { id: "all", label: t("inf.statusAll", "All") }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -779,18 +821,18 @@ export default function InfluencersView({
 
         {/* Right: Sort Selector & View Switcher */}
         <div className="flex items-center gap-2.5 flex-wrap">
-          {/* Sort Selector */}
-          <div className="w-44 shrink-0">
+          {/* Sort Selector - widened to prevent truncation in all languages */}
+          <div className="w-52 sm:w-56 shrink-0">
             <SearchableSelect
               value={sortBy}
               onChange={setSortBy}
               options={[
-                { value: "revenue", label: "Sort: Highest Revenue" },
-                { value: "registrations", label: "Sort: Most Passes" },
-                { value: "clicks", label: "Sort: Most Clicks" },
-                { value: "conversion", label: "Sort: Highest Conversion" },
-                { value: "recent", label: "Sort: Recently Added" },
-                { value: "name", label: "Sort: Name A-Z" }
+                { value: "revenue", label: t("inf.sortRevenue", "Sort: Highest Revenue") },
+                { value: "registrations", label: t("inf.sortRegistrations", "Sort: Most Passes") },
+                { value: "clicks", label: t("inf.sortClicks", "Sort: Most Clicks") },
+                { value: "conversion", label: t("inf.sortConversion", "Sort: Highest Conversion") },
+                { value: "recent", label: t("inf.sortRecent", "Sort: Recently Added") },
+                { value: "name", label: t("inf.sortName", "Sort: Name A-Z") }
               ]}
               showSearch={false}
               className="text-xs"
@@ -828,13 +870,13 @@ export default function InfluencersView({
           </div>
           <h3 className="text-base font-extrabold text-slate-800 mb-1">
             {searchQuery || platformFilter !== "all" || statusFilter !== "active"
-              ? "No matching influencer campaigns found"
+              ? t("inf.noMatchingInfluencers", "No matching influencer campaigns found")
               : t("inf.noInfluencers", "No influencers or affiliate campaigns created yet.")}
           </h3>
           <p className="text-xs text-slate-500 max-w-md mb-6">
             {searchQuery || platformFilter !== "all" || statusFilter !== "active"
-              ? "Try adjusting your search terms or filter settings to view your campaigns."
-              : "Launch tracking referral links to partner with influencers, bloggers, and promoters."}
+              ? t("inf.adjustFiltersDesc", "Try adjusting your search terms or filter settings to view your campaigns.")
+              : t("inf.emptyStateDesc", "Launch tracking referral links to partner with influencers, bloggers, and promoters.")}
           </p>
           <button
             onClick={handleOpenAdd}
@@ -868,10 +910,10 @@ export default function InfluencersView({
                       
                       <div className="flex items-center gap-1.5 mt-1">
                         <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md border ${platMeta.badgeColor}`}>
-                          {inf.platform}
+                          {getPlatformLabel(inf.platform)}
                         </span>
                         {inf.handle && (
-                          <span className="text-[10px] font-semibold text-slate-500 truncate" title={inf.handle}>
+                          <span className="text-[10px] font-semibold text-slate-500 truncate" title={inf.handle} dir="ltr">
                             {inf.handle}
                           </span>
                         )}
@@ -879,7 +921,7 @@ export default function InfluencersView({
                     </div>
 
                     <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full border ${isPaused ? "bg-amber-50 text-amber-700 border-amber-200" : isArchived ? "bg-slate-100 text-slate-600 border-slate-200" : "bg-emerald-50 text-emerald-700 border-emerald-200"}`}>
-                      {isPaused ? "Paused" : isArchived ? "Archived" : "Active"}
+                      {isPaused ? t("inf.statusPaused", "Paused") : isArchived ? t("inf.statusArchived", "Archived") : t("inf.statusActive", "Active")}
                     </span>
                   </div>
 
@@ -887,9 +929,9 @@ export default function InfluencersView({
                   <div className="mt-4 p-3 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-center justify-between gap-2">
                     <div className="min-w-0 flex-1">
                       <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
-                        Referral Link
+                        {t("inf.referralLink", "Referral Link")}
                       </div>
-                      <div className="text-[11px] text-slate-700 font-semibold truncate" title={getReferralUrl(inf.code)}>
+                      <div className="text-[11px] text-slate-700 font-semibold truncate" title={getReferralUrl(inf.code)} dir="ltr">
                         {getReferralUrl(inf.code)}
                       </div>
                     </div>
@@ -925,27 +967,27 @@ export default function InfluencersView({
                   {/* Deal parameters */}
                   <div className="mt-3.5 grid grid-cols-2 gap-2 text-[11px]">
                     <div className="bg-slate-50/70 p-2 rounded-xl border border-slate-100">
-                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Buyer Discount</span>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">{t("inf.buyerDiscount", "Buyer Discount")}</span>
                       <span className="font-extrabold text-slate-700 mt-0.5 block">
                         {inf.discountPercent > 0 ? (
-                          <span className="text-emerald-600 font-black">{inf.discountPercent}% OFF</span>
+                          <span className="text-emerald-600 font-black"><bdi dir="ltr">{inf.discountPercent}%</bdi> {t("inf.off", "OFF")}</span>
                         ) : inf.discountAmount > 0 ? (
-                          <span className="text-emerald-600 font-black">{formatPrice(inf.discountAmount)} OFF</span>
+                          <span className="text-emerald-600 font-black"><bdi dir="ltr">{formatPrice(inf.discountAmount)}</bdi> {t("inf.off", "OFF")}</span>
                         ) : (
-                          <span className="text-slate-400">No discount</span>
+                          <span className="text-slate-400">{t("inf.noDiscount", "No discount")}</span>
                         )}
                       </span>
                     </div>
 
                     <div className="bg-slate-50/70 p-2 rounded-xl border border-slate-100">
-                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Commission</span>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">{t("inf.commission", "Commission")}</span>
                       <span className="font-extrabold text-slate-700 mt-0.5 block truncate">
                         {inf.commissionPercent > 0 ? (
-                          <span className="text-blue-600 font-black">{inf.commissionPercent}% share</span>
+                          <span className="text-blue-600 font-black"><bdi dir="ltr">{inf.commissionPercent}%</bdi> {t("inf.commShare", "share")}</span>
                         ) : inf.commissionAmount > 0 ? (
-                          <span className="text-blue-600 font-black">{formatPrice(inf.commissionAmount)} / pass</span>
+                          <span className="text-blue-600 font-black"><bdi dir="ltr">{formatPrice(inf.commissionAmount)}</bdi> / {t("inf.perPass", "pass")}</span>
                         ) : (
-                          <span className="text-slate-400">Tracking only</span>
+                          <span className="text-slate-400">{t("inf.trackingOnly", "Tracking only")}</span>
                         )}
                       </span>
                     </div>
@@ -956,7 +998,7 @@ export default function InfluencersView({
                     <div className="flex items-center justify-between text-[10px] font-bold mb-1">
                       <span className="text-slate-400 uppercase tracking-wider">{t("inf.goalProgress", "Goal Progress")}</span>
                       <span className="text-slate-700">
-                        {inf.registrationsCount} / {inf.targetGoal || 50} passes ({inf.goalProgressPct}%)
+                        <bdi dir="ltr">{inf.registrationsCount} / {inf.targetGoal || 50}</bdi> {t("inf.passesSold", "passes")} (<bdi dir="ltr">{inf.goalProgressPct}%</bdi>)
                       </span>
                     </div>
                     <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
@@ -970,19 +1012,19 @@ export default function InfluencersView({
                   {/* 3 Metrics */}
                   <div className="mt-3.5 pt-3.5 border-t border-slate-100 grid grid-cols-3 gap-2 text-center">
                     <div>
-                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Clicks</span>
-                      <span className="text-xs font-black text-slate-800 mt-0.5 block">{inf.clicksCount}</span>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">{t("inf.clicks", "Clicks")}</span>
+                      <span className="text-xs font-black text-slate-800 mt-0.5 block"><bdi dir="ltr">{inf.clicksCount}</bdi></span>
                     </div>
                     <div>
-                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Sales Value</span>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">{t("inf.salesValue", "Sales Value")}</span>
                       <span className="text-xs font-black text-slate-800 mt-0.5 block truncate" title={formatPrice(inf.grossRevenue)}>
-                        {inf.grossRevenue > 0 ? `${(inf.grossRevenue / 1000).toFixed(0)}k ${currency}` : "0"}
+                        <bdi dir="ltr">{inf.grossRevenue > 0 ? `${(inf.grossRevenue / 1000).toFixed(0)}k ${currency}` : "0"}</bdi>
                       </span>
                     </div>
                     <div>
-                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Reward Due</span>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">{t("inf.rewardDue", "Reward Due")}</span>
                       <span className="text-xs font-black text-rose-600 mt-0.5 block truncate" title={formatPrice(inf.commissionDue)}>
-                        {inf.commissionDue > 0 ? formatPrice(inf.commissionDue) : "0"}
+                        <bdi dir="ltr">{inf.commissionDue > 0 ? formatPrice(inf.commissionDue) : "0"}</bdi>
                       </span>
                     </div>
                   </div>
@@ -997,18 +1039,18 @@ export default function InfluencersView({
                   >
                     <Users size={13} />
                     <span>
-                      {inf.registrationsCount} {t("inf.attributedAttendees", "Attendees")}
+                      <bdi dir="ltr">{inf.registrationsCount}</bdi> {t("inf.attributedAttendees", "Attendees")}
                     </span>
-                    <ChevronRight size={13} />
+                    <ChevronRight size={13} className="rtl:rotate-180 transition-transform" />
                   </button>
 
                   <div className="flex items-center gap-1">
                     <button
                       onClick={(e) => handleToggleStatus(inf, e)}
                       className={`text-[10px] font-bold px-2 py-1 rounded-lg border transition-all cursor-pointer ${isPaused ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100" : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"}`}
-                      title={isPaused ? "Resume campaign" : "Pause campaign"}
+                      title={isPaused ? t("inf.clickToResume", "Click to Resume Campaign") : t("inf.clickToPause", "Click to Pause Campaign")}
                     >
-                      {isPaused ? "Resume" : "Pause"}
+                      {isPaused ? t("inf.resume", "Resume") : t("inf.pause", "Pause")}
                     </button>
 
                     <button
@@ -1039,19 +1081,19 @@ export default function InfluencersView({
         /* TABLE VIEW */
         <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-xs">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full text-start rtl:text-right text-left text-xs">
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px] tracking-wider">
                 <tr>
-                  <th className="py-3 px-4">Influencer</th>
-                  <th className="py-3 px-3">Platform</th>
-                  <th className="py-3 px-3">Status</th>
-                  <th className="py-3 px-3">Buyer Discount</th>
-                  <th className="py-3 px-3 text-center">Clicks</th>
-                  <th className="py-3 px-3 text-center">Passes Sold</th>
-                  <th className="py-3 px-3 text-right">Gross Revenue</th>
-                  <th className="py-3 px-3 text-right">Commission Due</th>
-                  <th className="py-3 px-3 text-center">Payout</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                  <th className="py-3 px-4">{t("inf.colInfluencer", "Influencer")}</th>
+                  <th className="py-3 px-3">{t("inf.colPlatform", "Platform")}</th>
+                  <th className="py-3 px-3">{t("inf.colStatus", "Status")}</th>
+                  <th className="py-3 px-3">{t("inf.colDiscount", "Buyer Discount")}</th>
+                  <th className="py-3 px-3 text-center">{t("inf.colClicks", "Clicks")}</th>
+                  <th className="py-3 px-3 text-center">{t("inf.colPasses", "Passes Sold")}</th>
+                  <th className="py-3 px-3 text-right rtl:text-left">{t("inf.colRevenue", "Gross Revenue")}</th>
+                  <th className="py-3 px-3 text-right rtl:text-left">{t("inf.colCommission", "Commission Due")}</th>
+                  <th className="py-3 px-3 text-center">{t("inf.colPayout", "Payout")}</th>
+                  <th className="py-3 px-4 text-right rtl:text-left">{t("inf.colActions", "Actions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -1065,14 +1107,14 @@ export default function InfluencersView({
                       <td className="py-3 px-4">
                         <div className="min-w-0">
                           <div className="font-extrabold text-slate-900 truncate">{inf.name}</div>
-                          <div className="text-[10px] text-slate-400 font-medium truncate">{inf.email || inf.phone || "No contact"}</div>
+                          <div className="text-[10px] text-slate-400 font-medium truncate" dir="ltr">{inf.email || inf.phone || t("inf.noContact", "No contact")}</div>
                         </div>
                       </td>
 
                       <td className="py-3 px-3">
                         <div className="flex flex-col gap-1 items-start">
                           <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded border ${platMeta.badgeColor}`}>
-                            {inf.platform} {inf.handle ? `• ${inf.handle}` : ""}
+                            {getPlatformLabel(inf.platform)} {inf.handle ? `• ${inf.handle}` : ""}
                           </span>
                         </div>
                       </td>
@@ -1087,45 +1129,45 @@ export default function InfluencersView({
                                 ? "bg-slate-100 text-slate-600 border-slate-200" 
                                 : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
                           }`}
-                          title={isPaused ? "Click to Resume Campaign" : "Click to Pause Campaign"}
+                          title={isPaused ? t("inf.clickToResume", "Click to Resume Campaign") : t("inf.clickToPause", "Click to Pause Campaign")}
                         >
                           <span className={`w-1.5 h-1.5 rounded-full ${isPaused ? "bg-amber-500" : isArchived ? "bg-slate-400" : "bg-emerald-500 animate-pulse"}`} />
-                          {isPaused ? "Paused" : isArchived ? "Archived" : "Active"}
+                          {isPaused ? t("inf.statusPaused", "Paused") : isArchived ? t("inf.statusArchived", "Archived") : t("inf.statusActive", "Active")}
                         </button>
                       </td>
 
                       <td className="py-3 px-3 font-semibold text-slate-700">
                         {inf.discountPercent > 0 ? (
-                          <span className="text-emerald-600 font-bold">{inf.discountPercent}% OFF</span>
+                          <span className="text-emerald-600 font-bold"><bdi dir="ltr">{inf.discountPercent}%</bdi> {t("inf.off", "OFF")}</span>
                         ) : inf.discountAmount > 0 ? (
-                          <span className="text-emerald-600 font-bold">{formatPrice(inf.discountAmount)} OFF</span>
+                          <span className="text-emerald-600 font-bold"><bdi dir="ltr">{formatPrice(inf.discountAmount)}</bdi> {t("inf.off", "OFF")}</span>
                         ) : (
-                          <span className="text-slate-400 font-normal">None</span>
+                          <span className="text-slate-400 font-normal">{t("inf.none", "None")}</span>
                         )}
                       </td>
 
                       <td className="py-3 px-3 text-center font-bold text-slate-700">
-                        {inf.clicksCount}
+                        <bdi dir="ltr">{inf.clicksCount}</bdi>
                       </td>
 
                       <td className="py-3 px-3 text-center">
                         <button
                           onClick={() => setInspectingInfluencer(inf)}
                           className="inline-flex items-center gap-1 font-extrabold text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2 py-1 rounded-lg border border-transparent hover:border-blue-200 transition-all cursor-pointer"
-                          title="View Converted Attendees"
+                          title={t("inf.viewConvertedAttendees", "View Converted Attendees")}
                         >
                           <Users size={12} className="text-blue-500 shrink-0" />
-                          <span>{inf.registrationsCount}</span>
-                          <span className="text-[9px] text-slate-400 font-normal">/ {inf.targetGoal || 50}</span>
+                          <span><bdi dir="ltr">{inf.registrationsCount}</bdi></span>
+                          <span className="text-[9px] text-slate-400 font-normal">/ <bdi dir="ltr">{inf.targetGoal || 50}</bdi></span>
                         </button>
                       </td>
 
-                      <td className="py-3 px-3 text-right font-extrabold text-slate-900">
-                        {formatPrice(inf.grossRevenue)}
+                      <td className="py-3 px-3 text-right rtl:text-left font-extrabold text-slate-900">
+                        <bdi dir="ltr">{formatPrice(inf.grossRevenue)}</bdi>
                       </td>
 
-                      <td className="py-3 px-3 text-right font-extrabold text-rose-600">
-                        {formatPrice(inf.commissionDue)}
+                      <td className="py-3 px-3 text-right rtl:text-left font-extrabold text-rose-600">
+                        <bdi dir="ltr">{formatPrice(inf.commissionDue)}</bdi>
                       </td>
 
                       <td className="py-3 px-3 text-center">
@@ -1134,9 +1176,9 @@ export default function InfluencersView({
                           onChange={(e) => handleUpdatePayoutStatus(inf, e.target.value)}
                           className="text-[10px] font-bold rounded-lg px-2 py-1 border bg-white cursor-pointer focus:outline-none"
                         >
-                          <option value="unpaid">Unpaid</option>
-                          <option value="partial">Partial</option>
-                          <option value="paid">Paid</option>
+                          <option value="unpaid">{t("inf.unpaid", "Unpaid")}</option>
+                          <option value="partial">{t("inf.partial", "Partial")}</option>
+                          <option value="paid">{t("inf.paid", "Paid")}</option>
                         </select>
                       </td>
 
@@ -1146,7 +1188,7 @@ export default function InfluencersView({
                           <button
                             onClick={() => setInspectingInfluencer(inf)}
                             className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
-                            title={`${inf.registrationsCount} Attributed Attendees`}
+                            title={`${inf.registrationsCount} ${t("inf.attributedAttendees", "Attributed Attendees")}`}
                           >
                             <Users size={13} />
                           </button>
@@ -1177,7 +1219,7 @@ export default function InfluencersView({
                                 ? "text-emerald-600 hover:bg-emerald-50"
                                 : "text-amber-600 hover:bg-amber-50"
                             }`}
-                            title={isPaused ? "Resume Campaign" : "Pause Campaign"}
+                            title={isPaused ? t("inf.clickToResume", "Click to Resume Campaign") : t("inf.clickToPause", "Click to Pause Campaign")}
                           >
                             {isPaused ? <Play size={13} /> : <Pause size={13} />}
                           </button>
@@ -1214,7 +1256,7 @@ export default function InfluencersView({
 
       {/* 5. ADD / EDIT INFLUENCER DRAWER */}
       {mounted && isDrawerOpen && typeof document !== "undefined" && createPortal(
-        <div className="fixed inset-0 z-[100] overflow-hidden flex justify-end bg-slate-900/40 backdrop-blur-sm animate-fade-in font-sans">
+        <div className="fixed inset-0 z-[100] overflow-hidden flex justify-end bg-slate-900/40 backdrop-blur-sm animate-fade-in font-sans" dir={isRTL ? "rtl" : "ltr"}>
           <div 
             onClick={() => setIsDrawerOpen(false)}
             className="absolute inset-0"
@@ -1226,7 +1268,7 @@ export default function InfluencersView({
                 <h3 className="text-lg font-extrabold text-slate-900 tracking-tight">
                   {editingInfluencer ? t("inf.drawerTitleEdit", "Edit Influencer Campaign") : t("inf.drawerTitleAdd", "Add New Influencer Campaign")}
                 </h3>
-                <p className="text-xs font-semibold text-slate-500 mt-0.5">Configure partner details, tracking codes, discounts and commissions.</p>
+                <p className="text-xs font-semibold text-slate-500 mt-0.5">{t("inf.drawerSubtitle", "Configure partner details, tracking codes, discounts and commissions.")}</p>
               </div>
               <button
                 type="button"
@@ -1246,7 +1288,7 @@ export default function InfluencersView({
                   type="text"
                   value={formData.name}
                   onChange={(e) => handleNameChange(e.target.value)}
-                  placeholder="e.g. Sarah TechDZ, Karim Dev, Amine Lifestyle"
+                  placeholder={t("inf.namePlaceholder", "e.g. Sarah TechDZ, Karim Dev, Amine Lifestyle")}
                   className={`w-full px-3.5 py-2.5 bg-slate-50 border rounded-xl font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all ${formErrors.name ? "border-rose-400 bg-rose-50/30" : "border-slate-200"}`}
                 />
                 {formErrors.name && <span className="text-[10px] text-rose-500 font-semibold mt-1 block">{formErrors.name}</span>}
@@ -1275,7 +1317,7 @@ export default function InfluencersView({
                     type="text"
                     value={formData.handle}
                     onChange={(e) => setFormData(prev => ({ ...prev, handle: e.target.value }))}
-                    placeholder="@sarah_techdz or link"
+                    placeholder={t("inf.handlePlaceholder", "@sarah_techdz or link")}
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                   />
                 </div>
@@ -1299,12 +1341,11 @@ export default function InfluencersView({
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     {t("inf.phone", "WhatsApp / Phone")}
                   </label>
-                  <input
-                    type="text"
+                  <CountryPhoneInput
                     value={formData.phone}
-                    onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                    placeholder="+213 555 12 34 56"
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                    onChange={(val) => setFormData(prev => ({ ...prev, phone: val }))}
+                    defaultCountry="DZ"
+                    className="w-full"
                   />
                 </div>
               </div>
@@ -1332,9 +1373,9 @@ export default function InfluencersView({
 
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    { id: "none", label: "No Discount" },
-                    { id: "percent", label: "% Percentage" },
-                    { id: "fixed", label: "Fixed Amount" }
+                    { id: "none", label: t("inf.discountNoneBtn", "No Discount") },
+                    { id: "percent", label: t("inf.discountPercentBtn", "% Percentage") },
+                    { id: "fixed", label: t("inf.discountFixedBtn", "Fixed Amount") }
                   ].map(dt => (
                     <button
                       key={dt.id}
@@ -1355,10 +1396,11 @@ export default function InfluencersView({
                       max="100"
                       value={formData.discountValue || ""}
                       onChange={(e) => setFormData(prev => ({ ...prev, discountValue: e.target.value }))}
-                      placeholder="e.g. 10"
+                      placeholder="10"
                       className="w-32 px-3 py-2 bg-white border border-slate-200 rounded-xl font-bold text-xs"
+                      dir="ltr"
                     />
-                    <span className="text-xs font-bold text-slate-600">% OFF standard ticket price</span>
+                    <span className="text-xs font-bold text-slate-600">{t("inf.discountPercentHelp", "% OFF standard ticket price")}</span>
                   </div>
                 )}
 
@@ -1369,10 +1411,11 @@ export default function InfluencersView({
                       min="1"
                       value={formData.discountValue || ""}
                       onChange={(e) => setFormData(prev => ({ ...prev, discountValue: e.target.value }))}
-                      placeholder="e.g. 1000"
+                      placeholder="1000"
                       className="w-32 px-3 py-2 bg-white border border-slate-200 rounded-xl font-bold text-xs"
+                      dir="ltr"
                     />
-                    <span className="text-xs font-bold text-slate-600">{currency} OFF per ticket</span>
+                    <span className="text-xs font-bold text-slate-600"><bdi dir="ltr">{currency}</bdi> {t("inf.discountFixedHelp", "OFF per ticket")}</span>
                   </div>
                 )}
               </div>
@@ -1384,9 +1427,9 @@ export default function InfluencersView({
 
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    { id: "none", label: "No Commission" },
-                    { id: "percent", label: "% Revenue Share" },
-                    { id: "fixed", label: "Fixed Bounty" }
+                    { id: "none", label: t("inf.commNoneBtn", "No Commission") },
+                    { id: "percent", label: t("inf.commPercentBtn", "% Revenue Share") },
+                    { id: "fixed", label: t("inf.commFixedBtn", "Fixed Bounty") }
                   ].map(ct => (
                     <button
                       key={ct.id}
@@ -1407,10 +1450,11 @@ export default function InfluencersView({
                       max="100"
                       value={formData.commissionValue || ""}
                       onChange={(e) => setFormData(prev => ({ ...prev, commissionValue: e.target.value }))}
-                      placeholder="e.g. 15"
+                      placeholder="15"
                       className="w-32 px-3 py-2 bg-white border border-slate-200 rounded-xl font-bold text-xs"
+                      dir="ltr"
                     />
-                    <span className="text-xs font-bold text-slate-600">% of ticket sale revenue</span>
+                    <span className="text-xs font-bold text-slate-600">{t("inf.commPercentHelp", "% of ticket sale revenue")}</span>
                   </div>
                 )}
 
@@ -1421,10 +1465,11 @@ export default function InfluencersView({
                       min="1"
                       value={formData.commissionValue || ""}
                       onChange={(e) => setFormData(prev => ({ ...prev, commissionValue: e.target.value }))}
-                      placeholder="e.g. 500"
+                      placeholder="500"
                       className="w-32 px-3 py-2 bg-white border border-slate-200 rounded-xl font-bold text-xs"
+                      dir="ltr"
                     />
-                    <span className="text-xs font-bold text-slate-600">{currency} per registered attendee</span>
+                    <span className="text-xs font-bold text-slate-600"><bdi dir="ltr">{currency}</bdi> {t("inf.commFixedHelp", "per registered attendee")}</span>
                   </div>
                 )}
               </div>
@@ -1439,6 +1484,7 @@ export default function InfluencersView({
                   value={formData.targetGoal}
                   onChange={(e) => setFormData(prev => ({ ...prev, targetGoal: e.target.value }))}
                   placeholder="50"
+                  dir="ltr"
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                 />
               </div>
@@ -1451,7 +1497,7 @@ export default function InfluencersView({
                   rows={3}
                   value={formData.notes}
                   onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                  placeholder="Contract agreed on 2 Instagram Stories + 1 Reel post before Sept 1st..."
+                  placeholder={t("inf.notesPlaceholder", "Contract agreed on 2 Instagram Stories + 1 Reel post before Sept 1st...")}
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                 />
               </div>
@@ -1459,14 +1505,14 @@ export default function InfluencersView({
               <div className="grid grid-cols-2 gap-3.5 pt-2 border-t border-slate-200">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Campaign Status
+                    {t("inf.campaignStatus", "Campaign Status")}
                   </label>
                   <SearchableSelect
                     value={formData.status}
                     onChange={(val) => setFormData(prev => ({ ...prev, status: val }))}
                     options={[
-                      { value: "active", label: "Active" },
-                      { value: "paused", label: "Paused" }
+                      { value: "active", label: t("inf.statusActive", "Active") },
+                      { value: "paused", label: t("inf.statusPaused", "Paused") }
                     ]}
                     showSearch={false}
                     className="text-xs"
@@ -1476,12 +1522,12 @@ export default function InfluencersView({
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Payout Status
+                    {t("inf.payoutStatus", "Payout Status")}
                   </label>
                   <SearchableSelect
                     value={formData.payoutStatus}
                     onChange={(val) => setFormData(prev => ({ ...prev, payoutStatus: val }))}
-                    options={PAYOUT_STATUS_OPTIONS}
+                    options={payoutStatusOptions}
                     showSearch={false}
                     className="text-xs"
                     buttonClassName="py-2.5 text-xs font-semibold bg-slate-50 border-slate-200"
@@ -1513,7 +1559,7 @@ export default function InfluencersView({
 
       {/* 6. ATTRIBUTED ATTENDEES DRILL-DOWN DRAWER */}
       {mounted && inspectingInfluencer && typeof document !== "undefined" && createPortal(
-        <div className="fixed inset-0 z-[100] overflow-hidden flex justify-end bg-slate-900/40 backdrop-blur-sm animate-fade-in font-sans">
+        <div className="fixed inset-0 z-[100] overflow-hidden flex justify-end bg-slate-900/40 backdrop-blur-sm animate-fade-in font-sans" dir={isRTL ? "rtl" : "ltr"}>
           <div 
             onClick={() => setInspectingInfluencer(null)}
             className="absolute inset-0"
@@ -1526,7 +1572,7 @@ export default function InfluencersView({
                   {inspectingInfluencer.name}
                 </h3>
                 <p className="text-xs font-semibold text-slate-500 mt-0.5">
-                  {inspectingInfluencer.attributedAttendees.length} Attributed Registrations • {formatPrice(inspectingInfluencer.grossRevenue)} Total Revenue
+                  <bdi dir="ltr">{inspectingInfluencer.attributedAttendees.length}</bdi> {t("inf.attributedRegistrations", "Attributed Registrations")} • <bdi dir="ltr">{formatPrice(inspectingInfluencer.grossRevenue)}</bdi> {t("inf.totalRevenueTitle", "Total Revenue")}
                 </p>
               </div>
 
@@ -1541,18 +1587,18 @@ export default function InfluencersView({
 
             <div className="p-4 bg-blue-50/60 border-b border-blue-100 grid grid-cols-3 gap-3 text-center">
               <div className="bg-white p-3 rounded-xl border border-blue-100 shadow-xs">
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Passes Converted</span>
-                <span className="text-base font-black text-blue-700 mt-0.5 block">{inspectingInfluencer.attributedAttendees.length}</span>
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">{t("inf.passesConverted", "Passes Converted")}</span>
+                <span className="text-base font-black text-blue-700 mt-0.5 block"><bdi dir="ltr">{inspectingInfluencer.attributedAttendees.length}</bdi></span>
               </div>
 
               <div className="bg-white p-3 rounded-xl border border-blue-100 shadow-xs">
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Gross Sales</span>
-                <span className="text-base font-black text-slate-800 mt-0.5 block">{formatPrice(inspectingInfluencer.grossRevenue)}</span>
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">{t("inf.grossSales", "Gross Sales")}</span>
+                <span className="text-base font-black text-slate-800 mt-0.5 block"><bdi dir="ltr">{formatPrice(inspectingInfluencer.grossRevenue)}</bdi></span>
               </div>
 
               <div className="bg-white p-3 rounded-xl border border-blue-100 shadow-xs">
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Commission Earned</span>
-                <span className="text-base font-black text-rose-600 mt-0.5 block">{formatPrice(inspectingInfluencer.commissionDue)}</span>
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">{t("inf.commissionEarned", "Commission Earned")}</span>
+                <span className="text-base font-black text-rose-600 mt-0.5 block"><bdi dir="ltr">{formatPrice(inspectingInfluencer.commissionDue)}</bdi></span>
               </div>
             </div>
 
@@ -1575,7 +1621,7 @@ export default function InfluencersView({
                         </div>
                         <div className="min-w-0">
                           <div className="font-extrabold text-slate-800 text-xs truncate">{att.name || "Attendee"}</div>
-                          <div className="text-[10px] text-slate-400 truncate">{att.email || "No email"} {att.company ? `• ${att.company}` : ""}</div>
+                          <div className="text-[10px] text-slate-400 truncate">{att.email || t("inf.noEmail", "No email")} {att.company ? `• ${att.company}` : ""}</div>
                         </div>
                       </div>
 
@@ -1584,7 +1630,7 @@ export default function InfluencersView({
                           {att.ticketType || att.ticket_type || "Standard"}
                         </span>
                         <span className="text-[9px] text-slate-400 block">
-                          {att.registeredDate || "Recently registered"}
+                          {att.registeredDate || t("inf.recentlyRegistered", "Recently registered")}
                         </span>
                       </div>
                     </div>
@@ -1600,7 +1646,7 @@ export default function InfluencersView({
 
       {/* 7. SHARE KIT & QR CODE MODAL */}
       {mounted && shareKitInfluencer && typeof document !== "undefined" && createPortal(
-        <div className="fixed inset-0 z-[100] overflow-y-auto flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in font-sans">
+        <div className="fixed inset-0 z-[100] overflow-y-auto flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in font-sans" dir={isRTL ? "rtl" : "ltr"}>
           <div 
             onClick={() => setShareKitInfluencer(null)}
             className="absolute inset-0"
@@ -1608,7 +1654,7 @@ export default function InfluencersView({
 
           <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl p-6 z-10 animate-scale-up text-center border border-slate-200">
             <div className="flex items-center justify-between mb-4 select-none">
-              <div className="flex items-center gap-2 text-left">
+              <div className="flex items-center gap-2 text-start rtl:text-right text-left">
                 <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
                   <QrCode size={18} />
                 </div>
@@ -1636,13 +1682,13 @@ export default function InfluencersView({
                 />
               ) : (
                 <div className="w-48 h-48 flex items-center justify-center text-slate-400 text-xs">
-                  Generating QR...
+                  {t("inf.generatingQR", "Generating QR...")}
                 </div>
               )}
             </div>
 
             <p className="text-[11px] text-slate-500 mt-1 mb-4">
-              Scans directly route to your event with your referral link automatically tracked.
+              {t("inf.qrHelper", "Scans directly route to your event with your referral link automatically tracked.")}
             </p>
 
             <div className="space-y-2 text-xs">
