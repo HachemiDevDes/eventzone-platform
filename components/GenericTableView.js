@@ -1,7 +1,11 @@
 
 "use client";
 
+import { getLocalizedIndustry } from "../lib/constants";
+
 // Helper to localize ticket tier names
+// Uses getLocalizedIndustry from lib/constants
+
 function getLocalizedTicketTierName(name, t) {
   if (!name || typeof name !== 'string') return name;
   const key = 'tickets.tier_' + name.toLowerCase().replace(/[^a-z0-9]/g, '_');
@@ -250,7 +254,7 @@ function EventDetailsView({ state, onUpdateState, onUploadFile }) {
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-6">
         <div className="flex flex-col gap-1.5">
-          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Event Title</label>
+          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("createEvent.eventTitle", "Event Title")}</label>
           <input 
             type="text" 
             value={title} 
@@ -262,7 +266,7 @@ function EventDetailsView({ state, onUpdateState, onUploadFile }) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Location / Venue</label>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("createEvent.location", "Location / Venue")}</label>
             <input 
               type="text" 
               value={location} 
@@ -271,7 +275,7 @@ function EventDetailsView({ state, onUpdateState, onUploadFile }) {
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Event Type</label>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("createEvent.eventType", "Event Type")}</label>
             <SearchableSelect 
               value={type} 
               onChange={(val) => setType(val)}
@@ -280,14 +284,14 @@ function EventDetailsView({ state, onUpdateState, onUploadFile }) {
                 { value: "In-person", label: "In-Person Only" },
                 { value: "Virtual", label: "Virtual / Online Only" }
               ]}
-              placeholder="Select event type..."
+              placeholder={t("createEvent.selectEventType", "Select event type...")}
             />
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Start Date</label>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("createEvent.startDate", "Start Date")}</label>
             <input 
               type="date" 
               value={startDate} 
@@ -296,7 +300,7 @@ function EventDetailsView({ state, onUpdateState, onUploadFile }) {
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">End Date</label>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("createEvent.endDate", "End Date")}</label>
             <input 
               type="date" 
               value={endDate} 
@@ -307,7 +311,7 @@ function EventDetailsView({ state, onUpdateState, onUploadFile }) {
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">About Event</label>
+          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("createEvent.aboutEvent", "About Event")}</label>
           <textarea 
             rows={4} 
             value={description} 
@@ -317,7 +321,7 @@ function EventDetailsView({ state, onUpdateState, onUploadFile }) {
         </div>
 
         <div className="flex flex-col gap-2">
-          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Event Cover Banner</label>
+          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("createEvent.coverBanner", "Event Cover Banner")}</label>
           <div className="border-2 border-dashed border-slate-200 rounded-2xl p-6 bg-slate-50 hover:bg-slate-100/55 transition-all text-center flex flex-col items-center gap-3">
             <label className="flex items-center gap-2 text-xs font-semibold text-indigo-650 bg-white border border-slate-200 hover:border-indigo-150 py-2.5 px-4 rounded-xl cursor-pointer shadow-sm hover:shadow">
               <Upload size={14} />
@@ -1664,17 +1668,17 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                                 <span className="text-slate-850 font-bold leading-tight truncate">{a.name}</span>
                                 {sponsor && (
                                   <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase bg-amber-50 text-amber-800 border border-amber-200 inline-flex items-center" title={`${sponsor.name || 'Sponsor'} (${sponsor.tier || 'Official'})`}>
-                                    <span>{sponsor.tier ? `${sponsor.tier.toUpperCase()} SPONSOR` : 'SPONSOR'}</span>
+                                    <span>{sponsor.tier ? `${sponsor.tier.toUpperCase()} ${t("common.sponsor", "Sponsor")}` : t("common.sponsor", "Sponsor")}</span>
                                   </span>
                                 )}
                                 {exhibitor && (
                                   <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase bg-blue-50 text-blue-800 border border-blue-200 inline-flex items-center" title={`${exhibitor.name || 'Exhibitor'}${boothLabel ? ` (${boothLabel})` : ''}`}>
-                                    <span>{boothLabel ? `EXHIBITOR (${boothLabel})` : 'EXHIBITOR'}</span>
+                                    <span>{boothLabel ? `${t("common.exhibitor", "Exhibitor")} (${boothLabel})` : t("common.exhibitor", "Exhibitor")}</span>
                                   </span>
                                 )}
                                 {a.isSpeaker && (
                                   <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase bg-purple-50 text-purple-800 border border-purple-200 inline-flex items-center">
-                                    <span>SPEAKER</span>
+                                    <span>{t("speakers.role_speaker", "Speaker")}</span>
                                   </span>
                                 )}
                               </div>
@@ -2088,7 +2092,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                     className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer text-start group"
                   >
                     <Pencil size={15} className="text-slate-400 group-hover:text-slate-600 transition-colors" />
-                    <span>Edit</span>
+                    <span>{t("common.edit", "Edit")}</span>
                   </button>
 
                   <div className="my-1 border-t border-slate-100" />
@@ -2134,7 +2138,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                     className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer text-start group"
                   >
                     <Pencil size={15} className="text-slate-400 group-hover:text-slate-600 transition-colors" />
-                    <span>Edit</span>
+                    <span>{t("common.edit", "Edit")}</span>
                   </button>
 
                   <div className="my-1 border-t border-slate-100" />
@@ -2391,7 +2395,7 @@ function PendingView({ state, onUpdateState }) {
                   : "text-slate-500 hover:text-slate-800 hover:bg-white/60 border border-transparent"
               }`}
             >
-              <span>{tt.label}</span>
+              <span>{tt.id === "all" ? t("tickets.allTickets", "All Tickets") : t("tickets." + tt.id.toLowerCase().replace(/[^a-z0-9]/g, "_"), tt.label)}</span>
               <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-bold transition-colors ${
                 isSelected ? "bg-slate-100 text-slate-700" : "text-slate-400 bg-transparent"
               }`}>
@@ -2636,10 +2640,10 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
       if (o.industry) set.add(o.industry);
     });
     return [
-      { value: "all", label: "All Industries" },
-      ...Array.from(set).map(ind => ({ value: ind, label: ind }))
+      { value: "all", label: t("table.allIndustries", "All Industries") },
+      ...Array.from(set).map(ind => ({ value: ind, label: getLocalizedIndustry(ind, t) }))
     ];
-  }, [organizations]);
+  }, [organizations, t]);
 
   // Filter organizations
   const filteredOrganizations = useMemo(() => {
@@ -2679,11 +2683,11 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
           <div className="flex items-center gap-2.5">
             <h2 className="text-2xl font-black text-slate-900 tracking-tight">{t("dash.organizations", "Partner Organizations")}</h2>
             <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-black border border-blue-100">
-              {organizations.length} Companies
+              {organizations.length} {t("dash.companies", "Companies")}
             </span>
           </div>
           <p className="text-sm text-slate-500 font-medium mt-0.5">
-            Manage partner corporations, institutions, sponsors, and exhibitors connected to your event.
+            {t("table.orgSubtitle", "Manage partner corporations, institutions, sponsors, and exhibitors connected to your event.")}
           </p>
         </div>
 
@@ -2692,7 +2696,7 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
           className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-4 rounded-xl text-xs transition-all hover:shadow-md hover:-translate-y-0.5 flex items-center gap-2 cursor-pointer shadow-xs shadow-blue-100 shrink-0"
         >
           <Plus size={16} />
-          <span>Add Organization</span>
+          <span>{t("table.addCompany", "Add Organization")}</span>
         </button>
       </header>
 
@@ -2704,7 +2708,7 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
           </div>
           <div>
             <div className="text-xl font-black text-slate-800 leading-tight">{organizations.length}</div>
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Total Companies</div>
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">{t("table.totalCompanies", "Total Companies")}</div>
           </div>
         </div>
 
@@ -2714,7 +2718,7 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
           </div>
           <div>
             <div className="text-xl font-black text-amber-700 leading-tight">{activeSponsorsCount}</div>
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Active Sponsors</div>
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">{t("table.activeSponsors", "Active Sponsors")}</div>
           </div>
         </div>
 
@@ -2724,7 +2728,7 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
           </div>
           <div>
             <div className="text-xl font-black text-blue-700 leading-tight">{activeExhibitorsCount}</div>
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Active Exhibitors</div>
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">{t("table.activeExhibitors", "Active Exhibitors")}</div>
           </div>
         </div>
 
@@ -2734,7 +2738,7 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
           </div>
           <div>
             <div className="text-xl font-black text-sky-700 leading-tight">{Math.max(1, industryOptions.length - 1)}</div>
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Sectors Represented</div>
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">{t("table.sectorsRepresented", "Sectors Represented")}</div>
           </div>
         </div>
       </div>
@@ -2750,7 +2754,7 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
               statusTab === "all" ? "bg-white text-slate-900 shadow-xs font-extrabold" : "text-slate-500 hover:text-slate-800"
             }`}
           >
-            All ({organizations.length})
+            {t("table.all", "All")} ({organizations.length})
           </button>
           <button
             onClick={() => setStatusTab("active")}
@@ -2758,7 +2762,7 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
               statusTab === "active" ? "bg-white text-blue-700 shadow-xs font-extrabold" : "text-slate-500 hover:text-slate-800"
             }`}
           >
-            Active ({activeCount})
+            {t("common.active", "Active")} ({activeCount})
           </button>
           <button
             onClick={() => setStatusTab("sponsors")}
@@ -2766,7 +2770,7 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
               statusTab === "sponsors" ? "bg-white text-amber-700 shadow-xs font-extrabold" : "text-slate-500 hover:text-slate-800"
             }`}
           >
-            Sponsors ({activeSponsorsCount})
+            {t("dash.sponsors", "Sponsors")} ({activeSponsorsCount})
           </button>
           <button
             onClick={() => setStatusTab("exhibitors")}
@@ -2774,7 +2778,7 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
               statusTab === "exhibitors" ? "bg-white text-blue-700 shadow-xs font-extrabold" : "text-slate-500 hover:text-slate-800"
             }`}
           >
-            Exhibitors ({activeExhibitorsCount})
+            {t("dash.exhibitors", "Exhibitors")} ({activeExhibitorsCount})
           </button>
           <button
             onClick={() => setStatusTab("archived")}
@@ -2782,7 +2786,7 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
               statusTab === "archived" ? "bg-white text-slate-700 shadow-xs font-extrabold" : "text-slate-500 hover:text-slate-800"
             }`}
           >
-            Archived ({archivedCount})
+            {t("common.archived", "Archived")} ({archivedCount})
           </button>
         </div>
 
@@ -2796,7 +2800,7 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search company, sector..."
+              placeholder={t("table.searchCompanyPlaceholder", "Search company, sector...")}
               className="w-full pl-8.5 pr-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 bg-slate-50/50"
             />
             {searchQuery && (
@@ -2812,8 +2816,8 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
               value={selectedIndustry}
               onChange={(val) => setSelectedIndustry(val || "all")}
               options={industryOptions}
-              placeholder="All Industries"
-              searchPlaceholder="Filter industry..."
+              placeholder={t("table.allIndustries", "All Industries")}
+              searchPlaceholder={t("table.filterIndustry", "Filter industry...")}
               isClearable={false}
             />
           </div>
@@ -2852,7 +2856,7 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
           <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
             <Building2 size={24} />
           </div>
-          <h3 className="text-base font-bold text-slate-800">No organizations found</h3>
+          <h3 className="text-base font-bold text-slate-800">{t("table.noOrganizationsFound", "No organizations found")}</h3>
           <p className="text-xs text-slate-500 max-w-sm">
             Try adjusting search keywords, clearing industry filters, or register your first partner organization.
           </p>
@@ -2958,7 +2962,7 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
                     {/* Sector & Event Role Tags */}
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full">
-                        {o.industry || "General Business"}
+                        {getLocalizedIndustry(o.industry, t) || t("common.generalBusiness", "General Business")}
                       </span>
 
                       {isSponsor && (
@@ -2969,7 +2973,7 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
 
                       {isExhibitor && (
                         <span className="text-[10px] font-extrabold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
-                          {formatBoothDisplay(isExhibitor.booth || isExhibitor.boothNumber) ? (formatBoothDisplay(isExhibitor.booth || isExhibitor.boothNumber).toUpperCase().startsWith('BOOTH') ? formatBoothDisplay(isExhibitor.booth || isExhibitor.boothNumber).toUpperCase() : `BOOTH ${formatBoothDisplay(isExhibitor.booth || isExhibitor.boothNumber).toUpperCase()}`) : 'EXHIBITOR'}
+                          {formatBoothDisplay(isExhibitor.booth || isExhibitor.boothNumber) ? `${t("table.booth", "Booth").toUpperCase()} ${formatBoothDisplay(isExhibitor.booth || isExhibitor.boothNumber).replace(/^BOOTH\s*/i, '').toUpperCase()}` : t("dash.exhibitors", "Exhibitor").toUpperCase()}
                         </span>
                       )}
                     </div>
@@ -3075,8 +3079,8 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
                   <th className="py-4 px-6">{t("table.primaryContact", "Primary Contact")}</th>
                   <th className="py-4 px-6">{t("table.eventRoles", "Event Roles")}</th>
                   <th className="py-4 px-6">{t("table.websiteLink", "Website / Link")}</th>
-                  <th className="py-4 px-6">Status</th>
-                  <th className="py-4 px-6 text-right">Actions</th>
+                  <th className="py-4 px-6">{t("common.status", "Status")}</th>
+                  <th className={`py-4 px-6 ${isRTL ? "text-left" : "text-right"}`}>{t("common.actions", "Actions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -3110,7 +3114,7 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
                           <div className="min-w-0">
                             <h4 className="font-extrabold text-slate-900 text-sm truncate">{o.name}</h4>
                             <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full inline-block mt-0.5">
-                              {o.industry || "General"}
+                              {getLocalizedIndustry(o.industry, t) || t("common.general", "General")}
                             </span>
                           </div>
                         </div>
@@ -3159,11 +3163,11 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
                           )}
                           {isExhibitor && (
                             <span className="text-[10px] font-extrabold text-blue-800 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-xl">
-                              {formatBoothDisplay(isExhibitor.booth || isExhibitor.boothNumber) ? (formatBoothDisplay(isExhibitor.booth || isExhibitor.boothNumber).toUpperCase().startsWith('BOOTH') ? formatBoothDisplay(isExhibitor.booth || isExhibitor.boothNumber).toUpperCase() : `BOOTH ${formatBoothDisplay(isExhibitor.booth || isExhibitor.boothNumber).toUpperCase()}`) : 'BOOTH ALLOCATED'}
+                              {formatBoothDisplay(isExhibitor.booth || isExhibitor.boothNumber) ? `${t("table.booth", "Booth").toUpperCase()} ${formatBoothDisplay(isExhibitor.booth || isExhibitor.boothNumber).replace(/^BOOTH\s*/i, '').toUpperCase()}` : t("table.boothAllocated", "Booth Allocated").toUpperCase()}
                             </span>
                           )}
                           {!isSponsor && !isExhibitor && (
-                            <span className="text-[11px] text-slate-400 font-medium">Partner</span>
+                            <span className="text-[11px] text-slate-400 font-medium">{t("table.partner", "Partner")}</span>
                           )}
                         </div>
                       </td>
@@ -3360,7 +3364,7 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
   const TIERS_CONFIG = useMemo(() => {
     return DEFAULT_TIERS.map(tier => ({
       ...tier,
-      name: tierNamesMap[tier.key] || tier.defaultName
+      name: tierNamesMap[tier.key] || t("sponsors.tier_" + tier.key.toLowerCase(), tier.defaultName)
     }));
   }, [DEFAULT_TIERS, tierNamesMap]);
 
@@ -3451,7 +3455,7 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
 
   const tierFilterOptions = useMemo(() => {
     return [
-      { value: "all", label: "All Tiers" },
+      { value: "all", label: t("table.allTiers", "All Tiers") },
       ...TIERS_CONFIG.map(t => ({
         value: t.key,
         label: t.name
@@ -3481,11 +3485,11 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
           <div className="flex items-center gap-2.5">
             <h2 className="text-2xl font-black text-slate-900 tracking-tight">{t("dash.sponsors", "Event Sponsors")}</h2>
             <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-black border border-blue-100">
-              {sponsors.length} Sponsors
+              {sponsors.length} {t("dash.sponsors", "Sponsors")}
             </span>
           </div>
           <p className="text-sm text-slate-500 font-medium mt-0.5">
-            Sponsors categorized by tier level. Prominently featured on your public landing page.
+            {t("table.sponsorsSubtitle", "Sponsors categorized by tier level. Prominently featured on your public landing page.")}
           </p>
         </div>
 
@@ -3496,7 +3500,7 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
             className="bg-white hover:bg-slate-50 text-slate-700 font-bold py-2.5 px-3.5 rounded-xl text-xs border border-slate-200 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs hover:border-slate-300 shrink-0"
           >
             <Pencil size={13} className="text-slate-500" />
-            <span>Edit Tiers</span>
+            <span>{t("table.editTiers", "Edit Tiers")}</span>
           </button>
           <button 
             onClick={() => onOpenModal("sponsor")}
@@ -3516,7 +3520,7 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search sponsor by name..."
+            placeholder={t("table.searchSponsorPlaceholder", "Search sponsor by name...")}
             className="w-full pl-8.5 pr-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 bg-slate-50/50"
           />
         </div>
@@ -3527,7 +3531,7 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
               value={tierFilter}
               onChange={(val) => setTierFilter(val || "all")}
               options={tierFilterOptions}
-              placeholder="Filter by tier..."
+              placeholder={t("table.filterByTier", "Filter by tier...")}
               isClearable={false}
             />
           </div>
@@ -3563,7 +3567,7 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
           <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
             <Award size={24} />
           </div>
-          <h3 className="text-base font-bold text-slate-800">No sponsors found</h3>
+          <h3 className="text-base font-bold text-slate-800">{t("table.noSponsorsFound", "No sponsors found")}</h3>
           <p className="text-xs text-slate-500 max-w-sm">
             Add official corporate sponsors or link partner organizations to sponsor packages.
           </p>
@@ -3596,7 +3600,7 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
                         }}
                         autoFocus
                         className="flex-1 px-3 py-1.5 border border-blue-500 rounded-xl text-xs font-bold bg-white text-slate-900 focus:outline-none shadow-2xs"
-                        placeholder="Enter tier name..."
+                        placeholder={t("sponsors.enterTierName", "Enter tier name...")}
                       />
                       <button
                         type="button"
@@ -3638,10 +3642,10 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
                           type="button"
                           onClick={() => handleStartEditTier(tier.key, tier.name)}
                           className="opacity-0 group-hover/tier-header:opacity-100 p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ml-1"
-                          title="Rename Tier"
+                          title={t("sponsors.renameTier", "Rename Tier")}
                         >
                           <Pencil size={12} />
-                          <span className="text-[11px] font-semibold text-slate-500 hover:text-blue-600">Rename</span>
+                          <span className="text-[11px] font-semibold text-slate-500 hover:text-blue-600">{t("common.rename", "Rename")}</span>
                         </button>
                       </div>
 
@@ -3651,14 +3655,14 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
                         className="text-[11px] font-bold text-slate-400 hover:text-blue-600 flex items-center gap-1 transition-colors cursor-pointer px-2 py-1 rounded-lg hover:bg-slate-50"
                       >
                         <Pencil size={11} />
-                        <span>Edit Name</span>
+                        <span>{t("common.editName", "Edit Name")}</span>
                       </button>
                     </div>
                   )}
                 </div>
 
                 {list.length === 0 ? (
-                  <p className="text-slate-400 text-xs italic py-2">No sponsors registered in this tier.</p>
+                  <p className="text-slate-400 text-xs italic py-2">{t("table.noSponsorsInTier", "No sponsors registered in this tier.")}</p>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {list.map((s, index) => {
@@ -3693,14 +3697,14 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
                                 <button 
                                   onClick={() => handleArchive(s.id)}
                                   className="text-slate-400 hover:text-amber-600 hover:bg-amber-50 p-1 rounded-md cursor-pointer"
-                                  title="Archive Sponsor"
+                                  title={t("table.archiveSponsor", "Archive Sponsor")}
                                 >
                                   <Archive size={12} />
                                 </button>
                                 <button 
                                   onClick={() => handleDeletePermanent(s.id)}
                                   className="text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-1 rounded-md cursor-pointer"
-                                  title="Delete Sponsor"
+                                  title={t("table.deleteSponsor", "Delete Sponsor")}
                                 >
                                   <Trash2 size={12} />
                                 </button>
@@ -3717,7 +3721,7 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
                                 <button 
                                   onClick={() => handleDeletePermanent(s.id)}
                                   className="text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-1 rounded-md cursor-pointer"
-                                  title="Permanently Delete Sponsor"
+                                  title={t("table.deletePermanently", "Permanently Delete")}
                                 >
                                   <Trash2 size={12} />
                                 </button>
@@ -3744,7 +3748,7 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
                           <div className="flex flex-wrap items-center justify-center gap-1 mt-1">
                             {s.amount && (
                               <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
-                                {Number(s.amount).toLocaleString()} {s.currency || 'DZD'}
+                                <bdi dir="ltr">{Number(s.amount).toLocaleString()}</bdi> {s.currency || "DZD"}
                               </span>
                             )}
                             {s.booth && (
@@ -3777,7 +3781,7 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
                               rel="noopener noreferrer" 
                               className="text-[10px] text-blue-600 hover:underline font-bold mt-1 flex items-center gap-1"
                             >
-                              <span>Website</span>
+                              <span>{t("table.website", "Website")}</span>
                               <ExternalLink size={9} />
                             </a>
                           )}
@@ -3947,12 +3951,12 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
                 <div key={tier.key} className="flex flex-col gap-1.5 p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                      Default: {tier.defaultName}
+                      {t("sponsors.defaultTierLabel", "Default")}: {t("sponsors.tier_" + tier.key.toLowerCase(), tier.defaultName)}
                     </span>
-                    {modalTierNames[tier.key] !== tier.defaultName && (
+                    {Boolean(modalTierNames[tier.key]) && (
                       <button
                         type="button"
-                        onClick={() => setModalTierNames(prev => ({ ...prev, [tier.key]: tier.defaultName }))}
+                        onClick={() => setModalTierNames(prev => ({ ...prev, [tier.key]: "" }))}
                         className="text-[10px] font-bold text-slate-400 hover:text-blue-600 cursor-pointer"
                       >
                         Reset
@@ -3963,7 +3967,7 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
                     type="text"
                     value={modalTierNames[tier.key] || ""}
                     onChange={(e) => setModalTierNames(prev => ({ ...prev, [tier.key]: e.target.value }))}
-                    placeholder={tier.defaultName}
+                    placeholder={t("sponsors.tier_" + tier.key.toLowerCase(), tier.defaultName)}
                     className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 bg-white"
                   />
                 </div>
@@ -4044,11 +4048,11 @@ function ExhibitorsView({ state, onUpdateState, onOpenModal }) {
           <div className="flex items-center gap-2.5">
             <h2 className="text-2xl font-black text-slate-900 tracking-tight">{t("dash.exhibitors", "Event Exhibitors")}</h2>
             <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-black border border-blue-100">
-              {exhibitors.length} Exhibitors
+              {exhibitors.length} {t("dash.exhibitors", "Exhibitors")}
             </span>
           </div>
           <p className="text-sm text-slate-500 font-medium mt-0.5">
-            Manage exhibition booths, floor plan allocation, and representative credentials.
+            {t("table.exhibitorsSubtitle", "Manage exhibition booths, floor plan allocation, and representative credentials.")}
           </p>
         </div>
 
@@ -4057,7 +4061,7 @@ function ExhibitorsView({ state, onUpdateState, onOpenModal }) {
           className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-4 rounded-xl text-xs transition-all hover:shadow-md hover:-translate-y-0.5 flex items-center gap-2 cursor-pointer shadow-xs shadow-blue-100 shrink-0"
         >
           <Plus size={16} />
-          <span>Add Exhibitor</span>
+          <span>{t("table.addExhibitor", "Add Exhibitor")}</span>
         </button>
       </header>
 
@@ -4069,14 +4073,14 @@ function ExhibitorsView({ state, onUpdateState, onOpenModal }) {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search exhibitor, booth #, staff..."
+            placeholder={t("table.searchExhibitorPlaceholder", "Search exhibitor, booth #, staff...")}
             className="w-full pl-8.5 pr-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 bg-slate-50/50"
           />
         </div>
 
         <div className="flex items-center gap-3">
           <div className="text-xs font-bold text-slate-500">
-            Total: <strong className="text-slate-800">{filteredExhibitors.length}</strong> booths
+            {t("table.total", "Total")}: <strong className="text-slate-800">{filteredExhibitors.length}</strong> {t("table.booths", "booths")}
           </div>
 
           <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 shrink-0">
@@ -4110,7 +4114,7 @@ function ExhibitorsView({ state, onUpdateState, onOpenModal }) {
           <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
             <Store size={24} />
           </div>
-          <h3 className="text-base font-bold text-slate-800">No exhibitors registered yet</h3>
+          <h3 className="text-base font-bold text-slate-800">{t("table.noExhibitorsYet", "No exhibitors registered yet")}</h3>
           <p className="text-xs text-slate-500 max-w-sm">
             Assign booth spaces to registered organizations or add a standalone exhibitor.
           </p>
@@ -4184,7 +4188,7 @@ function ExhibitorsView({ state, onUpdateState, onOpenModal }) {
                       <button 
                         onClick={() => handleDelete(e.id)}
                         className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                        title="Remove Exhibitor"
+                        title={t("table.removeExhibitor", "Remove Exhibitor")}
                       >
                         <Trash2 size={13} />
                       </button>
@@ -4255,7 +4259,7 @@ function ExhibitorsView({ state, onUpdateState, onOpenModal }) {
                   <span className="flex items-center gap-1 text-slate-600">
                     <Ticket size={12} className="text-blue-500" />
                     <span className={matchingStaff.length >= staffLimit ? "text-amber-700 font-extrabold" : "text-slate-600"}>
-                      {matchingStaff.length} / {staffLimit} Staff Badges
+                      <bdi dir="ltr">{matchingStaff.length} / {staffLimit}</bdi> {t("table.staffBadges", "Staff Badges")}
                     </span>
                   </span>
                   <span className="text-[10px] text-slate-400 uppercase font-extrabold">{e.boothType || "Standard"}</span>
@@ -4275,7 +4279,7 @@ function ExhibitorsView({ state, onUpdateState, onOpenModal }) {
                   <th className="py-4 px-6">{t("table.boothAllocation", "Booth Allocation")}</th>
                   <th className="py-4 px-6">{t("table.staffContact", "Staff Contact")}</th>
                   <th className="py-4 px-6">{t("table.passesQuota", "Passes Quota")}</th>
-                  <th className="py-4 px-6">Linked Organization</th>
+                  <th className="py-4 px-6">{t("table.linkedOrg", "Linked Organization")}</th>
                   <th className="py-4 px-6 text-right">Actions</th>
                 </tr>
               </thead>
@@ -4322,7 +4326,7 @@ function ExhibitorsView({ state, onUpdateState, onOpenModal }) {
                       </td>
                       <td className="py-4 px-6">
                         <span className="font-black text-blue-800 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-xl text-xs">
-                          {formatBoothDisplay(e.booth || e.boothNumber) ? (formatBoothDisplay(e.booth || e.boothNumber).toUpperCase().startsWith('BOOTH') ? formatBoothDisplay(e.booth || e.boothNumber) : `Booth ${formatBoothDisplay(e.booth || e.boothNumber)}`) : 'Unassigned'}
+                          {formatBoothDisplay(e.booth || e.boothNumber) ? `${t("table.booth", "Booth")} ${formatBoothDisplay(e.booth || e.boothNumber).replace(/^BOOTH\s*/i, '')}` : t("common.unassigned", "Unassigned")}
                         </span>
                       </td>
                       <td className="py-4 px-6">
@@ -4355,7 +4359,7 @@ function ExhibitorsView({ state, onUpdateState, onOpenModal }) {
                       </td>
                       <td className="py-4 px-6">
                         <span className={`font-bold ${matchingStaff.length >= staffLimit ? "text-amber-700 font-extrabold" : "text-slate-700"}`}>
-                          {matchingStaff.length} / {staffLimit} Badges
+                          <bdi dir="ltr">{matchingStaff.length} / {staffLimit}</bdi> {t("table.badges", "Badges")}
                         </span>
                       </td>
                       <td className="py-4 px-6">
@@ -4443,13 +4447,13 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
             onClick={() => onSwitchView && onSwitchView("forms")}
             className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl text-sm transition-all shadow-xs cursor-pointer"
           >
-            Customize Registration Forms
+            {t("tickets.customizeForms", "Customize Registration Forms")}
           </button>
           <button 
             onClick={() => onOpenModal("ticket")}
             className="bg-indigo-650 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-xl text-sm transition-all hover:shadow duration-200 cursor-pointer"
           >
-            Add Ticket Tier
+            {t("tickets.addTicketTier", "Add Ticket Tier")}
           </button>
         </div>
       </header>
@@ -4458,30 +4462,30 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
           <div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tickets Sold</span>
-            <div className="text-2xl font-extrabold text-slate-800 mt-2">{totalSold} <span className="text-sm font-semibold text-slate-400">/ {totalCap}</span></div>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("tickets.ticketsSold", "Tickets Sold")}</span>
+            <div className="text-2xl font-extrabold text-slate-800 mt-2"><bdi dir="ltr">{totalSold} <span className="text-sm font-semibold text-slate-400">/ {totalCap}</span></bdi></div>
           </div>
           <div className="mt-4">
             <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
               <div className="h-full bg-indigo-600 rounded-full" style={{ width: `${totalSoldPct}%` }}></div>
             </div>
-            <span className="text-[10px] text-slate-400 font-semibold mt-1 block">{totalSoldPct.toFixed(1)}% capacity filled</span>
+            <span className="text-[10px] text-slate-400 font-semibold mt-1 block">{t("tickets.capacityFilled", "{pct}% capacity filled", { pct: totalSoldPct.toFixed(1) })}</span>
           </div>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
           <div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ticket Revenue</span>
-            <div className="text-2xl font-extrabold text-slate-800 mt-2">{totalRev.toLocaleString()} <span className="text-sm font-bold text-slate-400">DZD</span></div>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("tickets.ticketRevenue", "Ticket Revenue")}</span>
+            <div className="text-2xl font-extrabold text-slate-800 mt-2"><bdi dir="ltr">{totalRev.toLocaleString()}</bdi> <span className="text-sm font-bold text-slate-400">{t("common.dzd", "DZD")}</span></div>
           </div>
           <span className="text-[10px] text-emerald-500 font-semibold flex items-center gap-1 mt-4">
-            ↑ 15% clean conversion
+            {t("tickets.cleanConversion", "↑ 15% conversion")}
           </span>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
           <div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Active Tiers</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("tickets.activeTiers", "Active Tiers")}</span>
             <div className="text-2xl font-extrabold text-slate-800 mt-2">{activeCount}</div>
           </div>
           <span className="text-[10px] text-slate-450 font-semibold mt-4">
@@ -4499,7 +4503,7 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
               ticketFilter === "active" ? "bg-white text-slate-900 shadow-xs" : "text-slate-500 hover:text-slate-800"
             }`}
           >
-            Active Tiers ({activeCount})
+            {t("tickets.activeTiersTab", "Active Tiers")} ({activeCount})
           </button>
           <button
             onClick={() => setTicketFilter("archived")}
@@ -4507,7 +4511,7 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
               ticketFilter === "archived" ? "bg-slate-700 text-white shadow-xs" : "text-slate-500 hover:text-slate-800"
             }`}
           >
-            Archived ({archivedCount})
+            {t("tickets.archivedTab", "Archived")} ({archivedCount})
           </button>
           <button
             onClick={() => setTicketFilter("all")}
@@ -4515,7 +4519,7 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
               ticketFilter === "all" ? "bg-white text-slate-900 shadow-xs" : "text-slate-500 hover:text-slate-800"
             }`}
           >
-            All ({tickets.length})
+            {t("tickets.allTab", "All")} ({tickets.length})
           </button>
         </div>
       </div>
@@ -4523,7 +4527,7 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
       {/* Ticket Tiers list */}
       {filteredTickets.length === 0 ? (
         <div className="bg-white border border-dashed border-slate-300 rounded-3xl p-12 text-center text-slate-400 text-xs">
-          {ticketFilter === "archived" ? "No archived ticket tiers." : "No active ticket tiers found."}
+          {ticketFilter === "archived" ? t("tickets.noArchived", "No archived ticket tiers.") : t("tickets.noActive", "No active ticket tiers found.")}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -4540,9 +4544,9 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full border border-blue-200 bg-blue-50 text-blue-700">
-                      {badgeType === "thermal_qr" && "Thermal Ticket"}
-                      {badgeType === "a6" && "A6 Lanyard"}
-                      {badgeType === "a4" && "A4 Full Page"}
+                      {badgeType === "thermal_qr" && t("tickets.thermalTicket", "Thermal Ticket")}
+                      {badgeType === "a6" && t("tickets.a6Lanyard", "A6 Lanyard")}
+                      {badgeType === "a4" && t("tickets.a4Badge", "A4 Full Page")}
                     </span>
                     {isArchived && (
                       <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 border border-slate-300">
@@ -4558,7 +4562,7 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
 
                   {!isArchived && t.isPopular && (
                     <span className="bg-amber-500 text-white text-[9px] font-extrabold uppercase py-0.5 px-2.5 rounded-full shadow-xs flex items-center gap-1 shrink-0">
-                      ★ Best Seller
+                      ★ {t("tickets.bestSeller", "Best Seller")}
                     </span>
                   )}
                 </div>
@@ -4570,10 +4574,10 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
                   </h3>
                   <div className="flex items-baseline gap-1.5 text-sm font-bold">
                     <span className="text-slate-850 font-black">
-                      {t.price === 0 ? "Free" : `${t.price.toLocaleString()} DZD`}
+                      {t.price === 0 ? t("tickets.free", "Free") : <><bdi dir="ltr">{t.price.toLocaleString()}</bdi> {t("common.dzd", "DZD")}</>}
                     </span>
                     <span className="text-xs font-semibold text-slate-400">
-                      • {t.price > 0 ? "per attendee" : "Admission"}
+                      • {t.price > 0 ? t("tickets.perAttendee", "per attendee") : t("tickets.admission", "Admission")}
                     </span>
                   </div>
                   {t.description && (
@@ -4587,7 +4591,7 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
                 {linkedForm && (
                   <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500 bg-slate-50 border border-slate-200/80 px-2.5 py-1 rounded-xl w-fit">
                     <FileText size={12} className="text-slate-400 shrink-0" />
-                    <span>Form: <strong className="text-slate-700 font-semibold">{linkedForm.title}</strong></span>
+                    <span>{t("tickets.formPrefix", "Form:")} <strong className="text-slate-700 font-semibold">{linkedForm.title}</strong></span>
                   </div>
                 )}
 
@@ -4602,7 +4606,7 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
                     ))}
                     {(t.features || []).length > 4 && (
                       <li className="text-[11px] text-slate-400 font-semibold pl-5">
-                        + {(t.features || []).length - 4} more inclusions
+                        <span className="inline-flex items-center gap-1"><bdi dir="ltr">+ {(t.features || []).length - 4}</bdi> {t("tickets.moreInclusions", "more inclusions")}</span>
                       </li>
                     )}
                   </ul>
@@ -4611,7 +4615,7 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
                 {/* Card Footer: Sold Count Left, Action Icon Buttons Right */}
                 <div className="mt-auto border-t border-slate-100 pt-3.5 flex items-center justify-between text-xs text-slate-400 font-semibold">
                   <span className="font-bold text-slate-500">
-                    Sold: {tierSold} / {t.maxQty >= 99999 ? "∞" : t.maxQty}
+                    {t("tickets.soldLabel", "Sold")}: <bdi dir="ltr">{tierSold} / {t.maxQty >= 99999 ? "∞" : t.maxQty}</bdi>
                   </span>
                   
                   <div className="flex items-center gap-1">
@@ -4620,7 +4624,7 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
                         type="button"
                         onClick={() => onOpenModal("ticket", t)}
                         className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 border border-transparent hover:border-indigo-100 rounded-xl transition-all cursor-pointer flex items-center justify-center"
-                        title="Edit & Design Ticket Tier"
+                        title={t("tickets.editTierTooltip", "Edit & Design Ticket Tier")}
                       >
                         <Pencil size={15} />
                       </button>
@@ -4631,7 +4635,7 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
                           type="button"
                           onClick={() => handleRestore(t.id)}
                           className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 border border-transparent hover:border-emerald-100 rounded-xl transition-all cursor-pointer flex items-center justify-center"
-                          title="Restore Ticket Tier"
+                          title={t("tickets.restoreTierTooltip", "Restore Ticket Tier")}
                         >
                           <RotateCcw size={15} />
                         </button>
@@ -4639,7 +4643,7 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
                           type="button"
                           onClick={() => handleDeletePermanent(t.id)}
                           className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-100 rounded-xl transition-all cursor-pointer flex items-center justify-center"
-                          title="Delete Ticket Tier Permanently"
+                          title={t("tickets.deleteTierPermanentTooltip", "Delete Ticket Tier Permanently")}
                         >
                           <Trash2 size={15} />
                         </button>
@@ -4649,7 +4653,7 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
                         type="button"
                         onClick={() => handleArchive(t.id)}
                         className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 border border-transparent hover:border-amber-100 rounded-xl transition-all cursor-pointer flex items-center justify-center"
-                        title="Archive Ticket Tier"
+                        title={t("tickets.archiveTierTooltip", "Archive Ticket Tier")}
                       >
                         <Archive size={15} />
                       </button>
@@ -4856,7 +4860,7 @@ function CheckInView({ state, onUpdateState }) {
           className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-xs font-bold shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-102 shrink-0"
         >
           <Camera size={16} />
-          <span>Scan Attendee QR</span>
+          <span>{t("checkin.scanAttendeeQr", "Scan Attendee QR")}</span>
         </button>
       </header>
 
@@ -4904,10 +4908,10 @@ function CheckInView({ state, onUpdateState }) {
               <div className="space-y-2 max-w-xl">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-bold">
                   <Smartphone size={13} />
-                  <span>Mobile Gate Portal &bull; ci.eventzone.pro</span>
+                  <span>{t("checkin.mobilePortalBadge", "Mobile Gate Portal • ci.eventzone.pro")}</span>
                 </div>
                 <h3 className="text-xl font-black text-white tracking-tight">
-                  Mobile Staff Check-In Web App
+                  {t("checkin.mobileStaffApp", "Mobile Staff Check-In Web App")}
                 </h3>
                 <p className="text-xs text-slate-300 leading-relaxed">
                   Gate staff and volunteers can open <strong className="text-white">ci.eventzone.pro</strong> on their mobile phones, enter their email and the event passcode below to scan badges with their phone camera or check in delegates manually.
@@ -4919,7 +4923,7 @@ function CheckInView({ state, onUpdateState }) {
                 {/* Passcode Box */}
                 <div className="bg-white/10 border border-white/15 px-4 py-3 rounded-2xl flex flex-col">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    Event Passcode
+                    {t("checkin.eventPasscode", "Event Passcode")}
                   </span>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className="text-lg font-mono font-black tracking-widest text-emerald-400">
@@ -4929,9 +4933,9 @@ function CheckInView({ state, onUpdateState }) {
                       type="button"
                       onClick={() => {
                         navigator.clipboard.writeText(eventPasscode);
-                        alert(`Passcode "${eventPasscode}" copied to clipboard! Share it with your check-in staff.`);
+                        alert(t("checkin.copiedPasscodeAlert", 'Passcode "{code}" copied to clipboard! Share it with your check-in staff.').replace("{code}", eventPasscode));
                       }}
-                      title="Copy Passcode"
+                      title={t("checkin.copyPasscode", "Copy Passcode")}
                       className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-white/10 cursor-pointer transition-colors"
                     >
                       <Copy size={15} />
@@ -4947,7 +4951,7 @@ function CheckInView({ state, onUpdateState }) {
                   className="px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold text-xs shadow-lg shadow-blue-600/30 flex items-center gap-2 cursor-pointer transition-all hover:scale-102"
                 >
                   <ExternalLink size={15} />
-                  <span>Open Check-In Web App</span>
+                  <span>{t("checkin.openWebApp", "Open Check-In Web App")}</span>
                 </a>
               </div>
             </div>
@@ -4958,9 +4962,11 @@ function CheckInView({ state, onUpdateState }) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
           <div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Attendance Rate</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("checkin.attendanceRate", "Attendance Rate")}</span>
             <div className="text-2xl font-extrabold text-slate-800 mt-2">
-              {attendees.filter(a => a.status === "checked-in" || a.checked_in).length} <span className="text-sm font-semibold text-slate-400">/ {attendees.length}</span>
+              <bdi dir="ltr">
+                {attendees.filter(a => a.status === "checked-in" || a.checked_in).length} <span className="text-sm font-semibold text-slate-400">/ {attendees.length}</span>
+              </bdi>
             </div>
           </div>
           <div className="mt-4">
@@ -4975,11 +4981,11 @@ function CheckInView({ state, onUpdateState }) {
 
         <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
           <div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Rapid Door Status</span>
-            <div className="text-2xl font-extrabold text-slate-800 mt-2">Ready for Scans</div>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("checkin.rapidDoorStatus", "Rapid Door Status")}</span>
+            <div className="text-2xl font-extrabold text-slate-800 mt-2">{t("checkin.readyForScans", "Ready for Scans")}</div>
           </div>
           <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1 mt-4">
-            <Check size={12} /> Scannable unique QR codes active on ci.eventzone.pro
+            <Check size={12} className={isRTL ? "ml-1" : "mr-1"} /> {t("checkin.scannableActive", "Scannable unique QR codes active on ci.eventzone.pro")}
           </span>
         </div>
       </div>
@@ -4989,7 +4995,7 @@ function CheckInView({ state, onUpdateState }) {
           <div className="relative w-full max-w-sm">
             <input 
               type="text" 
-              placeholder="Search attendees by name or email..." 
+              placeholder={t("checkin.searchAttendeesPlaceholder", "Search attendees by name or email...")} 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-4 pr-4 py-2 border border-slate-200 bg-white rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-650"
@@ -5006,7 +5012,7 @@ function CheckInView({ state, onUpdateState }) {
             <div className="relative">
               <input
                 type="text"
-                placeholder="Scan / Type QR Badge Code..."
+                placeholder={t("checkin.scanBadgePlaceholder", "Scan / Type QR Badge Code...")}
                 value={scanInputCode}
                 onChange={(e) => setScanInputCode(e.target.value)}
                 className="w-48 sm:w-56 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600"
@@ -5029,13 +5035,13 @@ function CheckInView({ state, onUpdateState }) {
                 <th className="py-4 px-6">{t("table.ticketTier", "Ticket Type")}</th>
                 <th className="py-4 px-6">{t("table.checkinStatus", "Check-in Status")}</th>
                 <th className="py-4 px-6">{t("table.checkinTime", "Check-in Time")}</th>
-                <th className="py-4 px-6 w-36">Action</th>
+                <th className="py-4 px-6 w-36">{t("common.action", "Action")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {paginated.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="text-center text-slate-400 py-12">No attendees registered yet.</td>
+                  <td colSpan="5" className="text-center text-slate-400 py-12">{t("checkin.noAttendeesYet", "No attendees registered yet.")}</td>
                 </tr>
               ) : (
                 paginated.map(a => {
@@ -5052,7 +5058,7 @@ function CheckInView({ state, onUpdateState }) {
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
                             : 'bg-slate-100 text-slate-600 border-slate-200'
                         }`}>
-                          {isCheckedIn ? 'Checked In' : 'Registered'}
+                          {isCheckedIn ? t("checkin.statusCheckedIn", "Checked In") : t("checkin.statusRegistered", "Registered")}
                         </span>
                       </td>
                       <td className="py-4 px-6 text-slate-400 font-bold">{a.checkinTime || "-"}</td>
@@ -5061,7 +5067,7 @@ function CheckInView({ state, onUpdateState }) {
                           <button
                             onClick={() => handleDirectPrintAttendeeBadge(a)}
                             className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 border border-transparent hover:border-blue-100 rounded-lg transition-all cursor-pointer flex items-center justify-center"
-                            title="Print Attendee Badge (A4 4-Fold)"
+                            title={t("checkin.printBadgeTooltip", "Print Attendee Badge (A4 4-Fold)")}
                           >
                             <Printer size={15} />
                           </button>
@@ -5069,7 +5075,7 @@ function CheckInView({ state, onUpdateState }) {
                             onClick={() => handleToggle(a.id)}
                             className={`font-semibold py-1.5 px-4 rounded-xl text-[11px] shadow-sm transition-all duration-200 cursor-pointer ${isCheckedIn ? 'bg-rose-50 hover:bg-rose-500 hover:text-white text-rose-600' : 'bg-indigo-650 hover:bg-indigo-700 text-white'}`}
                           >
-                            {isCheckedIn ? 'Check Out' : 'Check In'}
+                            {isCheckedIn ? t("checkin.checkOutBtn", "Check Out") : t("checkin.checkInBtn", "Check In")}
                           </button>
                         </div>
                       </td>
@@ -5088,7 +5094,7 @@ function CheckInView({ state, onUpdateState }) {
           pageSize={pageSize}
           onPageChange={setCurrentPage}
           onPageSizeChange={setPageSize}
-          itemName="attendees"
+          itemName={t("checkin.attendeesItemName", "attendees")}
         />
       </div>
 
@@ -5110,7 +5116,7 @@ function CheckInView({ state, onUpdateState }) {
               <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
                 <QrCode size={22} />
               </div>
-              <h3 className="text-lg font-black text-slate-900">Door QR Pass Scanner</h3>
+              <h3 className="text-lg font-black text-slate-900">{t("checkin.doorScannerTitle", "Door QR Pass Scanner")}</h3>
             </div>
 
             <p className="text-xs text-slate-500 max-w-xs mx-auto">
@@ -5131,23 +5137,22 @@ function CheckInView({ state, onUpdateState }) {
               <input
                 autoFocus
                 type="text"
-                placeholder="Scan pass with barcode reader or paste QR..."
+                placeholder={t("checkin.scanPassReaderPlaceholder", "Scan pass with barcode reader or paste QR...")}
                 value={scanInputCode}
                 onChange={(e) => setScanInputCode(e.target.value)}
                 className="flex-1 px-3.5 py-2.5 border border-slate-200 bg-slate-50 rounded-xl text-xs font-mono font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:bg-white"
               />
               <button
                 type="submit"
-                className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/20 cursor-pointer"
-              >
-                Verify
+                className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/20 cursor-pointer">
+                {t("checkin.verifyBtn", "Verify")}
               </button>
             </form>
 
             <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-              <span className="font-semibold">Attendees checked in:</span>
+              <span className="font-semibold">{t("checkin.attendeesCheckedIn", "Attendees checked in:")}</span>
               <span className="font-black text-slate-900">
-                {attendees.filter(a => a.status === "checked-in").length} / {attendees.length}
+                <bdi dir="ltr">{attendees.filter(a => a.status === "checked-in" || a.checked_in).length} / {attendees.length}</bdi>
               </span>
             </div>
           </div>

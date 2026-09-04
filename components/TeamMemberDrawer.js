@@ -65,16 +65,16 @@ const ICON_COMPONENTS = {
   ShieldCheck
 };
 
-const DEPARTMENT_SUGGESTIONS = [
-  "Operations & Logistics",
-  "Registration & Welcome Desk",
-  "Stage & Program Management",
-  "Sponsorship & Partnerships",
-  "Marketing & Communications",
-  "Security & Access Control",
-  "VIP & Hospitality",
-  "Technical & AV Production",
-  "General Administration"
+const DEPARTMENT_LIST = [
+  { id: "dept.operations", fallback: "Operations & Logistics" },
+  { id: "dept.registration", fallback: "Registration & Welcome Desk" },
+  { id: "dept.stage", fallback: "Stage & Program Management" },
+  { id: "dept.sponsorship", fallback: "Sponsorship & Partnerships" },
+  { id: "dept.marketing", fallback: "Marketing & Communications" },
+  { id: "dept.security", fallback: "Security & Access Control" },
+  { id: "dept.vip", fallback: "VIP & Hospitality" },
+  { id: "dept.technical", fallback: "Technical & AV Production" },
+  { id: "dept.admin", fallback: "General Administration" }
 ];
 
 export default function TeamMemberDrawer({
@@ -85,7 +85,7 @@ export default function TeamMemberDrawer({
   activeEventId,
   eventTitle = "Eventzone Summit"
 }) {
-  const { t } = useLanguage();
+  const { t, isRTL } = useLanguage();
 
   // Form State
   const [name, setName] = useState("");
@@ -105,6 +105,14 @@ export default function TeamMemberDrawer({
   const [moduleSearch, setModuleSearch] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+
+  // Department options localized
+  const departmentOptions = useMemo(() => {
+    return DEPARTMENT_LIST.map(d => ({
+      value: d.fallback,
+      label: t(d.id, d.fallback)
+    }));
+  }, [t]);
 
   // Sync state when member or isOpen changes
   useEffect(() => {
@@ -195,13 +203,21 @@ export default function TeamMemberDrawer({
   const filteredModules = useMemo(() => {
     return EVENT_MODULES.filter(mod => {
       const matchesCategory = categoryFilter === "all" || mod.category === categoryFilter;
+      const modTranslatedName = t(`module.${mod.id}.name`, mod.name).toLowerCase();
+      const modTranslatedDesc = t(`module.${mod.id}.desc`, mod.description).toLowerCase();
+      const modTranslatedCat = t(`category.${mod.category}`, mod.category).toLowerCase();
+      const q = moduleSearch.toLowerCase();
+      
       const matchesSearch = !moduleSearch || 
-        mod.name.toLowerCase().includes(moduleSearch.toLowerCase()) || 
-        mod.description.toLowerCase().includes(moduleSearch.toLowerCase()) ||
-        mod.category.toLowerCase().includes(moduleSearch.toLowerCase());
+        mod.name.toLowerCase().includes(q) || 
+        mod.description.toLowerCase().includes(q) ||
+        mod.category.toLowerCase().includes(q) ||
+        modTranslatedName.includes(q) ||
+        modTranslatedDesc.includes(q) ||
+        modTranslatedCat.includes(q);
       return matchesCategory && matchesSearch;
     });
-  }, [categoryFilter, moduleSearch]);
+  }, [categoryFilter, moduleSearch, t]);
 
   const summary = useMemo(() => getPermissionSummary(permissions), [permissions]);
 
@@ -211,13 +227,13 @@ export default function TeamMemberDrawer({
     setErrorMessage("");
 
     if (!name.trim()) {
-      setErrorMessage("Please enter the team member's full name.");
+      setErrorMessage(t("team.errEnterName", "Please enter the team member's full name."));
       setActiveTab("profile");
       return;
     }
 
     if (!email.trim() || !email.includes("@")) {
-      setErrorMessage("Please enter a valid email address.");
+      setErrorMessage(t("team.errEnterEmail", "Please enter a valid email address."));
       setActiveTab("profile");
       return;
     }
@@ -245,7 +261,7 @@ export default function TeamMemberDrawer({
       onClose();
     } catch (err) {
       console.error("Save team member failed:", err);
-      setErrorMessage(err.message || "Failed to save team member. Please try again.");
+      setErrorMessage(err.message || t("team.errSaveFailed", "Failed to save team member. Please try again."));
     } finally {
       setIsSubmitting(false);
     }
@@ -254,24 +270,26 @@ export default function TeamMemberDrawer({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden animate-fade-in select-none">
+    <div dir={isRTL ? "rtl" : "ltr"} className="fixed inset-0 z-50 overflow-hidden animate-fade-in select-none">
       {/* Backdrop */}
       <div 
         onClick={onClose}
         className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-300"
       />
 
-      <div className="fixed inset-y-0 right-0 max-w-full flex pl-6 sm:pl-10">
-        <div className="w-screen max-w-3xl md:max-w-4xl lg:max-w-4xl xl:max-w-5xl bg-white shadow-2xl flex flex-col border-l border-slate-100 transform transition-transform ease-in-out duration-300">
+      <div className={`fixed inset-y-0 ${isRTL ? "left-0" : "right-0"} max-w-full flex ${isRTL ? "pr-6 sm:pr-10" : "pl-6 sm:pl-10"}`}>
+        <div className={`w-screen max-w-3xl md:max-w-4xl lg:max-w-4xl xl:max-w-5xl bg-white shadow-2xl flex flex-col ${isRTL ? "border-r" : "border-l"} border-slate-100 transform transition-transform ease-in-out duration-300`}>
           
           {/* Header */}
           <header className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
             <div>
               <h3 className="text-base font-extrabold text-slate-900 leading-tight">
-                {member ? `Edit ${member.name || 'Team Member'}` : "Invite New Team Member"}
+                {member ? t("team.editMember", "Edit Team Member") : t("team.inviteMember", "Invite New Team Member")}
               </h3>
               <p className="text-xs text-slate-500 font-medium mt-0.5">
-                {member ? "Manage roles and granular module permissions" : `Assign access permissions for ${eventTitle}`}
+                {member 
+                  ? t("team.drawerSubtitleEdit", "Manage roles and granular module permissions") 
+                  : t("team.drawerSubtitleAdd", "Assign access permissions for {eventTitle}").replace("{eventTitle}", eventTitle)}
               </p>
             </div>
 
@@ -296,9 +314,9 @@ export default function TeamMemberDrawer({
                 }`}
               >
                 <ShieldCheck size={14} />
-                <span>Module Permissions</span>
-                <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-extrabold">
-                  {summary.totalAssigned}
+                <span>{t("team.permissionsMatrix", "Module Permissions")}</span>
+                <span className={`${isRTL ? "mr-1" : "ml-1"} text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-extrabold`}>
+                  <bdi dir="ltr">{summary.totalAssigned}</bdi>
                 </span>
               </button>
 
@@ -312,7 +330,7 @@ export default function TeamMemberDrawer({
                 }`}
               >
                 <User size={14} />
-                <span>Profile & Contact</span>
+                <span>{t("drawer.tabProfile", "Profile & Contact")}</span>
               </button>
 
               <button
@@ -325,7 +343,7 @@ export default function TeamMemberDrawer({
                 }`}
               >
                 <Send size={14} />
-                <span>Invite & Onboarding</span>
+                <span>{t("team.tabInviteOnboarding", "Invite & Onboarding")}</span>
               </button>
             </div>
 
@@ -333,11 +351,11 @@ export default function TeamMemberDrawer({
             <div className="hidden sm:flex items-center gap-2 text-[11px] font-semibold text-slate-500">
               <span className="flex items-center gap-1 text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
-                {summary.editorCount} Editor
+                <bdi dir="ltr">{summary.editorCount}</bdi> <span>{t("team.editorPill", "Editor")}</span>
               </span>
               <span className="flex items-center gap-1 text-sky-700 font-bold bg-sky-50 px-2 py-0.5 rounded-md">
                 <span className="w-1.5 h-1.5 rounded-full bg-sky-500"></span>
-                {summary.viewerCount} Viewer
+                <bdi dir="ltr">{summary.viewerCount}</bdi> <span>{t("team.viewerPill", "Viewer")}</span>
               </span>
             </div>
           </div>
@@ -361,9 +379,11 @@ export default function TeamMemberDrawer({
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                       <Sparkles size={13} className="text-blue-600" />
-                      <span>Role Preset Quick-Select</span>
+                      <span>{t("team.rolePresetQuickSelect", "Role Preset Quick-Select")}</span>
                     </label>
-                    <span className="text-[11px] text-slate-400 font-medium">Click to auto-configure module permissions</span>
+                    <span className="text-[11px] text-slate-400 font-medium">
+                      {t("team.rolePresetHelper", "Click to auto-configure module permissions")}
+                    </span>
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -374,7 +394,7 @@ export default function TeamMemberDrawer({
                           key={preset.id}
                           type="button"
                           onClick={() => handleSelectPreset(preset.id)}
-                          className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1.5 ${
+                          className={`p-3 rounded-2xl border text-start rtl:text-right text-left transition-all cursor-pointer flex flex-col justify-between gap-1.5 ${
                             isSelected 
                               ? "border-blue-600 bg-blue-50/60 ring-2 ring-blue-600/20 shadow-xs" 
                               : "border-slate-200 hover:border-slate-300 hover:bg-slate-50/70"
@@ -382,12 +402,12 @@ export default function TeamMemberDrawer({
                         >
                           <div className="flex items-center justify-between w-full">
                             <span className={`text-[11px] font-extrabold leading-snug ${isSelected ? 'text-blue-900' : 'text-slate-800'}`}>
-                              {preset.title}
+                              {t(`preset.${preset.id}.title`, preset.title)}
                             </span>
                             {isSelected && <CheckCircle2 size={13} className="text-blue-600 shrink-0" />}
                           </div>
                           <p className="text-[10px] text-slate-500 line-clamp-2 leading-relaxed font-normal">
-                            {preset.description}
+                            {t(`preset.${preset.id}.desc`, preset.description)}
                           </p>
                         </button>
                       );
@@ -398,44 +418,46 @@ export default function TeamMemberDrawer({
                 {/* 2. Batch Actions & Filter Bar */}
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 flex flex-col sm:flex-row gap-3 items-center justify-between">
                   <div className="flex items-center gap-1.5 w-full sm:w-auto">
-                    <span className="text-[11px] font-bold text-slate-500 shrink-0">Batch Set:</span>
+                    <span className="text-[11px] font-bold text-slate-500 shrink-0">
+                      {t("team.batchSetLabel", "Batch Set:")}
+                    </span>
                     <button
                       type="button"
                       onClick={() => handleGrantAll("editor")}
                       className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-emerald-100/80 text-emerald-800 hover:bg-emerald-200 transition-colors cursor-pointer"
                     >
-                      All Editor
+                      {t("team.allEditor", "All Editor")}
                     </button>
                     <button
                       type="button"
                       onClick={() => handleGrantAll("viewer")}
                       className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-sky-100/80 text-sky-800 hover:bg-sky-200 transition-colors cursor-pointer"
                     >
-                      All Viewer
+                      {t("team.allViewer", "All Viewer")}
                     </button>
                     <button
                       type="button"
                       onClick={() => handleGrantAll("none")}
                       className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-slate-200 text-slate-700 hover:bg-slate-300 transition-colors cursor-pointer"
                     >
-                      Clear All
+                      {t("team.clearAll", "Clear All")}
                     </button>
                   </div>
 
                   {/* Search box inside matrix */}
                   <div className="relative w-full sm:w-56">
-                    <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <Search size={13} className={`absolute ${isRTL ? "right-3" : "left-3"} top-1/2 -translate-y-1/2 text-slate-400`} />
                     <input
                       type="text"
                       value={moduleSearch}
                       onChange={(e) => setModuleSearch(e.target.value)}
-                      placeholder="Search modules..."
-                      className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600"
+                      placeholder={t("team.searchModulesPlaceholder", "Search modules...")}
+                      className={`w-full ${isRTL ? "pr-8 pl-3" : "pl-8 pr-3"} py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600`}
                     />
                   </div>
                 </div>
 
-                {/* 3. Category Filter Tabs (Wrap naturally without clipping) */}
+                {/* 3. Category Filter Tabs */}
                 <div className="flex flex-wrap items-center gap-2">
                   {MODULE_CATEGORIES.map((cat) => (
                     <button
@@ -448,7 +470,7 @@ export default function TeamMemberDrawer({
                           : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                       }`}
                     >
-                      {cat.label}
+                      {t(`category.${cat.id}`, cat.label)}
                     </button>
                   ))}
                 </div>
@@ -485,14 +507,14 @@ export default function TeamMemberDrawer({
                           <div className="flex flex-col min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-xs font-extrabold text-slate-800 truncate">
-                                {mod.name}
+                                {t(`module.${mod.id}.name`, mod.name)}
                               </span>
                               <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500 uppercase tracking-wide">
-                                {mod.category}
+                                {t(`category.${mod.category}`, mod.category)}
                               </span>
                             </div>
                             <p className="text-[11px] text-slate-500 font-normal leading-relaxed mt-0.5">
-                              {mod.description}
+                              {t(`module.${mod.id}.desc`, mod.description)}
                             </p>
                           </div>
                         </div>
@@ -508,7 +530,7 @@ export default function TeamMemberDrawer({
                                 : "text-slate-400 hover:text-slate-600"
                             }`}
                           >
-                            No Access
+                            {t("team.permNoAccess", "No Access")}
                           </button>
 
                           <button
@@ -521,7 +543,7 @@ export default function TeamMemberDrawer({
                             }`}
                           >
                             <Eye size={11} />
-                            <span>Viewer</span>
+                            <span>{t("team.permViewer", "Viewer")}</span>
                           </button>
 
                           <button
@@ -534,7 +556,7 @@ export default function TeamMemberDrawer({
                             }`}
                           >
                             <Pencil size={11} />
-                            <span>Editor</span>
+                            <span>{t("team.permEditor", "Editor")}</span>
                           </button>
                         </div>
                       </div>
@@ -553,34 +575,34 @@ export default function TeamMemberDrawer({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                      Full Name <span className="text-rose-500">*</span>
+                      {t("team.fullNameLabel", "Full Name")} <span className="text-rose-500">*</span>
                     </label>
                     <div className="relative">
-                      <User size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <User size={14} className={`absolute ${isRTL ? "right-3.5" : "left-3.5"} top-1/2 -translate-y-1/2 text-slate-400`} />
                       <input
                         type="text"
                         required
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        placeholder="e.g. Sarah Connor"
-                        className="w-full pl-9 pr-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600"
+                        placeholder={t("team.namePlaceholder", "e.g. Sarah Connor")}
+                        className={`w-full ${isRTL ? "pr-9 pl-3.5" : "pl-9 pr-3.5"} py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600`}
                       />
                     </div>
                   </div>
 
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                      Email Address <span className="text-rose-500">*</span>
+                      {t("team.emailAddressLabel", "Email Address")} <span className="text-rose-500">*</span>
                     </label>
                     <div className="relative">
-                      <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <Mail size={14} className={`absolute ${isRTL ? "right-3.5" : "left-3.5"} top-1/2 -translate-y-1/2 text-slate-400`} />
                       <input
                         type="email"
                         required
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="sarah@eventzone.io"
-                        className="w-full pl-9 pr-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600"
+                        className={`w-full ${isRTL ? "pr-9 pl-3.5" : "pl-9 pr-3.5"} py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600`}
                       />
                     </div>
                   </div>
@@ -590,7 +612,7 @@ export default function TeamMemberDrawer({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                      Phone Number (Optional)
+                      {t("team.phoneOptionalLabel", "Phone Number (Optional)")}
                     </label>
                     <CountryPhoneInput
                       value={phone}
@@ -603,14 +625,14 @@ export default function TeamMemberDrawer({
 
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                      Department / Operations Area
+                      {t("team.departmentLabel", "Department / Operations Area")}
                     </label>
                     <SearchableSelect
                       value={department}
                       onChange={(val) => setDepartment(val)}
-                      options={DEPARTMENT_SUGGESTIONS.map(d => ({ value: d, label: d }))}
-                      placeholder="-- Select Department --"
-                      searchPlaceholder="Search department..."
+                      options={departmentOptions}
+                      placeholder={t("team.selectDepartmentPlaceholder", "-- Select Department --")}
+                      searchPlaceholder={t("team.searchDepartmentPlaceholder", "Search department...")}
                     />
                   </div>
                 </div>
@@ -619,28 +641,28 @@ export default function TeamMemberDrawer({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                      Display Role / Job Title
+                      {t("team.displayRoleLabel", "Display Role / Job Title")}
                     </label>
                     <input
                       type="text"
                       value={role}
                       onChange={(e) => setRole(e.target.value)}
-                      placeholder="e.g. Stage Manager, Desk Supervisor"
+                      placeholder={t("team.displayRolePlaceholder", "e.g. Stage Manager, Desk Supervisor")}
                       className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600"
                     />
                   </div>
 
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                      Membership Status
+                      {t("team.membershipStatusLabel", "Membership Status")}
                     </label>
                     <SearchableSelect
                       value={status}
                       onChange={(val) => setStatus(val)}
                       options={[
-                        { value: "Active", label: "Active Member" },
-                        { value: "Pending Invite", label: "Pending Invite / Email Sent" },
-                        { value: "Archived", label: "Archived / Inactive" }
+                        { value: "Active", label: t("team.statusActiveMember", "Active Member") },
+                        { value: "Pending Invite", label: t("team.statusPendingInvite", "Pending Invite / Email Sent") },
+                        { value: "Archived", label: t("team.statusArchivedMember", "Archived / Inactive") }
                       ]}
                       placeholder="-- Select Status --"
                       isClearable={false}
@@ -665,10 +687,10 @@ export default function TeamMemberDrawer({
                   />
                   <div className="flex flex-col">
                     <span className="text-xs font-bold text-slate-800">
-                      Send Invitation Email with Platform Access Link
+                      {t("team.sendInviteCheckbox", "Send Invitation Email with Platform Access Link")}
                     </span>
                     <span className="text-[11px] text-slate-500 font-normal mt-0.5">
-                      The team member will receive an automated invitation to collaborate on {eventTitle} with their assigned permissions.
+                      {t("team.sendInviteHelp", "The team member will receive an automated invitation to collaborate on {eventTitle} with their assigned permissions.").replace("{eventTitle}", eventTitle)}
                     </span>
                   </div>
                 </label>
@@ -676,13 +698,13 @@ export default function TeamMemberDrawer({
                 {/* Custom Note */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                    Personalized Welcome Note & Instructions (Optional)
+                    {t("team.welcomeNoteLabel", "Personalized Welcome Note & Instructions (Optional)")}
                   </label>
                   <textarea
                     rows={4}
                     value={inviteNote}
                     onChange={(e) => setInviteNote(e.target.value)}
-                    placeholder="e.g. Welcome to the team! You have been assigned to coordinate registration and attendee check-in at Gate 2. Please review the attendee list before Monday."
+                    placeholder={t("team.welcomeNotePlaceholder", "e.g. Welcome to the team! You have been assigned to coordinate registration and attendee check-in at Gate 2. Please review the attendee list before Monday.")}
                     className="w-full p-3 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 resize-none"
                   />
                 </div>
@@ -691,20 +713,20 @@ export default function TeamMemberDrawer({
                 <div className="p-4 bg-blue-50/50 border border-blue-100 rounded-2xl flex flex-col gap-2">
                   <span className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
                     <Info size={14} className="text-blue-600" />
-                    <span>Summary of Granted Permissions</span>
+                    <span>{t("team.summaryGrantedPerms", "Summary of Granted Permissions")}</span>
                   </span>
                   <div className="grid grid-cols-3 gap-2 text-center mt-1">
                     <div className="p-2 bg-white rounded-xl border border-blue-100/60">
-                      <div className="text-base font-extrabold text-slate-800">{summary.totalAssigned}</div>
-                      <div className="text-[10px] font-bold text-slate-400 uppercase">Assigned Modules</div>
+                      <div className="text-base font-extrabold text-slate-800"><bdi dir="ltr">{summary.totalAssigned}</bdi></div>
+                      <div className="text-[10px] font-bold text-slate-400 uppercase">{t("team.summaryAssignedModules", "Assigned Modules")}</div>
                     </div>
                     <div className="p-2 bg-white rounded-xl border border-emerald-100">
-                      <div className="text-base font-extrabold text-emerald-600">{summary.editorCount}</div>
-                      <div className="text-[10px] font-bold text-emerald-600 uppercase">Editor (Full Access)</div>
+                      <div className="text-base font-extrabold text-emerald-600"><bdi dir="ltr">{summary.editorCount}</bdi></div>
+                      <div className="text-[10px] font-bold text-emerald-600 uppercase">{t("team.summaryEditorFull", "Editor (Full Access)")}</div>
                     </div>
                     <div className="p-2 bg-white rounded-xl border border-sky-100">
-                      <div className="text-base font-extrabold text-sky-600">{summary.viewerCount}</div>
-                      <div className="text-[10px] font-bold text-sky-600 uppercase">Viewer (Read-Only)</div>
+                      <div className="text-base font-extrabold text-sky-600"><bdi dir="ltr">{summary.viewerCount}</bdi></div>
+                      <div className="text-[10px] font-bold text-sky-600 uppercase">{t("team.summaryViewerReadOnly", "Viewer (Read-Only)")}</div>
                     </div>
                   </div>
                 </div>
@@ -719,7 +741,7 @@ export default function TeamMemberDrawer({
                 onClick={onClose}
                 className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold text-xs transition-colors cursor-pointer"
               >
-                Cancel
+                {t("common.cancel", "Cancel")}
               </button>
 
               <button
@@ -730,12 +752,12 @@ export default function TeamMemberDrawer({
                 {isSubmitting ? (
                   <>
                     <Loader2 size={14} className="animate-spin" />
-                    <span>Saving Permissions...</span>
+                    <span>{t("common.saving", "Saving Permissions...")}</span>
                   </>
                 ) : (
                   <>
                     <Check size={14} />
-                    <span>{member ? "Save Member Permissions" : "Send Invite & Grant Access"}</span>
+                    <span>{member ? t("team.saveMember", "Save Member Permissions") : t("team.inviteMember", "Send Invite & Grant Access")}</span>
                   </>
                 )}
               </button>

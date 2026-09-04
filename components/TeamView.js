@@ -20,7 +20,7 @@ export default function TeamView({
   simulatedMemberId = null,
   onSimulateMember = () => {}
 }) {
-  const { t } = useLanguage();
+  const { t, isRTL } = useLanguage();
   const { team = [], eventDetails = {} } = state;
 
   // Search & Filter State
@@ -35,7 +35,7 @@ export default function TeamView({
 
   // Status Handlers
   const handleArchive = (id) => {
-    if (confirm("Archive this team member? Their access will be paused but records preserved.")) {
+    if (confirm(t("team.confirmArchiveMember", "Archive this team member? Their access will be paused but records preserved."))) {
       const updated = team.map(t => t.id === id ? { ...t, status: 'Archived', isArchived: true } : t);
       onUpdateState("team", updated);
     }
@@ -47,7 +47,7 @@ export default function TeamView({
   };
 
   const handleDelete = (id) => {
-    if (confirm("Permanently remove this team member?")) {
+    if (confirm(t("team.confirmDeleteMember", "Permanently remove this team member?"))) {
       const updated = team.filter(t => t.id !== id);
       onUpdateState("team", updated);
     }
@@ -70,17 +70,20 @@ export default function TeamView({
   const roleOptions = useMemo(() => {
     const uniqueRoles = Array.from(new Set(team.map(m => m.role).filter(Boolean)));
     return [
-      { value: "all", label: "All Roles" },
+      { value: "all", label: t("team.allRoles", "All Roles") },
       ...uniqueRoles.map(r => ({ value: r, label: r }))
     ];
-  }, [team]);
+  }, [team, t]);
 
   const moduleOptions = useMemo(() => {
     return [
-      { value: "all", label: "All Modules" },
-      ...EVENT_MODULES.map(m => ({ value: m.id, label: `Access to ${m.name}` }))
+      { value: "all", label: t("team.allModules", "All Modules") },
+      ...EVENT_MODULES.map(m => ({ 
+        value: m.id, 
+        label: t("team.accessToModule", "Access to {name}").replace("{name}", t(`module.${m.id}.name`, m.name)) 
+      }))
     ];
-  }, []);
+  }, [t]);
 
   // Filtered Team List
   const filteredTeam = useMemo(() => {
@@ -140,7 +143,7 @@ export default function TeamView({
   };
 
   return (
-    <div className="flex flex-col gap-6 w-full animate-fade-in select-none">
+    <div dir={isRTL ? "rtl" : "ltr"} className="flex flex-col gap-6 w-full animate-fade-in select-none">
       
       {/* Simulation Banner */}
       {simulatedMemberId && (
@@ -151,10 +154,12 @@ export default function TeamView({
             </div>
             <div>
               <p className="text-xs font-extrabold tracking-wide uppercase">
-                Role Simulation Active
+                {t("team.roleSimulationActive", "Role Simulation Active")}
               </p>
               <p className="text-xs opacity-95">
-                You are previewing the platform as <strong>{team.find(m => m.id === simulatedMemberId)?.name || 'Simulated Member'}</strong> ({team.find(m => m.id === simulatedMemberId)?.role}).
+                {t("team.previewingAs", "You are previewing the platform as {name} ({role}).")
+                  .replace("{name}", team.find(m => m.id === simulatedMemberId)?.name || "Simulated Member")
+                  .replace("{role}", team.find(m => m.id === simulatedMemberId)?.role || "Staff")}
               </p>
             </div>
           </div>
@@ -164,7 +169,7 @@ export default function TeamView({
             className="px-3.5 py-1.5 bg-white text-amber-900 hover:bg-amber-50 rounded-xl font-bold text-xs transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
           >
             <LogOut size={13} />
-            <span>Exit Simulation</span>
+            <span>{t("team.exitSimulation", "Exit Simulation")}</span>
           </button>
         </div>
       )}
@@ -173,13 +178,13 @@ export default function TeamView({
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5">
-            <h2 className="text-2xl font-black text-slate-900 tracking-tight">My Event Team</h2>
-            <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-black border border-blue-100">
-              {team.length} Members
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight">{t("team.title", "My Event Team")}</h2>
+            <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-black border border-blue-100 flex items-center gap-1">
+              <bdi dir="ltr">{team.length}</bdi> <span>{t("team.membersCount", "Members")}</span>
             </span>
           </div>
           <p className="text-sm text-slate-500 font-medium mt-0.5">
-            Invite organizers and staff, assign modules, and customize granular viewer vs editor permissions.
+            {t("team.subtitle", "Invite organizers and staff, assign modules, and customize granular viewer vs editor permissions.")}
           </p>
         </div>
 
@@ -187,19 +192,19 @@ export default function TeamView({
           {/* Quick Role Simulator Selector */}
           {team.length > 0 && (
             <div className="hidden lg:flex items-center gap-2 bg-slate-100 p-1 rounded-2xl border border-slate-200/80">
-              <span className="text-[11px] font-bold text-slate-500 pl-2 flex items-center gap-1">
+              <span className={`text-[11px] font-bold text-slate-500 ${isRTL ? "pr-2" : "pl-2"} flex items-center gap-1`}>
                 <Play size={12} className="text-blue-600" />
-                <span>Simulate View:</span>
+                <span>{t("team.simulateView", "Simulate View:")}</span>
               </span>
               <select
                 value={simulatedMemberId || ""}
                 onChange={(e) => onSimulateMember(e.target.value ? e.target.value : null)}
                 className="bg-white border border-slate-200 rounded-xl text-xs font-bold py-1.5 px-3 text-slate-700 focus:outline-none focus:border-blue-600 cursor-pointer shadow-xs"
               >
-                <option value="">Full Admin (Default)</option>
+                <option value="">{t("team.fullAdminDefault", "Full Admin (Default)")}</option>
                 {team.filter(m => !m.isArchived).map(m => (
                   <option key={m.id} value={m.id}>
-                    {m.name} ({m.role || 'Staff'})
+                    {m.name} ({m.role || t("team.roleStaff", "Staff")})
                   </option>
                 ))}
               </select>
@@ -211,7 +216,7 @@ export default function TeamView({
             className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-4 rounded-xl text-xs transition-all hover:shadow-md hover:-translate-y-0.5 flex items-center gap-2 cursor-pointer shadow-xs shadow-blue-100"
           >
             <Plus size={16} />
-            <span>Add Member</span>
+            <span>{t("team.inviteMember", "Add Member")}</span>
           </button>
         </div>
       </header>
@@ -223,8 +228,12 @@ export default function TeamView({
             <Users size={20} />
           </div>
           <div>
-            <div className="text-xl font-black text-slate-800 leading-tight">{team.length}</div>
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Total Roster</div>
+            <div className="text-xl font-black text-slate-800 leading-tight">
+              <bdi dir="ltr">{team.length}</bdi>
+            </div>
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">
+              {t("team.totalRosterUpper", "TOTAL ROSTER")}
+            </div>
           </div>
         </div>
 
@@ -233,8 +242,12 @@ export default function TeamView({
             <UserCheck size={20} />
           </div>
           <div>
-            <div className="text-xl font-black text-emerald-700 leading-tight">{activeCount}</div>
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Active Staff</div>
+            <div className="text-xl font-black text-emerald-700 leading-tight">
+              <bdi dir="ltr">{activeCount}</bdi>
+            </div>
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">
+              {t("team.activeStaffUpper", "ACTIVE STAFF")}
+            </div>
           </div>
         </div>
 
@@ -243,8 +256,12 @@ export default function TeamView({
             <Clock size={20} />
           </div>
           <div>
-            <div className="text-xl font-black text-amber-700 leading-tight">{pendingCount}</div>
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Pending Invites</div>
+            <div className="text-xl font-black text-amber-700 leading-tight">
+              <bdi dir="ltr">{pendingCount}</bdi>
+            </div>
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">
+              {t("team.pendingInvitesUpper", "PENDING INVITES")}
+            </div>
           </div>
         </div>
 
@@ -253,8 +270,12 @@ export default function TeamView({
             <ShieldCheck size={20} />
           </div>
           <div>
-            <div className="text-xl font-black text-purple-700 leading-tight">{adminCount}</div>
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Co-Organizers</div>
+            <div className="text-xl font-black text-purple-700 leading-tight">
+              <bdi dir="ltr">{adminCount}</bdi>
+            </div>
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">
+              {t("team.coOrganizersUpper", "CO-ORGANIZERS")}
+            </div>
           </div>
         </div>
       </div>
@@ -270,7 +291,7 @@ export default function TeamView({
               statusTab === "all" ? "bg-white text-slate-900 shadow-xs font-extrabold" : "text-slate-500 hover:text-slate-800"
             }`}
           >
-            All ({team.length})
+            {t("team.tabAll", "All")} (<bdi dir="ltr">{team.length}</bdi>)
           </button>
           <button
             onClick={() => setStatusTab("active")}
@@ -278,7 +299,7 @@ export default function TeamView({
               statusTab === "active" ? "bg-white text-emerald-700 shadow-xs font-extrabold" : "text-slate-500 hover:text-slate-800"
             }`}
           >
-            Active ({activeCount})
+            {t("team.tabActive", "Active")} (<bdi dir="ltr">{activeCount}</bdi>)
           </button>
           <button
             onClick={() => setStatusTab("pending")}
@@ -286,7 +307,7 @@ export default function TeamView({
               statusTab === "pending" ? "bg-white text-amber-700 shadow-xs font-extrabold" : "text-slate-500 hover:text-slate-800"
             }`}
           >
-            Pending ({pendingCount})
+            {t("team.tabPending", "Pending")} (<bdi dir="ltr">{pendingCount}</bdi>)
           </button>
           <button
             onClick={() => setStatusTab("archived")}
@@ -294,7 +315,7 @@ export default function TeamView({
               statusTab === "archived" ? "bg-white text-slate-700 shadow-xs font-extrabold" : "text-slate-500 hover:text-slate-800"
             }`}
           >
-            Archived ({archivedCount})
+            {t("team.tabArchived", "Archived")} (<bdi dir="ltr">{archivedCount}</bdi>)
           </button>
         </div>
 
@@ -302,13 +323,13 @@ export default function TeamView({
         <div className="flex flex-col sm:flex-row gap-2.5 w-full md:w-auto">
           {/* Search Box */}
           <div className="relative w-full sm:w-56">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search size={14} className={`absolute ${isRTL ? "right-3" : "left-3"} top-1/2 -translate-y-1/2 text-slate-400`} />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search member, email..."
-              className="w-full pl-8.5 pr-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 bg-slate-50/50"
+              placeholder={t("team.searchPlaceholder", "Search member, email...")}
+              className={`w-full ${isRTL ? "pr-8.5 pl-3" : "pl-8.5 pr-3"} py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 bg-slate-50/50`}
             />
           </div>
 
@@ -318,8 +339,8 @@ export default function TeamView({
               value={roleFilter}
               onChange={(val) => setRoleFilter(val || "all")}
               options={roleOptions}
-              placeholder="All Roles"
-              searchPlaceholder="Filter role..."
+              placeholder={t("team.allRoles", "All Roles")}
+              searchPlaceholder={t("team.filterRolePlaceholder", "Filter role...")}
               isClearable={false}
             />
           </div>
@@ -330,8 +351,8 @@ export default function TeamView({
               value={moduleFilter}
               onChange={(val) => setModuleFilter(val || "all")}
               options={moduleOptions}
-              placeholder="Filter by Module"
-              searchPlaceholder="Filter module..."
+              placeholder={t("team.filterByModule", "Filter by Module")}
+              searchPlaceholder={t("team.filterModulePlaceholder", "Filter module...")}
               isClearable={false}
             />
           </div>
@@ -342,15 +363,15 @@ export default function TeamView({
       {/* Team Table */}
       <div className="bg-white border border-slate-200/80 rounded-3xl shadow-xs overflow-hidden">
         <div className="overflow-x-auto w-full">
-          <table className="w-full border-collapse text-left text-xs font-semibold text-slate-700">
+          <table className="w-full border-collapse text-start rtl:text-right text-left text-xs font-semibold text-slate-700">
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-200/80 text-[10px] text-slate-400 font-extrabold uppercase tracking-wider select-none">
-                <th className="py-4 px-6">Member & Department</th>
-                <th className="py-4 px-6">Role / Title</th>
-                <th className="py-4 px-6">Email & Contact</th>
-                <th className="py-4 px-6">Assigned Modules & Permissions</th>
-                <th className="py-4 px-6">Status</th>
-                <th className="py-4 px-6 text-right w-28">Actions</th>
+                <th className="py-4 px-6">{t("team.thMemberDept", "Member & Department")}</th>
+                <th className="py-4 px-6">{t("team.thRoleTitle", "Role / Title")}</th>
+                <th className="py-4 px-6">{t("team.thEmailContact", "Email & Contact")}</th>
+                <th className="py-4 px-6">{t("team.thAssignedModules", "Assigned Modules & Permissions")}</th>
+                <th className="py-4 px-6">{t("team.thStatus", "Status")}</th>
+                <th className={`py-4 px-6 ${isRTL ? "text-left" : "text-right"} w-28`}>{t("team.thActions", "Actions")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -361,17 +382,17 @@ export default function TeamView({
                       <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
                         <Users size={26} />
                       </div>
-                      <p className="text-sm font-bold text-slate-800">No team members found</p>
+                      <p className="text-sm font-bold text-slate-800">{t("team.noMembersFound", "No team members found")}</p>
                       <p className="text-xs text-slate-400 max-w-sm">
                         {searchTerm || roleFilter !== "all" || moduleFilter !== "all"
-                          ? "Try adjusting your filters or search terms."
-                          : "Invite your organizers, registration desk staff, and coordinators to start collaborating."}
+                          ? t("team.adjustFiltersDesc", "Try adjusting your filters or search terms.")
+                          : t("team.emptyStateDesc", "Invite your organizers, registration desk staff, and coordinators to start collaborating.")}
                       </p>
                       <button
                         onClick={() => onOpenModal("team")}
                         className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
                       >
-                        + Add Member
+                        + {t("team.addMemberBtn", "Add Member")}
                       </button>
                     </div>
                   </td>
@@ -410,7 +431,9 @@ export default function TeamView({
                                 <span className="truncate">{member.department}</span>
                               </span>
                             ) : (
-                              <span className="text-[10px] text-slate-400 font-normal mt-0.5">General Staff</span>
+                              <span className="text-[10px] text-slate-400 font-normal mt-0.5">
+                                {t("team.generalStaff", "General Staff")}
+                              </span>
                             )}
                           </div>
                         </div>
@@ -424,7 +447,7 @@ export default function TeamView({
                             : "bg-slate-100 text-slate-700 border-slate-200"
                         }`}>
                           {isMemberAdmin && <Sparkles size={11} className="text-purple-600" />}
-                          <span>{member.role || "Staff"}</span>
+                          <span>{member.role || t("team.roleStaff", "Staff")}</span>
                         </span>
                       </td>
 
@@ -438,7 +461,7 @@ export default function TeamView({
                           {member.phone && (
                             <span className="text-[10px] text-slate-400 font-normal flex items-center gap-1.5 mt-0.5">
                               <Phone size={10} />
-                              <span>{member.phone}</span>
+                              <span dir="ltr"><bdi>{member.phone}</bdi></span>
                             </span>
                           )}
                         </div>
@@ -450,17 +473,18 @@ export default function TeamView({
                           <div className="flex items-center gap-1.5">
                             <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[10px] font-extrabold border border-emerald-200 flex items-center gap-1">
                               <ShieldCheck size={11} />
-                              <span>All 19 Modules (Editor)</span>
+                              <span>{t("team.allModulesEditor", "All {count} Modules (Editor)").replace("{count}", EVENT_MODULES.length)}</span>
                             </span>
                           </div>
                         ) : assignedModuleKeys.length === 0 ? (
-                          <span className="text-[11px] text-slate-400 italic">No modules assigned</span>
+                          <span className="text-[11px] text-slate-400 italic">{t("team.noModulesAssigned", "No modules assigned")}</span>
                         ) : (
                           <div className="flex flex-wrap items-center gap-1.5 max-w-md">
                             {assignedModuleKeys.slice(0, 3).map(([modId, level]) => {
                               const modDef = EVENT_MODULES.find(m => m.id === modId);
-                              const modName = modDef?.name || modId;
+                              const modName = t(`module.${modDef?.id || modId}.name`, modDef?.name || modId);
                               const isEditor = level === 'editor';
+                              const levelName = isEditor ? t("team.permEditor", "Editor") : t("team.permViewer", "Viewer");
                               return (
                                 <span
                                   key={modId}
@@ -469,7 +493,7 @@ export default function TeamView({
                                       ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                                       : "bg-sky-50 text-sky-700 border-sky-200"
                                   }`}
-                                  title={`${modName} - ${isEditor ? 'Editor' : 'Viewer'}`}
+                                  title={`${modName} - ${levelName}`}
                                 >
                                   {isEditor ? <Pencil size={9} /> : <Eye size={9} />}
                                   <span className="max-w-[90px] truncate">{modName}</span>
@@ -482,7 +506,7 @@ export default function TeamView({
                                 onClick={() => setMatrixMember(member)}
                                 className="px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 hover:bg-blue-50 hover:text-blue-600 text-[10px] font-bold transition-colors cursor-pointer"
                               >
-                                +{assignedModuleKeys.length - 3} more
+                                {t("team.moreCount", "+{count} more").replace("{count}", assignedModuleKeys.length - 3)}
                               </button>
                             )}
 
@@ -490,7 +514,7 @@ export default function TeamView({
                               onClick={() => setMatrixMember(member)}
                               className="ml-1 text-[10px] text-blue-600 hover:underline font-bold cursor-pointer"
                             >
-                              Matrix
+                              {t("team.matrixBtn", "Matrix")}
                             </button>
                           </div>
                         )}
@@ -508,27 +532,27 @@ export default function TeamView({
                           <span className={`w-1.5 h-1.5 rounded-full ${
                             isArchived ? 'bg-slate-400' : isPending ? 'bg-amber-500' : 'bg-emerald-500'
                           }`}></span>
-                          <span>{isArchived ? 'ARCHIVED' : isPending ? 'INVITED' : 'ACTIVE'}</span>
+                          <span>{isArchived ? t("team.statusArchivedMember", "ARCHIVED") : isPending ? t("team.statusPendingInvite", "INVITED") : t("team.statusActiveMember", "ACTIVE")}</span>
                         </span>
                       </td>
 
                       {/* Actions */}
-                      <td className="py-4 px-6 text-right">
-                        <div className="flex items-center justify-end gap-1">
+                      <td className={`py-4 px-6 ${isRTL ? "text-left" : "text-right"}`}>
+                        <div className={`flex items-center ${isRTL ? "justify-start" : "justify-end"} gap-1`}>
                           {!isArchived && (
                             <>
                               <button 
                                 onClick={() => onOpenModal("team", member)}
                                 className="px-2.5 py-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                                title="Edit Member Permissions"
+                                title={t("team.editMember", "Edit Member Permissions")}
                               >
-                                Edit
+                                {t("common.edit", "Edit")}
                               </button>
 
                               <button
                                 onClick={() => handleCopyInvite(member)}
                                 className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all cursor-pointer"
-                                title="Copy Magic Invite Link"
+                                title={t("team.copyInvite", "Copy Magic Invite Link")}
                               >
                                 {copiedInviteId === member.id ? (
                                   <Check size={13} className="text-emerald-600" />
@@ -540,7 +564,7 @@ export default function TeamView({
                               <button
                                 onClick={() => onSimulateMember(member.id)}
                                 className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all cursor-pointer"
-                                title="Simulate / Test This Role"
+                                title={t("team.simulate", "Simulate / Test This Role")}
                               >
                                 <Play size={13} />
                               </button>
@@ -551,16 +575,16 @@ export default function TeamView({
                             <button 
                               onClick={() => handleRestore(member.id)}
                               className="px-2 py-1 text-emerald-600 hover:bg-emerald-50 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
-                              title="Restore Member"
+                              title={t("common.restore", "Restore")}
                             >
                               <RotateCcw size={11} />
-                              <span>Restore</span>
+                              <span>{t("common.restore", "Restore")}</span>
                             </button>
                           ) : (
                             <button 
                               onClick={() => handleArchive(member.id)}
                               className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
-                              title="Archive Member"
+                              title={t("common.archive", "Archive")}
                             >
                               <Archive size={13} />
                             </button>
@@ -588,10 +612,10 @@ export default function TeamView({
                 </div>
                 <div>
                   <h3 className="text-base font-extrabold text-slate-900">
-                    {matrixMember.name} • Permissions Matrix
+                    {matrixMember.name} • {t("team.permissionsMatrix", "Permissions Matrix")}
                   </h3>
                   <p className="text-xs text-slate-500 font-medium">
-                    {matrixMember.role || "Staff"} • {matrixMember.email}
+                    {matrixMember.role || t("team.roleStaff", "Staff")} • {matrixMember.email}
                   </p>
                 </div>
               </div>
@@ -621,24 +645,24 @@ export default function TeamView({
                     }`}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="text-xs font-bold text-slate-800 truncate">{mod.name}</span>
-                      <span className="text-[9px] font-extrabold text-slate-400 uppercase">{mod.category}</span>
+                      <span className="text-xs font-bold text-slate-800 truncate">{t(`module.${mod.id}.name`, mod.name)}</span>
+                      <span className="text-[9px] font-extrabold text-slate-400 uppercase">{t(`category.${mod.category}`, mod.category)}</span>
                     </div>
 
                     <div>
                       {level === 'editor' ? (
                         <span className="px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-[10px] font-extrabold flex items-center gap-1 shadow-xs">
                           <Pencil size={10} />
-                          <span>Editor</span>
+                          <span>{t("team.permEditor", "Editor")}</span>
                         </span>
                       ) : level === 'viewer' ? (
                         <span className="px-2.5 py-1 rounded-lg bg-sky-600 text-white text-[10px] font-extrabold flex items-center gap-1 shadow-xs">
                           <Eye size={10} />
-                          <span>Viewer</span>
+                          <span>{t("team.permViewer", "Viewer")}</span>
                         </span>
                       ) : (
                         <span className="px-2 py-0.5 rounded-lg bg-slate-200 text-slate-500 text-[10px] font-bold">
-                          No Access
+                          {t("team.permNoAccess", "No Access")}
                         </span>
                       )}
                     </div>
@@ -656,14 +680,14 @@ export default function TeamView({
                 }}
                 className="px-4 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl text-xs font-bold transition-colors cursor-pointer"
               >
-                Modify Permissions
+                {t("team.editMember", "Modify Permissions")}
               </button>
 
               <button
                 onClick={() => setMatrixMember(null)}
                 className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
               >
-                Close
+                {t("common.close", "Close")}
               </button>
             </footer>
 
