@@ -213,7 +213,13 @@ export default function CertificatesView({
 
   const localizedCategories = useMemo(() => {
     return CERTIFICATE_CATEGORIES.map(c => {
-      if (c.id === "all") return { ...c, label: t("common.all", "All") };
+      if (c.id === "all") return { ...c, label: t("cert.catAllTemplates", "All Templates") };
+      if (c.id === "attendance") return { ...c, label: t("cert.catAttendance", "Attendance & Participation") };
+      if (c.id === "speaker") return { ...c, label: t("cert.catSpeaker", "Speakers & Keynotes") };
+      if (c.id === "sponsor") return { ...c, label: t("cert.catSponsor", "Sponsors & Partners") };
+      if (c.id === "exhibitor") return { ...c, label: t("cert.catExhibitor", "Exhibitors & Booths") };
+      if (c.id === "award") return { ...c, label: t("cert.catAward", "Awards & Honors") };
+      if (c.id === "masterclass") return { ...c, label: t("cert.catMasterclass", "Workshops & Training") };
       if (c.id === "academic") return { ...c, label: t("cert.catAcademic", "Academic & Scientific") };
       if (c.id === "corporate") return { ...c, label: t("cert.catCorporate", "Corporate & Tech") };
       if (c.id === "prestige") return { ...c, label: t("cert.catPrestige", "Prestige & Luxury") };
@@ -223,6 +229,72 @@ export default function CertificatesView({
       return c;
     });
   }, [t]);
+
+  const localizedFontPairings = useMemo(() => {
+    const map = {
+      "cinzel-sans": t("cert.fontCinzelSans", "Classic Roman (Cinzel & Plus Jakarta)"),
+      "playfair-inter": t("cert.fontPlayfairInter", "Luxury Editorial (Playfair & Inter)"),
+      "montserrat-sans": t("cert.fontMontserratSans", "Modern Tech (Montserrat & Plus Jakarta)"),
+      "cormorant-serif": t("cert.fontCormorantSerif", "Academic Heritage (Cormorant & Serif)"),
+    };
+    return FONT_PAIRINGS.map(f => ({ value: f.id, label: map[f.id] || f.name }));
+  }, [t]);
+
+  const localizedBorderStyles = useMemo(() => {
+    const map = {
+      "modern-geometric-navy-gold": t("cert.borderModernGeometric", "Modern Geometric Navy & Gold (Polygon Facets)"),
+      "fluid-wave-teal-gold": t("cert.borderFluidWave", "Fluid Luxe Waves & Gold Ribbon"),
+      "corporate-diagonal-red-gold": t("cert.borderCorporateDiagonal", "Executive Crimson & Charcoal Diagonal"),
+      "dark-obsidian-luxe": t("cert.borderDarkObsidian", "Midnight Obsidian & Gold Crest (Dark Mode)"),
+      "asymmetric-royal-blue": t("cert.borderAsymmetricRoyal", "Asymmetric Royal Blue Modern Pillar"),
+      "emerald-botanical-crest": t("cert.borderEmeraldBotanical", "Botanical Emerald & Gold Laurel"),
+      "creative-coral-violet": t("cert.borderCreativeCoral", "Creative Tech Vanguard Wave (Gradient)"),
+      "classic-gold": t("cert.borderClassicGold", "Classic Regal Double Gold Frame & Rosettes"),
+      "art-deco": t("cert.borderArtDeco", "1920s Art Deco Stepped Angles & Diamonds"),
+      "corporate-navy": t("cert.borderCorporateNavy", "Corporate Executive Navy Header & Footer Bands"),
+      "vintage-filigree": t("cert.borderVintageFiligree", "Vintage Baroque Heritage Engraved Frame"),
+      "nordic-clean": t("cert.borderNordicClean", "Swiss Minimalist Precision Grid & Crosshairs"),
+      "none": t("cert.borderNone", "None (Clean Full-Bleed Canvas)"),
+    };
+    return BORDER_STYLES.map(b => ({ value: b.id, label: map[b.id] || b.name }));
+  }, [t]);
+
+  const localizedCalligraphy = useMemo(() => {
+    const map = {
+      "calligraphy-1": t("cert.callig1", "Executive Swash (Great Vibes)"),
+      "calligraphy-2": t("cert.callig2", "Classic Flourish (Alex Brush)"),
+      "calligraphy-3": t("cert.callig3", "Royal Aristocratic (Pinyon Script)"),
+      "calligraphy-4": t("cert.callig4", "Fluid Ribbon (Allura)"),
+      "calligraphy-5": t("cert.callig5", "Parisian Vintage (Parisienne)"),
+      "calligraphy-6": t("cert.callig6", "Modern Casual (Dancing Script)"),
+      "calligraphy-7": t("cert.callig7", "Monoline Flow (Sacramento)"),
+      "calligraphy-8": t("cert.callig8", "Expressive Brush (Satisfy)"),
+      "calligraphy-9": t("cert.callig9", "Ornate Engraver (Monsieur La Doulaise)"),
+      "calligraphy-10": t("cert.callig10", "Natural Quill (Marck Script)"),
+    };
+    return CALLIGRAPHY_SIGNATURES.map(c => ({ value: c.id, label: map[c.id] || c.name }));
+  }, [t]);
+
+  const getTemplateLocalizedName = (tpl) => {
+    if (tpl.id === "fluid-wave-teal-gold" || tpl.styleId === "fluid-wave-teal-gold") {
+      return t("cert.tplFluidWave", "Fluid Luxe Waves & Gold Ribbon");
+    }
+    if (tpl.id === "modern-geometric-navy-gold" || tpl.styleId === "modern-geometric-navy-gold") {
+      return t("cert.tplModernGeometric", "Modern Geometric Navy & Gold");
+    }
+    if (tpl.id === "dark-obsidian-luxe" || tpl.styleId === "dark-obsidian-luxe") {
+      return t("cert.tplAwardExcellence", "Award of Excellence");
+    }
+    if (tpl.id === "corporate-diagonal-red-gold" || tpl.styleId === "corporate-diagonal-red-gold") {
+      return t("cert.tplCertParticipation", "Certificate of Participation");
+    }
+    return tpl.name;
+  };
+
+  const getCategoryLocalizedLabel = (catId) => {
+    const found = localizedCategories.find(c => c.id === catId);
+    return found ? found.label : catId;
+  };
 
   // Load custom saved templates and restore active template from database / localStorage
   useEffect(() => {
@@ -1320,7 +1392,7 @@ export default function CertificatesView({
                     className="flex items-center justify-between p-3.5 cursor-pointer select-none"
                     onClick={() => setExpandedCoreSection(expandedCoreSection === "title" ? null : "title")}
                   >
-                    <div className="min-w-0 pr-2">
+                    <div className="min-w-0 pe-2">
                       <div className="text-xs font-bold text-slate-900 flex items-center gap-2 truncate">
                         <span>{t("cert.certificateMainTitle", "Certificate Main Title")}</span>
                         {activeTemplate.hideTitle && <span className="text-[9.5px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold border border-slate-200">{t("cert.hiddenBadge", "Hidden")}</span>}
@@ -1601,7 +1673,7 @@ export default function CertificatesView({
                     className="flex items-center justify-between p-3.5 cursor-pointer select-none"
                     onClick={() => setExpandedCoreSection(expandedCoreSection === "subtitle" ? null : "subtitle")}
                   >
-                    <div className="min-w-0 pr-2">
+                    <div className="min-w-0 pe-2">
                       <div className="text-xs font-bold text-slate-900 flex items-center gap-2 truncate">
                         <span>{t("cert.presentationSubtitle", "Presentation Subtitle & Subtext")}</span>
                         {activeTemplate.hideSubtitle && <span className="text-[9.5px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold border border-slate-200">{t("cert.hiddenBadge", "Hidden")}</span>}
@@ -1876,7 +1948,7 @@ export default function CertificatesView({
                     className="flex items-center justify-between p-3.5 cursor-pointer select-none"
                     onClick={() => setExpandedCoreSection(expandedCoreSection === "body" ? null : "body")}
                   >
-                    <div className="min-w-0 pr-2">
+                    <div className="min-w-0 pe-2">
                       <div className="text-xs font-bold text-slate-900 flex items-center gap-2 truncate">
                         <span>{t("cert.certificateBodyStatement", "Certificate Body Statement")}</span>
                         {activeTemplate.hideBody && <span className="text-[9.5px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold border border-slate-200">{t("cert.hiddenBadge", "Hidden")}</span>}
@@ -2243,7 +2315,7 @@ export default function CertificatesView({
                         className="flex items-center justify-between p-3 cursor-pointer select-none"
                         onClick={() => setExpandedElementId(isExpanded ? null : el.id)}
                       >
-                        <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                        <div className="flex items-center gap-2.5 min-w-0 pe-2">
                           <div
                             className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
                               el.type === "text"
@@ -2604,7 +2676,7 @@ export default function CertificatesView({
                 <SearchableSelect
                   value={activeTemplate.fontPairing || "cinzel-sans"}
                   onChange={(val) => handleUpdateActiveTemplate("fontPairing", val)}
-                  options={FONT_PAIRINGS.map(f => ({ value: f.id, label: f.name }))}
+                  options={localizedFontPairings}
                   placeholder={t("cert.selectFontPairingPlaceholder", "Select Font Pairing...")}
                 />
               </div>
@@ -2616,7 +2688,7 @@ export default function CertificatesView({
                 <SearchableSelect
                   value={activeTemplate.borderStyle || "modern-geometric-navy-gold"}
                   onChange={(val) => handleUpdateActiveTemplate("borderStyle", val)}
-                  options={BORDER_STYLES.map(b => ({ value: b.id, label: b.name }))}
+                  options={localizedBorderStyles}
                   placeholder={t("cert.selectBorderStylePlaceholder", "Select Border Style Architecture...")}
                 />
               </div>
@@ -2640,7 +2712,7 @@ export default function CertificatesView({
                       {activeTemplate.accentColor === c.color && <Check size={12} className="text-white" />}
                     </button>
                   ))}
-                  <div className="flex items-center gap-1.5 ml-2">
+                  <div className="flex items-center gap-1.5 ms-2">
                     <div className="relative group shrink-0" title={t("cert.customColorPicker", "Custom color picker")}>
                       <div
                         className="w-7 h-7 rounded-xl border border-slate-300 shadow-2xs flex items-center justify-center cursor-pointer transition-all group-hover:scale-105 group-hover:border-blue-400 overflow-hidden relative"
@@ -2656,7 +2728,7 @@ export default function CertificatesView({
                       </div>
                     </div>
                     <span className="text-[11px] font-mono font-bold text-slate-600">
-                      {activeTemplate.accentColor || "#D4AF37"}
+                      <bdi dir="ltr">{activeTemplate.accentColor || "#D4AF37"}</bdi>
                     </span>
                   </div>
                 </div>
@@ -2740,7 +2812,7 @@ export default function CertificatesView({
                 <div className="flex justify-between items-center">
                   <label className="text-[11px] font-bold text-slate-700">{t("cert.signaturesHeightBottom", "Signatures Height from Bottom")}</label>
                   <span className="text-[10px] font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
-                    {activeTemplate.signatureBottom !== undefined ? activeTemplate.signatureBottom : 8.5}%
+                    <bdi dir="ltr">{activeTemplate.signatureBottom !== undefined ? activeTemplate.signatureBottom : 8.5}%</bdi>
                   </span>
                 </div>
                 <input
@@ -2814,7 +2886,7 @@ export default function CertificatesView({
                       <SearchableSelect
                         value={sig.calligraphyId || "calligraphy-1"}
                         onChange={(val) => handleUpdateSignatory(idx, "calligraphyId", val)}
-                        options={CALLIGRAPHY_SIGNATURES.map(c => ({ value: c.id, label: c.name }))}
+                        options={localizedCalligraphy}
                         placeholder={t("cert.calligraphyPlaceholder", "Calligraphy...")}
                       />
                     </div>
@@ -2873,7 +2945,7 @@ export default function CertificatesView({
                         <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
                           isSelected ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
                         }`}>
-                          {count}
+                          <bdi dir="ltr">{count}</bdi>
                         </span>
                       )}
                     </button>
@@ -2890,7 +2962,7 @@ export default function CertificatesView({
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[420px] overflow-y-auto pr-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[420px] overflow-y-auto pe-1">
                   {(galleryCategory === "saved"
                     ? customSavedList
                     : savedTemplates.filter(t => galleryCategory === "all" || t.category === galleryCategory || (galleryCategory === "custom" && t.styleId === "custom-artwork"))
@@ -3082,8 +3154,8 @@ export default function CertificatesView({
                         {/* Template Metadata & Action Controls */}
                         <div className="flex items-start justify-between gap-2 pt-0.5">
                           <div className="min-w-0 flex-1">
-                            <h5 className="text-xs font-bold text-slate-900 truncate">{tpl.name}</h5>
-                            <span className="text-[10px] font-medium text-slate-400 capitalize">{tpl.category}</span>
+                            <h5 className="text-xs font-bold text-slate-900 truncate">{getTemplateLocalizedName(tpl)}</h5>
+                            <span className="text-[10px] font-medium text-slate-400 capitalize">{getCategoryLocalizedLabel(tpl.category)}</span>
                           </div>
 
                           {/* Quick Action Controls for Custom Saved Templates */}
@@ -3141,14 +3213,14 @@ export default function CertificatesView({
                 className="p-2 rounded-xl border border-slate-200 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer text-slate-700"
                 title={t("cert.prevRecipientTooltip", "Previous Recipient")}
               >
-                <ChevronLeft size={16} />
+                {isRTL ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
               </button>
 
               <div className="text-xs">
                 <span className="font-extrabold text-slate-900">
                   {currentPreviewRecipient.name}
                 </span>
-                <span className="text-slate-400 font-medium ml-1.5">
+                <span className="text-slate-400 font-medium ms-1.5">
                   (<bdi dir="ltr">{filteredRecipients.length > 0 ? activePreviewIndex + 1 : 0}</bdi> {t("cert.of", "of")} <bdi dir="ltr">{filteredRecipients.length}</bdi>)
                 </span>
               </div>
@@ -3159,7 +3231,7 @@ export default function CertificatesView({
                 className="p-2 rounded-xl border border-slate-200 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer text-slate-700"
                 title={t("cert.nextRecipientTooltip", "Next Recipient")}
               >
-                <ChevronRight size={16} />
+                {isRTL ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
               </button>
             </div>
 
@@ -3252,7 +3324,7 @@ export default function CertificatesView({
 
         {/* Table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-start rtl:text-right text-left text-xs border-collapse">
+          <table className="w-full text-start text-xs border-collapse">
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-extrabold uppercase tracking-wider text-[10px]">
                 <th className="py-3 px-4 w-10 text-center">
@@ -3263,11 +3335,11 @@ export default function CertificatesView({
                     className="w-4 h-4 rounded text-blue-600 cursor-pointer"
                   />
                 </th>
-                <th className="py-3 px-4">{t("cert.colRecipientName", "RECIPIENT NAME")}</th>
-                <th className="py-3 px-4">{t("cert.colRoleCategory", "ROLE / CATEGORY")}</th>
-                <th className="py-3 px-4">{t("cert.colCompanyOrg", "COMPANY / ORGANIZATION")}</th>
-                <th className="py-3 px-4">{t("cert.colCertificateSerial", "CERTIFICATE SERIAL")}</th>
-                <th className="py-3 px-4 text-right">{t("cert.colActions", "ACTIONS")}</th>
+                <th className="py-3 px-4 text-start">{t("cert.colRecipientName", "RECIPIENT NAME")}</th>
+                <th className="py-3 px-4 text-start">{t("cert.colRoleCategory", "ROLE / CATEGORY")}</th>
+                <th className="py-3 px-4 text-start">{t("cert.colCompanyOrg", "COMPANY / ORGANIZATION")}</th>
+                <th className="py-3 px-4 text-start">{t("cert.colCertificateSerial", "CERTIFICATE SERIAL")}</th>
+                <th className="py-3 px-4 text-end">{t("cert.colActions", "ACTIONS")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -3335,7 +3407,7 @@ export default function CertificatesView({
                         {rec.certificateId}
                       </td>
 
-                      <td className="py-3 px-4 text-right">
+                      <td className="py-3 px-4 text-end">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => {
