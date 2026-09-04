@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { useLanguage } from '../lib/i18n';
+import { getLocalizedIndustry } from '../lib/constants';
 import { COUNTRY_CITIES_MAP } from '../lib/formPresets';
 import { fetchOrganizations } from '../lib/db';
 import FormImageUploader from './FormImageUploader';
@@ -129,7 +130,7 @@ export default function AttendeeDrawer({
       });
     };
 
-    (localOrgs || []).forEach(o => addOrg(o.name || o.title, o.industry || o.category || o.type, o.type || 'Organization', o.logo));
+    (localOrgs || []).forEach(o => addOrg(o.name || o.title, o.industry ? getLocalizedIndustry(o.industry, t) : (o.category || o.type), o.type || 'Organization', o.logo));
     (sponsors || []).forEach(s => addOrg(s.name || s.company, s.tier || 'Sponsor', s.tier || 'Sponsor', s.logo));
     (exhibitors || []).forEach(e => addOrg(e.name || e.company, e.booth ? `Booth ${e.booth}` : 'Exhibitor', 'Exhibitor', e.logo));
 
@@ -559,7 +560,7 @@ export default function AttendeeDrawer({
           <div>
             <div className="flex items-center gap-2.5">
               <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
-                {attendee ? 'Edit Attendee' : 'Add New Attendee'}
+                {attendee ? t("drawer.editAttendee", "Edit Attendee") : t("table.addAttendee", "Add New Attendee")}
               </h2>
               <span className={`text-[10px] font-extrabold tracking-wider uppercase px-2.5 py-0.5 rounded-full ${
                 status === 'checked-in'
@@ -568,13 +569,13 @@ export default function AttendeeDrawer({
                     ? 'bg-slate-100 text-slate-600 border border-slate-200'
                     : 'bg-blue-50 text-blue-700 border border-blue-200'
               }`}>
-                {status === 'checked-in' ? 'Checked In' : status === 'archived' ? 'Archived' : 'Registered'}
+                {status === 'checked-in' ? t("table.statusCheckedIn", "Checked In") : status === 'archived' ? t("table.statusArchived", "Archived") : t("table.statusRegistered", "Registered")}
               </span>
             </div>
             <p className="text-xs text-slate-500 font-medium mt-0.5">
               {attendee 
                 ? `Editing registration record and form answers for ${name || 'attendee'}.`
-                : 'Manually register an attendee and complete their ticket-specific intake form.'}
+                : t("drawer.addAttendeeSubtitle", "Manually register an attendee and complete their ticket-specific intake form.")}
             </p>
           </div>
 
@@ -599,7 +600,7 @@ export default function AttendeeDrawer({
               }`}
             >
               <FileText size={15} className={activeTab === 'form' ? 'text-blue-600' : 'text-slate-400'} />
-              <span>Ticket & Intake Form</span>
+              <span>{t("drawer.tabForm", "Ticket & Intake Form")}</span>
               {Object.keys(errors).length > 0 && (
                 <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0"></span>
               )}
@@ -615,7 +616,7 @@ export default function AttendeeDrawer({
               }`}
             >
               <Printer size={15} className={activeTab === 'badge' ? 'text-blue-600' : 'text-slate-400'} />
-              <span>Badge, Photo & Check-in</span>
+              <span>{t("drawer.tabBadge", "Badge, Photo & Check-in")}</span>
             </button>
           </div>
         </div>
@@ -630,11 +631,11 @@ export default function AttendeeDrawer({
                   <div className="flex items-center gap-2">
                     <Ticket size={16} className="text-blue-600" />
                     <label className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">
-                      Select Ticket Tier
+                      {t("table.selectTicketTier", "Select Ticket Tier")}
                     </label>
                   </div>
                   <span className="text-[11px] font-semibold text-slate-500">
-                    {availableTickets.length} Tier{availableTickets.length !== 1 ? 's' : ''} available
+                    {t("drawer.tiersAvailable", "Tiers available")} {availableTickets.length}
                   </span>
                 </div>
 
@@ -643,7 +644,7 @@ export default function AttendeeDrawer({
                     const tName = tItem.name || tItem.tier || 'Ticket';
                     const isSelected = (selectedTicketTier || '').trim().toLowerCase() === tName.trim().toLowerCase();
                     const numPrice = typeof tItem.price === 'number' ? tItem.price : parseFloat(String(tItem.price).replace(/[^0-9.]/g, '')) || 0;
-                    const priceLabel = numPrice === 0 ? 'Free' : `${numPrice.toLocaleString()} DZD`;
+                    const priceLabel = numPrice === 0 ? t("overview.free", "Free") : `${numPrice.toLocaleString()} DZD`;
 
                     return (
                       <div
@@ -669,7 +670,7 @@ export default function AttendeeDrawer({
                         <div className="flex items-center justify-between text-[11px]">
                           <span className="font-extrabold text-blue-600">{priceLabel}</span>
                           <span className="text-[10px] text-slate-400 font-medium truncate max-w-[120px]">
-                            {tItem.formId && tItem.formId !== 'default' ? 'Custom Form' : 'Standard Form'}
+                            {tItem.formId && tItem.formId !== 'default' ? t("drawer.customForm", "Custom Form") : t("drawer.standardForm", "Standard Form")}
                           </span>
                         </div>
                       </div>
@@ -683,10 +684,10 @@ export default function AttendeeDrawer({
                   <FileText size={16} className="text-indigo-600 shrink-0" />
                   <div className="min-w-0">
                     <span className="text-xs font-bold block truncate">
-                      Linked Form: {associatedForm?.title || 'Default Registration Form'}
+                      {t("drawer.linkedForm", "Linked Form")}: {associatedForm?.title || t("drawer.defaultRegistrationForm", "Default Registration Form")}
                     </span>
                     <span className="text-[10px] text-indigo-600/80 font-medium block truncate">
-                      {formFields.length} Form Field{formFields.length !== 1 ? 's' : ''} configured for this ticket
+                      {formFields.length} {t("drawer.formFieldsConfigured", "Form Fields configured for this ticket")}
                     </span>
                   </div>
                 </div>
@@ -700,7 +701,7 @@ export default function AttendeeDrawer({
                     }}
                     className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 hover:underline shrink-0 flex items-center gap-1 cursor-pointer"
                   >
-                    <span>Edit Form</span>
+                    <span>{t("drawer.editForm", "Edit Form")}</span>
                     <ChevronRight size={12} />
                   </button>
                 )}
@@ -743,7 +744,7 @@ export default function AttendeeDrawer({
                     <div key={field.id || idx} className="flex flex-col gap-1.5">
                       <div className="flex items-center justify-between">
                         <label className="text-xs font-bold text-slate-800 flex items-center gap-1">
-                          <span>{field.label || field.placeholder || 'Field'}</span>
+                          <span>{field.label === "Full Name" ? t("reg.fullName", "Full Name") : field.label === "Email Address" ? t("common.email", "Email Address") : field.label === "Phone Number" ? t("common.phone", "Phone Number") : field.label === "Job Function / Role" ? t("table.jobRole", "Job Function / Role") : field.label === "Company / Organization" ? t("table.companyOrg", "Company / Organization") : (field.label || field.placeholder || 'Field')}</span>
                           {field.required && (
                             <span className="text-rose-500 font-extrabold">*</span>
                           )}
@@ -758,7 +759,7 @@ export default function AttendeeDrawer({
                               }`}
                             >
                               <Edit3 size={11} />
-                              <span>Type Custom</span>
+                              <span>{t("drawer.typeCustom", "Type Custom")}</span>
                             </button>
                             <button
                               type="button"
@@ -768,7 +769,7 @@ export default function AttendeeDrawer({
                               }`}
                             >
                               <Building2 size={11} />
-                              <span>Choose from List ({organizationOptions.length})</span>
+                              <span>{t("drawer.chooseFromList", "Choose from List")} ({organizationOptions.length})</span>
                             </button>
                           </div>
                         ) : field.description ? (
@@ -1221,7 +1222,7 @@ export default function AttendeeDrawer({
                 onClick={() => setActiveTab('badge')}
                 className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer"
               >
-                <span>Next: Badge & QR</span>
+                <span>{t("drawer.nextBadgeQr", "Next: Badge & QR")}</span>
                 <ChevronRight size={14} />
               </button>
             ) : (
@@ -1230,7 +1231,7 @@ export default function AttendeeDrawer({
                 onClick={() => setActiveTab('form')}
                 className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer"
               >
-                <span>Back to Form</span>
+                <span>{t("drawer.backToForm", "Back to Form")}</span>
               </button>
             )}
 
@@ -1243,12 +1244,12 @@ export default function AttendeeDrawer({
               {isSaving ? (
                 <>
                   <Loader2 size={14} className="animate-spin" />
-                  <span>Saving...</span>
+                  <span>{t("common.saving", "Saving...")}</span>
                 </>
               ) : (
                 <>
                   <Check size={14} />
-                  <span>{attendee ? 'Update Attendee' : 'Register Attendee'}</span>
+                  <span>{attendee ? t("drawer.updateAttendee", "Update Attendee") : t("drawer.registerAttendee", "Register Attendee")}</span>
                 </>
               )}
             </button>
