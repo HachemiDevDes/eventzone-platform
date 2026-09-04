@@ -288,6 +288,37 @@ export default function LogisticsView({
     return map[val] ? t(map[val], val) : val;
   };
 
+  const getLocationLabel = (loc) => {
+    if (!loc) return "";
+    const map = {
+      "Main Auditorium": "logistics.locMainAuditorium",
+      "Hall A Stage": "logistics.locHallAStage",
+      "Hall B Stage": "logistics.locHallBStage",
+      "VIP Green Room": "logistics.locVipGreenRoom",
+      "Exhibition Floor": "logistics.locExhibitionFloor",
+      "Registration Lobby": "logistics.locRegistrationLobby",
+      "Loading Dock": "logistics.locLoadingDock",
+      "Workshop Room 101": "logistics.locWorkshop101",
+      "Workshop Room 102": "logistics.locWorkshop102",
+      "Press Room": "logistics.locPressRoom"
+    };
+    return map[loc] ? t(map[loc], loc) : loc;
+  };
+
+  const getStaffLabel = (staff) => {
+    if (!staff) return "";
+    const map = {
+      "Operations Lead": "logistics.staffOpsLead",
+      "Stage Manager": "logistics.staffStageManager",
+      "AV Technical Director": "logistics.staffAvDirector",
+      "VIP Concierge": "logistics.staffVipConcierge",
+      "Guest Experience Lead": "logistics.staffGuestExp",
+      "Security Lead": "logistics.staffSecurityLead",
+      "Floor Staff": "logistics.staffFloorStaff"
+    };
+    return map[staff] ? t(map[staff], staff) : staff;
+  };
+
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -1233,7 +1264,7 @@ export default function LogisticsView({
                         </h4>
                         <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-1">
                           <MapPin size={12} className="text-slate-400 shrink-0" />
-                          <span className="font-semibold text-slate-700">{item.location || t("logistics.unassigned", "Unassigned")}</span>
+                          <span className="font-semibold text-slate-700">{getLocationLabel(item.location) || t("logistics.unassigned", "Unassigned")}</span>
                           {item.supplier && (
                             <>
                               <span className="text-slate-300">•</span>
@@ -1609,11 +1640,11 @@ export default function LogisticsView({
                               {getActionTypeLabel(cue.actionType) || t("logistics.cueAction", "Action")}
                             </span>
                             <span className="text-xs font-semibold text-slate-500 flex items-center gap-1">
-                              <MapPin size={11} className="text-slate-400" /> {cue.stageOrLocation}
+                              <MapPin size={11} className="text-slate-400" /> {getLocationLabel(cue.stageOrLocation)}
                             </span>
                             <span className="text-slate-300">•</span>
                             <span className="text-xs font-semibold text-slate-600 flex items-center gap-1">
-                              <User size={11} className="text-slate-400" /> {cue.responsiblePerson}
+                              <User size={11} className="text-slate-400" /> {getStaffLabel(cue.responsiblePerson)}
                             </span>
                           </div>
 
@@ -1842,11 +1873,11 @@ export default function LogisticsView({
                           </h4>
                           <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-1">
                             <MapPin size={11} className="text-slate-400 shrink-0" />
-                            <span>{inc.location}</span>
+                            <span>{getLocationLabel(inc.location)}</span>
                             {inc.assignedTo && (
                               <>
                                 <span className="text-slate-300">•</span>
-                                <span className="font-semibold text-blue-600">{t("logistics.assigned", "Assigned:")} {inc.assignedTo}</span>
+                                <span className="font-semibold text-blue-600">{t("logistics.assigned", "Assigned:")} {getStaffLabel(inc.assignedTo)}</span>
                               </>
                             )}
                           </div>
@@ -2051,7 +2082,7 @@ export default function LogisticsView({
                     <SearchableSelect
                       value={inventoryForm.location}
                       onChange={(val) => setInventoryForm({ ...inventoryForm, location: val })}
-                      options={availableLocations.map(l => ({ value: l, label: l }))}
+                      options={availableLocations.map(l => ({ value: l, label: getLocationLabel(l) }))}
                       placeholder={t("logistics.selectLocationPlaceholder", "Select Location")}
                       buttonClassName="py-2 text-xs bg-white border-slate-200"
                     />
@@ -2394,7 +2425,7 @@ export default function LogisticsView({
                       <SearchableSelect
                         value={cueForm.stageOrLocation}
                         onChange={(val) => setCueForm({ ...cueForm, stageOrLocation: val })}
-                        options={availableLocations.map(l => ({ value: l, label: l }))}
+                        options={availableLocations.map(l => ({ value: l, label: getLocationLabel(l) }))}
                         placeholder={t("logistics.selectStagePlaceholder", "Select Stage")}
                         buttonClassName="py-2 text-xs bg-white border-slate-200"
                       />
@@ -2405,7 +2436,7 @@ export default function LogisticsView({
                       <SearchableSelect
                         value={cueForm.responsiblePerson}
                         onChange={(val) => setCueForm({ ...cueForm, responsiblePerson: val })}
-                        options={availableStaff.map(s => ({ value: s, label: s }))}
+                        options={availableStaff.map(s => ({ value: s, label: getStaffLabel(s) }))}
                         placeholder={t("logistics.selectPersonPlaceholder", "Select Person")}
                         buttonClassName="py-2 text-xs bg-white border-slate-200"
                       />
@@ -2499,7 +2530,7 @@ export default function LogisticsView({
                       <SearchableSelect
                         value={incidentForm.location}
                         onChange={(val) => setIncidentForm({ ...incidentForm, location: val })}
-                        options={availableLocations.map(l => ({ value: l, label: l }))}
+                        options={availableLocations.map(l => ({ value: l, label: getLocationLabel(l) }))}
                         placeholder={t("logistics.selectLocationPlaceholder", "Select Location")}
                         buttonClassName="py-2 text-xs bg-white border-slate-200"
                       />
@@ -2511,7 +2542,7 @@ export default function LogisticsView({
                     <SearchableSelect
                       value={incidentForm.assignedTo}
                       onChange={(val) => setIncidentForm({ ...incidentForm, assignedTo: val })}
-                      options={availableStaff.map(s => ({ value: s, label: s }))}
+                      options={availableStaff.map(s => ({ value: s, label: getStaffLabel(s) }))}
                       placeholder={t("logistics.selectAssigneePlaceholder", "Select Assignee")}
                       buttonClassName="py-2 text-xs bg-white border-slate-200"
                     />
