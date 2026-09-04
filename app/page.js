@@ -361,6 +361,26 @@ export function HomeContent() {
           .eq('id', userId)
           .maybeSingle();
 
+        // If no direct profile exists by UUID, check if an existing profile exists for this email
+        if (!profile && session.user.email) {
+          const { data: existingEmailProfile } = await supabase
+            .from('profiles')
+            .select('*')
+            .ilike('email', session.user.email.trim())
+            .order('created_at', { ascending: true })
+            .limit(1)
+            .maybeSingle();
+          if (existingEmailProfile) {
+            profile = existingEmailProfile;
+            // Also automatically re-link any events previously created under the old profile UUID to the active session UUID
+            try {
+              await supabase.from('events').update({ organizer_id: userId }).eq('organizer_id', existingEmailProfile.id);
+            } catch (linkErr) {
+              console.warn("Auto event re-link notice:", linkErr);
+            }
+          }
+        }
+
         const retrievedName = profile?.full_name 
           || userMeta.full_name 
           || userMeta.name 
@@ -615,7 +635,7 @@ export function HomeContent() {
       try {
         const [pEvents, uEvents, vRegs] = await Promise.all([
           fetchPublicEvents(),
-          currentUser?.id ? fetchUserEvents(currentUser.id) : Promise.resolve([]),
+          currentUser?.id ? fetchUserEvents(currentUser.id, currentUser.email) : Promise.resolve([]),
           currentUser?.email ? fetchVisitorRegistrations(currentUser.email) : Promise.resolve([]),
         ]);
         setPublicEvents(pEvents || []);
@@ -3146,10 +3166,10 @@ export function HomeContent() {
   const currentEventSummary = userEvents.find(e => e.id === activeEventId) || eventDetails || {};
 
   return (
-    <div className="flex min-h-screen bg-slate-50 font-sans">
+    <div className="flex min-h-screen bg-slate-50 font-sans" dir={dir}>
       {/* Sidebar Navigation — hidden while editing a floor plan */}
       {!isEditingFloorPlan && (
-      <aside className="w-[260px] h-screen bg-white border-r border-slate-200 py-5 px-4 flex flex-col justify-between sticky top-0 overflow-y-auto shrink-0 select-none z-40">
+      <aside className="w-[260px] h-screen bg-white border-r rtl:border-l rtl:border-r-0 border-slate-200 py-5 px-4 flex flex-col justify-between sticky top-0 overflow-y-auto shrink-0 select-none z-40">
         <div className="space-y-4">
           {/* Top Logo & Language Selector */}
           <div className="flex items-center justify-between px-1 relative">
@@ -3211,12 +3231,12 @@ export function HomeContent() {
                 <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs shrink-0">
                   <Building2 size={15} />
                 </div>
-                <div className="flex flex-col text-left overflow-hidden">
+                <div className="flex flex-col text-start overflow-hidden">
                   <span className="text-[11px] font-bold text-slate-900 truncate leading-tight">
                     {currentEventSummary?.title || eventDetails?.title || "Eventzone Summit"}
                   </span>
                   <span className="text-[9px] text-slate-400 font-medium truncate">
-                    {currentEventSummary?.type || eventDetails?.type || "Hybrid"} Event
+                    {(currentEventSummary?.type || eventDetails?.type) === "In-Person" ? t("eventsHub.inPersonEvent", "In-Person Event") : (currentEventSummary?.type || eventDetails?.type) === "Virtual" ? t("eventsHub.virtualEvent", "Virtual Event") : t("eventsHub.hybridEvent", "Hybrid Event")}
                   </span>
                 </div>
               </div>
@@ -3237,7 +3257,7 @@ export function HomeContent() {
                         setActiveEventStateId(ev.id);
                         setEventSwitcherOpen(false);
                       }}
-                      className={`w-full text-left p-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between ${
+                      className={`w-full text-start p-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between ${
                         ev.id === activeEventId ? "bg-blue-50 text-blue-700" : "text-slate-700 hover:bg-slate-50"
                       }`}
                     >
@@ -3252,7 +3272,7 @@ export function HomeContent() {
                       setEventSwitcherOpen(false);
                       setCurrentView("create-event");
                     }}
-                    className="w-full text-left p-2 rounded-xl text-xs font-bold text-blue-600 hover:bg-blue-50 flex items-center cursor-pointer"
+                    className="w-full text-start p-2 rounded-xl text-xs font-bold text-blue-600 hover:bg-blue-50 flex items-center cursor-pointer"
                   >
                     <span>{t("dash.hostNewEvent", "Host New Event")}</span>
                   </button>
@@ -3262,7 +3282,7 @@ export function HomeContent() {
                       setEventSwitcherOpen(false);
                       setCurrentView("events-hub");
                     }}
-                    className="w-full text-left p-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 flex items-center cursor-pointer"
+                    className="w-full text-start p-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 flex items-center cursor-pointer"
                   >
                     <span>{t("dash.allEventsHub", "All Events Hub")}</span>
                   </button>
@@ -3275,7 +3295,7 @@ export function HomeContent() {
           <nav className="flex flex-col gap-0.5">
             <button 
               onClick={() => setCurrentView("overview")}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-left group ${currentView === "overview" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "overview" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
             >
               <LayoutDashboard size={14} className={`shrink-0 ${currentView === "overview" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
               <span>{t("dash.overview", "Overview")}</span>
@@ -3283,7 +3303,7 @@ export function HomeContent() {
 
             <button 
               onClick={() => setCurrentView("event-details")}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-left group ${["event-details", "page-builder"].includes(currentView) ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${["event-details", "page-builder"].includes(currentView) ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
             >
               <FileText size={14} className={`shrink-0 ${["event-details", "page-builder"].includes(currentView) ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
               <span>{t("dash.eventDetails", "Event Details")}</span>
@@ -3291,7 +3311,7 @@ export function HomeContent() {
 
             <button 
               onClick={() => setCurrentView("calendar")}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-left group ${currentView === "calendar" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "calendar" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
             >
               <Calendar size={14} className={`shrink-0 ${currentView === "calendar" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
               <span>{t("dash.calendar", "Agenda")}</span>
@@ -3300,7 +3320,7 @@ export function HomeContent() {
             {/* Standalone Opportunities Tab */}
             <button 
               onClick={() => setCurrentView("opportunities")}
-              className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-left group ${currentView === "opportunities" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+              className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "opportunities" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
             >
               <div className="flex items-center gap-2">
                 <TrendingUp size={14} className={`shrink-0 ${currentView === "opportunities" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
@@ -3313,7 +3333,7 @@ export function HomeContent() {
             <div className="flex flex-col">
               <button 
                 onClick={() => setParticipantsOpen(!participantsOpen)}
-                className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-left group ${["attendees", "pending", "speakers"].includes(currentView) ? "text-blue-700 bg-blue-50/50 font-extrabold" : "text-slate-600 hover:bg-slate-50"}`}
+                className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${["attendees", "pending", "speakers"].includes(currentView) ? "text-blue-700 bg-blue-50/50 font-extrabold" : "text-slate-600 hover:bg-slate-50"}`}
               >
                 <div className="flex items-center gap-2">
                   <Users2 size={14} className={`shrink-0 ${["attendees", "pending", "speakers"].includes(currentView) ? "text-blue-600" : "text-slate-400 group-hover:text-blue-600"}`} />
@@ -3323,10 +3343,10 @@ export function HomeContent() {
               </button>
 
               {participantsOpen && (
-                <div className="flex flex-col gap-0.5 pl-3 mt-1 border-l border-slate-100 ml-4">
+                <div className="flex flex-col gap-0.5 pl-3 rtl:pr-3 rtl:pl-0 mt-1 border-l rtl:border-r rtl:border-l-0 border-slate-100 ml-4 rtl:mr-4 rtl:ml-0">
                   <button 
                     onClick={() => setCurrentView("attendees")}
-                    className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-left transition-all ${currentView === "attendees" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
+                    className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "attendees" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
                   >
                     <div className="flex items-center gap-1.5 min-w-0">
                       <UserCheck size={12} className="shrink-0" />
@@ -3337,7 +3357,7 @@ export function HomeContent() {
 
                   <button 
                     onClick={() => setCurrentView("pending")}
-                    className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-left transition-all ${currentView === "pending" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
+                    className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "pending" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
                   >
                     <div className="flex items-center gap-1.5 min-w-0">
                       <Clock size={12} className="shrink-0" />
@@ -3348,7 +3368,7 @@ export function HomeContent() {
 
                   <button 
                     onClick={() => setCurrentView("speakers")}
-                    className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-left transition-all ${currentView === "speakers" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
+                    className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "speakers" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
                   >
                     <div className="flex items-center gap-1.5 min-w-0">
                       <Mic2 size={12} className="shrink-0" />
@@ -3364,7 +3384,7 @@ export function HomeContent() {
             <div className="flex flex-col">
               <button 
                 onClick={() => setCompaniesOpen(!companiesOpen)}
-                className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-left group ${["organizations", "sponsors", "exhibitors"].includes(currentView) ? "text-blue-700 bg-blue-50/50 font-extrabold" : "text-slate-600 hover:bg-slate-50"}`}
+                className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${["organizations", "sponsors", "exhibitors"].includes(currentView) ? "text-blue-700 bg-blue-50/50 font-extrabold" : "text-slate-600 hover:bg-slate-50"}`}
               >
                 <div className="flex items-center gap-2">
                   <Building2 size={14} className={`shrink-0 ${["organizations", "sponsors", "exhibitors"].includes(currentView) ? "text-blue-600" : "text-slate-400 group-hover:text-blue-600"}`} />
@@ -3374,10 +3394,10 @@ export function HomeContent() {
               </button>
 
               {companiesOpen && (
-                <div className="flex flex-col gap-0.5 pl-3 mt-1 border-l border-slate-100 ml-4">
+                <div className="flex flex-col gap-0.5 pl-3 rtl:pr-3 rtl:pl-0 mt-1 border-l rtl:border-r rtl:border-l-0 border-slate-100 ml-4 rtl:mr-4 rtl:ml-0">
                   <button 
                     onClick={() => setCurrentView("organizations")}
-                    className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-left transition-all ${currentView === "organizations" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
+                    className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "organizations" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
                   >
                     <div className="flex items-center gap-1.5 min-w-0">
                       <Building2 size={12} className="shrink-0" />
@@ -3388,7 +3408,7 @@ export function HomeContent() {
 
                   <button 
                     onClick={() => setCurrentView("sponsors")}
-                    className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-left transition-all ${currentView === "sponsors" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
+                    className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "sponsors" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
                   >
                     <div className="flex items-center gap-1.5 min-w-0">
                       <Sparkles size={12} className="shrink-0" />
@@ -3399,7 +3419,7 @@ export function HomeContent() {
 
                   <button 
                     onClick={() => setCurrentView("exhibitors")}
-                    className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-left transition-all ${currentView === "exhibitors" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
+                    className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "exhibitors" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
                   >
                     <div className="flex items-center gap-1.5 min-w-0">
                       <Store size={12} className="shrink-0" />
@@ -3413,7 +3433,7 @@ export function HomeContent() {
 
             <button 
               onClick={() => { setCurrentView("floor-plan"); setActiveFloorPlanId(null); }}
-              className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-left group ${currentView === "floor-plan" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+              className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "floor-plan" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
             >
               <div className="flex items-center gap-2">
                 <Layers size={14} className={`shrink-0 ${currentView === "floor-plan" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
@@ -3424,7 +3444,7 @@ export function HomeContent() {
 
             <button 
               onClick={() => setCurrentView("tickets")}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-left group ${currentView === "tickets" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "tickets" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
             >
               <Ticket size={14} className={`shrink-0 ${currentView === "tickets" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
               <span>{t("dash.tickets", "Tickets")}</span>
@@ -3432,7 +3452,7 @@ export function HomeContent() {
 
             <button 
               onClick={() => setCurrentView("portal-settings")}
-              className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-left group ${currentView === "portal-settings" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+              className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "portal-settings" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
             >
               <div className="flex items-center gap-2">
                 <Globe size={14} className={`shrink-0 ${currentView === "portal-settings" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
@@ -3449,7 +3469,7 @@ export function HomeContent() {
 
             <button 
               onClick={() => setCurrentView("forms")}
-              className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-left group ${currentView === "forms" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+              className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "forms" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
             >
               <div className="flex items-center gap-2">
                 <ClipboardList size={14} className={`shrink-0 ${currentView === "forms" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
@@ -3460,7 +3480,7 @@ export function HomeContent() {
 
             <button 
               onClick={() => setCurrentView("rsvp")}
-              className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-left group ${currentView === "rsvp" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+              className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "rsvp" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
             >
               <div className="flex items-center gap-2">
                 <CheckCircle2 size={14} className={`shrink-0 ${currentView === "rsvp" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
@@ -3471,7 +3491,7 @@ export function HomeContent() {
 
             <button 
               onClick={() => setCurrentView("logistics")}
-              className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-left group ${currentView === "logistics" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+              className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "logistics" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
             >
               <div className="flex items-center gap-2">
                 <Boxes size={14} className={`shrink-0 ${currentView === "logistics" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
@@ -3485,7 +3505,7 @@ export function HomeContent() {
             {/* Standalone Influencers Tab */}
             <button 
               onClick={() => setCurrentView("influencers")}
-              className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-left group ${currentView === "influencers" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+              className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "influencers" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
             >
               <div className="flex items-center gap-2">
                 <Share2 size={14} className={`shrink-0 ${currentView === "influencers" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
@@ -3498,7 +3518,7 @@ export function HomeContent() {
             {/*
             <button 
               onClick={() => setCurrentView("documents")}
-              className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-left group ${currentView === "documents" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+              className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "documents" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
             >
               <div className="flex items-center gap-2">
                 <Files size={14} className={`shrink-0 ${currentView === "documents" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
@@ -3512,7 +3532,7 @@ export function HomeContent() {
 
             <button 
               onClick={() => setCurrentView("check-in")}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-left group ${currentView === "check-in" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "check-in" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
             >
               <QrCode size={14} className={`shrink-0 ${currentView === "check-in" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
               <span>{t("dash.checkIn", "Check In")}</span>
@@ -3520,7 +3540,7 @@ export function HomeContent() {
 
             <button 
               onClick={() => setCurrentView("my-team")}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-left group ${currentView === "my-team" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "my-team" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
             >
               <ShieldCheck size={14} className={`shrink-0 ${currentView === "my-team" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
               <span>{t("dash.myTeam", "My Team")}</span>
@@ -3528,7 +3548,7 @@ export function HomeContent() {
 
             <button 
               onClick={() => setCurrentView("analytics")}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-left group ${currentView === "analytics" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "analytics" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
             >
               <BarChart3 size={14} className={`shrink-0 ${currentView === "analytics" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
               <span>{t("dash.analytics", "Analytics")}</span>
@@ -3536,7 +3556,7 @@ export function HomeContent() {
 
             <button 
               onClick={() => setCurrentView("communications")}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-left group ${currentView === "communications" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "communications" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
             >
               <Mail size={14} className={`shrink-0 ${currentView === "communications" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
               <span>{t("dash.communications", "Communications")}</span>
@@ -3544,7 +3564,7 @@ export function HomeContent() {
 
             <button 
               onClick={() => setCurrentView("certificates")}
-              className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-left group ${currentView === "certificates" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+              className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "certificates" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
             >
               <div className="flex items-center gap-2">
                 <Award size={14} className={`shrink-0 ${currentView === "certificates" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
@@ -3557,7 +3577,7 @@ export function HomeContent() {
 
             <button 
               onClick={() => setCurrentView("developers")}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-left group ${currentView === "developers" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "developers" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
             >
               <Code2 size={14} className={`shrink-0 ${currentView === "developers" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
               <span>{t("dash.developers", "Developers & API")}</span>
