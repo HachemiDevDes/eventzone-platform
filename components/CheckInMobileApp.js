@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { useLanguage } from "../lib/i18n";
 import {
   QrCode,
   Users,
@@ -16,6 +17,7 @@ import {
   ShieldCheck,
   Check,
   ChevronRight,
+  ChevronDown,
   User,
   UserCheck,
   Building,
@@ -27,14 +29,78 @@ import {
   EyeOff,
   Undo2,
   Info,
+  Globe,
 } from "lucide-react";
 import CheckInScanner from "./CheckInScanner";
 
 const SESSION_STORAGE_KEY = "ez_checkin_session";
 
+function CheckInLanguageToggle({ lang, setLang, languages, isRTL, isLight = false }) {
+  const [open, setOpen] = useState(false);
+  const curLang = languages.find((l) => l.code === lang) || languages[0];
+
+  return (
+    <div className="relative shrink-0">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className={`h-8 flex items-center gap-1.5 px-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer shadow-xs ${
+          isLight
+            ? "border-white/10 bg-slate-900/80 hover:bg-slate-800 text-slate-200"
+            : "border-white/10 bg-white/5 hover:bg-white/10 text-slate-300"
+        }`}
+        title="Change Language"
+      >
+        <img
+          src={curLang?.icon || "https://i.imgur.com/NXtMImD.png"}
+          alt={lang}
+          className="w-4 h-4 object-contain shrink-0"
+        />
+        <span className="uppercase tracking-wider font-black text-[10px]">{curLang?.short || lang}</span>
+        <ChevronDown size={12} className={`text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div
+            className={`absolute top-full ${
+              isRTL ? "left-0" : "right-0"
+            } mt-1.5 w-36 bg-slate-900 border border-white/15 rounded-2xl shadow-2xl p-1 z-50 space-y-0.5 animate-in fade-in zoom-in-95 duration-100`}
+          >
+            {languages.map((item) => (
+              <button
+                key={item.code}
+                type="button"
+                onClick={() => {
+                  setLang(item.code);
+                  setOpen(false);
+                }}
+                className={`w-full text-start px-2.5 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
+                  lang === item.code
+                    ? "bg-blue-600/20 text-blue-400 font-bold border border-blue-500/30"
+                    : "text-slate-300 hover:bg-white/5"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <img src={item.icon} alt={item.code} className="w-4 h-4 object-contain shrink-0" />
+                  <span>{item.label}</span>
+                </div>
+                {lang === item.code && <Check size={12} className="text-blue-400 shrink-0" />}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function CheckInMobileApp({
   initialEventId = "",
 }) {
+  const { t, lang, setLang, isRTL, languages } = useLanguage();
+
   // Session / Auth state
   const [session, setSession] = useState(null);
   const [authEmail, setAuthEmail] = useState("");
@@ -80,7 +146,7 @@ export default function CheckInMobileApp({
   const handleLogin = async (e) => {
     if (e) e.preventDefault();
     if (!authEmail.trim() || !authPasscode.trim()) {
-      setAuthError("Please enter both your staff email and the event passcode.");
+      setAuthError(t("checkin.validationRequired", "Please enter both your staff email and the event passcode."));
       return;
     }
 
@@ -101,7 +167,7 @@ export default function CheckInMobileApp({
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        setAuthError(data.error || "Invalid passcode or email. Please check with the organizer.");
+        setAuthError(data.error || t("checkin.authFailed", "Invalid passcode or email. Please check with the organizer."));
         return;
       }
 
@@ -116,13 +182,18 @@ export default function CheckInMobileApp({
         localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(newSession));
       } catch {}
 
-      showToast(`Welcome ${data.staff?.name || "Staff"}! Check-in desk ready.`);
+      showToast(
+        t("checkin.welcomeStaff", "Welcome {name}! Check-in desk ready.").replace(
+          "{name}",
+          data.staff?.name || t("checkin.defaultStaff", "Staff")
+        )
+      );
       if (newSession.eventId) {
         loadAttendees(newSession.eventId, newSession);
       }
     } catch (err) {
       console.error("Login error:", err);
-      setAuthError("Unable to connect to the check-in server. Please try again.");
+      setAuthError(t("checkin.connectionError", "Unable to connect to the check-in server. Please try again."));
     } finally {
       setAuthLoading(false);
     }
@@ -301,9 +372,20 @@ export default function CheckInMobileApp({
   // ─────────────────────────────────────────────
   if (!session) {
     return (
-      <div className="min-h-[100dvh] w-full bg-slate-950 text-slate-100 flex flex-col justify-between p-5 select-none font-sans">
+      <div className="min-h-[100dvh] w-full bg-slate-950 text-slate-100 flex flex-col justify-between p-5 select-none font-sans relative" dir={isRTL ? "rtl" : "ltr"}>
+        {/* Top Floating Language Switcher */}
+        <div className={`absolute top-4 ${isRTL ? "left-4" : "right-4"} z-20`}>
+          <CheckInLanguageToggle
+            lang={lang}
+            setLang={setLang}
+            languages={languages}
+            isRTL={isRTL}
+            isLight={true}
+          />
+        </div>
+
         {/* Top Branding */}
-        <div className="pt-10 pb-4 text-center">
+        <div className="pt-8 pb-4 text-center">
           <div className="flex items-center justify-center mb-4">
             <img
               src="/eventzone-logo-white.png"
@@ -319,10 +401,12 @@ export default function CheckInMobileApp({
 
         {/* Login Form Card */}
         <div className="w-full max-w-sm mx-auto bg-slate-900/90 border border-white/10 rounded-3xl p-6 sm:p-7 shadow-2xl backdrop-blur-xl">
-          <div className="mb-6 text-center sm:text-left">
-            <h2 className="text-lg font-black text-white tracking-tight">Staff Sign In</h2>
+          <div className="mb-6 text-center sm:text-start rtl:text-right text-left">
+            <h2 className="text-lg font-black text-white tracking-tight">
+              {t("checkin.portalTitle", "Gate Desk Check-In")}
+            </h2>
             <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-              Enter your email and the passcode provided by the organizer.
+              {t("checkin.portalSubtitle", "Enter your staff credentials and event passcode to start scanning tickets and checking in delegates.")}
             </p>
           </div>
 
@@ -336,51 +420,51 @@ export default function CheckInMobileApp({
           <form onSubmit={handleLogin} className="space-y-4">
             {/* Email Field */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Staff Email
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5 text-start rtl:text-right text-left">
+                {t("checkin.staffEmail", "Staff Email Address")}
               </label>
               <div className="relative">
                 <Mail
                   size={17}
-                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+                  className={`absolute ${isRTL ? "right-3.5" : "left-3.5"} top-1/2 -translate-y-1/2 text-slate-400`}
                 />
                 <input
                   type="email"
                   required
                   autoCapitalize="none"
                   autoCorrect="off"
-                  placeholder="your.email@example.com"
+                  placeholder={t("checkin.staffEmailPlaceholder", "your.email@example.com")}
                   value={authEmail}
                   onChange={(e) => setAuthEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3.5 bg-slate-950 border border-white/10 rounded-2xl text-sm font-medium text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                  className={`w-full ${isRTL ? "pr-10 pl-4 text-right" : "pl-10 pr-4 text-left"} py-3.5 bg-slate-950 border border-white/10 rounded-2xl text-sm font-medium text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all`}
                 />
               </div>
             </div>
 
             {/* Passcode Field */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Event Passcode
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5 text-start rtl:text-right text-left">
+                {t("checkin.eventPasscode", "Event Passcode")}
               </label>
               <div className="relative">
                 <Lock
                   size={17}
-                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+                  className={`absolute ${isRTL ? "right-3.5" : "left-3.5"} top-1/2 -translate-y-1/2 text-slate-400`}
                 />
                 <input
                   type={showPasscode ? "text" : "password"}
                   required
                   autoCapitalize="characters"
                   autoCorrect="off"
-                  placeholder="Enter event passcode"
+                  placeholder={t("checkin.eventPasscodePlaceholder", "Enter event passcode")}
                   value={authPasscode}
                   onChange={(e) => setAuthPasscode(e.target.value.toUpperCase())}
-                  className="w-full pl-10 pr-11 py-3.5 bg-slate-950 border border-white/10 rounded-2xl text-sm font-mono font-bold tracking-widest text-white placeholder-slate-500 uppercase focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                  className={`w-full ${isRTL ? "pr-10 pl-11 text-right" : "pl-10 pr-11 text-left"} py-3.5 bg-slate-950 border border-white/10 rounded-2xl text-sm font-mono font-bold tracking-widest text-white placeholder-slate-500 uppercase focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPasscode(!showPasscode)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1 cursor-pointer"
+                  className={`absolute ${isRTL ? "left-3.5" : "right-3.5"} top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1 cursor-pointer`}
                 >
                   {showPasscode ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -396,10 +480,10 @@ export default function CheckInMobileApp({
               {authLoading ? (
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Connecting...</span>
+                  <span>{t("checkin.connecting", "Connecting...")}</span>
                 </div>
               ) : (
-                <span>Let&apos;s Scan</span>
+                <span>{t("checkin.letsScan", "Let's Scan")}</span>
               )}
             </button>
           </form>
@@ -408,7 +492,7 @@ export default function CheckInMobileApp({
         {/* Footer info */}
         <div className="py-4 text-center">
           <p className="text-[11px] text-slate-500">
-            Powered by Eventzone &bull; Secure On-Site Check-In
+            {t("checkin.poweredBy", "Powered by Eventzone • Secure On-Site Check-In")}
           </p>
         </div>
       </div>
@@ -419,7 +503,7 @@ export default function CheckInMobileApp({
   //  2. MAIN CHECK-IN INTERFACE
   // ─────────────────────────────────────────────
   return (
-    <div className="relative min-h-[100dvh] max-h-[100dvh] w-full flex flex-col bg-slate-900 text-slate-100 overflow-hidden font-sans">
+    <div className="relative min-h-[100dvh] max-h-[100dvh] w-full flex flex-col bg-slate-900 text-slate-100 overflow-hidden font-sans" dir={isRTL ? "rtl" : "ltr"}>
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed top-4 inset-x-4 z-50 flex justify-center pointer-events-none animate-in fade-in slide-in-from-top-4 duration-200">
@@ -444,10 +528,10 @@ export default function CheckInMobileApp({
           {/* Event Title & Subtitle */}
           <div className="min-w-0 flex-1">
             <h1 className="text-sm font-black text-white truncate">
-              {session.eventTitle || "Event Check-In"}
+              {session.eventTitle || t("checkin.eventTitleDefault", "Event Check-In")}
             </h1>
             <div className="flex items-center gap-2 text-[11px] text-slate-400">
-              <span className="truncate">{session.staffName || "Staff"}</span>
+              <span className="truncate">{session.staffName || t("checkin.defaultStaff", "Staff")}</span>
               <span>&bull;</span>
               <span className="font-mono text-emerald-400 font-bold">
                 {checkedInCount}/{totalCount}
@@ -455,11 +539,18 @@ export default function CheckInMobileApp({
             </div>
           </div>
 
-          {/* Action Buttons: Refresh & Logout */}
+          {/* Action Buttons: Language Selector, Refresh & Logout */}
           <div className="flex items-center gap-1.5">
+            <CheckInLanguageToggle
+              lang={lang}
+              setLang={setLang}
+              languages={languages}
+              isRTL={isRTL}
+            />
+
             <button
               onClick={() => loadAttendees(session.eventId)}
-              title="Sync Attendees"
+              title={t("checkin.syncAttendees", "Sync Attendees")}
               disabled={listLoading}
               className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 flex items-center justify-center cursor-pointer transition-colors"
             >
@@ -468,7 +559,7 @@ export default function CheckInMobileApp({
 
             <button
               onClick={handleLogout}
-              title="Sign Out"
+              title={t("checkin.signOut", "Sign Out")}
               className="w-8 h-8 rounded-xl bg-white/5 hover:bg-red-500/20 text-slate-400 hover:text-red-300 flex items-center justify-center cursor-pointer transition-colors"
             >
               <LogOut size={14} />
@@ -510,19 +601,19 @@ export default function CheckInMobileApp({
               <div className="relative">
                 <Search
                   size={16}
-                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                  className={`absolute ${isRTL ? "right-3.5" : "left-3.5"} top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none`}
                 />
                 <input
                   type="text"
-                  placeholder="Search attendee by name, email, badge..."
+                  placeholder={t("checkin.searchPlaceholder", "Search attendee by name, email, badge...")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-9 py-2.5 bg-slate-900 border border-white/10 rounded-xl text-xs font-medium text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  className={`w-full ${isRTL ? "pr-9 pl-9 text-right" : "pl-9 pr-9 text-left"} py-2.5 bg-slate-900 border border-white/10 rounded-xl text-xs font-medium text-white placeholder-slate-500 focus:outline-none focus:border-blue-500`}
                 />
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5 cursor-pointer"
+                    className={`absolute ${isRTL ? "left-3" : "right-3"} top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5 cursor-pointer`}
                   >
                     <X size={14} />
                   </button>
@@ -540,7 +631,7 @@ export default function CheckInMobileApp({
                       : "text-slate-400 hover:text-white"
                   }`}
                 >
-                  All ({totalCount})
+                  {t("checkin.filterAll", "All")} ({totalCount})
                 </button>
                 <button
                   type="button"
@@ -551,7 +642,7 @@ export default function CheckInMobileApp({
                       : "text-slate-400 hover:text-white"
                   }`}
                 >
-                  Remaining ({remainingCount})
+                  {t("checkin.filterRemaining", "Remaining")} ({remainingCount})
                 </button>
                 <button
                   type="button"
@@ -562,7 +653,7 @@ export default function CheckInMobileApp({
                       : "text-slate-400 hover:text-white"
                   }`}
                 >
-                  Checked ({checkedInCount})
+                  {t("checkin.filterChecked", "Checked")} ({checkedInCount})
                 </button>
               </div>
             </div>
@@ -572,14 +663,18 @@ export default function CheckInMobileApp({
               {listLoading && attendees.length === 0 ? (
                 <div className="py-12 text-center text-slate-400 text-xs">
                   <div className="w-6 h-6 mx-auto border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-2" />
-                  <span>Loading attendee roster...</span>
+                  <span>{t("checkin.loadingRoster", "Loading attendee roster...")}</span>
                 </div>
               ) : filteredAttendees.length === 0 ? (
                 <div className="py-12 text-center text-slate-500 text-xs px-4">
                   <Users size={32} className="mx-auto mb-2 text-slate-600" />
-                  <p className="font-semibold text-slate-300">No attendees found</p>
+                  <p className="font-semibold text-slate-300">
+                    {t("checkin.noAttendeesFound", "No attendees found")}
+                  </p>
                   <p className="mt-1 text-slate-500">
-                    {searchQuery ? "Try a different search term" : "No attendees registered yet"}
+                    {searchQuery
+                      ? t("checkin.tryDifferentSearch", "Try a different search term")
+                      : t("checkin.noAttendeesRegistered", "No attendees registered yet")}
                   </p>
                 </div>
               ) : (
@@ -600,17 +695,17 @@ export default function CheckInMobileApp({
                       <button
                         type="button"
                         onClick={() => setSelectedAttendee(attendee)}
-                        className="min-w-0 flex-1 text-left cursor-pointer group"
+                        className="min-w-0 flex-1 text-start rtl:text-right text-left cursor-pointer group"
                       >
                         <div className="flex items-center gap-1.5">
                           <h3 className="text-sm font-bold text-white truncate group-hover:text-blue-400 transition-colors">
-                            {attendee.name || "Attendee"}
+                            {attendee.name || t("checkin.defaultAttendeeName", "Attendee")}
                           </h3>
                         </div>
 
                         <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-slate-400 truncate">
                           <span className="font-semibold text-slate-300">
-                            {attendee.ticketType || attendee.ticket_type || "Standard"}
+                            {attendee.ticketType || attendee.ticket_type || t("checkin.defaultTicketType", "Standard")}
                           </span>
                           {attendee.company && (
                             <>
@@ -635,7 +730,7 @@ export default function CheckInMobileApp({
                             className="px-3 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25 active:scale-95 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all"
                           >
                             <Check size={14} className="stroke-[3]" />
-                            <span>Checked In</span>
+                            <span>{t("checkin.btnCheckedIn", "Checked In")}</span>
                           </button>
                         ) : (
                           <button
@@ -649,7 +744,7 @@ export default function CheckInMobileApp({
                             ) : (
                               <UserCheck size={14} />
                             )}
-                            <span>Check In</span>
+                            <span>{t("checkin.btnCheckIn", "Check In")}</span>
                           </button>
                         )}
                       </div>
@@ -676,7 +771,7 @@ export default function CheckInMobileApp({
             }`}
           >
             <QrCode size={18} />
-            <span>Scan QR</span>
+            <span>{t("checkin.tabScanQr", "Scan QR")}</span>
           </button>
 
           {/* Tab 2: Attendees List */}
@@ -690,7 +785,7 @@ export default function CheckInMobileApp({
             }`}
           >
             <Users size={18} />
-            <span>Attendees ({totalCount})</span>
+            <span>{t("checkin.tabAttendees", "Attendees")} ({totalCount})</span>
           </button>
         </div>
       </nav>
@@ -701,12 +796,12 @@ export default function CheckInMobileApp({
           <div className="bg-slate-900 border-t border-white/10 rounded-t-3xl p-5 max-h-[85dvh] overflow-y-auto space-y-4 animate-in slide-in-from-bottom duration-200">
             {/* Header */}
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 text-start rtl:text-right text-left">
                 <span className="text-[10px] font-black uppercase tracking-wider text-blue-400">
-                  Delegate Details
+                  {t("checkin.delegateDetails", "Delegate Details")}
                 </span>
                 <h2 className="text-lg font-black text-white truncate">
-                  {selectedAttendee.name || "Attendee"}
+                  {selectedAttendee.name || t("checkin.defaultAttendeeName", "Attendee")}
                 </h2>
               </div>
               <button
@@ -720,15 +815,15 @@ export default function CheckInMobileApp({
             {/* Info Items */}
             <div className="space-y-2.5 text-xs">
               <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-white/5">
-                <span className="text-slate-400">Ticket Tier:</span>
+                <span className="text-slate-400">{t("checkin.ticketTier", "Ticket Tier:")}</span>
                 <span className="font-bold text-white bg-slate-800 px-2.5 py-1 rounded-lg">
-                  {selectedAttendee.ticketType || selectedAttendee.ticket_type || "Standard"}
+                  {selectedAttendee.ticketType || selectedAttendee.ticket_type || t("checkin.defaultTicketType", "Standard")}
                 </span>
               </div>
 
               {selectedAttendee.email && (
                 <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-white/5">
-                  <span className="text-slate-400">Email:</span>
+                  <span className="text-slate-400">{t("checkin.email", "Email:")}</span>
                   <span className="font-medium text-slate-200 truncate max-w-[220px]">
                     {selectedAttendee.email}
                   </span>
@@ -737,7 +832,7 @@ export default function CheckInMobileApp({
 
               {selectedAttendee.company && (
                 <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-white/5">
-                  <span className="text-slate-400">Company:</span>
+                  <span className="text-slate-400">{t("checkin.company", "Company:")}</span>
                   <span className="font-bold text-white truncate max-w-[220px]">
                     {selectedAttendee.company}
                   </span>
@@ -745,14 +840,14 @@ export default function CheckInMobileApp({
               )}
 
               <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-white/5">
-                <span className="text-slate-400">Badge Pass:</span>
+                <span className="text-slate-400">{t("checkin.badgePass", "Badge Pass:")}</span>
                 <span className="font-mono font-bold text-indigo-400">
                   {selectedAttendee.badgeCode || selectedAttendee.badge_code || "EZ-PASS"}
                 </span>
               </div>
 
               <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-white/5">
-                <span className="text-slate-400">Status:</span>
+                <span className="text-slate-400">{t("checkin.status", "Status:")}</span>
                 <span
                   className={`font-bold px-2.5 py-0.5 rounded-md ${
                     selectedAttendee.checkedIn || selectedAttendee.checked_in
@@ -761,8 +856,8 @@ export default function CheckInMobileApp({
                   }`}
                 >
                   {selectedAttendee.checkedIn || selectedAttendee.checked_in
-                    ? "Checked In"
-                    : "Registered (Pending Arrival)"}
+                    ? t("checkin.statusCheckedIn", "Checked In")
+                    : t("checkin.statusRegistered", "Registered (Pending Arrival)")}
                 </span>
               </div>
 
@@ -770,11 +865,13 @@ export default function CheckInMobileApp({
                 <div className="flex items-center gap-2 text-xs text-slate-400 p-2">
                   <Clock size={14} className="text-slate-500" />
                   <span>
-                    Checked in at{" "}
-                    {new Date(selectedAttendee.checkedInAt).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    {t("checkin.checkedInAtTime", "Checked in at {time}").replace(
+                      "{time}",
+                      new Date(selectedAttendee.checkedInAt).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    )}
                   </span>
                 </div>
               )}
@@ -792,7 +889,7 @@ export default function CheckInMobileApp({
                   className="w-full py-3.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Undo2 size={16} />
-                  <span>Undo Check-In</span>
+                  <span>{t("checkin.btnUndoCheckin", "Undo Check-In")}</span>
                 </button>
               ) : (
                 <button
@@ -804,7 +901,7 @@ export default function CheckInMobileApp({
                   className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-sm shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <CheckCircle2 size={18} />
-                  <span>Check In Delegate</span>
+                  <span>{t("checkin.btnCheckinDelegate", "Check In Delegate")}</span>
                 </button>
               )}
             </div>
@@ -819,9 +916,14 @@ export default function CheckInMobileApp({
             <div className="w-12 h-12 mx-auto rounded-2xl bg-amber-500/15 text-amber-400 flex items-center justify-center mb-3">
               <Undo2 size={24} />
             </div>
-            <h3 className="text-base font-bold text-white">Undo Check-In?</h3>
+            <h3 className="text-base font-bold text-white">
+              {t("checkin.undoTitle", "Undo Check-In?")}
+            </h3>
             <p className="text-xs text-slate-400 mt-1 mb-5">
-              Reset check-in status for <strong>{undoAttendee.name}</strong>?
+              {t("checkin.undoConfirmText", "Reset check-in status for {name}?").replace(
+                "{name}",
+                undoAttendee.name || t("checkin.defaultAttendeeName", "Attendee")
+              )}
             </p>
             <div className="grid grid-cols-2 gap-2.5">
               <button
@@ -829,14 +931,14 @@ export default function CheckInMobileApp({
                 onClick={() => setUndoAttendee(null)}
                 className="py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs cursor-pointer"
               >
-                Cancel
+                {t("checkin.btnCancel", "Cancel")}
               </button>
               <button
                 type="button"
                 onClick={() => handleToggleCheckin(undoAttendee, false)}
                 className="py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-md shadow-red-600/30 cursor-pointer"
               >
-                Yes, Undo
+                {t("checkin.btnYesUndo", "Yes, Undo")}
               </button>
             </div>
           </div>

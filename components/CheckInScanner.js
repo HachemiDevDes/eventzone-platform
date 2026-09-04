@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import jsQR from "jsqr";
+import { useLanguage } from "../lib/i18n";
 import {
   Camera,
   CameraOff,
@@ -65,14 +66,13 @@ function playAudioFeedback(type = "success") {
       osc.start(now);
       osc.stop(now + 0.35);
     } else {
-      // Error buzz (low sawtooth)
+      // Low buzz for unrecognized/invalid pass
       const now = ctx.currentTime;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = "sawtooth";
-      osc.frequency.setValueAtTime(220, now);
-      osc.frequency.setValueAtTime(146.83, now + 0.08);
-      gain.gain.setValueAtTime(0.35, now);
+      osc.frequency.setValueAtTime(150.0, now);
+      gain.gain.setValueAtTime(0.3, now);
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
       osc.connect(gain);
       gain.connect(ctx.destination);
@@ -114,6 +114,7 @@ export default function CheckInScanner({
   onSwitchToList,
   onClose,
 }) {
+  const { t, isRTL } = useLanguage();
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
@@ -219,7 +220,7 @@ export default function CheckInScanner({
           setActiveResult({
             status: "success",
             attendee: data.attendee,
-            message: data.message || "Attendance Confirmed!",
+            message: data.message || t("checkin.statusConfirmed", "Attendance Confirmed!"),
             checkedInAt: data.attendee?.checkedInAt || new Date().toISOString(),
             rawScanned: code,
           });
@@ -231,7 +232,7 @@ export default function CheckInScanner({
           setActiveResult({
             status: "already_checked_in",
             attendee: data.attendee,
-            message: "Already Checked In",
+            message: t("checkin.alreadyCheckedInMsg", "Already Checked In"),
             checkedInAt: data.checkedInAt || data.attendee?.checkedInAt || new Date().toISOString(),
             checkedInBy: data.checkedInBy || "Gate Staff",
             rawScanned: code,
@@ -242,7 +243,7 @@ export default function CheckInScanner({
           setActiveResult({
             status: "invalid",
             attendee: null,
-            message: data.message || "Invalid ticket pass for this event.",
+            message: data.message || t("checkin.statusInvalid", "Invalid ticket pass for this event."),
             rawScanned: code,
           });
         }
@@ -252,14 +253,14 @@ export default function CheckInScanner({
         setActiveResult({
           status: "invalid",
           attendee: null,
-          message: "Network error during pass verification. Please try again.",
+          message: t("checkin.connectionError", "Network error during pass verification. Please try again."),
           rawScanned: code,
         });
       } finally {
         setIsProcessing(false);
       }
     },
-    [eventId, isProcessing, onScanResult, staffEmail, staffName, startAutoNextCountdown]
+    [eventId, isProcessing, onScanResult, staffEmail, staffName, startAutoNextCountdown, t]
   );
 
   const scanVideoFrameRef = useRef(null);
@@ -532,7 +533,7 @@ export default function CheckInScanner({
 
             {/* Hint below target */}
             <div className="mt-6 px-4 py-1.5 rounded-full bg-slate-950/75 border border-white/10 text-[11px] font-semibold text-slate-300 backdrop-blur-md shadow-lg">
-              Point camera at delegate QR code
+              {t("checkin.scannerPointCamera", "Point camera at delegate QR code")}
             </div>
           </div>
         )}
@@ -543,9 +544,11 @@ export default function CheckInScanner({
             <div className="w-14 h-14 mx-auto rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center mb-4 shadow-inner">
               <CameraOff size={28} />
             </div>
-            <h3 className="text-base font-black text-white mb-2">Camera Access Required</h3>
+            <h3 className="text-base font-black text-white mb-2">
+              {t("checkin.cameraAccessRequired", "Camera Access Required")}
+            </h3>
             <p className="text-xs text-slate-300 mb-5 leading-relaxed">
-              {errorMessage || "Please enable camera access in your browser settings to scan QR passes."}
+              {errorMessage || t("checkin.cameraAccessDesc", "Please enable camera access in your browser settings to scan QR passes.")}
             </p>
 
             <div className="space-y-2.5">
@@ -554,7 +557,7 @@ export default function CheckInScanner({
                 className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white rounded-2xl font-bold text-xs shadow-lg shadow-blue-600/30 transition-all cursor-pointer flex items-center justify-center gap-2"
               >
                 <RefreshCw size={15} />
-                Try Enabling Camera
+                <span>{t("checkin.btnEnableCamera", "Try Enabling Camera")}</span>
               </button>
 
               {onSwitchToList && (
@@ -562,7 +565,7 @@ export default function CheckInScanner({
                   onClick={onSwitchToList}
                   className="w-full pt-2 text-[11px] font-bold text-blue-400 hover:text-blue-300 underline cursor-pointer"
                 >
-                  Browse Full Attendee List &rarr;
+                  {t("checkin.browseAttendeeList", "Browse Full Attendee List")} &rarr;
                 </button>
               )}
             </div>
@@ -574,7 +577,9 @@ export default function CheckInScanner({
           <div className="absolute z-30 inset-0 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center animate-fade-in">
             <div className="bg-slate-900 border border-white/15 px-6 py-4 rounded-3xl flex items-center gap-3.5 shadow-2xl">
               <div className="w-5 h-5 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
-              <span className="text-sm font-black text-white">Verifying delegate pass...</span>
+              <span className="text-sm font-black text-white">
+                {t("checkin.verifyingPass", "Verifying delegate pass...")}
+              </span>
             </div>
           </div>
         )}
@@ -622,16 +627,16 @@ export default function CheckInScanner({
                   >
                     {activeResult.status === "success" && <Sparkles size={12} />}
                     {activeResult.status === "success"
-                      ? "Check-In Confirmed"
+                      ? t("checkin.statusConfirmed", "Check-In Confirmed")
                       : activeResult.status === "already_checked_in"
-                      ? "Duplicate Badge Scan"
-                      : "Invalid Pass / Scan Failed"}
+                      ? t("checkin.statusDuplicate", "Duplicate Badge Scan")
+                      : t("checkin.statusInvalid", "Invalid Pass / Scan Failed")}
                   </div>
 
                   <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
                     {activeResult.status === "invalid"
-                      ? "Unrecognized Ticket"
-                      : activeResult.attendee?.name || "Delegate"}
+                      ? t("checkin.unrecognizedTicket", "Unrecognized Ticket")
+                      : activeResult.attendee?.name || t("checkin.defaultAttendeeName", "Delegate")}
                   </h3>
 
                   {activeResult.status === "invalid" && (
@@ -642,7 +647,7 @@ export default function CheckInScanner({
 
                   {activeResult.status === "already_checked_in" && (
                     <p className="text-xs text-amber-300 mt-1 max-w-xs mx-auto">
-                      {activeResult.message || "This attendee was already checked in earlier."}
+                      {activeResult.message || t("checkin.alreadyCheckedInMsg", "This attendee was already checked in earlier.")}
                     </p>
                   )}
                 </div>
@@ -655,10 +660,10 @@ export default function CheckInScanner({
                   <div className="flex items-center justify-between pb-2 border-b border-white/10">
                     <span className="flex items-center gap-1.5 font-semibold text-slate-400">
                       <Ticket size={14} className="text-blue-400" />
-                      Ticket Tier:
+                      {t("checkin.ticketTier", "Ticket Tier:")}
                     </span>
                     <span className="font-black text-white bg-blue-500/20 border border-blue-400/30 px-2.5 py-1 rounded-lg text-xs">
-                      {activeResult.attendee.ticketType || activeResult.attendee.ticket_type || "Standard Admission"}
+                      {activeResult.attendee.ticketType || activeResult.attendee.ticket_type || t("checkin.defaultTicketType", "Standard Admission")}
                     </span>
                   </div>
 
@@ -667,7 +672,7 @@ export default function CheckInScanner({
                     <div className="flex items-center justify-between">
                       <span className="flex items-center gap-1.5 font-semibold text-slate-400">
                         <Mail size={14} className="text-slate-400" />
-                        Email:
+                        {t("checkin.email", "Email:")}
                       </span>
                       <span className="font-medium text-white truncate max-w-[190px]">
                         {activeResult.attendee.email}
@@ -680,7 +685,7 @@ export default function CheckInScanner({
                     <div className="flex items-center justify-between">
                       <span className="flex items-center gap-1.5 font-semibold text-slate-400">
                         <Building size={14} className="text-slate-400" />
-                        Company:
+                        {t("checkin.company", "Company:")}
                       </span>
                       <span className="font-bold text-white truncate max-w-[190px]">
                         {activeResult.attendee.company}
@@ -690,7 +695,7 @@ export default function CheckInScanner({
 
                   {/* Badge Code */}
                   <div className="flex items-center justify-between pt-1">
-                    <span className="font-semibold text-slate-400">Badge Code:</span>
+                    <span className="font-semibold text-slate-400">{t("checkin.badgePass", "Badge Code:")}</span>
                     <span className="font-mono font-bold text-emerald-400 text-xs">
                       {activeResult.attendee.badgeCode || activeResult.attendee.badge_code || "EZ-PASS"}
                     </span>
@@ -700,7 +705,7 @@ export default function CheckInScanner({
                   {activeResult.checkedInAt && (
                     <div className="flex items-center justify-between pt-1 text-[11px] text-slate-400 border-t border-white/5">
                       <span className="flex items-center gap-1">
-                        <Clock size={12} /> Check-in Time:
+                        <Clock size={12} /> {t("checkin.checkinTime", "Check-in Time:")}
                       </span>
                       <span className="font-mono text-slate-200">
                         {new Date(activeResult.checkedInAt).toLocaleTimeString([], {
@@ -717,7 +722,7 @@ export default function CheckInScanner({
                 activeResult.rawScanned && (
                   <div className="bg-slate-950/80 rounded-2xl p-3.5 border border-white/10 mb-5 text-center shadow-inner">
                     <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
-                      Scanned Content:
+                      {t("checkin.scannedContent", "Scanned Content:")}
                     </span>
                     <p className="font-mono text-xs text-red-300 break-all bg-red-950/40 p-2 rounded-xl border border-red-900/40">
                       {activeResult.rawScanned.slice(0, 90)}
@@ -750,7 +755,11 @@ export default function CheckInScanner({
                       : "bg-blue-600 hover:bg-blue-500 text-white shadow-blue-600/30"
                   }`}
                 >
-                  <span>{activeResult.status === "invalid" ? "Try Scanning Again" : "Scan Next Delegate"}</span>
+                  <span>
+                    {activeResult.status === "invalid"
+                      ? t("checkin.btnTryAgain", "Try Scanning Again")
+                      : t("checkin.btnScanNext", "Scan Next Delegate")}
+                  </span>
                   <ArrowRight size={18} />
                 </button>
 
@@ -762,7 +771,7 @@ export default function CheckInScanner({
                     }}
                     className="w-full py-3 bg-white/5 hover:bg-white/10 text-slate-300 rounded-2xl font-bold text-xs transition-colors cursor-pointer"
                   >
-                    Search Attendee Manually
+                    {t("checkin.btnSearchManual", "Search Attendee Manually")}
                   </button>
                 )}
               </div>
