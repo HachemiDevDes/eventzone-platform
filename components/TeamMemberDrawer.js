@@ -148,14 +148,14 @@ export default function TeamMemberDrawer({
         const defaultPreset = ROLE_PRESETS.find(p => p.id === "Registration") || ROLE_PRESETS[1];
         setPermissions({ ...defaultPreset.permissions });
         setSelectedPreset(defaultPreset.id);
-        setRole(defaultPreset.roleName);
+        setRole(t(`preset.${defaultPreset.id}.roleName`, defaultPreset.roleName));
         setSendInviteEmail(true);
         setInviteNote("");
       }
       setErrorMessage("");
       setIsSubmitting(false);
     }
-  }, [isOpen, member]);
+  }, [isOpen, member, t]);
 
   // Apply Role Preset
   const handleSelectPreset = (presetId) => {
@@ -164,7 +164,7 @@ export default function TeamMemberDrawer({
     if (preset) {
       if (presetId !== "Custom") {
         setPermissions({ ...preset.permissions });
-        setRole(preset.roleName);
+        setRole(t(`preset.${preset.id}.roleName`, preset.roleName));
       }
     }
   };
@@ -349,13 +349,19 @@ export default function TeamMemberDrawer({
 
             {/* Quick Pill Indicator */}
             <div className="hidden sm:flex items-center gap-2 text-[11px] font-semibold text-slate-500">
-              <span className="flex items-center gap-1 text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
-                <bdi dir="ltr">{summary.editorCount}</bdi> <span>{t("team.editorPill", "Editor")}</span>
+              <span className="flex items-center gap-1.5 text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse shrink-0"></span>
+                <span className="inline-flex items-center gap-1">
+                  <bdi dir="ltr">{summary.editorCount}</bdi>
+                  <span>{t("team.editorPill", "Editor")}</span>
+                </span>
               </span>
-              <span className="flex items-center gap-1 text-sky-700 font-bold bg-sky-50 px-2 py-0.5 rounded-md">
-                <span className="w-1.5 h-1.5 rounded-full bg-sky-500"></span>
-                <bdi dir="ltr">{summary.viewerCount}</bdi> <span>{t("team.viewerPill", "Viewer")}</span>
+              <span className="flex items-center gap-1.5 text-sky-700 font-bold bg-sky-50 px-2 py-0.5 rounded-md">
+                <span className="w-1.5 h-1.5 rounded-full bg-sky-500 shrink-0"></span>
+                <span className="inline-flex items-center gap-1">
+                  <bdi dir="ltr">{summary.viewerCount}</bdi>
+                  <span>{t("team.viewerPill", "Viewer")}</span>
+                </span>
               </span>
             </div>
           </div>
@@ -664,7 +670,7 @@ export default function TeamMemberDrawer({
                         { value: "Pending Invite", label: t("team.statusPendingInvite", "Pending Invite / Email Sent") },
                         { value: "Archived", label: t("team.statusArchivedMember", "Archived / Inactive") }
                       ]}
-                      placeholder="-- Select Status --"
+                      placeholder={t("team.selectStatusPlaceholder", "-- Select Status --")}
                       isClearable={false}
                     />
                   </div>

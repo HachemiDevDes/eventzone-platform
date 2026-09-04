@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { ChevronDown, Search, Check } from "lucide-react";
+import { useLanguage } from "../lib/i18n";
 
 export const COUNTRIES = [
   { code: "AF", name: "Afghanistan", dial: "+93", sample: "70 123 4567" },
@@ -220,6 +221,7 @@ export default function CountryPhoneInput({
   inputClassName = "",
   defaultCountry = "DZ"
 }) {
+  const { t, isRTL } = useLanguage ? useLanguage() : { t: (k, d) => d, isRTL: false };
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const dropdownRef = useRef(null);
@@ -293,14 +295,16 @@ export default function CountryPhoneInput({
           type="button"
           disabled={disabled}
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-1.5 px-3 py-2 border-r border-slate-200 bg-slate-100/80 hover:bg-slate-200/70 rounded-l-xl text-xs font-bold text-slate-800 transition-colors cursor-pointer select-none shrink-0"
+          className="flex items-center gap-1.5 px-3 py-2 border-e border-slate-200 bg-slate-100/80 hover:bg-slate-200/70 rounded-s-xl text-xs font-bold text-slate-800 transition-colors cursor-pointer select-none shrink-0"
           title={`Selected: ${selectedCountry.name} (${selectedCountry.dial})`}
         >
-          <span className="text-[11px] font-extrabold text-slate-500 tracking-wider uppercase">
-            {selectedCountry.code}
-          </span>
-          <span className="text-xs font-bold text-slate-800">
-            {selectedCountry.dial}
+          <span dir="ltr" className="inline-flex items-center gap-1">
+            <span className="text-[11px] font-extrabold text-slate-500 tracking-wider uppercase">
+              {selectedCountry.code}
+            </span>
+            <span className="text-xs font-bold text-slate-800 font-mono">
+              {"\u200E" + selectedCountry.dial}
+            </span>
           </span>
           <ChevronDown size={12} className={`text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
         </button>
@@ -308,6 +312,7 @@ export default function CountryPhoneInput({
         {/* National Number Input */}
         <input
           type="tel"
+          dir="ltr"
           id={id}
           name={name}
           required={required}
@@ -315,7 +320,7 @@ export default function CountryPhoneInput({
           value={nationalNumber}
           onChange={handleNumberChange}
           placeholder={placeholder || selectedCountry.sample}
-          className={`flex-1 min-w-0 px-3.5 py-2 bg-transparent text-xs font-semibold text-slate-900 placeholder:text-slate-400 outline-none ${inputClassName}`}
+          className={`flex-1 min-w-0 px-3.5 py-2 bg-transparent text-xs font-semibold text-slate-900 placeholder:text-slate-400 outline-none text-start ${inputClassName}`}
         />
       </div>
 
@@ -323,7 +328,7 @@ export default function CountryPhoneInput({
       {isOpen && (
         <div
           ref={dropdownRef}
-          className="absolute left-0 top-full mt-1.5 w-72 max-h-72 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 flex flex-col overflow-hidden animate-scale-up"
+          className="absolute start-0 top-full mt-1.5 w-72 max-h-72 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 flex flex-col overflow-hidden animate-scale-up"
         >
           {/* Search Header */}
           <div className="p-2 border-b border-slate-100 bg-slate-50/50">
@@ -333,7 +338,7 @@ export default function CountryPhoneInput({
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search country or code..."
+                placeholder={t ? t("common.searchCountryCode", "Search country or code...") : "Search country or code..."}
                 className="w-full text-xs font-medium text-slate-800 placeholder:text-slate-400 outline-none bg-transparent"
                 autoFocus
               />
@@ -343,7 +348,7 @@ export default function CountryPhoneInput({
           {/* Country List - Clean text without flags */}
           <div className="overflow-y-auto p-1.5 space-y-0.5 max-h-56">
             {filteredCountries.length === 0 ? (
-              <div className="text-center py-4 text-xs text-slate-400">No country found</div>
+              <div className="text-center py-4 text-xs text-slate-400">{t ? t("common.noCountryFound", "No country found") : "No country found"}</div>
             ) : (
               filteredCountries.map(c => {
                 const isSelected = c.code === selectedCountry.code;
@@ -352,7 +357,7 @@ export default function CountryPhoneInput({
                     key={`${c.code}-${c.dial}`}
                     type="button"
                     onClick={() => handleCountrySelect(c)}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs text-left transition-colors cursor-pointer ${
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs text-start rtl:text-right text-left transition-colors cursor-pointer ${
                       isSelected
                         ? "bg-blue-50 text-blue-700 font-bold"
                         : "text-slate-700 hover:bg-slate-50"
@@ -363,7 +368,7 @@ export default function CountryPhoneInput({
                       <span className="truncate text-slate-800 font-medium">{c.name}</span>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
-                      <span className="text-[11px] font-semibold text-slate-500 font-mono">{c.dial}</span>
+                      <bdi dir="ltr" className="text-[11px] font-semibold text-slate-500 font-mono">{c.dial}</bdi>
                       {isSelected && <Check size={13} className="text-blue-600" />}
                     </div>
                   </button>
