@@ -567,23 +567,58 @@ function getLocalizedTriggerDef(triggerDef, t) {
   if (!triggerDef) return triggerDef;
   const triggerMap = {
     trigger_ticket_pass: {
-      title: t("comm.triggerTicketPassTitle", "1. Instant Ticket Registration Pass & PDF Badge"),
+      index: 1,
+      titleClean: t("comm.triggerTicketPassClean", "Instant Ticket Registration Pass & PDF Badge"),
+      trigger: t("comm.triggerDescTicket", "Triggered instantly when a visitor purchases a ticket or organizer approves an attendee application."),
+      features: [
+        t("comm.featQrPass", "Scannable mobile check-in QR pass"),
+        t("comm.featBadgePdf", "Official A6 badge PDF attachment"),
+        t("comm.featArrivalChecklist", "Venue arrival checklist"),
+        t("comm.featCustomForm", "Custom dynamic form intake link")
+      ]
     },
     trigger_rsvp_confirmation: {
-      title: t("comm.triggerRsvpTitle", "2. RSVP Confirmation & Door Access QR"),
+      index: 2,
+      titleClean: t("comm.triggerRsvpClean", "RSVP Confirmation & Door Access QR"),
+      trigger: t("comm.triggerDescRsvp", "Triggered when a guest confirms RSVP on the public event landing page."),
+      features: [
+        t("comm.featDoorQr", "Door check-in QR code"),
+        t("comm.featSpecialRequests", "Dietary & special request confirmation"),
+        t("comm.featGpsDates", "Venue GPS coordinates & dates"),
+        t("comm.featCalInvite", "Calendar invitation link")
+      ]
     },
     trigger_exhibitor_briefing: {
-      title: t("comm.triggerExhibitorTitle", "3. Exhibitor Space Allocation Packet"),
+      index: 3,
+      titleClean: t("comm.triggerExhibitorClean", "Exhibitor Space Allocation Packet"),
+      trigger: t("comm.triggerDescExhibitor", "Dispatched from the Interactive 2D Floor Plan tool when assigning booths to exhibitors."),
+      features: [
+        t("comm.featBoothNumber", "Booth number & zone reference"),
+        t("comm.featSetupWindow", "Technical setup window times"),
+        t("comm.featLoadingBay", "Loading bay access rules"),
+        t("comm.featFloorPlanPdf", "Exhibitor floor plan PDF")
+      ]
     },
     trigger_team_invite: {
-      title: t("comm.triggerTeamInviteTitle", "4. Organizer Team & Staff Invite"),
+      index: 4,
+      titleClean: t("comm.triggerTeamInviteClean", "Organizer Team & Staff Invite"),
+      trigger: t("comm.triggerDescTeam", "Dispatched when inviting new staff or volunteers in the Team Management Center."),
+      features: [
+        t("comm.featStaffRoleBadge", "Role & zone assignment badge"),
+        t("comm.featPortalCredentials", "Staff portal access credentials"),
+        t("comm.featShiftSchedule", "On-site shift & briefing schedule"),
+        t("comm.featEmergencyContacts", "Emergency radio & staff contacts")
+      ]
     }
   };
   const loc = triggerMap[triggerDef.id];
   if (!loc) return triggerDef;
   return {
     ...triggerDef,
-    title: loc.title || triggerDef.title
+    index: loc.index,
+    titleClean: loc.titleClean,
+    trigger: loc.trigger || triggerDef.trigger,
+    features: loc.features || triggerDef.features
   };
 }
 
@@ -2082,7 +2117,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                   ref={bodyTextareaRef}
                   rows={9}
                   required
-                  placeholder="Write your email body here..."
+                  placeholder={t("comm.writeEmailBodyPlaceholder", "Write your email body here...")}
                   value={body}
                   onFocus={() => setLastFocusedField("body")}
                   onChange={(e) => setBody(e.target.value)}
@@ -2989,7 +3024,10 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                 <div key={triggerDef.id} className="bg-white border border-slate-250/70 hover:border-blue-300 rounded-3xl p-6 shadow-sm flex flex-col justify-between gap-5 transition-all">
                   <div className="flex flex-col gap-3">
                     <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <span className="text-xs font-black text-slate-900">{config.title}</span>
+                      <span className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                        <bdi dir="ltr">{triggerDef.index || 1}.</bdi>
+                        <span>{triggerDef.titleClean || config.title}</span>
+                      </span>
                       <div className="flex items-center gap-1.5">
                         {config.isCustomized ? (
                           <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1">
@@ -3678,7 +3716,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="text-[11px] font-black uppercase tracking-wider text-slate-700 block mb-1.5">
-                          Template Name
+                          {t("comm.templateNameLabel", "Template Name")}
                         </label>
                         <input
                           type="text"
@@ -3690,17 +3728,17 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                       </div>
                       <div>
                         <label className="text-[11px] font-black uppercase tracking-wider text-slate-700 block mb-1.5">
-                          Category
+                          {t("comm.categoryLabel", "Category")}
                         </label>
                         <select
                           value={editModalCategory}
                           onChange={(e) => setEditModalCategory(e.target.value)}
                           className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-850 focus:border-blue-500 focus:outline-none cursor-pointer"
                         >
-                          <option value="attendees">Attendees & Passes</option>
-                          <option value="logistics">Logistics & Alerts</option>
-                          <option value="partners">Sponsors & Speakers</option>
-                          <option value="surveys">Surveys & Feedback</option>
+                          <option value="attendees">{t("comm.catAttendeesPasses", "Attendees & Passes")}</option>
+                          <option value="logistics">{t("comm.catLogisticsAlerts", "Logistics & Alerts")}</option>
+                          <option value="partners">{t("comm.catSponsorsSpeakers", "Sponsors & Speakers")}</option>
+                          <option value="surveys">{t("comm.catSurveysFeedback", "Surveys & Feedback")}</option>
                           <option value="custom">{t("comm.catCustomPresets", "Custom Presets")}</option>
                         </select>
                       </div>
@@ -3711,10 +3749,10 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
                       <label className="text-[11px] font-black uppercase tracking-wider text-slate-700">
-                        Subject Line
+                        {t("comm.subjectLineLabel", "Subject Line")}
                       </label>
                       <span className="text-[10px] font-bold text-slate-400">
-                        {editModalSubject.length} chars
+                        <bdi dir="ltr">{editModalSubject.length}</bdi> {t("comm.chars", "chars")}
                       </span>
                     </div>
                     <input
@@ -3739,7 +3777,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                       value={editModalPreheader}
                       onFocus={() => setEditModalLastFocused("preheader")}
                       onChange={(e) => setEditModalPreheader(e.target.value)}
-                      placeholder="e.g. Your official pass and fast-track access QR code inside."
+                      placeholder={t("comm.preheaderPlaceholder", "e.g. Your official pass and fast-track access QR code inside.")}
                       className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-850 focus:border-blue-500 focus:bg-white focus:outline-none"
                     />
                   </div>
@@ -3859,7 +3897,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-6">
                           <input
                             type="text"
-                            placeholder="Button Text"
+                            placeholder={t("comm.buttonTextPlaceholder", "Button Text")}
                             value={editModalFormBtnText}
                             onChange={(e) => setEditModalFormBtnText(e.target.value)}
                             className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold"
@@ -3890,14 +3928,14 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-6">
                           <input
                             type="text"
-                            placeholder="Button Text (e.g. View Floor Plan)"
+                            placeholder={t("comm.buttonTextFloorPlanPlaceholder", "Button Text (e.g. View Floor Plan)")}
                             value={editModalCustomBtnText}
                             onChange={(e) => setEditModalCustomBtnText(e.target.value)}
                             className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold"
                           />
                           <input
                             type="text"
-                            placeholder="Resource URL (e.g. https://...)"
+                            placeholder={t("comm.resourceUrlPlaceholder", "Resource URL (e.g. https://...)")}
                             value={editModalCustomBtnUrl}
                             onChange={(e) => setEditModalCustomBtnUrl(e.target.value)}
                             className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold"
@@ -3980,7 +4018,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                           {interpolateText(editModalSubject || "Event Announcement")}
                         </h5>
 
-                        <div className={`p-3.5 rounded-xl border leading-relaxed whitespace-pre-wrap ${
+                        <div dir="auto" className={`p-3.5 rounded-xl border leading-relaxed whitespace-pre-wrap ${
                           editModalPreviewTheme === "dark"
                             ? "bg-slate-800/80 border-slate-700/80 text-slate-200"
                             : "bg-slate-50/90 border-slate-200 text-slate-800"
@@ -4034,7 +4072,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                         <div className={`pt-3 border-t text-[10px] text-center ${
                           editModalPreviewTheme === "dark" ? "border-slate-800 text-slate-500" : "border-slate-100 text-slate-400"
                         }`}>
-                          Sent via <strong className="text-slate-600">Eventzone Platform</strong> • Organized by {eventDetails?.organizerName || currentUser?.name || "Eventzone"}
+                          {t("comm.sentVia", "Sent via")} <strong className="text-slate-600">Eventzone Platform</strong> • {t("comm.organizedBy", "Organized by")} {eventDetails?.organizerName || currentUser?.name || "Eventzone"}
                         </div>
                       </div>
                     </div>
@@ -4076,7 +4114,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                     onClick={() => setIsEditingTemplateModalOpen(false)}
                     className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl text-xs font-bold transition-colors cursor-pointer"
                   >
-                    Cancel
+                    {t("common.cancel", "Cancel")}
                   </button>
 
                   <button

@@ -125,7 +125,7 @@ export default function CertificatesView({
   onUploadFile,
   onSwitchView,
 }) {
-  const { t } = useLanguage();
+  const { t, lang, isRTL } = useLanguage();
 
   const {
     eventDetails = {},
@@ -210,6 +210,19 @@ export default function CertificatesView({
   const [customTemplateCategory, setCustomTemplateCategory] = useState("attendance");
   const [editingTemplateId, setEditingTemplateId] = useState(null);
   const [customTemplateFeedback, setCustomTemplateFeedback] = useState("");
+
+  const localizedCategories = useMemo(() => {
+    return CERTIFICATE_CATEGORIES.map(c => {
+      if (c.id === "all") return { ...c, label: t("common.all", "All") };
+      if (c.id === "academic") return { ...c, label: t("cert.catAcademic", "Academic & Scientific") };
+      if (c.id === "corporate") return { ...c, label: t("cert.catCorporate", "Corporate & Tech") };
+      if (c.id === "prestige") return { ...c, label: t("cert.catPrestige", "Prestige & Luxury") };
+      if (c.id === "minimalist") return { ...c, label: t("cert.catMinimalist", "Minimalist Modern") };
+      if (c.id === "custom") return { ...c, label: t("cert.catCustom", "Custom Artwork") };
+      if (c.id === "saved") return { ...c, label: t("cert.catSaved", "Saved Templates") };
+      return c;
+    });
+  }, [t]);
 
   // Load custom saved templates and restore active template from database / localStorage
   useEffect(() => {
@@ -1063,7 +1076,7 @@ export default function CertificatesView({
   }
 
   return (
-    <div className="space-y-6 animate-fade-in text-slate-800 pb-16">
+    <div className="space-y-6 animate-fade-in text-slate-800 pb-16" dir={isRTL ? "rtl" : "ltr"}>
       
       {/* ─────────────────────────────────────────────
           1. HEADER & GLOBAL ACTIONS
@@ -1071,10 +1084,10 @@ export default function CertificatesView({
       <header className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 select-none">
         <div>
           <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
-            {t("dash.certificates", "Certificates")}
+            {t("dash.certificates", "Certificates & Awards")}
           </h2>
           <p className="text-xs sm:text-sm text-slate-500">
-            Design custom certificates with instant A4 landscape batch printing for attendees, speakers, sponsors, and exhibitors.
+            {t("cert.subtitle", "Design custom certificates with instant A4 landscape batch printing for attendees, speakers, sponsors, and exhibitors.")}
           </p>
         </div>
 
@@ -1088,20 +1101,22 @@ export default function CertificatesView({
                 : "bg-white hover:bg-slate-50 text-slate-800 border-slate-200"
             }`}
           >
-            <span>{isSavingTemplate ? "Saving..." : templateSavedFeedback ? "Saved!" : "Save Template"}</span>
+            <span>{isSavingTemplate ? t("cert.savingBtn", "Saving...") : templateSavedFeedback ? t("cert.savedBtn", "Saved!") : t("cert.saveTemplateBtn", "Save Template")}</span>
           </button>
 
           <button
             onClick={handleOpenBatchEmailModal}
             disabled={isBatchSendingEmail || isBatchPrinting}
             className="bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 font-bold py-2 px-3.5 sm:px-4 rounded-xl text-xs border border-slate-200 shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
-            title="Send Certificates via Email"
+            title={t("cert.sendEmailTooltip", "Send Certificates via Email")}
           >
             <Mail size={14} className="text-blue-600" />
             <span>
-              {selectedRecipientIds.size > 0
-                ? `Email Selected (${selectedRecipientIds.size})`
-                : `Email All (${filteredRecipients.length})`}
+              {selectedRecipientIds.size > 0 ? (
+                <span>{t("cert.emailSelectedBtn", "Email Selected")} (<bdi dir="ltr">{selectedRecipientIds.size}</bdi>)</span>
+              ) : (
+                <span>{t("cert.emailAllBtn", "Email All")} (<bdi dir="ltr">{filteredRecipients.length}</bdi>)</span>
+              )}
             </span>
           </button>
 
@@ -1112,9 +1127,11 @@ export default function CertificatesView({
           >
             <Printer size={15} />
             <span>
-              {selectedRecipientIds.size > 0
-                ? `Print Selected (${selectedRecipientIds.size})`
-                : `Batch Print All (${filteredRecipients.length})`}
+              {selectedRecipientIds.size > 0 ? (
+                <span>{t("cert.printSelectedBtn", "Print Selected")} (<bdi dir="ltr">{selectedRecipientIds.size}</bdi>)</span>
+              ) : (
+                <span>{t("cert.batchPrintAllBtn", "Batch Print All")} (<bdi dir="ltr">{filteredRecipients.length}</bdi>)</span>
+              )}
             </span>
           </button>
         </div>
@@ -1135,11 +1152,11 @@ export default function CertificatesView({
               : "bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
           }`}
         >
-          <span>All Eligible</span>
+          <span>{t("cert.roleAllEligible", "All Eligible")}</span>
           <span className={`px-2 py-0.5 rounded-full text-[10.5px] font-extrabold ${
             roleFilter === "all" ? "bg-white/25 text-white" : "bg-slate-100 text-slate-600"
           }`}>
-            {allRecipients.length}
+            <bdi dir="ltr">{allRecipients.length}</bdi>
           </span>
         </button>
 
@@ -1153,11 +1170,11 @@ export default function CertificatesView({
               : "bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
           }`}
         >
-          <span>Attendees</span>
+          <span>{t("cert.roleAttendees", "Attendees")}</span>
           <span className={`px-2 py-0.5 rounded-full text-[10.5px] font-extrabold ${
             roleFilter === "attendees" ? "bg-white/25 text-white" : "bg-slate-100 text-slate-600"
           }`}>
-            {attendeeCount}
+            <bdi dir="ltr">{attendeeCount}</bdi>
           </span>
         </button>
 
@@ -1171,11 +1188,11 @@ export default function CertificatesView({
               : "bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
           }`}
         >
-          <span>Speakers</span>
+          <span>{t("cert.roleSpeakers", "Speakers")}</span>
           <span className={`px-2 py-0.5 rounded-full text-[10.5px] font-extrabold ${
             roleFilter === "speakers" ? "bg-white/25 text-white" : "bg-slate-100 text-slate-600"
           }`}>
-            {speakerCount}
+            <bdi dir="ltr">{speakerCount}</bdi>
           </span>
         </button>
 
@@ -1189,11 +1206,11 @@ export default function CertificatesView({
               : "bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
           }`}
         >
-          <span>Sponsors</span>
+          <span>{t("cert.roleSponsors", "Sponsors")}</span>
           <span className={`px-2 py-0.5 rounded-full text-[10.5px] font-extrabold ${
             roleFilter === "sponsors" ? "bg-white/25 text-white" : "bg-slate-100 text-slate-600"
           }`}>
-            {sponsorCount}
+            <bdi dir="ltr">{sponsorCount}</bdi>
           </span>
         </button>
 
@@ -1207,11 +1224,11 @@ export default function CertificatesView({
               : "bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
           }`}
         >
-          <span>Exhibitors</span>
+          <span>{t("cert.roleExhibitors", "Exhibitors")}</span>
           <span className={`px-2 py-0.5 rounded-full text-[10.5px] font-extrabold ${
             roleFilter === "exhibitors" ? "bg-white/25 text-white" : "bg-slate-100 text-slate-600"
           }`}>
-            {exhibitorCount}
+            <bdi dir="ltr">{exhibitorCount}</bdi>
           </span>
         </button>
 
@@ -1235,7 +1252,7 @@ export default function CertificatesView({
                   : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
               }`}
             >
-              <span>Content & Text</span>
+              <span>{t("cert.tabContent", "Content & Text")}</span>
               {editorTab === "content" && (
                 <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-blue-600" />
               )}
@@ -1249,7 +1266,7 @@ export default function CertificatesView({
                   : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
               }`}
             >
-              <span>Styling & Theme</span>
+              <span>{t("cert.tabStyling", "Styling & Theme")}</span>
               {editorTab === "styling" && (
                 <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-blue-600" />
               )}
@@ -1263,7 +1280,7 @@ export default function CertificatesView({
                   : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
               }`}
             >
-              <span>Signatures</span>
+              <span>{t("cert.tabSignatures", "Signatures")}</span>
               {editorTab === "signatures" && (
                 <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-blue-600" />
               )}
@@ -1277,7 +1294,7 @@ export default function CertificatesView({
                   : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
               }`}
             >
-              <span>Templates</span>
+              <span>{t("cert.tabTemplates", "Templates")}</span>
               {editorTab === "templates" && (
                 <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-blue-600" />
               )}
@@ -1292,9 +1309,9 @@ export default function CertificatesView({
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between px-1">
                   <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">
-                    Core Template Fields
+                    {t("cert.coreTemplateFields", "Core Template Fields")}
                   </span>
-                  <span className="text-[10px] text-slate-400 font-medium">3 Primary Sections</span>
+                  <span className="text-[10px] text-slate-400 font-medium"><bdi dir="ltr">3</bdi> {t("cert.primarySections", "Primary Sections")}</span>
                 </div>
 
                 {/* 1. Main Title Accordion */}
@@ -1305,8 +1322,8 @@ export default function CertificatesView({
                   >
                     <div className="min-w-0 pr-2">
                       <div className="text-xs font-bold text-slate-900 flex items-center gap-2 truncate">
-                        <span>Certificate Main Title</span>
-                        {activeTemplate.hideTitle && <span className="text-[9.5px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold border border-slate-200">Hidden</span>}
+                        <span>{t("cert.certificateMainTitle", "Certificate Main Title")}</span>
+                        {activeTemplate.hideTitle && <span className="text-[9.5px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold border border-slate-200">{t("cert.hiddenBadge", "Hidden")}</span>}
                       </div>
                       <div className="text-[11px] text-slate-500 font-medium truncate mt-0.5">
                         {activeTemplate.certificateTitle || "CERTIFICATE OF ATTENDANCE"}
@@ -1319,7 +1336,7 @@ export default function CertificatesView({
                           e.stopPropagation();
                           handleUpdateActiveTemplate("hideTitle", !activeTemplate.hideTitle);
                         }}
-                        title={activeTemplate.hideTitle ? "Show Title" : "Hide Title"}
+                        title={activeTemplate.hideTitle ? t("cert.showTitleTooltip", "Show Title") : t("cert.hideTitleTooltip", "Hide Title")}
                         className={`p-1.5 rounded-xl transition-all cursor-pointer ${activeTemplate.hideTitle ? "text-slate-400 hover:text-slate-600 bg-slate-100" : "text-blue-600 bg-blue-50 hover:bg-blue-100"}`}
                       >
                         {activeTemplate.hideTitle ? <EyeOff size={14} /> : <Eye size={14} />}
@@ -1335,31 +1352,31 @@ export default function CertificatesView({
                       {/* Content Section */}
                       <div className="pt-2">
                         <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                          Title Text
+                          {t("cert.titleTextLabel", "Title Text")}
                         </label>
                         <input
                           type="text"
                           value={activeTemplate.certificateTitle || ""}
                           onChange={(e) => handleUpdateActiveTemplate("certificateTitle", e.target.value)}
-                          placeholder="e.g. CERTIFICATE OF ATTENDANCE"
+                          placeholder={t("cert.titlePlaceholder", "e.g. CERTIFICATE OF ATTENDANCE")}
                           className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
                         />
                         {/* Quick presets */}
                         <div className="flex flex-wrap gap-1 mt-1.5">
                           {[
-                            "CERTIFICATE OF ATTENDANCE",
-                            "CERTIFICATE OF APPRECIATION",
-                            "CERTIFICATE OF ACHIEVEMENT",
-                            "CERTIFICATE OF COMPLETION",
-                            "AWARD OF EXCELLENCE",
+                            { text: "CERTIFICATE OF ATTENDANCE", label: t("cert.titlePresetAttendance", "CERTIFICATE OF ATTENDANCE") },
+                            { text: "CERTIFICATE OF APPRECIATION", label: t("cert.titlePresetAppreciation", "CERTIFICATE OF APPRECIATION") },
+                            { text: "CERTIFICATE OF ACHIEVEMENT", label: t("cert.titlePresetAchievement", "CERTIFICATE OF ACHIEVEMENT") },
+                            { text: "CERTIFICATE OF COMPLETION", label: t("cert.titlePresetCompletion", "CERTIFICATE OF COMPLETION") },
+                            { text: "AWARD OF EXCELLENCE", label: t("cert.titlePresetExcellence", "AWARD OF EXCELLENCE") },
                           ].map(preset => (
                             <button
-                              key={preset}
+                              key={preset.text}
                               type="button"
-                              onClick={() => handleUpdateActiveTemplate("certificateTitle", preset)}
+                              onClick={() => handleUpdateActiveTemplate("certificateTitle", isRTL ? preset.label : preset.text)}
                               className="px-2 py-0.5 rounded-md bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-[9px] font-bold text-slate-600 border border-slate-200 transition-colors cursor-pointer"
                             >
-                              {preset}
+                              {preset.label}
                             </button>
                           ))}
                         </div>
@@ -1370,14 +1387,14 @@ export default function CertificatesView({
                         <div className="flex items-center justify-between">
                           <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                             <Type size={12} className="text-indigo-600" />
-                            <span>Typography & Styling</span>
+                            <span>{t("cert.typographyStyling", "Typography & Styling")}</span>
                           </span>
 
                           {/* Bold & Italic Quick Toggle Toolbar */}
                           <div className="flex items-center gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-2xs">
                             <button
                               type="button"
-                              title="Toggle Bold"
+                              title={t("cert.toggleBold", "Toggle Bold")}
                               onClick={() => {
                                 const currentWeight = activeTemplate.titleFontWeight || "black";
                                 const isBold = currentWeight === "bold" || currentWeight === "extrabold" || currentWeight === "black";
@@ -1393,7 +1410,7 @@ export default function CertificatesView({
                             </button>
                             <button
                               type="button"
-                              title="Toggle Italic"
+                              title={t("cert.toggleItalic", "Toggle Italic")}
                               onClick={() => handleUpdateActiveTemplate("titleItalic", !activeTemplate.titleItalic)}
                               className={`w-6 h-6 rounded flex items-center justify-center text-xs font-bold font-sans italic transition-all cursor-pointer ${
                                 activeTemplate.titleItalic
@@ -1408,22 +1425,22 @@ export default function CertificatesView({
 
                         <div className="grid grid-cols-2 gap-2.5">
                           <div>
-                            <label className="block text-[10.5px] font-bold text-slate-700 mb-1">Font Family</label>
+                            <label className="block text-[10.5px] font-bold text-slate-700 mb-1">{t("cert.fontFamily", "Font Family")}</label>
                             <SearchableSelect
                               value={activeTemplate.titleFontFamily || "cinzel"}
                               onChange={(val) => handleUpdateActiveTemplate("titleFontFamily", val)}
                               options={FONT_STYLE_OPTIONS}
-                              placeholder="Font Family..."
+                              placeholder={t("cert.fontFamilyPlaceholder", "Font Family...")}
                             />
                           </div>
 
                           <div>
-                            <label className="block text-[10.5px] font-bold text-slate-700 mb-1">Font Weight</label>
+                            <label className="block text-[10.5px] font-bold text-slate-700 mb-1">{t("cert.fontWeight", "Font Weight")}</label>
                             <SearchableSelect
                               value={activeTemplate.titleFontWeight || "black"}
                               onChange={(val) => handleUpdateActiveTemplate("titleFontWeight", val)}
                               options={FONT_WEIGHT_OPTIONS}
-                              placeholder="Font Weight..."
+                              placeholder={t("cert.fontWeightPlaceholder", "Font Weight...")}
                             />
                           </div>
                         </div>
@@ -1431,7 +1448,7 @@ export default function CertificatesView({
                         <div className="grid grid-cols-2 gap-2.5 pt-2 border-t border-slate-200/60">
                           <div>
                             <div className="flex justify-between items-center mb-1">
-                              <label className="text-[10.5px] font-bold text-slate-700">Font Size</label>
+                              <label className="text-[10.5px] font-bold text-slate-700">{t("cert.fontSize", "Font Size")}</label>
                               <div className="flex items-center gap-1">
                                 <span className="text-[9.5px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
                                   {activeTemplate.titleFontSize ? `${activeTemplate.titleFontSize}pt` : "Auto"}
@@ -1442,7 +1459,7 @@ export default function CertificatesView({
                                     onClick={() => handleUpdateActiveTemplate("titleFontSize", undefined)}
                                     className="text-[8.5px] text-slate-400 hover:text-blue-600 font-bold underline cursor-pointer"
                                   >
-                                    Reset
+                                    {t("cert.resetBtn", "Reset")}
                                   </button>
                                 )}
                               </div>
@@ -1460,7 +1477,7 @@ export default function CertificatesView({
 
                           <div>
                             <div className="flex justify-between items-center mb-1">
-                              <label className="text-[10.5px] font-bold text-slate-700">Letter Spacing</label>
+                              <label className="text-[10.5px] font-bold text-slate-700">{t("cert.letterSpacing", "Letter Spacing")}</label>
                               <span className="text-[9.5px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
                                 {typeof activeTemplate.titleLetterSpacing === 'number'
                                   ? `${activeTemplate.titleLetterSpacing}px`
@@ -1482,9 +1499,9 @@ export default function CertificatesView({
                         </div>
 
                         <div className="pt-2 border-t border-slate-200/60">
-                          <label className="block text-[10.5px] font-bold text-slate-700 mb-1">Text Color</label>
+                          <label className="block text-[10.5px] font-bold text-slate-700 mb-1">{t("cert.textColor", "Text Color")}</label>
                           <div className="flex items-center gap-1.5">
-                            <div className="relative group shrink-0" title="Custom color picker">
+                            <div className="relative group shrink-0" title={t("cert.customColorPicker", "Custom color picker")}>
                               <div
                                 className="w-6.5 h-6.5 rounded-lg border border-slate-300 shadow-2xs flex items-center justify-center cursor-pointer transition-all group-hover:scale-105 group-hover:border-blue-400 overflow-hidden relative"
                                 style={{ backgroundColor: activeTemplate.titleColor || activeTemplate.accentColor || "#D4AF37" }}
@@ -1519,14 +1536,14 @@ export default function CertificatesView({
                       <div className="p-3 bg-slate-50/70 rounded-xl border border-slate-200/70 space-y-2.5">
                         <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                           <Sliders size={12} className="text-blue-600" />
-                          <span>Position & Canvas Layout</span>
+                          <span>{t("cert.positionLayout", "Position & Canvas Layout")}</span>
                         </span>
 
                         {/* Dual X & Y Sliders */}
                         <div className="grid grid-cols-2 gap-2.5">
                           <div>
                             <div className="flex justify-between items-center mb-1">
-                              <label className="text-[10.5px] font-bold text-slate-700">X (Horizontal)</label>
+                              <label className="text-[10.5px] font-bold text-slate-700">{t("cert.xHorizontal", "X (Horizontal)")}</label>
                               <span className="text-[9.5px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{activeTemplate.titleX !== undefined ? activeTemplate.titleX : 50}%</span>
                             </div>
                             <input
@@ -1542,7 +1559,7 @@ export default function CertificatesView({
 
                           <div>
                             <div className="flex justify-between items-center mb-1">
-                              <label className="text-[10.5px] font-bold text-slate-700">Y (Vertical)</label>
+                              <label className="text-[10.5px] font-bold text-slate-700">{t("cert.yVertical", "Y (Vertical)")}</label>
                               <span className="text-[9.5px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{activeTemplate.titleY !== undefined ? activeTemplate.titleY : 18}%</span>
                             </div>
                             <input
@@ -1560,7 +1577,7 @@ export default function CertificatesView({
                         {/* Opacity Slider */}
                         <div>
                           <div className="flex justify-between items-center mb-1">
-                            <label className="text-[10.5px] font-bold text-slate-700">Opacity</label>
+                            <label className="text-[10.5px] font-bold text-slate-700">{t("cert.opacity", "Opacity")}</label>
                             <span className="text-[9.5px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{Math.round((activeTemplate.titleOpacity !== undefined ? activeTemplate.titleOpacity : 1) * 100)}%</span>
                           </div>
                           <input
@@ -1586,8 +1603,8 @@ export default function CertificatesView({
                   >
                     <div className="min-w-0 pr-2">
                       <div className="text-xs font-bold text-slate-900 flex items-center gap-2 truncate">
-                        <span>Presentation Subtitle & Subtext</span>
-                        {activeTemplate.hideSubtitle && <span className="text-[9.5px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold border border-slate-200">Hidden</span>}
+                        <span>{t("cert.presentationSubtitle", "Presentation Subtitle & Subtext")}</span>
+                        {activeTemplate.hideSubtitle && <span className="text-[9.5px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold border border-slate-200">{t("cert.hiddenBadge", "Hidden")}</span>}
                       </div>
                       <div className="text-[11px] text-slate-500 font-medium truncate mt-0.5">
                         {activeTemplate.subtitleText || "THIS IS PROUDLY PRESENTED TO"}
@@ -1600,7 +1617,7 @@ export default function CertificatesView({
                           e.stopPropagation();
                           handleUpdateActiveTemplate("hideSubtitle", !activeTemplate.hideSubtitle);
                         }}
-                        title={activeTemplate.hideSubtitle ? "Show Subtitle" : "Hide Subtitle"}
+                        title={activeTemplate.hideSubtitle ? t("cert.showSubtitleTooltip", "Show Subtitle") : t("cert.hideSubtitleTooltip", "Hide Subtitle")}
                         className={`p-1.5 rounded-xl transition-all cursor-pointer ${activeTemplate.hideSubtitle ? "text-slate-400 hover:text-slate-600 bg-slate-100" : "text-blue-600 bg-blue-50 hover:bg-blue-100"}`}
                       >
                         {activeTemplate.hideSubtitle ? <EyeOff size={14} /> : <Eye size={14} />}
@@ -1617,26 +1634,26 @@ export default function CertificatesView({
                       <div className="pt-2 space-y-2.5">
                         <div>
                           <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                            Conferral Subtitle Line
+                            {t("cert.conferralSubtitleLine", "Conferral Subtitle Line")}
                           </label>
                           <input
                             type="text"
                             value={activeTemplate.subtitleText || ""}
                             onChange={(e) => handleUpdateActiveTemplate("subtitleText", e.target.value)}
-                            placeholder="e.g. THIS IS PROUDLY PRESENTED TO"
+                            placeholder={t("cert.subtitlePlaceholder", "e.g. THIS IS PROUDLY PRESENTED TO")}
                             className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
                           />
                         </div>
 
                         <div>
                           <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                            Recipient Subtitle Format
+                            {t("cert.recipientSubtitleFormat", "Recipient Subtitle Format")}
                           </label>
                           <input
                             type="text"
                             value={activeTemplate.recipientSubtext || ""}
                             onChange={(e) => handleUpdateActiveTemplate("recipientSubtext", e.target.value)}
-                            placeholder="e.g. {{job_title}} • {{organization}}"
+                            placeholder={t("cert.subtitleFormatPlaceholder", "e.g. {{job_title}} • {{organization}}")}
                             className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
                           />
                         </div>
@@ -1647,14 +1664,14 @@ export default function CertificatesView({
                         <div className="flex items-center justify-between">
                           <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                             <Type size={12} className="text-indigo-600" />
-                            <span>Typography & Styling</span>
+                            <span>{t("cert.typographyStyling", "Typography & Styling")}</span>
                           </span>
 
                           {/* Bold & Italic Quick Toggle Toolbar */}
                           <div className="flex items-center gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-2xs">
                             <button
                               type="button"
-                              title="Toggle Bold"
+                              title={t("cert.toggleBold", "Toggle Bold")}
                               onClick={() => {
                                 const currentWeight = activeTemplate.subtitleFontWeight || "bold";
                                 const isBold = currentWeight === "bold" || currentWeight === "extrabold" || currentWeight === "black";
@@ -1670,7 +1687,7 @@ export default function CertificatesView({
                             </button>
                             <button
                               type="button"
-                              title="Toggle Italic"
+                              title={t("cert.toggleItalic", "Toggle Italic")}
                               onClick={() => handleUpdateActiveTemplate("subtitleItalic", !activeTemplate.subtitleItalic)}
                               className={`w-6 h-6 rounded flex items-center justify-center text-xs font-bold font-sans italic transition-all cursor-pointer ${
                                 activeTemplate.subtitleItalic
@@ -1685,22 +1702,22 @@ export default function CertificatesView({
 
                         <div className="grid grid-cols-2 gap-2.5">
                           <div>
-                            <label className="block text-[10.5px] font-bold text-slate-700 mb-1">Font Family</label>
+                            <label className="block text-[10.5px] font-bold text-slate-700 mb-1">{t("cert.fontFamily", "Font Family")}</label>
                             <SearchableSelect
                               value={activeTemplate.subtitleFontFamily || "sans"}
                               onChange={(val) => handleUpdateActiveTemplate("subtitleFontFamily", val)}
                               options={FONT_STYLE_OPTIONS}
-                              placeholder="Font Family..."
+                              placeholder={t("cert.fontFamilyPlaceholder", "Font Family...")}
                             />
                           </div>
 
                           <div>
-                            <label className="block text-[10.5px] font-bold text-slate-700 mb-1">Font Weight</label>
+                            <label className="block text-[10.5px] font-bold text-slate-700 mb-1">{t("cert.fontWeight", "Font Weight")}</label>
                             <SearchableSelect
                               value={activeTemplate.subtitleFontWeight || "bold"}
                               onChange={(val) => handleUpdateActiveTemplate("subtitleFontWeight", val)}
                               options={FONT_WEIGHT_OPTIONS.filter(w => w.value !== "black")}
-                              placeholder="Font Weight..."
+                              placeholder={t("cert.fontWeightPlaceholder", "Font Weight...")}
                             />
                           </div>
                         </div>
@@ -1708,7 +1725,7 @@ export default function CertificatesView({
                         <div className="grid grid-cols-2 gap-2.5 pt-2 border-t border-slate-200/60">
                           <div>
                             <div className="flex justify-between items-center mb-1">
-                              <label className="text-[10.5px] font-bold text-slate-700">Font Size</label>
+                              <label className="text-[10.5px] font-bold text-slate-700">{t("cert.fontSize", "Font Size")}</label>
                               <div className="flex items-center gap-1">
                                 <span className="text-[9.5px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{activeTemplate.subtitleFontSize ? `${activeTemplate.subtitleFontSize}pt` : "Auto"}</span>
                                 {activeTemplate.subtitleFontSize && (
@@ -1735,7 +1752,7 @@ export default function CertificatesView({
 
                           <div>
                             <div className="flex justify-between items-center mb-1">
-                              <label className="text-[10.5px] font-bold text-slate-700">Letter Spacing</label>
+                              <label className="text-[10.5px] font-bold text-slate-700">{t("cert.letterSpacing", "Letter Spacing")}</label>
                               <span className="text-[9.5px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
                                 {typeof activeTemplate.subtitleLetterSpacing === 'number'
                                   ? `${activeTemplate.subtitleLetterSpacing}px`
@@ -1757,9 +1774,9 @@ export default function CertificatesView({
                         </div>
 
                         <div className="pt-2 border-t border-slate-200/60">
-                          <label className="block text-[10.5px] font-bold text-slate-700 mb-1">Subtitle Color</label>
+                          <label className="block text-[10.5px] font-bold text-slate-700 mb-1">{t("cert.subtitleColor", "Subtitle Color")}</label>
                           <div className="flex items-center gap-1.5">
-                            <div className="relative group shrink-0" title="Custom color picker">
+                            <div className="relative group shrink-0" title={t("cert.customColorPicker", "Custom color picker")}>
                               <div
                                 className="w-6.5 h-6.5 rounded-lg border border-slate-300 shadow-2xs flex items-center justify-center cursor-pointer transition-all group-hover:scale-105 group-hover:border-blue-400 overflow-hidden relative"
                                 style={{ backgroundColor: activeTemplate.subtitleColor || "#94A3B8" }}
@@ -1794,14 +1811,14 @@ export default function CertificatesView({
                       <div className="p-3 bg-slate-50/70 rounded-xl border border-slate-200/70 space-y-2.5">
                         <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                           <Sliders size={12} className="text-blue-600" />
-                          <span>Position & Canvas Layout</span>
+                          <span>{t("cert.positionLayout", "Position & Canvas Layout")}</span>
                         </span>
 
                         {/* Dual X & Y Sliders */}
                         <div className="grid grid-cols-2 gap-2.5">
                           <div>
                             <div className="flex justify-between items-center mb-1">
-                              <label className="text-[10.5px] font-bold text-slate-700">X (Horizontal)</label>
+                              <label className="text-[10.5px] font-bold text-slate-700">{t("cert.xHorizontal", "X (Horizontal)")}</label>
                               <span className="text-[9.5px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{activeTemplate.subtitleX !== undefined ? activeTemplate.subtitleX : 50}%</span>
                             </div>
                             <input
@@ -1817,7 +1834,7 @@ export default function CertificatesView({
 
                           <div>
                             <div className="flex justify-between items-center mb-1">
-                              <label className="text-[10.5px] font-bold text-slate-700">Y (Vertical)</label>
+                              <label className="text-[10.5px] font-bold text-slate-700">{t("cert.yVertical", "Y (Vertical)")}</label>
                               <span className="text-[9.5px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{activeTemplate.subtitleY !== undefined ? activeTemplate.subtitleY : 26}%</span>
                             </div>
                             <input
@@ -1835,7 +1852,7 @@ export default function CertificatesView({
                         {/* Opacity Slider */}
                         <div>
                           <div className="flex justify-between items-center mb-1">
-                            <label className="text-[10.5px] font-bold text-slate-700">Opacity</label>
+                            <label className="text-[10.5px] font-bold text-slate-700">{t("cert.opacity", "Opacity")}</label>
                             <span className="text-[9.5px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{Math.round((activeTemplate.subtitleOpacity !== undefined ? activeTemplate.subtitleOpacity : 1) * 100)}%</span>
                           </div>
                           <input
@@ -1861,8 +1878,8 @@ export default function CertificatesView({
                   >
                     <div className="min-w-0 pr-2">
                       <div className="text-xs font-bold text-slate-900 flex items-center gap-2 truncate">
-                        <span>Certificate Body Statement</span>
-                        {activeTemplate.hideBody && <span className="text-[9.5px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold border border-slate-200">Hidden</span>}
+                        <span>{t("cert.certificateBodyStatement", "Certificate Body Statement")}</span>
+                        {activeTemplate.hideBody && <span className="text-[9.5px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold border border-slate-200">{t("cert.hiddenBadge", "Hidden")}</span>}
                       </div>
                       <div className="text-[11px] text-slate-500 font-medium truncate mt-0.5">
                         {activeTemplate.bodyText || "For distinguished and active participation..."}
@@ -1875,7 +1892,7 @@ export default function CertificatesView({
                           e.stopPropagation();
                           handleUpdateActiveTemplate("hideBody", !activeTemplate.hideBody);
                         }}
-                        title={activeTemplate.hideBody ? "Show Body" : "Hide Body"}
+                        title={activeTemplate.hideBody ? t("cert.showBodyTooltip", "Show Body") : t("cert.hideBodyTooltip", "Hide Body")}
                         className={`p-1.5 rounded-xl transition-all cursor-pointer ${activeTemplate.hideBody ? "text-slate-400 hover:text-slate-600 bg-slate-100" : "text-blue-600 bg-blue-50 hover:bg-blue-100"}`}
                       >
                         {activeTemplate.hideBody ? <EyeOff size={14} /> : <Eye size={14} />}
@@ -1891,30 +1908,30 @@ export default function CertificatesView({
                       {/* Content Section */}
                       <div className="pt-2">
                         <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                          Body Paragraph (Markdown bold **text** supported)
+                          {t("cert.bodyParagraphMarkdown", "Body Paragraph (Markdown bold **text** supported)")}
                         </label>
                         <textarea
                           rows={4}
                           value={activeTemplate.bodyText || ""}
                           onChange={(e) => handleUpdateActiveTemplate("bodyText", e.target.value)}
-                          placeholder="For distinguished and active participation in the **{{event_name}}**..."
+                          placeholder={t("cert.bodyStatementPlaceholder", "For distinguished and active participation in the **{{event_name}}**...")}
                           className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 leading-relaxed focus:ring-2 focus:ring-blue-500 focus:outline-hidden resize-none"
                         />
                         
                         {/* Dynamic variables chips */}
                         <div className="mt-2 space-y-1">
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                            Click to insert variables:
+                            {t("cert.clickToInsertVars", "Click to insert variables:")}
                           </span>
                           <div className="flex flex-wrap gap-1">
                             {[
-                              { key: "name", label: "+ Name" },
-                              { key: "organization", label: "+ Company" },
-                              { key: "job_title", label: "+ Job Title" },
-                              { key: "event_name", label: "+ Event Title" },
-                              { key: "event_location", label: "+ Venue" },
-                              { key: "event_date", label: "+ Date" },
-                              { key: "certificate_id", label: "+ Cert ID" },
+                              { key: "name", label: `+ ${t("cert.varName", "Name")}` },
+                              { key: "organization", label: `+ ${t("cert.varCompany", "Company")}` },
+                              { key: "job_title", label: `+ ${t("cert.varJobTitle", "Job Title")}` },
+                              { key: "event_name", label: `+ ${t("cert.varEventTitle", "Event Title")}` },
+                              { key: "event_location", label: `+ ${t("cert.varVenue", "Venue")}` },
+                              { key: "event_date", label: `+ ${t("cert.varDate", "Date")}` },
+                              { key: "certificate_id", label: `+ ${t("cert.varCertId", "Cert ID")}` },
                             ].map(chip => (
                               <button
                                 key={chip.key}
@@ -1934,14 +1951,14 @@ export default function CertificatesView({
                         <div className="flex items-center justify-between">
                           <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                             <Type size={12} className="text-indigo-600" />
-                            <span>Typography & Styling</span>
+                            <span>{t("cert.typographyStyling", "Typography & Styling")}</span>
                           </span>
 
                           {/* Bold & Italic Quick Toggle Toolbar */}
                           <div className="flex items-center gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-2xs">
                             <button
                               type="button"
-                              title="Toggle Bold"
+                              title={t("cert.toggleBold", "Toggle Bold")}
                               onClick={() => {
                                 const currentWeight = activeTemplate.bodyFontWeight || "normal";
                                 const isBold = currentWeight === "bold" || currentWeight === "semibold" || currentWeight === "extrabold";
@@ -1957,7 +1974,7 @@ export default function CertificatesView({
                             </button>
                             <button
                               type="button"
-                              title="Toggle Italic"
+                              title={t("cert.toggleItalic", "Toggle Italic")}
                               onClick={() => handleUpdateActiveTemplate("bodyItalic", !activeTemplate.bodyItalic)}
                               className={`w-6 h-6 rounded flex items-center justify-center text-xs font-bold font-sans italic transition-all cursor-pointer ${
                                 activeTemplate.bodyItalic
@@ -1972,22 +1989,22 @@ export default function CertificatesView({
 
                         <div className="grid grid-cols-2 gap-2.5">
                           <div>
-                            <label className="block text-[10.5px] font-bold text-slate-700 mb-1">Font Family</label>
+                            <label className="block text-[10.5px] font-bold text-slate-700 mb-1">{t("cert.fontFamily", "Font Family")}</label>
                             <SearchableSelect
                               value={activeTemplate.bodyFontFamily || "sans"}
                               onChange={(val) => handleUpdateActiveTemplate("bodyFontFamily", val)}
                               options={FONT_STYLE_OPTIONS}
-                              placeholder="Font Family..."
+                              placeholder={t("cert.fontFamilyPlaceholder", "Font Family...")}
                             />
                           </div>
 
                           <div>
-                            <label className="block text-[10.5px] font-bold text-slate-700 mb-1">Font Weight</label>
+                            <label className="block text-[10.5px] font-bold text-slate-700 mb-1">{t("cert.fontWeight", "Font Weight")}</label>
                             <SearchableSelect
                               value={activeTemplate.bodyFontWeight || "normal"}
                               onChange={(val) => handleUpdateActiveTemplate("bodyFontWeight", val)}
                               options={FONT_WEIGHT_OPTIONS.filter(w => w.value !== "black" && w.value !== "extrabold")}
-                              placeholder="Font Weight..."
+                              placeholder={t("cert.fontWeightPlaceholder", "Font Weight...")}
                             />
                           </div>
                         </div>
@@ -1995,7 +2012,7 @@ export default function CertificatesView({
                         <div className="grid grid-cols-2 gap-2.5 pt-2 border-t border-slate-200/60">
                           <div>
                             <div className="flex justify-between items-center mb-1">
-                              <label className="text-[10.5px] font-bold text-slate-700">Font Size</label>
+                              <label className="text-[10.5px] font-bold text-slate-700">{t("cert.fontSize", "Font Size")}</label>
                               <div className="flex items-center gap-1">
                                 <span className="text-[9.5px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{activeTemplate.bodyFontSize ? `${activeTemplate.bodyFontSize}pt` : "Auto"}</span>
                                 {activeTemplate.bodyFontSize && (
@@ -2022,7 +2039,7 @@ export default function CertificatesView({
 
                           <div>
                             <div className="flex justify-between items-center mb-1">
-                              <label className="text-[10.5px] font-bold text-slate-700">Letter Spacing</label>
+                              <label className="text-[10.5px] font-bold text-slate-700">{t("cert.letterSpacing", "Letter Spacing")}</label>
                               <span className="text-[9.5px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
                                 {typeof activeTemplate.bodyLetterSpacing === 'number'
                                   ? `${activeTemplate.bodyLetterSpacing}px`
@@ -2044,9 +2061,9 @@ export default function CertificatesView({
                         </div>
 
                         <div className="pt-2 border-t border-slate-200/60">
-                          <label className="block text-[10.5px] font-bold text-slate-700 mb-1">Text Color</label>
+                          <label className="block text-[10.5px] font-bold text-slate-700 mb-1">{t("cert.textColor", "Text Color")}</label>
                           <div className="flex items-center gap-1.5">
-                            <div className="relative group shrink-0" title="Custom color picker">
+                            <div className="relative group shrink-0" title={t("cert.customColorPicker", "Custom color picker")}>
                               <div
                                 className="w-6.5 h-6.5 rounded-lg border border-slate-300 shadow-2xs flex items-center justify-center cursor-pointer transition-all group-hover:scale-105 group-hover:border-blue-400 overflow-hidden relative"
                                 style={{ backgroundColor: activeTemplate.bodyColor || "#475569" }}
@@ -2081,14 +2098,14 @@ export default function CertificatesView({
                       <div className="p-3 bg-slate-50/70 rounded-xl border border-slate-200/70 space-y-2.5">
                         <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                           <Sliders size={12} className="text-blue-600" />
-                          <span>Position & Canvas Layout</span>
+                          <span>{t("cert.positionLayout", "Position & Canvas Layout")}</span>
                         </span>
 
                         {/* Dual X & Y Sliders */}
                         <div className="grid grid-cols-2 gap-2.5">
                           <div>
                             <div className="flex justify-between items-center mb-1">
-                              <label className="text-[10.5px] font-bold text-slate-700">X (Horizontal)</label>
+                              <label className="text-[10.5px] font-bold text-slate-700">{t("cert.xHorizontal", "X (Horizontal)")}</label>
                               <span className="text-[9.5px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{activeTemplate.bodyX !== undefined ? activeTemplate.bodyX : 50}%</span>
                             </div>
                             <input
@@ -2104,7 +2121,7 @@ export default function CertificatesView({
 
                           <div>
                             <div className="flex justify-between items-center mb-1">
-                              <label className="text-[10.5px] font-bold text-slate-700">Y (Vertical)</label>
+                              <label className="text-[10.5px] font-bold text-slate-700">{t("cert.yVertical", "Y (Vertical)")}</label>
                               <span className="text-[9.5px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{activeTemplate.bodyY !== undefined ? activeTemplate.bodyY : 64}%</span>
                             </div>
                             <input
@@ -2123,7 +2140,7 @@ export default function CertificatesView({
                         <div className="grid grid-cols-2 gap-2.5 pt-1">
                           <div>
                             <div className="flex justify-between items-center mb-1">
-                              <label className="text-[10.5px] font-bold text-slate-700">Opacity</label>
+                              <label className="text-[10.5px] font-bold text-slate-700">{t("cert.opacity", "Opacity")}</label>
                               <span className="text-[9.5px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{Math.round((activeTemplate.bodyOpacity !== undefined ? activeTemplate.bodyOpacity : 1) * 100)}%</span>
                             </div>
                             <input
@@ -2138,16 +2155,16 @@ export default function CertificatesView({
                           </div>
 
                           <div>
-                            <label className="block text-[10.5px] font-bold text-slate-700 mb-1">Paragraph Alignment</label>
+                            <label className="block text-[10.5px] font-bold text-slate-700 mb-1">{t("cert.paragraphAlignment", "Paragraph Alignment")}</label>
                             <SearchableSelect
                               value={activeTemplate.bodyTextAlign || "center"}
                               onChange={(val) => handleUpdateActiveTemplate("bodyTextAlign", val)}
                               options={[
-                                { value: "left", label: "Left Align" },
-                                { value: "center", label: "Center Align" },
-                                { value: "right", label: "Right Align" },
+                                { value: "left", label: t("cert.alignLeft", "Left Align") },
+                                { value: "center", label: t("cert.alignCenter", "Center Align") },
+                                { value: "right", label: t("cert.alignRight", "Right Align") },
                               ]}
-                              placeholder="Alignment..."
+                              placeholder={t("cert.alignmentPlaceholder", "Alignment...")}
                             />
                           </div>
                         </div>
@@ -2163,14 +2180,14 @@ export default function CertificatesView({
                   <div className="flex items-center justify-between">
                     <h3 className="text-xs font-black text-slate-900 flex items-center gap-1.5">
                       <Move size={14} className="text-blue-600" />
-                      <span>Custom Overlay Elements</span>
+                      <span>{t("cert.customOverlayElements", "Custom Overlay Elements")}</span>
                       <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
-                        {(activeTemplate.customElements || []).length}
+                        <bdi dir="ltr">{(activeTemplate.customElements || []).length}</bdi>
                       </span>
                     </h3>
                   </div>
                   <p className="text-[11px] text-slate-500 leading-snug">
-                    Place floating custom text annotations, accreditation seals, or partner sponsor logos anywhere on the certificate canvas.
+                    {t("cert.customOverlayElementsDesc", "Place floating custom text annotations, accreditation seals, or partner sponsor logos anywhere on the certificate canvas.")}
                   </p>
                 </div>
 
@@ -2184,7 +2201,7 @@ export default function CertificatesView({
                     <div className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-2xs group-hover:scale-105 transition-transform">
                       <Type size={13} />
                     </div>
-                    <span>+ Add Custom Text</span>
+                    <span>+ {t("cert.addCustomText", "Add Custom Text")}</span>
                   </button>
 
                   <button
@@ -2195,7 +2212,7 @@ export default function CertificatesView({
                     <div className="w-6 h-6 rounded-lg bg-purple-600 text-white flex items-center justify-center shadow-2xs group-hover:scale-105 transition-transform">
                       <ImageIcon size={13} />
                     </div>
-                    <span>+ Add Image / Logo</span>
+                    <span>+ {t("cert.addImageLogo", "Add Image / Logo")}</span>
                   </button>
                 </div>
 
@@ -2203,7 +2220,7 @@ export default function CertificatesView({
                 {(!activeTemplate.customElements || activeTemplate.customElements.length === 0) && (
                   <div className="p-4 rounded-2xl bg-slate-50 border border-dashed border-slate-200 text-center space-y-2">
                     <p className="text-[11px] text-slate-500 leading-relaxed">
-                      No custom elements added yet. Click <strong>+ Text</strong> or <strong>+ Image</strong> to place floating stamps, accreditation logos, or custom annotations anywhere on the canvas.
+                      {t("cert.noCustomElements", "No custom elements added yet. Click + Text or + Image to place floating stamps, accreditation logos, or custom annotations anywhere on the canvas.")}
                     </p>
                   </div>
                 )}
@@ -2239,7 +2256,7 @@ export default function CertificatesView({
 
                           <div className="min-w-0">
                             <div className="text-xs font-bold text-slate-800 truncate">
-                              {el.type === "text" ? (el.text || "Untitled Text") : "Custom Graphic / Logo"}
+                              {el.type === "text" ? (el.text || t("cert.untitledText", "Untitled Text")) : t("cert.customGraphicLogo", "Custom Graphic / Logo")}
                             </div>
                             <div className="text-[10px] text-slate-400 font-mono">
                               Pos: X {el.x || 50}% • Y {el.y || 50}% • {el.type === "text" ? `${el.fontSize || 10}pt` : `${el.width || 55}px`}
@@ -2251,7 +2268,7 @@ export default function CertificatesView({
                         <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                           <button
                             type="button"
-                            title="Duplicate Element"
+                            title={t("cert.duplicateElementTooltip", "Duplicate Element")}
                             onClick={() => handleDuplicateCustomElement(el.id)}
                             className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
                           >
@@ -2259,7 +2276,7 @@ export default function CertificatesView({
                           </button>
                           <button
                             type="button"
-                            title="Delete Element"
+                            title={t("cert.deleteElementTooltip", "Delete Element")}
                             onClick={() => handleDeleteCustomElement(el.id)}
                             className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                           >
@@ -2285,13 +2302,13 @@ export default function CertificatesView({
                               {/* Content Section */}
                               <div>
                                 <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                  Text Content
+                                  {t("cert.textContent", "Text Content")}
                                 </label>
                                 <input
                                   type="text"
                                   value={el.text || ""}
                                   onChange={(e) => handleUpdateCustomElement(el.id, "text", e.target.value)}
-                                  placeholder="e.g. ★ OFFICIAL ACCREDITATION ★"
+                                  placeholder={t("cert.textPlaceholder", "e.g. ★ OFFICIAL ACCREDITATION ★")}
                                   className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
                                 />
                                 
@@ -2320,14 +2337,14 @@ export default function CertificatesView({
                                 <div className="flex items-center justify-between">
                                   <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                                     <Type size={12} className="text-indigo-600" />
-                                    <span>Typography & Styling</span>
+                                    <span>{t("cert.typographyStyling", "Typography & Styling")}</span>
                                   </span>
 
                                   {/* Bold & Italic Quick Toggle Toolbar */}
                                   <div className="flex items-center gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-2xs">
                                     <button
                                       type="button"
-                                      title="Toggle Bold"
+                                      title={t("cert.toggleBold", "Toggle Bold")}
                                       onClick={() => {
                                         const currentWeight = el.fontWeight || "bold";
                                         const isBold = currentWeight === "bold" || currentWeight === "extrabold" || currentWeight === "black";
@@ -2343,7 +2360,7 @@ export default function CertificatesView({
                                     </button>
                                     <button
                                       type="button"
-                                      title="Toggle Italic"
+                                      title={t("cert.toggleItalic", "Toggle Italic")}
                                       onClick={() => handleUpdateCustomElement(el.id, "italic", !el.italic)}
                                       className={`w-6 h-6 rounded flex items-center justify-center text-xs font-bold font-sans italic transition-all cursor-pointer ${
                                         el.italic
@@ -2358,22 +2375,22 @@ export default function CertificatesView({
 
                                 <div className="grid grid-cols-2 gap-2.5">
                                   <div>
-                                    <label className="block text-[10.5px] font-bold text-slate-700 mb-1">Font Family</label>
+                                    <label className="block text-[10.5px] font-bold text-slate-700 mb-1">{t("cert.fontFamily", "Font Family")}</label>
                                     <SearchableSelect
                                       value={el.fontFamily || "cinzel"}
                                       onChange={(val) => handleUpdateCustomElement(el.id, "fontFamily", val)}
                                       options={FONT_STYLE_OPTIONS}
-                                      placeholder="Font Family..."
+                                      placeholder={t("cert.fontFamilyPlaceholder", "Font Family...")}
                                     />
                                   </div>
 
                                   <div>
-                                    <label className="block text-[10.5px] font-bold text-slate-700 mb-1">Font Weight</label>
+                                    <label className="block text-[10.5px] font-bold text-slate-700 mb-1">{t("cert.fontWeight", "Font Weight")}</label>
                                     <SearchableSelect
                                       value={el.fontWeight || "bold"}
                                       onChange={(val) => handleUpdateCustomElement(el.id, "fontWeight", val)}
                                       options={FONT_WEIGHT_OPTIONS}
-                                      placeholder="Font Weight..."
+                                      placeholder={t("cert.fontWeightPlaceholder", "Font Weight...")}
                                     />
                                   </div>
                                 </div>
@@ -2381,7 +2398,7 @@ export default function CertificatesView({
                                 <div className="grid grid-cols-2 gap-2.5 pt-2 border-t border-slate-200/60">
                                   <div>
                                     <div className="flex justify-between items-center mb-1">
-                                      <label className="text-[10.5px] font-bold text-slate-700">Font Size</label>
+                                      <label className="text-[10.5px] font-bold text-slate-700">{t("cert.fontSize", "Font Size")}</label>
                                       <span className="text-[9.5px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{el.fontSize || 10}pt</span>
                                     </div>
                                     <input
@@ -2397,7 +2414,7 @@ export default function CertificatesView({
 
                                   <div>
                                     <div className="flex justify-between items-center mb-1">
-                                      <label className="text-[10.5px] font-bold text-slate-700">Letter Spacing</label>
+                                      <label className="text-[10.5px] font-bold text-slate-700">{t("cert.letterSpacing", "Letter Spacing")}</label>
                                       <span className="text-[9.5px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
                                         {typeof el.letterSpacing === 'number'
                                           ? `${el.letterSpacing}px`
@@ -2417,9 +2434,9 @@ export default function CertificatesView({
                                 </div>
 
                                 <div className="pt-2 border-t border-slate-200/60">
-                                  <label className="block text-[10.5px] font-bold text-slate-700 mb-1">Text Color</label>
+                                  <label className="block text-[10.5px] font-bold text-slate-700 mb-1">{t("cert.textColor", "Text Color")}</label>
                                   <div className="flex items-center gap-1.5">
-                                    <div className="relative group shrink-0" title="Custom color picker">
+                                    <div className="relative group shrink-0" title={t("cert.customColorPicker", "Custom color picker")}>
                                       <div
                                         className="w-6.5 h-6.5 rounded-lg border border-slate-300 shadow-2xs flex items-center justify-center cursor-pointer transition-all group-hover:scale-105 group-hover:border-blue-400 overflow-hidden relative"
                                         style={{ backgroundColor: el.color || activeTemplate.accentColor || "#D4AF37" }}
@@ -2457,26 +2474,26 @@ export default function CertificatesView({
                             <div className="space-y-3 pt-2">
                               <div>
                                 <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                  Upload Graphic / Stamp / Logo
+                                  {t("cert.uploadGraphicStampLogo", "Upload Graphic / Stamp / Logo")}
                                 </label>
                                 <FormImageUploader
                                   value={el.url || ""}
                                   onChange={(url) => handleUpdateCustomElement(el.id, "url", url)}
                                   aspectRatio="1:1"
-                                  placeholder="Upload badge, stamp, or partner logo"
+                                  placeholder={t("cert.uploadBadgePlaceholder", "Upload badge, stamp, or partner logo")}
                                 />
                               </div>
 
                               <div className="p-3 bg-slate-50/70 rounded-xl border border-slate-200/70 space-y-2.5">
                                 <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                                   <ImageIcon size={12} className="text-purple-600" />
-                                  <span>Image Dimensions & Shape</span>
+                                  <span>{t("cert.imageDimensionsShape", "Image Dimensions & Shape")}</span>
                                 </span>
 
                                 <div className="grid grid-cols-2 gap-2.5">
                                   <div>
                                     <div className="flex justify-between items-center mb-1">
-                                      <label className="text-[10.5px] font-bold text-slate-700">Image Size</label>
+                                      <label className="text-[10.5px] font-bold text-slate-700">{t("cert.imageSize", "Image Size")}</label>
                                       <span className="text-[9.5px] font-mono font-bold text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded">{el.width || 55}px</span>
                                     </div>
                                     <input
@@ -2491,16 +2508,16 @@ export default function CertificatesView({
                                   </div>
 
                                   <div>
-                                    <label className="block text-[10.5px] font-bold text-slate-700 mb-1">Shape Crop</label>
+                                    <label className="block text-[10.5px] font-bold text-slate-700 mb-1">{t("cert.shapeCrop", "Shape Crop")}</label>
                                     <SearchableSelect
                                       value={el.borderRadius || "none"}
                                       onChange={(val) => handleUpdateCustomElement(el.id, "borderRadius", val)}
                                       options={[
-                                        { value: "none", label: "Original / Square" },
-                                        { value: "rounded", label: "Rounded Corners" },
-                                        { value: "circle", label: "Circular Stamp" },
+                                        { value: "none", label: t("cert.cropSquare", "Original / Square") },
+                                        { value: "rounded", label: t("cert.cropRounded", "Rounded Corners") },
+                                        { value: "circle", label: t("cert.cropCircle", "Circular Stamp") },
                                       ]}
-                                      placeholder="Shape Crop..."
+                                      placeholder={t("cert.shapeCropPlaceholder", "Shape Crop...")}
                                     />
                                   </div>
                                 </div>
@@ -2512,14 +2529,14 @@ export default function CertificatesView({
                           <div className="p-3 bg-slate-50/70 rounded-xl border border-slate-200/70 space-y-2.5">
                             <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                               <Sliders size={12} className="text-blue-600" />
-                              <span>Position & Canvas Layout</span>
+                              <span>{t("cert.positionLayout", "Position & Canvas Layout")}</span>
                             </span>
 
                             {/* Dual X & Y Sliders */}
                             <div className="grid grid-cols-2 gap-2.5">
                               <div>
                                 <div className="flex justify-between items-center mb-1">
-                                  <label className="text-[10.5px] font-bold text-slate-700">X (Horizontal)</label>
+                                  <label className="text-[10.5px] font-bold text-slate-700">{t("cert.xHorizontal", "X (Horizontal)")}</label>
                                   <span className="text-[9.5px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{el.x || 50}%</span>
                                 </div>
                                 <input
@@ -2535,7 +2552,7 @@ export default function CertificatesView({
 
                               <div>
                                 <div className="flex justify-between items-center mb-1">
-                                  <label className="text-[10.5px] font-bold text-slate-700">Y (Vertical)</label>
+                                  <label className="text-[10.5px] font-bold text-slate-700">{t("cert.yVertical", "Y (Vertical)")}</label>
                                   <span className="text-[9.5px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{el.y || 50}%</span>
                                 </div>
                                 <input
@@ -2553,7 +2570,7 @@ export default function CertificatesView({
                             {/* Opacity Slider */}
                             <div>
                               <div className="flex justify-between items-center mb-1">
-                                <label className="text-[10.5px] font-bold text-slate-700">Opacity</label>
+                                <label className="text-[10.5px] font-bold text-slate-700">{t("cert.opacity", "Opacity")}</label>
                                 <span className="text-[9.5px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{Math.round((el.opacity !== undefined ? el.opacity : 1) * 100)}%</span>
                               </div>
                               <input
@@ -2582,32 +2599,32 @@ export default function CertificatesView({
             <div className="space-y-4 animate-fade-in">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Typography Font Pairing
+                  {t("cert.typographyFontPairing", "Typography Font Pairing")}
                 </label>
                 <SearchableSelect
                   value={activeTemplate.fontPairing || "cinzel-sans"}
                   onChange={(val) => handleUpdateActiveTemplate("fontPairing", val)}
                   options={FONT_PAIRINGS.map(f => ({ value: f.id, label: f.name }))}
-                  placeholder="Select Font Pairing..."
+                  placeholder={t("cert.selectFontPairingPlaceholder", "Select Font Pairing...")}
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Border Frame Architecture ({BORDER_STYLES.length} Distinct Styles)
+                  {t("cert.borderFrameArchitecture", "Border Frame Architecture")} (<bdi dir="ltr">{BORDER_STYLES.length}</bdi> {t("cert.distinctStyles", "Distinct Styles")})
                 </label>
                 <SearchableSelect
                   value={activeTemplate.borderStyle || "modern-geometric-navy-gold"}
                   onChange={(val) => handleUpdateActiveTemplate("borderStyle", val)}
                   options={BORDER_STYLES.map(b => ({ value: b.id, label: b.name }))}
-                  placeholder="Select Border Style Architecture..."
+                  placeholder={t("cert.selectBorderStylePlaceholder", "Select Border Style Architecture...")}
                 />
               </div>
 
               {/* Accent Color Palette */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Accent Color
+                  {t("cert.accentColorLabel", "Accent Color")}
                 </label>
                 <div className="flex flex-wrap items-center gap-2">
                   {ACCENT_COLORS.map(c => (
@@ -2624,7 +2641,7 @@ export default function CertificatesView({
                     </button>
                   ))}
                   <div className="flex items-center gap-1.5 ml-2">
-                    <div className="relative group shrink-0" title="Custom accent color picker">
+                    <div className="relative group shrink-0" title={t("cert.customColorPicker", "Custom color picker")}>
                       <div
                         className="w-7 h-7 rounded-xl border border-slate-300 shadow-2xs flex items-center justify-center cursor-pointer transition-all group-hover:scale-105 group-hover:border-blue-400 overflow-hidden relative"
                         style={{ backgroundColor: activeTemplate.accentColor || "#D4AF37" }}
@@ -2648,18 +2665,18 @@ export default function CertificatesView({
               {/* Background Canvas Style */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Background Tone
+                  {t("cert.backgroundTone", "Background Tone")}
                 </label>
                 <SearchableSelect
                   value={activeTemplate.bgStyle || "ivory"}
                   onChange={(val) => handleUpdateActiveTemplate("bgStyle", val)}
                   options={[
-                    { value: "ivory", label: "Classic Warm Ivory" },
-                    { value: "white", label: "Pure Clean White" },
-                    { value: "dark", label: "Obsidian Dark Slate" },
-                    { value: "gradient", label: "Soft Silver Slate Gradient" },
+                    { value: "ivory", label: t("cert.bgIvory", "Classic Warm Ivory") },
+                    { value: "white", label: t("cert.bgWhite", "Pure Clean White") },
+                    { value: "dark", label: t("cert.bgDark", "Obsidian Dark Slate") },
+                    { value: "gradient", label: t("cert.bgGradient", "Soft Silver Slate Gradient") },
                   ]}
-                  placeholder="Select Background Tone..."
+                  placeholder={t("cert.selectBgTonePlaceholder", "Select Background Tone...")}
                 />
               </div>
 
@@ -2667,13 +2684,13 @@ export default function CertificatesView({
               <div className="pt-2 border-t border-slate-100 space-y-2.5">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    Custom A4 Background Graphic Artwork
+                    {t("cert.customA4BgArtwork", "Custom A4 Background Graphic Artwork")}
                   </label>
                   <FormImageUploader
                     value={activeTemplate.customBgUrl || ""}
                     onChange={(url) => handleUpdateActiveTemplate("customBgUrl", url)}
                     onUploadFile={onUploadFile}
-                    placeholder="Upload custom A4 horizontal certificate artwork image (PNG, JPG)"
+                    placeholder={t("cert.uploadArtworkPlaceholder", "Upload custom A4 horizontal certificate artwork image (PNG, JPG)")}
                   />
                   {activeTemplate.customBgUrl && (
                     <button
@@ -2681,7 +2698,7 @@ export default function CertificatesView({
                       onClick={() => handleUpdateActiveTemplate("customBgUrl", "")}
                       className="mt-1 text-[11px] font-bold text-red-600 hover:underline cursor-pointer block"
                     >
-                      Remove Custom Artwork
+                      {t("cert.removeCustomArtwork", "Remove Custom Artwork")}
                     </button>
                   )}
                 </div>
@@ -2690,7 +2707,7 @@ export default function CertificatesView({
                 {activeTemplate.customBgUrl && (
                   <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2 animate-fade-in">
                     <div className="flex items-center justify-between text-xs font-bold text-slate-700">
-                      <span>Background Artwork Opacity</span>
+                      <span>{t("cert.bgArtworkOpacity", "Background Artwork Opacity")}</span>
                       <span className="font-mono text-blue-600 px-2 py-0.5 rounded-md bg-blue-50 border border-blue-200 text-[11px]">
                         {Math.round((activeTemplate.customBgOpacity !== undefined ? activeTemplate.customBgOpacity : 1) * 100)}%
                       </span>
@@ -2705,9 +2722,9 @@ export default function CertificatesView({
                       className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
                     />
                     <div className="flex justify-between text-[10px] text-slate-400 font-semibold">
-                      <span>5% (Subtle Watermark)</span>
-                      <span>50% (Muted)</span>
-                      <span>100% (Solid)</span>
+                      <span>5% ({t("cert.subtleWatermark", "Subtle Watermark")})</span>
+                      <span>50% ({t("cert.mutedWatermark", "Muted")})</span>
+                      <span>100% ({t("cert.solidWatermark", "Solid")})</span>
                     </div>
                   </div>
                 )}
@@ -2721,7 +2738,7 @@ export default function CertificatesView({
               {/* Position & Height Offset Card */}
               <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
                 <div className="flex justify-between items-center">
-                  <label className="text-[11px] font-bold text-slate-700">Signatures Height from Bottom</label>
+                  <label className="text-[11px] font-bold text-slate-700">{t("cert.signaturesHeightBottom", "Signatures Height from Bottom")}</label>
                   <span className="text-[10px] font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
                     {activeTemplate.signatureBottom !== undefined ? activeTemplate.signatureBottom : 8.5}%
                   </span>
@@ -2738,7 +2755,7 @@ export default function CertificatesView({
               </div>
 
               <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                <span className="text-xs font-bold text-slate-700">Committee Signatories</span>
+                <span className="text-xs font-bold text-slate-700">{t("cert.committeeSignatories", "Committee Signatories")}</span>
                 {(activeTemplate.signatories || []).length < 3 && (
                   <button
                     type="button"
@@ -2746,7 +2763,7 @@ export default function CertificatesView({
                     className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
                   >
                     <Plus size={13} />
-                    <span>Add Signer</span>
+                    <span>{t("cert.addSigner", "Add Signer")}</span>
                   </button>
                 )}
               </div>
@@ -2756,7 +2773,7 @@ export default function CertificatesView({
                   <div key={sig.id || idx} className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5">
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] font-black uppercase text-slate-600">
-                        Signatory #{idx + 1}
+                        {t("cert.signatoryPrefix", "Signatory")} #<bdi dir="ltr">{idx + 1}</bdi>
                       </span>
                       {(activeTemplate.signatories || []).length > 1 && (
                         <button
@@ -2771,34 +2788,34 @@ export default function CertificatesView({
 
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="block text-[10px] font-bold text-slate-600 mb-1">Name</label>
+                        <label className="block text-[10px] font-bold text-slate-600 mb-1">{t("cert.signerNameLabel", "Name")}</label>
                         <input
                           type="text"
                           value={sig.name || ""}
                           onChange={(e) => handleUpdateSignatory(idx, "name", e.target.value)}
-                          placeholder="Dr. Sarah Jenkins"
+                          placeholder={t("cert.signerNamePlaceholder", "Dr. Sarah Jenkins")}
                           className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900"
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-bold text-slate-600 mb-1">Title</label>
+                        <label className="block text-[10px] font-bold text-slate-600 mb-1">{t("cert.signerTitleLabel", "Title")}</label>
                         <input
                           type="text"
                           value={sig.title || ""}
                           onChange={(e) => handleUpdateSignatory(idx, "title", e.target.value)}
-                          placeholder="General Chair"
+                          placeholder={t("cert.signerTitlePlaceholder", "General Chair")}
                           className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-600 mb-1">Calligraphy Script</label>
+                      <label className="block text-[10px] font-bold text-slate-600 mb-1">{t("cert.calligraphyScript", "Calligraphy Script")}</label>
                       <SearchableSelect
                         value={sig.calligraphyId || "calligraphy-1"}
                         onChange={(val) => handleUpdateSignatory(idx, "calligraphyId", val)}
                         options={CALLIGRAPHY_SIGNATURES.map(c => ({ value: c.id, label: c.name }))}
-                        placeholder="Calligraphy..."
+                        placeholder={t("cert.calligraphyPlaceholder", "Calligraphy...")}
                       />
                     </div>
                   </div>
@@ -2838,7 +2855,7 @@ export default function CertificatesView({
                 onMouseLeave={() => setIsDraggingCategory(false)}
                 className="flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-none cursor-grab active:cursor-grabbing select-none"
               >
-                {CERTIFICATE_CATEGORIES.map(cat => {
+                {localizedCategories.map(cat => {
                   const isSelected = galleryCategory === cat.id;
                   const count = cat.id === "saved" ? customSavedList.length : null;
                   return (
@@ -2867,9 +2884,9 @@ export default function CertificatesView({
               {/* SAVED TAB EMPTY STATE */}
               {galleryCategory === "saved" && customSavedList.length === 0 ? (
                 <div className="text-center py-12 px-4 bg-slate-50/70 rounded-2xl border border-dashed border-slate-200 space-y-2">
-                  <h4 className="text-xs font-bold text-slate-800">No Saved Templates Yet</h4>
+                  <h4 className="text-xs font-bold text-slate-800">{t("cert.noSavedTemplatesYet", "No Saved Templates Yet")}</h4>
                   <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
-                    Customize your certificate design with fonts, colors, and signatures, then click &quot;Save Template&quot; at the top right to save it here.
+                    {t("cert.noSavedTemplatesDesc", "Customize your certificate design with fonts, colors, and signatures, then click \"Save Template\" at the top right to save it here.")}
                   </p>
                 </div>
               ) : (
@@ -3040,7 +3057,7 @@ export default function CertificatesView({
                                   borderColor: accentColor,
                                 }}
                               >
-                                John Doe
+                                {t("cert.miniJohnDoe", "John Doe")}
                               </span>
                               <div className="space-y-0.5 mt-1 w-20">
                                 <div className="h-0.5 w-full bg-slate-300/40 rounded-full" />
@@ -3052,11 +3069,11 @@ export default function CertificatesView({
                             <div className="w-full flex items-end justify-around px-2 pt-1 border-t border-slate-200/40">
                               <div className="flex flex-col items-center">
                                 <div className="w-8 h-0.5 bg-slate-300 rounded-full mb-0.5" />
-                                <span className="text-[4px] font-bold text-slate-400">Chair</span>
+                                <span className="text-[4px] font-bold text-slate-400">{t("cert.miniChair", "Chair")}</span>
                               </div>
                               <div className="flex flex-col items-center">
                                 <div className="w-8 h-0.5 bg-slate-300 rounded-full mb-0.5" />
-                                <span className="text-[4px] font-bold text-slate-400">Director</span>
+                                <span className="text-[4px] font-bold text-slate-400">{t("cert.miniDirector", "Director")}</span>
                               </div>
                             </div>
                           </div>
@@ -3075,7 +3092,7 @@ export default function CertificatesView({
                               <button
                                 type="button"
                                 onClick={(e) => handleOverwriteCustomTemplate(tpl.id, e)}
-                                title="Update this saved template with current canvas styling"
+                                title={t("cert.updateTemplateTooltip", "Update this saved template with current canvas styling")}
                                 className="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md cursor-pointer transition-all"
                               >
                                 <Save size={13} />
@@ -3086,7 +3103,7 @@ export default function CertificatesView({
                                   e.stopPropagation();
                                   handleOpenSaveCustomModal(tpl);
                                 }}
-                                title="Rename template"
+                                title={t("cert.renameTemplateTooltip", "Rename template")}
                                 className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md cursor-pointer transition-all"
                               >
                                 <Edit3 size={13} />
@@ -3094,7 +3111,7 @@ export default function CertificatesView({
                               <button
                                 type="button"
                                 onClick={(e) => handleDeleteSavedTemplate(tpl.id, e)}
-                                title="Delete saved template"
+                                title={t("cert.deleteTemplateTooltip", "Delete saved template")}
                                 className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md cursor-pointer transition-all"
                               >
                                 <Trash2 size={13} />
@@ -3122,7 +3139,7 @@ export default function CertificatesView({
                 onClick={() => setActivePreviewIndex(prev => Math.max(0, prev - 1))}
                 disabled={activePreviewIndex <= 0}
                 className="p-2 rounded-xl border border-slate-200 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer text-slate-700"
-                title="Previous Recipient"
+                title={t("cert.prevRecipientTooltip", "Previous Recipient")}
               >
                 <ChevronLeft size={16} />
               </button>
@@ -3132,7 +3149,7 @@ export default function CertificatesView({
                   {currentPreviewRecipient.name}
                 </span>
                 <span className="text-slate-400 font-medium ml-1.5">
-                  ({filteredRecipients.length > 0 ? activePreviewIndex + 1 : 0} of {filteredRecipients.length})
+                  (<bdi dir="ltr">{filteredRecipients.length > 0 ? activePreviewIndex + 1 : 0}</bdi> {t("cert.of", "of")} <bdi dir="ltr">{filteredRecipients.length}</bdi>)
                 </span>
               </div>
 
@@ -3140,7 +3157,7 @@ export default function CertificatesView({
                 onClick={() => setActivePreviewIndex(prev => Math.min(filteredRecipients.length - 1, prev + 1))}
                 disabled={activePreviewIndex >= filteredRecipients.length - 1}
                 className="p-2 rounded-xl border border-slate-200 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer text-slate-700"
-                title="Next Recipient"
+                title={t("cert.nextRecipientTooltip", "Next Recipient")}
               >
                 <ChevronRight size={16} />
               </button>
@@ -3151,10 +3168,10 @@ export default function CertificatesView({
                 type="button"
                 onClick={() => handleOpenEmailModal(currentPreviewRecipient)}
                 className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 font-bold text-xs transition-all cursor-pointer shadow-2xs"
-                title="Send Certificate via Email"
+                title={t("cert.sendEmailTooltip", "Send Certificate via Email")}
               >
                 <Mail size={13} />
-                <span>Email Certificate</span>
+                <span>{t("cert.emailCertificateBtn", "Email Certificate")}</span>
               </button>
 
               <button
@@ -3163,7 +3180,7 @@ export default function CertificatesView({
                 className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold text-xs transition-all cursor-pointer shadow-2xs border border-blue-200/60"
               >
                 <Printer size={13} />
-                <span>Print Certificate</span>
+                <span>{t("cert.printCertificateBtn", "Print Certificate")}</span>
               </button>
             </div>
           </div>
@@ -3181,8 +3198,8 @@ export default function CertificatesView({
           </div>
 
           <div className="flex items-center justify-between text-[11px] text-slate-500 font-medium px-2">
-            <span>Standard ISO 216 Landscape A4 (297 × 210 mm) • High-Precision Vector Engine</span>
-            <span>Template: <strong>{activeTemplate.name}</strong></span>
+            <span>{t("cert.canvasStandardNotice", "Standard ISO 216 Landscape A4 (297 × 210 mm) • High-Precision Vector Engine")}</span>
+            <span>{t("cert.templateLabel", "Template:")} <strong>{activeTemplate.name}</strong></span>
           </div>
 
         </div>
@@ -3198,27 +3215,27 @@ export default function CertificatesView({
         <div className="p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
             <h3 className="text-base font-black text-slate-900 tracking-tight flex items-center gap-2">
-              <span>Recipients Directory ({filteredRecipients.length})</span>
+              <span>{t("cert.recipientsDirectoryTitle", "Recipients Directory")} (<bdi dir="ltr">{filteredRecipients.length}</bdi>)</span>
               {selectedRecipientIds.size > 0 && (
                 <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-black">
-                  {selectedRecipientIds.size} Selected
+                  <bdi dir="ltr">{selectedRecipientIds.size}</bdi> {t("cert.selectedCount", "Selected")}
                 </span>
               )}
             </h3>
             <p className="text-xs text-slate-500">
-              Select delegates to generate and batch print official personalized A4 horizontal certificates.
+              {t("cert.recipientsDirectoryDesc", "Select delegates to generate and batch print official personalized A4 horizontal certificates.")}
             </p>
           </div>
 
           <div className="flex items-center flex-wrap gap-2.5">
             <div className="relative min-w-[220px]">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search size={14} className={`absolute ${isRTL ? "right-3" : "left-3"} top-1/2 -translate-y-1/2 text-slate-400`} />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search name, company, role..."
-                className="w-full pl-9 pr-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-hidden transition-all"
+                placeholder={t("cert.searchRecipientsPlaceholder", "Search name, company, role...")}
+                className={`w-full ${isRTL ? "pr-9 pl-3.5" : "pl-9 pr-3.5"} py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-hidden transition-all`}
               />
             </div>
 
@@ -3227,15 +3244,15 @@ export default function CertificatesView({
               className="px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-xs transition-all shrink-0 cursor-pointer"
             >
               {selectedRecipientIds.size === filteredRecipients.length && filteredRecipients.length > 0
-                ? "Deselect All"
-                : "Select All"}
+                ? t("cert.deselectAll", "Deselect All")
+                : t("cert.selectAll", "Select All")}
             </button>
           </div>
         </div>
 
         {/* Table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="w-full text-start rtl:text-right text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-extrabold uppercase tracking-wider text-[10px]">
                 <th className="py-3 px-4 w-10 text-center">
@@ -3246,11 +3263,11 @@ export default function CertificatesView({
                     className="w-4 h-4 rounded text-blue-600 cursor-pointer"
                   />
                 </th>
-                <th className="py-3 px-4">Recipient Name</th>
-                <th className="py-3 px-4">Role / Category</th>
-                <th className="py-3 px-4">Company / Organization</th>
-                <th className="py-3 px-4">Certificate Serial</th>
-                <th className="py-3 px-4 text-right">Actions</th>
+                <th className="py-3 px-4">{t("cert.colRecipientName", "RECIPIENT NAME")}</th>
+                <th className="py-3 px-4">{t("cert.colRoleCategory", "ROLE / CATEGORY")}</th>
+                <th className="py-3 px-4">{t("cert.colCompanyOrg", "COMPANY / ORGANIZATION")}</th>
+                <th className="py-3 px-4">{t("cert.colCertificateSerial", "CERTIFICATE SERIAL")}</th>
+                <th className="py-3 px-4 text-right">{t("cert.colActions", "ACTIONS")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -3259,8 +3276,8 @@ export default function CertificatesView({
                   <td colSpan={6} className="py-12 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <Award size={32} className="opacity-40" />
-                      <p className="font-bold text-slate-600">No recipients found</p>
-                      <p className="text-[11px] text-slate-400">Try adjusting your search query or role filter.</p>
+                      <p className="font-bold text-slate-600">{t("cert.noRecipientsFound", "No recipients found")}</p>
+                      <p className="text-[11px] text-slate-400">{t("cert.noRecipientsHint", "Try adjusting your search query or role filter.")}</p>
                     </div>
                   </td>
                 </tr>
@@ -3305,7 +3322,7 @@ export default function CertificatesView({
                               : "bg-blue-100 text-blue-800"
                           }`}
                         >
-                          {rec.role}
+                          {rec.role === "Speaker" ? t("cert.badgeSpeaker", "Speaker") : rec.role === "Sponsor" ? t("cert.badgeSponsor", "Sponsor") : rec.role === "Exhibitor" ? t("cert.badgeExhibitor", "Exhibitor") : t("cert.badgeAttendee", "Attendee")}
                         </span>
                       </td>
 
@@ -3314,7 +3331,7 @@ export default function CertificatesView({
                         {rec.jobTitle && <div className="text-[10px] text-slate-400">{rec.jobTitle}</div>}
                       </td>
 
-                      <td className="py-3 px-4 font-mono font-bold text-slate-800">
+                      <td className="py-3 px-4 font-mono font-bold text-slate-800" dir="ltr">
                         {rec.certificateId}
                       </td>
 
@@ -3326,7 +3343,7 @@ export default function CertificatesView({
                               window.scrollTo({ top: 0, behavior: "smooth" });
                             }}
                             className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 hover:text-blue-600 transition-all cursor-pointer"
-                            title="Preview on Canvas"
+                            title={t("cert.previewOnCanvas", "Preview on Canvas")}
                           >
                             <Eye size={14} />
                           </button>
@@ -3334,7 +3351,7 @@ export default function CertificatesView({
                           <button
                             onClick={() => handleOpenEmailModal(rec)}
                             className="p-1.5 rounded-lg border border-slate-200 hover:bg-blue-50 text-slate-600 hover:text-blue-600 transition-all cursor-pointer"
-                            title="Send Certificate via Email"
+                            title={t("cert.sendEmailTooltip", "Send Certificate via Email")}
                           >
                             <Mail size={14} />
                           </button>
@@ -3342,7 +3359,7 @@ export default function CertificatesView({
                           <button
                             onClick={() => handlePrintSingle(rec)}
                             className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 transition-all cursor-pointer"
-                            title="Print Certificate"
+                            title={t("cert.printCertificateBtn", "Print Certificate")}
                           >
                             <Printer size={14} />
                           </button>
@@ -3364,7 +3381,7 @@ export default function CertificatesView({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-slate-150 space-y-5">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-base font-black text-slate-900">Add Custom Recipient</h3>
+              <h3 className="text-base font-black text-slate-900">{t("cert.addCustomRecipient", "Add Custom Recipient")}</h3>
               <button
                 onClick={() => setIsAddRecipientModalOpen(false)}
                 className="text-slate-400 hover:text-slate-600 cursor-pointer"
@@ -3375,64 +3392,64 @@ export default function CertificatesView({
 
             <form onSubmit={handleAddCustomRecipientSubmit} className="space-y-3.5">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Full Name *</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">{t("cert.fullNameLabel", "Full Name")} *</label>
                 <input
                   type="text"
                   required
                   value={newRecName}
                   onChange={(e) => setNewRecName(e.target.value)}
-                  placeholder="e.g. Dr. Alexandre Dupont"
+                  placeholder={t("cert.fullNamePlaceholder", "e.g. Dr. Alexandre Dupont")}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">{t("cert.emailAddressLabel", "Email Address")}</label>
                 <input
                   type="email"
                   value={newRecEmail}
                   onChange={(e) => setNewRecEmail(e.target.value)}
-                  placeholder="alexandre@example.com"
+                  placeholder={t("cert.emailPlaceholder", "alexandre@example.com")}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Role / Category</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">{t("cert.colRoleCategory", "Role / Category")}</label>
                   <SearchableSelect
                     value={newRecRole}
                     onChange={(val) => setNewRecRole(val)}
                     options={[
-                      { value: "Attendee", label: "Attendee" },
-                      { value: "Speaker", label: "Speaker" },
-                      { value: "Sponsor", label: "Sponsor" },
-                      { value: "Exhibitor", label: "Exhibitor" },
-                      { value: "Special Guest", label: "Special Guest" },
+                      { value: "Attendee", label: t("cert.badgeAttendee", "Attendee") },
+                      { value: "Speaker", label: t("cert.badgeSpeaker", "Speaker") },
+                      { value: "Sponsor", label: t("cert.badgeSponsor", "Sponsor") },
+                      { value: "Exhibitor", label: t("cert.badgeExhibitor", "Exhibitor") },
+                      { value: "Special Guest", label: t("cert.roleSpecialGuest", "Special Guest") },
                     ]}
-                    placeholder="Role..."
+                    placeholder={t("cert.rolePlaceholder", "Role...")}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Job Title</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">{t("cert.varJobTitle", "Job Title")}</label>
                   <input
                     type="text"
                     value={newRecJobTitle}
                     onChange={(e) => setNewRecJobTitle(e.target.value)}
-                    placeholder="e.g. Keynote Speaker"
+                    placeholder={t("cert.jobTitlePlaceholder", "e.g. Keynote Speaker")}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Organization / Company</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">{t("cert.colCompanyOrg", "Organization / Company")}</label>
                 <input
                   type="text"
                   value={newRecCompany}
                   onChange={(e) => setNewRecCompany(e.target.value)}
-                  placeholder="e.g. University of Science & Technology"
+                  placeholder={t("cert.companyPlaceholder", "e.g. University of Science & Technology")}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900"
                 />
               </div>
@@ -3443,13 +3460,13 @@ export default function CertificatesView({
                   onClick={() => setIsAddRecipientModalOpen(false)}
                   className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
                 >
-                  Cancel
+                  {t("common.cancel", "Cancel")}
                 </button>
                 <button
                   type="submit"
                   className="px-5 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-xs cursor-pointer"
                 >
-                  Save Recipient
+                  {t("cert.saveRecipientBtn", "Save Recipient")}
                 </button>
               </div>
             </form>
@@ -3465,8 +3482,8 @@ export default function CertificatesView({
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-slate-150 space-y-5">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
-                <h3 className="text-base font-black text-slate-900">Bulk Import Recipients (CSV)</h3>
-                <p className="text-xs text-slate-500">Paste comma-separated rows: <code>Name, Email, Role, Company, JobTitle</code></p>
+                <h3 className="text-base font-black text-slate-900">{t("cert.bulkImportCsvTitle", "Bulk Import Recipients (CSV)")}</h3>
+                <p className="text-xs text-slate-500">{t("cert.bulkImportCsvDesc", "Paste comma-separated rows: Name, Email, Role, Company, JobTitle")}</p>
               </div>
               <button
                 onClick={() => setIsImportCsvModalOpen(false)}
@@ -3491,13 +3508,13 @@ export default function CertificatesView({
                   onClick={() => setIsImportCsvModalOpen(false)}
                   className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
                 >
-                  Cancel
+                  {t("common.cancel", "Cancel")}
                 </button>
                 <button
                   type="submit"
                   className="px-5 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-xs cursor-pointer"
                 >
-                  Import All Rows
+                  {t("cert.importAllRows", "Import All Rows")}
                 </button>
               </div>
             </form>
@@ -3513,8 +3530,8 @@ export default function CertificatesView({
           <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-150 space-y-6 max-h-[92vh] overflow-y-auto custom-scrollbar">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
-                <h3 className="text-xl font-black text-slate-900">Email Certificate</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Send verified certificate document directly to recipient</p>
+                <h3 className="text-xl font-black text-slate-900">{t("cert.emailCertificateModalTitle", "Email Certificate")}</h3>
+                <p className="text-xs text-slate-500 mt-0.5">{t("cert.emailCertificateModalDesc", "Send verified certificate document directly to recipient")}</p>
               </div>
               <button
                 type="button"
@@ -3544,14 +3561,14 @@ export default function CertificatesView({
               {/* Recipient Email */}
               <div>
                 <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                  Recipient Email Address *
+                  {t("cert.recipientEmailAddress", "Recipient Email Address")} *
                 </label>
                 <input
                   type="email"
                   required
                   value={emailRecipientAddress}
                   onChange={(e) => setEmailRecipientAddress(e.target.value)}
-                  placeholder="e.g. recipient@example.com"
+                  placeholder={t("cert.recipientEmailPlaceholder", "e.g. recipient@example.com")}
                   className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-hidden transition-all"
                 />
               </div>
@@ -3559,7 +3576,7 @@ export default function CertificatesView({
               {/* Subject */}
               <div>
                 <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                  Email Subject Line
+                  {t("cert.emailSubjectLine", "Email Subject Line")}
                 </label>
                 <input
                   type="text"
@@ -3573,13 +3590,13 @@ export default function CertificatesView({
               {/* Custom Personal Note */}
               <div>
                 <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                  Personal Message / Note
+                  {t("cert.personalMessageNote", "Personal Message / Note")}
                 </label>
                 <textarea
                   rows={5}
                   value={emailMessage}
                   onChange={(e) => setEmailMessage(e.target.value)}
-                  placeholder="Add an optional message or congratulatory note..."
+                  placeholder={t("cert.personalMessagePlaceholder", "Add an optional message or congratulatory note...")}
                   className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm text-slate-800 leading-relaxed focus:ring-2 focus:ring-blue-500 focus:outline-hidden resize-none transition-all"
                 />
               </div>
@@ -3607,7 +3624,7 @@ export default function CertificatesView({
                   disabled={isSendingEmail}
                   className="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100 cursor-pointer disabled:opacity-50 transition-all"
                 >
-                  Cancel
+                  {t("common.cancel", "Cancel")}
                 </button>
                 <button
                   type="submit"
@@ -3617,10 +3634,10 @@ export default function CertificatesView({
                   {isSendingEmail ? (
                     <>
                       <Loader2 size={15} className="animate-spin" />
-                      <span>Sending Certificate...</span>
+                      <span>{t("cert.sendingCertificate", "Sending Certificate...")}</span>
                     </>
                   ) : (
-                    <span>Send Certificate</span>
+                    <span>{t("cert.sendCertificateBtn", "Send Certificate")}</span>
                   )}
                 </button>
               </div>
@@ -3637,8 +3654,8 @@ export default function CertificatesView({
           <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-150 space-y-6 max-h-[92vh] overflow-y-auto custom-scrollbar">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
-                <h3 className="text-xl font-black text-slate-900">Batch Email Certificates</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Dispatch certificates in bulk to selected participants</p>
+                <h3 className="text-xl font-black text-slate-900">{t("cert.batchEmailModalTitle", "Batch Email Certificates")}</h3>
+                <p className="text-xs text-slate-500 mt-0.5">{t("cert.batchEmailModalDesc", "Dispatch certificates in bulk to selected participants")}</p>
               </div>
               <button
                 type="button"
@@ -3657,22 +3674,22 @@ export default function CertificatesView({
                   <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-2">
                     <CheckCircle2 size={26} />
                   </div>
-                  <h4 className="text-base font-extrabold text-emerald-900">Batch Delivery Completed!</h4>
-                  <p className="text-xs text-emerald-700">Official certificate notifications have been dispatched.</p>
+                  <h4 className="text-base font-extrabold text-emerald-900">{t("cert.batchDeliveryCompleted", "Batch Delivery Completed!")}</h4>
+                  <p className="text-xs text-emerald-700">{t("cert.batchDeliveryCompletedDesc", "Official certificate notifications have been dispatched.")}</p>
                 </div>
 
                 <div className="grid grid-cols-3 gap-3 text-center">
                   <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
                     <div className="text-lg font-black text-emerald-600">{batchEmailResults.sent}</div>
-                    <div className="text-xs font-bold text-slate-500 uppercase mt-0.5">Delivered</div>
+                    <div className="text-xs font-bold text-slate-500 uppercase mt-0.5">{t("cert.deliveredStat", "Delivered")}</div>
                   </div>
                   <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
                     <div className="text-lg font-black text-rose-600">{batchEmailResults.failed}</div>
-                    <div className="text-xs font-bold text-slate-500 uppercase mt-0.5">Failed</div>
+                    <div className="text-xs font-bold text-slate-500 uppercase mt-0.5">{t("cert.failedStat", "Failed")}</div>
                   </div>
                   <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
                     <div className="text-lg font-black text-amber-600">{batchEmailResults.skippedNoEmail}</div>
-                    <div className="text-xs font-bold text-slate-500 uppercase mt-0.5">Skipped (No Email)</div>
+                    <div className="text-xs font-bold text-slate-500 uppercase mt-0.5">{t("cert.skippedStat", "Skipped (No Email)")}</div>
                   </div>
                 </div>
 
@@ -3685,7 +3702,7 @@ export default function CertificatesView({
                     }}
                     className="px-6 py-2.5 rounded-xl text-sm font-bold bg-slate-900 hover:bg-slate-800 text-white shadow-xs cursor-pointer"
                   >
-                    Done & Close
+                    {t("cert.doneAndClose", "Done & Close")}
                   </button>
                 </div>
               </div>
@@ -3702,15 +3719,15 @@ export default function CertificatesView({
                   return (
                     <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2.5">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-bold text-slate-800">Target Recipients</span>
+                        <span className="text-sm font-bold text-slate-800">{t("cert.targetRecipients", "Target Recipients")}</span>
                         <span className="text-xs font-extrabold text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
                           {targetList.length} Total
                         </span>
                       </div>
                       <div className="flex items-center gap-4 text-xs text-slate-600 font-medium">
-                        <span>✉️ <strong>{withEmail}</strong> valid email addresses</span>
+                        <span>✉️ <strong>{withEmail}</strong> {t("cert.validEmailAddresses", "valid email addresses")}</span>
                         {noEmail > 0 && (
-                          <span className="text-amber-600 font-bold">⚠️ {noEmail} missing email</span>
+                          <span className="text-amber-600 font-bold">⚠️ {noEmail} {t("cert.missingEmail", "missing email")}</span>
                         )}
                       </div>
                     </div>
@@ -3720,8 +3737,8 @@ export default function CertificatesView({
                 {/* Email Subject Template */}
                 <div>
                   <div className="flex justify-between items-center mb-1.5">
-                    <label className="text-xs font-bold text-slate-800">Email Subject Template</label>
-                    <span className="text-xs text-slate-400 font-medium">Supports dynamic tags</span>
+                    <label className="text-xs font-bold text-slate-800">{t("cert.emailSubjectTemplate", "Email Subject Template")}</label>
+                    <span className="text-xs text-slate-400 font-medium">{t("cert.supportsDynamicTags", "Supports dynamic tags")}</span>
                   </div>
                   <input
                     type="text"
@@ -3753,8 +3770,8 @@ export default function CertificatesView({
                 {/* Message Body Template */}
                 <div>
                   <div className="flex justify-between items-center mb-1.5">
-                    <label className="text-xs font-bold text-slate-800">Message Body Template</label>
-                    <span className="text-xs text-slate-400 font-medium">Included in email body</span>
+                    <label className="text-xs font-bold text-slate-800">{t("cert.messageBodyTemplate", "Message Body Template")}</label>
+                    <span className="text-xs text-slate-400 font-medium">{t("cert.includedInEmailBody", "Included in email body")}</span>
                   </div>
                   <textarea
                     rows={5}
@@ -3789,7 +3806,7 @@ export default function CertificatesView({
                     <div className="flex items-center justify-between text-xs font-bold text-blue-900">
                       <span className="flex items-center gap-2">
                         <Loader2 size={14} className="animate-spin text-blue-600" />
-                        <span>Sending in progress...</span>
+                        <span>{t("cert.sendingInProgress", "Sending in progress...")}</span>
                       </span>
                       <span>{batchEmailProgress.current} of {batchEmailProgress.total}</span>
                     </div>
@@ -3817,7 +3834,7 @@ export default function CertificatesView({
                     disabled={isBatchSendingEmail}
                     className="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100 cursor-pointer disabled:opacity-50 transition-all"
                   >
-                    Cancel
+                    {t("common.cancel", "Cancel")}
                   </button>
                   <button
                     type="button"
@@ -3828,10 +3845,10 @@ export default function CertificatesView({
                     {isBatchSendingEmail ? (
                       <>
                         <Loader2 size={15} className="animate-spin" />
-                        <span>Sending Batch...</span>
+                        <span>{t("cert.sendingInProgress", "Sending Batch...")}</span>
                       </>
                     ) : (
-                      <span>Start Batch Delivery</span>
+                      <span>{t("cert.startBatchDelivery", "Start Batch Delivery")}</span>
                     )}
                   </button>
                 </div>
@@ -3850,10 +3867,10 @@ export default function CertificatesView({
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
                 <h3 className="text-base font-black text-slate-900">
-                  {editingTemplateId ? "Rename Saved Template" : "Save as New Template"}
+                  {editingTemplateId ? t("cert.renameSavedTemplate", "Rename Saved Template") : t("cert.saveAsNewTemplate", "Save as New Template")}
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  {editingTemplateId ? "Update your template's title and category" : "Store your current canvas design to your saved templates"}
+                  {editingTemplateId ? t("cert.renameTemplateDesc", "Update your template's title and category") : t("cert.saveTemplateDesc", "Store your current canvas design to your saved templates")}
                 </p>
               </div>
               <button
@@ -3877,7 +3894,7 @@ export default function CertificatesView({
             >
               <div>
                 <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                  Template Name *
+                  {t("cert.templateNameLabel", "Template Name *")}
                 </label>
                 <input
                   type="text"
@@ -3885,23 +3902,23 @@ export default function CertificatesView({
                   autoFocus
                   value={customTemplateName}
                   onChange={(e) => setCustomTemplateName(e.target.value)}
-                  placeholder="e.g. VIP Speaker Platinum Award"
+                  placeholder={t("cert.templateNamePlaceholder", "e.g. VIP Speaker Platinum Award")}
                   className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                  Category
+                  {t("cert.categoryLabel", "Category")}
                 </label>
                 <SearchableSelect
                   value={customTemplateCategory}
                   onChange={(val) => setCustomTemplateCategory(val)}
-                  options={CERTIFICATE_CATEGORIES.filter(c => c.id !== "all" && c.id !== "saved").map(c => ({
+                  options={localizedCategories.filter(c => c.id !== "all" && c.id !== "saved").map(c => ({
                     value: c.id,
                     label: c.label
                   }))}
-                  placeholder="Choose category..."
+                  placeholder={t("cert.chooseCategoryPlaceholder", "Choose category...")}
                 />
               </div>
 
@@ -3914,14 +3931,14 @@ export default function CertificatesView({
                   }}
                   className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer transition-all"
                 >
-                  Cancel
+                  {t("common.cancel", "Cancel")}
                 </button>
                 <button
                   type="submit"
                   disabled={!customTemplateName.trim()}
                   className="px-5 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white shadow-xs cursor-pointer transition-all"
                 >
-                  {editingTemplateId ? "Save Changes" : "Save Template"}
+                  {editingTemplateId ? t("cert.saveChanges", "Save Changes") : t("cert.saveTemplateBtn", "Save Template")}
                 </button>
               </div>
             </form>
