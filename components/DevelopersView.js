@@ -438,13 +438,13 @@ const styles = StyleSheet.create({
       setNewKeyName("");
       setIsNewKeyModalOpen(false);
     } catch (err) {
-      alert("Failed to generate API Key: " + err.message);
+      alert(t("dev.errGenerateKey", "Failed to generate API Key: ") + err.message);
     }
   };
 
   // Revoke API Key
   const handleDeleteKey = async (id) => {
-    if (confirm("Are you sure you want to revoke this API Key? Any external sites using this key will immediately lose access.")) {
+    if (confirm(t("dev.confirmRevokeKey", "Are you sure you want to revoke this API Key? Any external sites using this key will immediately lose access."))) {
       await deleteEventApiKey(id, currentEventId);
       setApiKeys((prev) => prev.filter((k) => k.id !== id));
     }
@@ -463,7 +463,7 @@ const styles = StyleSheet.create({
       setNewWebhookUrl("");
       setIsNewWebhookModalOpen(false);
     } catch (err) {
-      alert("Failed to register webhook: " + err.message);
+      alert(t("dev.errRegisterWebhook", "Failed to register webhook: ") + err.message);
     }
   };
 
@@ -1070,7 +1070,7 @@ fun main() {
   }, [webhooks, searchQuery]);
 
   return (
-    <div className="space-y-6 animate-fade-in text-slate-800 pb-16 w-full font-sans select-none">
+    <div dir={isRTL ? "rtl" : "ltr"} className="space-y-6 animate-fade-in text-slate-800 pb-16 w-full font-sans select-none">
       {/* ─────────────────────────────────────────────
           1. HEADER SECTION (Matches Logistics layout)
       ───────────────────────────────────────────── */}
@@ -1078,14 +1078,14 @@ fun main() {
         <div className="space-y-1">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-              Developers & Tickets API
+              {t("dev.title", "Developers & API Integrations")}
             </h1>
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
-              CORS Active
+              {t("dev.corsActive", "CORS ACTIVE")}
             </span>
           </div>
           <p className="text-xs text-slate-500 font-medium">
-            Command center for public REST APIs, embeddable registration widgets, API keys, and real-time webhook ingestion.
+            {t("dev.subtitle", "Command center for public REST APIs, embeddable registration widgets, API keys, and real-time webhook ingestion.")}
           </p>
         </div>
 
@@ -1099,12 +1099,12 @@ fun main() {
             {copiedKey === "eventId" ? (
               <>
                 <Check size={14} className="text-emerald-600" />
-                <span className="text-emerald-600 font-bold">Event ID Copied</span>
+                <span className="text-emerald-600 font-bold">{t("dev.eventIdCopied", "Event ID Copied")}</span>
               </>
             ) : (
               <>
                 <Copy size={14} />
-                <span>Copy Event ID</span>
+                <span>{t("dev.copyEventId", "Copy Event ID")}</span>
               </>
             )}
           </button>
@@ -1117,7 +1117,7 @@ fun main() {
               className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl text-xs sm:text-sm transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
             >
               <ExternalLink size={14} />
-              <span>Open Form Page</span>
+              <span>{t("dev.openFormPage", "Open Form Page")}</span>
             </a>
           )}
 
@@ -1127,7 +1127,7 @@ fun main() {
               className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs sm:text-sm shadow-sm transition-all flex items-center gap-2 cursor-pointer"
             >
               <Plus size={16} />
-              <span>Generate API Key</span>
+              <span>{t("dev.generateKey", "Generate API Key")}</span>
             </button>
           )}
 
@@ -1137,7 +1137,7 @@ fun main() {
               className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs sm:text-sm shadow-sm transition-all flex items-center gap-2 cursor-pointer"
             >
               <Plus size={16} />
-              <span>Add Webhook</span>
+              <span>{t("dev.addWebhook", "Add Webhook")}</span>
             </button>
           )}
 
@@ -1148,7 +1148,7 @@ fun main() {
               className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs sm:text-sm shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
             >
               <Play size={15} />
-              <span>{playgroundLoading ? "Sending..." : "Test Registration API"}</span>
+              <span>{playgroundLoading ? t("dev.sendingBtn", "Sending...") : t("dev.testRegistrationApiBtn", "Test Registration API")}</span>
             </button>
           )}
 
@@ -1158,7 +1158,7 @@ fun main() {
               className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs sm:text-sm shadow-sm transition-all flex items-center gap-2 cursor-pointer"
             >
               <Plus size={16} />
-              <span>Generate API Key</span>
+              <span>{t("dev.generateKey", "Generate API Key")}</span>
             </button>
           )}
         </div>
@@ -1171,7 +1171,7 @@ fun main() {
         {/* Card 1: Ticket Tiers */}
         <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Published Ticket Tiers</span>
+            <span className="text-xs font-bold text-slate-500">{t("dev.publishedTicketTiersUpper", "Published Ticket Tiers")}</span>
             <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
               <Ticket size={16} />
             </div>
@@ -1179,7 +1179,7 @@ fun main() {
           <div className="mt-3">
             <div className="text-2xl font-black text-slate-900">{tickets.length}</div>
             <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-slate-500">
-              <span className="text-blue-600 font-bold">{tickets.filter(t => !t.isSoldOut).length}</span> active ticket forms ready
+              <span className="text-blue-600 font-bold"><bdi dir="ltr">{tickets.filter(t => !t.isSoldOut).length}</bdi></span> {t("dev.activeTicketFormsReady", "active ticket forms ready")}
             </div>
           </div>
         </div>
@@ -1187,7 +1187,7 @@ fun main() {
         {/* Card 2: API Keys */}
         <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Developer API Keys</span>
+            <span className="text-xs font-bold text-slate-500">{t("dev.developerApiKeysUpper", "Developer API Keys")}</span>
             <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
               <Key size={16} />
             </div>
@@ -1196,7 +1196,7 @@ fun main() {
             <div className="text-2xl font-black text-slate-900">{apiKeys.length}</div>
             <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-emerald-600">
               <CheckCircle2 size={12} className="shrink-0" />
-              <span>{apiKeys.filter(k => k.is_active !== false).length} active credentials</span>
+              <span><bdi dir="ltr">{apiKeys.filter(k => k.is_active !== false).length}</bdi> {t("dev.activeCredentials", "active credentials")}</span>
             </div>
           </div>
         </div>
@@ -1204,7 +1204,7 @@ fun main() {
         {/* Card 3: Webhooks */}
         <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Active Webhooks</span>
+            <span className="text-xs font-bold text-slate-500">{t("dev.activeWebhooksUpper", "Active Webhooks")}</span>
             <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
               <Webhook size={16} />
             </div>
@@ -1212,7 +1212,7 @@ fun main() {
           <div className="mt-3">
             <div className="text-2xl font-black text-slate-900">{webhooks.length}</div>
             <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-indigo-600">
-              Real-time delivery active
+              {t("dev.realtimeDeliveryActive", "Real-time delivery active")}
             </div>
           </div>
         </div>
@@ -1220,7 +1220,7 @@ fun main() {
         {/* Card 4: Ingestion Health */}
         <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">API Health & Ingestion</span>
+            <span className="text-xs font-bold text-slate-500">{t("dev.apiHealthIngestion", "API Health & Ingestion")}</span>
             <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
               <ShieldCheck size={16} />
             </div>
@@ -1229,7 +1229,7 @@ fun main() {
             <div className="flex items-center justify-between">
               <span className="text-2xl font-black text-slate-900">100%</span>
               <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-teal-100 text-teal-700">
-                Online
+                {t("dev.onlineStatus", "Online")}
               </span>
             </div>
             {/* Progress Bar */}
@@ -1245,12 +1245,12 @@ fun main() {
       ───────────────────────────────────────────── */}
       <div className="flex items-center border-b border-slate-200 gap-1 overflow-x-auto">
         {[
-          { id: "overview", label: "Quickstart & Overview", icon: Sparkles },
-          { id: "embed_builder", label: "Embed Ticket Form", icon: Layers, badge: "Popular" },
-          { id: "api_keys", label: "API Keys", icon: Key, badge: apiKeys.length },
-          { id: "rest_docs", label: "REST API & Playground", icon: Terminal },
-          { id: "webhooks", label: "Webhooks", icon: Webhook, badge: webhooks.length },
-          { id: "logs", label: "Live Ingestion Logs", icon: Activity, badge: attendees.length },
+          { id: "overview", label: t("dev.tabOverview", "Quickstart & Overview"), icon: Sparkles },
+          { id: "embed_builder", label: t("dev.tabEmbed", "Embed Ticket Form"), icon: Layers, badge: t("dev.popularBadge", "Popular") },
+          { id: "api_keys", label: t("dev.tabApiKeys", "API Keys"), icon: Key, badge: apiKeys.length },
+          { id: "rest_docs", label: t("dev.tabRest", "REST API & Playground"), icon: Terminal },
+          { id: "webhooks", label: t("dev.tabWebhooks", "Webhooks"), icon: Webhook, badge: webhooks.length },
+          { id: "logs", label: t("dev.tabLogs", "Live Ingestion Logs"), icon: Activity, badge: attendees.length },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -1274,7 +1274,7 @@ fun main() {
                   className={`px-1.5 py-0.5 rounded-full text-[10px] font-extrabold ${
                     isActive
                       ? "bg-blue-600 text-white"
-                      : tab.badge === "Popular"
+                      : tab.badge === "Popular" || tab.badge === t("dev.popularBadge", "Popular")
                       ? "bg-amber-100 text-amber-800"
                       : "bg-slate-100 text-slate-600"
                   }`}
@@ -1301,15 +1301,15 @@ fun main() {
           <div className="bg-white rounded-3xl border border-slate-150 p-6 sm:p-8 shadow-xs space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h3 className="text-base font-extrabold text-slate-900">Direct Ticket Form Widgets & APIs</h3>
-                <p className="text-xs text-slate-500">Each ticket tier has its own direct form widget and dedicated registration API endpoint.</p>
+                <h3 className="text-base font-extrabold text-slate-900">{t("dev.directTicketFormWidgetsTitle", "Direct Ticket Form Widgets & APIs")}</h3>
+                <p className="text-xs text-slate-500">{t("dev.directTicketFormWidgetsDesc", "Each ticket tier has its own direct form widget and dedicated registration API endpoint.")}</p>
               </div>
               <button
                 onClick={() => onSwitchView ? onSwitchView("tickets") : (onOpenModal && onOpenModal("ticket"))}
                 className="px-3.5 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold transition-colors cursor-pointer self-start sm:self-center flex items-center gap-1.5"
               >
                 <Plus size={14} />
-                <span>Manage Ticket Tiers</span>
+                <span>{t("dev.manageTicketTiers", "Manage Ticket Tiers")}</span>
               </button>
             </div>
 
@@ -1319,9 +1319,9 @@ fun main() {
                   <Ticket size={22} />
                 </div>
                 <div className="space-y-1">
-                  <h4 className="text-sm font-bold text-slate-800">No Ticket Tiers Published Yet</h4>
+                  <h4 className="text-sm font-bold text-slate-800">{t("dev.noTicketTiersTitle", "No Ticket Tiers Published Yet")}</h4>
                   <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                    Create ticket tiers in the Tickets & Pricing module to generate direct checkout forms and endpoints.
+                    {t("dev.noTicketTiersDesc", "Create ticket tiers in the Tickets & Pricing module to generate direct checkout forms and endpoints.")}
                   </p>
                 </div>
                 <button
@@ -1329,7 +1329,7 @@ fun main() {
                   onClick={() => onSwitchView ? onSwitchView("tickets") : (onOpenModal && onOpenModal("ticket"))}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
                 >
-                  Create Your First Ticket
+                  {t("dev.createFirstTicketBtn", "Create Your First Ticket")}
                 </button>
               </div>
             ) : (
@@ -1347,16 +1347,16 @@ fun main() {
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
                             isFree ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-blue-50 text-blue-700 border border-blue-200"
                           }`}>
-                            {isFree ? "Free Pass" : `${Number(t.price).toLocaleString()} DZD`}
+                            {isFree ? t("dev.freePassBadge", "Free Pass") : `${Number(t.price).toLocaleString()} DZD`}
                           </span>
                           {t.requiresApproval && (
                             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                              Requires Approval
+                              {t("dev.requiresApprovalBadge", "Requires Approval")}
                             </span>
                           )}
                         </div>
                         <div className="flex items-center gap-3 text-xs text-slate-500 font-mono">
-                          <span className="truncate max-w-md">ID: {t.id}</span>
+                          <span className="truncate max-w-md font-mono" dir="ltr">ID: {t.id}</span>
                         </div>
                       </div>
 
@@ -1367,7 +1367,7 @@ fun main() {
                           className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
                         >
                           {copiedKey === `iframe-${t.id}` ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
-                          <span>{copiedKey === `iframe-${t.id}` ? "Copied!" : "Copy Embed Code"}</span>
+                          <span>{copiedKey === `iframe-${t.id}` ? t("dev.copied", "Copied!") : t("dev.copyEmbedCode", "Copy Embed Code")}</span>
                         </button>
 
                         <button
@@ -1379,7 +1379,7 @@ fun main() {
                           className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
                         >
                           <Eye size={13} />
-                          <span>Customize & Preview Form</span>
+                          <span>{t("dev.customizePreviewForm", "Customize & Preview Form")}</span>
                         </button>
                       </div>
                     </div>
@@ -1396,16 +1396,16 @@ fun main() {
                 <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-black text-sm">
                   1
                 </div>
-                <h3 className="text-base font-extrabold text-slate-900">Direct Form Embed</h3>
+                <h3 className="text-base font-extrabold text-slate-900">{t("dev.cardDirectFormEmbedTitle", "Direct Form Embed")}</h3>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  Embed the registration form for any specific ticket directly on your custom pricing card or button.
+                  {t("dev.cardDirectFormEmbedDesc", "Embed the registration form for any specific ticket directly on your custom pricing card or button.")}
                 </p>
               </div>
               <button
                 onClick={() => setActiveTab("embed_builder")}
                 className="mt-4 flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:underline cursor-pointer"
               >
-                <span>Launch Form Customizer</span>
+                <span>{t("dev.launchFormCustomizer", "Launch Form Customizer")}</span>
                 <ChevronRight size={13} />
               </button>
             </div>
@@ -1415,16 +1415,16 @@ fun main() {
                 <div className="w-10 h-10 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center font-black text-sm">
                   2
                 </div>
-                <h3 className="text-base font-extrabold text-slate-900">Direct Ticket API</h3>
+                <h3 className="text-base font-extrabold text-slate-900">{t("dev.cardDirectTicketApiTitle", "Direct Ticket API")}</h3>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  Use our REST endpoint to submit registrations for any specific ticket tier directly from your backend.
+                  {t("dev.cardDirectTicketApiDesc", "Use our REST endpoint to submit registrations for any specific ticket tier directly from your backend.")}
                 </p>
               </div>
               <button
                 onClick={() => setActiveTab("rest_docs")}
                 className="mt-4 flex items-center gap-1.5 text-xs font-bold text-purple-600 hover:underline cursor-pointer"
               >
-                <span>Open API Playground</span>
+                <span>{t("dev.openApiPlayground", "Open API Playground")}</span>
                 <ChevronRight size={13} />
               </button>
             </div>
@@ -1434,16 +1434,16 @@ fun main() {
                 <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-black text-sm">
                   3
                 </div>
-                <h3 className="text-base font-extrabold text-slate-900">Instant Ingestion</h3>
+                <h3 className="text-base font-extrabold text-slate-900">{t("dev.cardInstantIngestionTitle", "Instant Ingestion")}</h3>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  Attendees receive instant digital QR badges, custom form questions are saved, and webhooks fire in real-time.
+                  {t("dev.cardInstantIngestionDesc", "Attendees receive instant digital QR badges, custom form questions are saved, and webhooks fire in real-time.")}
                 </p>
               </div>
               <button
                 onClick={() => onSwitchView && onSwitchView("attendees")}
                 className="mt-4 flex items-center gap-1.5 text-xs font-bold text-emerald-600 hover:underline cursor-pointer"
               >
-                <span>View Attendees ({attendees.length})</span>
+                <span>{t("dev.viewAttendeesLink", "View Attendees")} (<bdi dir="ltr">{attendees.length}</bdi>)</span>
                 <ChevronRight size={13} />
               </button>
             </div>
@@ -1457,29 +1457,29 @@ fun main() {
           {/* Controls Configurator (Left 5 Cols) */}
           <div className="lg:col-span-5 bg-white p-6 sm:p-7 rounded-3xl border border-slate-150 shadow-xs space-y-6">
             <div>
-              <h3 className="text-base font-extrabold text-slate-900">Ticket Form Configurator</h3>
-              <p className="text-xs text-slate-500">Customize and embed the direct registration form for each specific ticket tier.</p>
+              <h3 className="text-base font-extrabold text-slate-900">{t("dev.ticketFormConfiguratorTitle", "Ticket Form Configurator")}</h3>
+              <p className="text-xs text-slate-500">{t("dev.ticketFormConfiguratorDesc", "Customize and embed the direct registration form for each specific ticket tier.")}</p>
             </div>
 
             {/* Select Target Ticket Tier */}
             <div className="space-y-2.5">
               <label className="text-xs font-bold text-slate-800 flex items-center justify-between">
-                <span>Select Target Ticket Tier</span>
+                <span>{t("dev.selectTargetTicketTier", "Select Target Ticket Tier")}</span>
                 <span className="text-[10px] font-extrabold uppercase text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
-                  Direct Form
+                  {t("dev.directFormBadge", "DIRECT FORM")}
                 </span>
               </label>
 
               {tickets.length === 0 ? (
                 <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl space-y-2">
-                  <span className="text-xs font-bold text-amber-900 block">No tickets created yet</span>
-                  <p className="text-[11px] text-amber-700">Please create ticket tiers first in Tickets & Pricing to configure form widgets.</p>
+                  <span className="text-xs font-bold text-amber-900 block">{t("dev.noTicketsCreatedYet", "No tickets created yet")}</span>
+                  <p className="text-[11px] text-amber-700">{t("dev.noTicketsCreatedDesc", "Please create ticket tiers first in Tickets & Pricing to configure form widgets.")}</p>
                   <button
                     type="button"
                     onClick={() => onSwitchView ? onSwitchView("tickets") : (onOpenModal && onOpenModal("ticket"))}
                     className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-[11px] cursor-pointer"
                   >
-                    Create Tickets
+                    {t("dev.createTicketsBtn", "Create Tickets")}
                   </button>
                 </div>
               ) : (
@@ -1512,7 +1512,7 @@ fun main() {
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
                           isFree ? "bg-emerald-100 text-emerald-800" : "bg-blue-100 text-blue-800"
                         }`}>
-                          {isFree ? "Free" : `${Number(t.price).toLocaleString()} DZD`}
+                          {isFree ? t("dev.freeBadge", "Free") : `${Number(t.price).toLocaleString()} DZD`}
                         </span>
                       </div>
                     );
@@ -1524,8 +1524,8 @@ fun main() {
             {/* Theme Picker */}
             <div className="space-y-2 pt-2 border-t border-slate-150">
               <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
-                <span>Color Theme</span>
-                <span className="text-[10px] font-semibold text-slate-400 capitalize">{embedTheme} Mode</span>
+                <span>{t("dev.colorThemeLabel", "Color Theme")}</span>
+                <span className="text-[10px] font-semibold text-slate-400 capitalize">{embedTheme === "light" ? t("dev.lightModeLabel", "Light Mode") : t("dev.darkModeLabel", "Dark Mode")}</span>
               </label>
               <div className="grid grid-cols-2 gap-2">
                 <button
@@ -1536,7 +1536,7 @@ fun main() {
                   }`}
                 >
                   <SunIcon />
-                  <span>Light Theme</span>
+                  <span>{t("dev.lightThemeBtn", "Light Theme")}</span>
                 </button>
                 <button
                   type="button"
@@ -1546,7 +1546,7 @@ fun main() {
                   }`}
                 >
                   <MoonIcon />
-                  <span>Dark Theme</span>
+                  <span>{t("dev.darkThemeBtn", "Dark Theme")}</span>
                 </button>
               </div>
             </div>
@@ -1554,7 +1554,7 @@ fun main() {
             {/* Accent Color Picker */}
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
-                <span>Brand Accent Color</span>
+                <span>{t("dev.brandAccentColorLabel", "Brand Accent Color")}</span>
                 <span className="text-[11px] font-mono text-slate-400">{embedColor}</span>
               </label>
               <div className="flex flex-wrap items-center gap-2">
@@ -1580,7 +1580,7 @@ fun main() {
                       ? "ring-2 ring-offset-2 ring-blue-600 border-blue-500 text-blue-600"
                       : ""
                   }`}
-                  title="Pick Custom Color"
+                  title={t("dev.pickCustomColor", "Pick Custom Color")}
                 >
                   <Pipette size={13} className="group-hover:scale-110 transition-transform" />
                   <input
@@ -1600,8 +1600,8 @@ fun main() {
             {/* Code Snippet Tabs with Multi-Framework Buttons */}
             <div className="space-y-2.5 pt-2 border-t border-slate-150">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-slate-800">Integration Framework</label>
-                <span className="text-[10px] font-semibold text-slate-400">10+ Frameworks</span>
+                <label className="text-xs font-bold text-slate-800">{t("dev.integrationFrameworkLabel", "Integration Framework")}</label>
+                <span className="text-[10px] font-semibold text-slate-400">{t("dev.frameworksCount", "10+ Frameworks")}</span>
               </div>
 
               {/* Framework Pills Strip */}
@@ -1623,7 +1623,7 @@ fun main() {
               </div>
 
               <div className="relative mt-2">
-                <pre className="p-3.5 bg-slate-900 text-slate-100 rounded-2xl text-[11px] font-mono overflow-x-auto max-h-56 border border-slate-800 leading-relaxed">
+                <pre dir="ltr" className="p-3.5 bg-slate-900 text-slate-100 rounded-2xl text-[11px] font-mono text-left overflow-x-auto max-h-56 border border-slate-800 leading-relaxed">
                   {embedSnippets[embedSnippetType] || embedSnippets.iframe}
                 </pre>
                 <button
@@ -1634,12 +1634,12 @@ fun main() {
                   {copiedKey === "embedCode" ? (
                     <>
                       <Check size={12} className="text-emerald-400" />
-                      <span>Copied!</span>
+                      <span>{t("dev.copied", "Copied!")}</span>
                     </>
                   ) : (
                     <>
                       <Copy size={12} />
-                      <span>Copy</span>
+                      <span>{t("dev.copySnippet", "Copy")}</span>
                     </>
                   )}
                 </button>
@@ -1651,7 +1651,7 @@ fun main() {
           <div className="lg:col-span-7 bg-white p-6 sm:p-7 rounded-3xl border border-slate-150 shadow-xs space-y-4">
             <div className="flex items-center justify-between border-b pb-4 border-slate-150">
               <h3 className="text-base font-extrabold text-slate-900">
-                Live Form Preview {currentSelectedTicket ? `(${currentSelectedTicket.name})` : ""}
+                {t("dev.liveFormPreviewTitle", "Live Form Preview")} {currentSelectedTicket ? `(${currentSelectedTicket.name})` : ""}
               </h3>
 
               {/* Device switcher */}
@@ -1662,7 +1662,7 @@ fun main() {
                   className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                     previewDevice === "desktop" ? "bg-white text-slate-900 shadow-2xs" : "text-slate-500 hover:text-slate-800"
                   }`}
-                  title="Desktop View"
+                  title={t("dev.desktopView", "Desktop View")}
                 >
                   <Laptop size={15} />
                 </button>
@@ -1672,7 +1672,7 @@ fun main() {
                   className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                     previewDevice === "mobile" ? "bg-white text-slate-900 shadow-2xs" : "text-slate-500 hover:text-slate-800"
                   }`}
-                  title="Mobile View"
+                  title={t("dev.mobileView", "Mobile View")}
                 >
                   <Smartphone size={15} />
                 </button>
@@ -1694,7 +1694,7 @@ fun main() {
             </div>
 
             <p className="text-[11px] text-center text-slate-400 font-medium">
-              💡 This preview shows the direct registration form for <strong>{currentSelectedTicket?.name || "this ticket"}</strong>. Submitting will register attendees immediately into your Eventzone platform.
+              💡 {t("dev.previewDisclaimer", "This preview shows the direct registration form for {ticket}. Submitting will register attendees immediately into your Eventzone platform.").replace("{ticket}", currentSelectedTicket?.name || "this ticket")}
             </p>
           </div>
         </div>
@@ -1710,7 +1710,7 @@ fun main() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search API keys by name, prefix, or permissions..."
+              placeholder={t("dev.searchApiKeysPlaceholder", "Search API keys by name, prefix, or permissions...")}
               className="w-full bg-transparent text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none"
             />
             {searchQuery && (
@@ -1726,17 +1726,17 @@ fun main() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-emerald-800 font-extrabold text-sm">
                   <CheckCircle2 size={18} className="text-emerald-600" />
-                  <span>API Key Generated Successfully</span>
+                  <span>{t("dev.keyGeneratedSuccess", "API Key Generated Successfully")}</span>
                 </div>
                 <button
                   onClick={() => setRecentlyCreatedKey(null)}
                   className="text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer"
                 >
-                  Dismiss
+                  {t("dev.dismissBtn", "Dismiss")}
                 </button>
               </div>
               <p className="text-xs text-emerald-700">
-                Please copy your API key now. For your security, you will not be able to see this full key again.
+                {t("dev.copyKeyWarning", "Please copy your API key now. For your security, you will not be able to see this full key again.")}
               </p>
               <div className="flex items-center gap-2 p-2.5 bg-white rounded-2xl border border-emerald-200 font-mono text-xs text-slate-900">
                 <span className="flex-1 truncate select-all">{recentlyCreatedKey.key}</span>
@@ -1745,7 +1745,7 @@ fun main() {
                   className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1 cursor-pointer"
                 >
                   {copiedKey === "newKey" ? <Check size={13} /> : <Copy size={13} />}
-                  <span>{copiedKey === "newKey" ? "Copied!" : "Copy Full Key"}</span>
+                  <span>{copiedKey === "newKey" ? t("dev.copied", "Copied!") : t("dev.copyFullKey", "Copy Full Key")}</span>
                 </button>
               </div>
             </div>
@@ -1754,26 +1754,26 @@ fun main() {
           {/* Keys Table */}
           <div className="bg-white rounded-3xl border border-slate-150 overflow-hidden shadow-xs">
             <div className="p-5 border-b border-slate-150 flex items-center justify-between">
-              <span className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">Active Keys</span>
-              <span className="text-xs font-bold text-slate-400">{filteredApiKeys.length} keys</span>
+              <span className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">{t("dev.activeKeysSection", "ACTIVE KEYS")}</span>
+              <span className="text-xs font-bold text-slate-400"><bdi dir="ltr">{filteredApiKeys.length}</bdi> {t("dev.keysLabel", "keys")}</span>
             </div>
 
             {loadingKeys ? (
-              <div className="p-8 text-center text-slate-400 text-xs animate-pulse">Loading API keys...</div>
+              <div className="p-8 text-center text-slate-400 text-xs animate-pulse">{t("dev.loadingApiKeys", "Loading API keys...")}</div>
             ) : filteredApiKeys.length === 0 ? (
               <div className="p-12 text-center space-y-3">
                 <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
                   <Key size={22} />
                 </div>
-                <h4 className="text-sm font-bold text-slate-700">No API Keys Found</h4>
+                <h4 className="text-sm font-bold text-slate-700">{t("dev.noApiKeysFound", "No API Keys Found")}</h4>
                 <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                  Public GET endpoints do not require an API key, but generating one allows secure backend access.
+                  {t("dev.noApiKeysFoundDesc", "Public GET endpoints do not require an API key, but generating one allows secure backend access.")}
                 </p>
                 <button
                   onClick={() => setIsNewKeyModalOpen(true)}
                   className="px-4 py-2 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-bold transition-colors cursor-pointer"
                 >
-                  Create Your First Key
+                  {t("dev.createYourFirstKey", "Create Your First Key")}
                 </button>
               </div>
             ) : (
@@ -1784,7 +1784,7 @@ fun main() {
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-extrabold text-slate-900">{k.name}</span>
                         <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          Active
+                          {t("dev.activeBadge", "Active")}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 text-xs font-mono text-slate-500">
@@ -1792,7 +1792,7 @@ fun main() {
                         <button
                           onClick={() => handleCopy(k.key || k.keyPrefix, k.id)}
                           className="text-slate-400 hover:text-blue-600 cursor-pointer"
-                          title="Copy Key Token"
+                          title={t("dev.copyKeyToken", "Copy Key Token")}
                         >
                           {copiedKey === k.id ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
                         </button>
@@ -1800,11 +1800,11 @@ fun main() {
                     </div>
 
                     <div className="flex items-center gap-4 text-xs text-slate-400 font-medium">
-                      <span>Created: {k.createdAt ? new Date(k.createdAt).toLocaleDateString() : "Recently"}</span>
+                      <span>{t("dev.createdDate", "Created: {date}").replace("{date}", k.createdAt ? new Date(k.createdAt).toLocaleDateString(lang === "ar" ? "ar-DZ" : (lang === "fr" ? "fr-FR" : "en-US")) : t("dev.recentlyCreated", "Recently"))}</span>
                       <button
                         onClick={() => handleDeleteKey(k.id)}
                         className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                        title="Revoke Key"
+                        title={t("dev.revokeKey", "Revoke Key")}
                       >
                         <Trash2 size={15} />
                       </button>
@@ -1824,8 +1824,8 @@ fun main() {
           {tickets.length > 0 && (
             <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <span className="text-xs font-bold text-slate-800 block">Select Ticket Tier for API Request</span>
-                <span className="text-[11px] text-slate-500">Each ticket tier has its own parameters (name, id, and price).</span>
+                <span className="text-xs font-bold text-slate-800 block">{t("dev.selectTicketTierForApi", "Select Ticket Tier for API Request")}</span>
+                <span className="text-[11px] text-slate-500">{t("dev.selectTicketTierForApiDesc", "Each ticket tier has its own parameters (name, id, and price).")}</span>
               </div>
               <div className="flex items-center gap-2 overflow-x-auto">
                 {tickets.map((t) => (
@@ -1849,9 +1849,9 @@ fun main() {
           {/* Endpoint selector strip */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1">
             {[
-              { id: "register_attendee", method: "POST", path: "/tickets/register", label: `Register Attendee (${currentSelectedTicket?.name || "Direct Ticket"})` },
-              { id: "get_tickets", method: "GET", path: "/tickets", label: "List Active Tickets" },
-              { id: "get_attendees", method: "GET", path: "/attendees", label: "Query Attendees" },
+              { id: "register_attendee", method: "POST", path: "/tickets/register", label: t("dev.registerAttendeeEndpoint", "Register Attendee ({tier})").replace("{tier}", currentSelectedTicket?.name || "Direct Ticket") },
+              { id: "get_tickets", method: "GET", path: "/tickets", label: t("dev.listActiveTicketsEndpoint", "List Active Tickets") },
+              { id: "get_attendees", method: "GET", path: "/attendees", label: t("dev.queryAttendeesEndpoint", "Query Attendees") },
             ].map((ep) => (
               <button
                 key={ep.id}
@@ -1883,8 +1883,8 @@ fun main() {
             <div className="lg:col-span-7 bg-white p-6 sm:p-7 rounded-3xl border border-slate-150 shadow-xs space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-base font-extrabold text-slate-900">Code Examples</h3>
-                  <p className="text-xs text-slate-500">Ready-to-use backend snippets in 13+ languages.</p>
+                  <h3 className="text-base font-extrabold text-slate-900">{t("dev.codeExamplesTitle", "Code Examples")}</h3>
+                  <p className="text-xs text-slate-500">{t("dev.codeExamplesSubtitle", "Ready-to-use backend snippets in 13+ languages.")}</p>
                 </div>
               </div>
 
@@ -1907,7 +1907,7 @@ fun main() {
               </div>
 
               <div className="relative mt-2">
-                <pre className="p-4 bg-slate-900 text-slate-100 rounded-2xl text-[11px] font-mono overflow-x-auto max-h-80 border border-slate-800 leading-relaxed">
+                <pre dir="ltr" className="p-4 bg-slate-900 text-slate-100 rounded-2xl text-[11px] font-mono text-left overflow-x-auto max-h-80 border border-slate-800 leading-relaxed">
                   {restCodeSnippets[codeLanguage] || restCodeSnippets.curl}
                 </pre>
                 <button
@@ -1916,7 +1916,7 @@ fun main() {
                   className="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer backdrop-blur-md"
                 >
                   {copiedKey === "restCode" ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
-                  <span>{copiedKey === "restCode" ? "Copied!" : "Copy"}</span>
+                  <span>{copiedKey === "restCode" ? t("dev.copied", "Copied!") : t("dev.copySnippetBtn", "Copy")}</span>
                 </button>
               </div>
             </div>
@@ -1925,8 +1925,8 @@ fun main() {
             <div className="lg:col-span-5 bg-white p-6 sm:p-7 rounded-3xl border border-slate-150 shadow-xs space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-base font-extrabold text-slate-900">API Playground</h3>
-                  <p className="text-xs text-slate-500">Execute live requests directly against your event.</p>
+                  <h3 className="text-base font-extrabold text-slate-900">{t("dev.apiPlaygroundTitle", "API Playground")}</h3>
+                  <p className="text-xs text-slate-500">{t("dev.apiPlaygroundSubtitle", "Execute live requests directly against your event.")}</p>
                 </div>
                 <button
                   type="button"
@@ -1935,15 +1935,16 @@ fun main() {
                   className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer disabled:opacity-50"
                 >
                   <Play size={13} />
-                  <span>{playgroundLoading ? "Sending..." : "Execute"}</span>
+                  <span>{playgroundLoading ? t("dev.sendingBtn", "Sending...") : t("dev.executeBtn", "Execute")}</span>
                 </button>
               </div>
 
               {/* Editable payload if POST */}
               {selectedEndpoint === "register_attendee" && (
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700">Request Body (JSON)</label>
+                  <label className="text-xs font-bold text-slate-700">{t("dev.requestBodyJson", "Request Body (JSON)")}</label>
                   <textarea
+                    dir="ltr"
                     rows={6}
                     value={JSON.stringify(playgroundPayload, null, 2)}
                     onChange={(e) => {
@@ -1959,7 +1960,7 @@ fun main() {
               {/* Response Viewer */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-slate-700">Response Payload</label>
+                  <label className="text-xs font-bold text-slate-700">{t("dev.responsePayloadLabel", "Response Payload")}</label>
                   {playgroundResponse && (
                     <div className="flex items-center gap-2 text-[10px] font-bold">
                       <span className={`px-2 py-0.5 rounded-md ${playgroundResponse.status < 300 ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
@@ -1970,8 +1971,8 @@ fun main() {
                   )}
                 </div>
 
-                <pre className="p-3.5 bg-slate-900 text-emerald-400 rounded-2xl text-[11px] font-mono overflow-x-auto max-h-64 border border-slate-800 leading-relaxed">
-                  {playgroundLoading ? "Sending request..." : playgroundResponse ? JSON.stringify(playgroundResponse.data, null, 2) : "// Click 'Execute' to send request"}
+                <pre dir="ltr" className="p-3.5 bg-slate-900 text-emerald-400 rounded-2xl text-[11px] font-mono text-left overflow-x-auto max-h-64 border border-slate-800 leading-relaxed">
+                  {playgroundLoading ? t("dev.sendingRequestPrompt", "Sending request...") : playgroundResponse ? JSON.stringify(playgroundResponse.data, null, 2) : t("dev.clickExecutePrompt", "// Click 'Execute' to send request")}
                 </pre>
               </div>
             </div>
@@ -1989,7 +1990,7 @@ fun main() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search webhooks by URL or events..."
+              placeholder={t("dev.searchWebhooksPlaceholder", "Search webhooks by URL or events...")}
               className="w-full bg-transparent text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none"
             />
             {searchQuery && (
@@ -2006,10 +2007,10 @@ fun main() {
             }`}>
               <div className="flex items-center gap-2">
                 {webhookTestResult.success ? <CheckCircle2 size={16} className="text-emerald-600" /> : <AlertCircle size={16} className="text-rose-600" />}
-                <span>{webhookTestResult.message || (webhookTestResult.success ? "Test ping delivered successfully (HTTP 200 OK)" : "Test ping delivery failed")}</span>
+                <span>{webhookTestResult.message || (webhookTestResult.success ? t("dev.testPingSuccess", "Test ping delivered successfully (HTTP 200 OK)") : t("dev.testPingFailed", "Test ping delivery failed"))}</span>
               </div>
               <button onClick={() => setWebhookTestResult(null)} className="font-bold hover:underline cursor-pointer">
-                Dismiss
+                {t("dev.dismissBtn", "Dismiss")}
               </button>
             </div>
           )}
@@ -2017,26 +2018,26 @@ fun main() {
           {/* Webhooks List */}
           <div className="bg-white rounded-3xl border border-slate-150 overflow-hidden shadow-xs">
             <div className="p-5 border-b border-slate-150 flex items-center justify-between">
-              <span className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">Configured Webhook Endpoints</span>
-              <span className="text-xs font-bold text-slate-400">{filteredWebhooks.length} endpoints</span>
+              <span className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">{t("dev.configuredEndpointsSection", "CONFIGURED WEBHOOK ENDPOINTS")}</span>
+              <span className="text-xs font-bold text-slate-400"><bdi dir="ltr">{filteredWebhooks.length}</bdi> {t("dev.endpointsLabel", "endpoints")}</span>
             </div>
 
             {loadingWebhooks ? (
-              <div className="p-8 text-center text-slate-400 text-xs animate-pulse">Loading webhooks...</div>
+              <div className="p-8 text-center text-slate-400 text-xs animate-pulse">{t("dev.loadingWebhooks", "Loading webhooks...")}</div>
             ) : filteredWebhooks.length === 0 ? (
               <div className="p-12 text-center space-y-3">
                 <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
                   <Webhook size={22} />
                 </div>
-                <h4 className="text-sm font-bold text-slate-700">No Webhook Endpoints Configured</h4>
+                <h4 className="text-sm font-bold text-slate-700">{t("dev.noWebhooksConfigured", "No Webhook Endpoints Configured")}</h4>
                 <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                  Subscribe to live registration and check-in events to sync attendees automatically to your CRM or custom backend.
+                  {t("dev.noWebhooksConfiguredDesc", "Subscribe to live registration and check-in events to sync attendees automatically to your CRM or custom backend.")}
                 </p>
                 <button
                   onClick={() => setIsNewWebhookModalOpen(true)}
                   className="px-4 py-2 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-bold transition-colors cursor-pointer"
                 >
-                  Add Your First Webhook
+                  {t("dev.addYourFirstWebhook", "Add Your First Webhook")}
                 </button>
               </div>
             ) : (
@@ -2047,7 +2048,7 @@ fun main() {
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-xs font-bold text-slate-900 truncate max-w-md">{wh.url}</span>
                         <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          Active
+                          {t("dev.activeBadge", "Active")}
                         </span>
                       </div>
                       <div className="flex flex-wrap gap-1.5">
@@ -2067,13 +2068,13 @@ fun main() {
                         className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
                       >
                         <Send size={12} />
-                        <span>{testingWebhookId === wh.id ? "Pinging..." : "Test Ping"}</span>
+                        <span>{testingWebhookId === wh.id ? t("dev.pingingBtn", "Pinging...") : t("dev.testPingBtn", "Test Ping")}</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => handleDeleteWebhook(wh.id)}
                         className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                        title="Delete Webhook"
+                        title={t("dev.deleteWebhook", "Delete Webhook")}
                       >
                         <Trash2 size={15} />
                       </button>
@@ -2096,7 +2097,7 @@ fun main() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search incoming registrations by name, email, ticket tier, or source..."
+              placeholder={t("dev.searchLogsPlaceholder", "Search incoming registrations by name, email, ticket tier, or source...")}
               className="w-full bg-transparent text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none"
             />
             {searchQuery && (
@@ -2108,8 +2109,8 @@ fun main() {
 
           <div className="bg-white rounded-3xl border border-slate-150 overflow-hidden shadow-xs">
             <div className="p-5 border-b border-slate-150 flex items-center justify-between">
-              <span className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">Real-time Ingested Registrations</span>
-              <span className="text-xs font-bold text-slate-400">{filteredRegistrations.length} events logged</span>
+              <span className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">{t("dev.realtimeRegistrationsSection", "REAL-TIME INGESTED REGISTRATIONS")}</span>
+              <span className="text-xs font-bold text-slate-400"><bdi dir="ltr">{filteredRegistrations.length}</bdi> {t("dev.eventsLogged", "events logged")}</span>
             </div>
 
             {filteredRegistrations.length === 0 ? (
@@ -2117,22 +2118,22 @@ fun main() {
                 <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
                   <Activity size={22} />
                 </div>
-                <h4 className="text-sm font-bold text-slate-700">No Registrations Ingested Yet</h4>
+                <h4 className="text-sm font-bold text-slate-700">{t("dev.noRegistrationsIngested", "No Registrations Ingested Yet")}</h4>
                 <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                  When attendees submit tickets via your embedded widget or API calls, their full JSON payloads will appear here in real-time.
+                  {t("dev.noRegistrationsIngestedDesc", "When attendees submit tickets via your embedded widget or API calls, their full JSON payloads will appear here in real-time.")}
                 </p>
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+                <table className="w-full text-start rtl:text-right text-left text-xs">
                   <thead className="bg-slate-50 border-b border-slate-150 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
                     <tr>
-                      <th className="p-4 pl-6">Attendee</th>
-                      <th className="p-4">Ticket Pass</th>
-                      <th className="p-4">Origin / Source</th>
-                      <th className="p-4">Status</th>
-                      <th className="p-4">Timestamp</th>
-                      <th className="p-4 pr-6 text-right">Payload</th>
+                      <th className="p-4 pl-6">{t("dev.colAttendee", "Attendee")}</th>
+                      <th className="p-4">{t("dev.colTicketPass", "Ticket Pass")}</th>
+                      <th className="p-4">{t("dev.colOriginSource", "Origin / Source")}</th>
+                      <th className="p-4">{t("dev.colStatus", "Status")}</th>
+                      <th className="p-4">{t("dev.colTimestamp", "Timestamp")}</th>
+                      <th className="p-4 pr-6 text-right">{t("dev.colPayload", "Payload")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-slate-700 font-semibold">
@@ -2145,7 +2146,7 @@ fun main() {
                         <td className="p-4 font-bold text-blue-600">{item.ticketType}</td>
                         <td className="p-4">
                           <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
-                            {item.source}
+                            {item.source === "Direct Form Embed" ? t("dev.originDirectForm", "Direct Form Embed") : item.source}
                           </span>
                         </td>
                         <td className="p-4">
@@ -2156,11 +2157,11 @@ fun main() {
                                 : "bg-amber-50 text-amber-700 border border-amber-200"
                             }`}
                           >
-                            {item.status}
+                            {item.status === "registered" ? t("dev.statusRegistered", "registered") : item.status === "pending" ? t("dev.statusPending", "pending") : item.status}
                           </span>
                         </td>
                         <td className="p-4 text-slate-400 text-[11px]">
-                          {item.date ? new Date(item.date).toLocaleString() : "Recently"}
+                          <bdi dir="ltr">{item.date ? new Date(item.date).toLocaleString(lang === "ar" ? "ar-DZ" : (lang === "fr" ? "fr-FR" : "en-US")) : t("dev.recentlyCreated", "Recently")}</bdi>
                         </td>
                         <td className="p-4 pr-6 text-right">
                           <button
@@ -2168,7 +2169,7 @@ fun main() {
                             onClick={() => setSelectedLogPayload(item.raw)}
                             className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold transition-colors cursor-pointer"
                           >
-                            Inspect JSON
+                            {t("dev.inspectJsonBtn", "Inspect JSON")}
                           </button>
                         </td>
                       </tr>
@@ -2194,7 +2195,7 @@ fun main() {
                 <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-black">
                   <Key size={18} />
                 </div>
-                <h3 className="text-base font-extrabold text-slate-900">Generate Event API Key</h3>
+                <h3 className="text-base font-extrabold text-slate-900">{t("dev.modalCreateKeyTitle", "Generate Event API Key")}</h3>
               </div>
               <button
                 onClick={() => setIsNewKeyModalOpen(false)}
@@ -2206,11 +2207,11 @@ fun main() {
 
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700">Key Name / Description</label>
+                <label className="text-xs font-bold text-slate-700">{t("dev.keyNameLabel", "Key Name / Description")}</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Main Website Ticket Embed"
+                  placeholder={t("dev.keyNamePlaceholder", "e.g. Main Website Ticket Embed")}
                   value={newKeyName}
                   onChange={(e) => setNewKeyName(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:border-blue-500 shadow-2xs"
@@ -2218,13 +2219,13 @@ fun main() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700">Access Permissions</label>
+                <label className="text-xs font-bold text-slate-700">{t("dev.accessPermissionsLabel", "Access Permissions")}</label>
                 <SearchableSelect
                   value={newKeyPermissions}
                   onChange={(v) => setNewKeyPermissions(v)}
                   options={[
-                    { value: "read_write", label: "Read & Write (Tickets, Registrations, Attendees)" },
-                    { value: "read_only", label: "Read-Only (Tickets & Public Schedules)" },
+                    { value: "read_write", label: t("dev.permReadWrite", "Read & Write (Tickets, Registrations, Attendees)") },
+                    { value: "read_only", label: t("dev.permReadOnly", "Read-Only (Tickets & Public Schedules)") },
                   ]}
                 />
               </div>
@@ -2236,7 +2237,7 @@ fun main() {
                 onClick={() => setIsNewKeyModalOpen(false)}
                 className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
               >
-                Cancel
+                {t("common.cancel", "Cancel")}
               </button>
               <button
                 type="button"
@@ -2244,7 +2245,7 @@ fun main() {
                 onClick={handleCreateApiKey}
                 className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50"
               >
-                Generate Token
+                {t("dev.generateTokenBtn", "Generate Token")}
               </button>
             </div>
           </div>
@@ -2260,7 +2261,7 @@ fun main() {
                 <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-black">
                   <Webhook size={18} />
                 </div>
-                <h3 className="text-base font-extrabold text-slate-900">Add Webhook Endpoint</h3>
+                <h3 className="text-base font-extrabold text-slate-900">{t("dev.modalAddWebhookTitle", "Add Webhook Endpoint")}</h3>
               </div>
               <button
                 onClick={() => setIsNewWebhookModalOpen(false)}
@@ -2272,11 +2273,11 @@ fun main() {
 
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700">Endpoint URL (HTTPS)</label>
+                <label className="text-xs font-bold text-slate-700">{t("dev.endpointUrlLabel", "Endpoint URL (HTTPS)")}</label>
                 <input
                   type="url"
                   required
-                  placeholder="https://api.yourdomain.com/webhooks/eventzone"
+                  placeholder={t("dev.endpointUrlPlaceholder", "https://api.yourdomain.com/webhooks/eventzone")}
                   value={newWebhookUrl}
                   onChange={(e) => setNewWebhookUrl(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:border-blue-500 shadow-2xs"
@@ -2284,12 +2285,12 @@ fun main() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-700">Trigger Events</label>
+                <label className="text-xs font-bold text-slate-700">{t("dev.triggerEventsLabel", "Trigger Events")}</label>
                 <div className="space-y-2">
                   {[
-                    { id: "registration.created", label: "registration.created (Approved & Instant)" },
-                    { id: "registration.pending", label: "registration.pending (Requires Review)" },
-                    { id: "attendee.checked_in", label: "attendee.checked_in (On-site Scan)" },
+                    { id: "registration.created", label: t("dev.eventRegCreated", "registration.created (Approved & Instant)") },
+                    { id: "registration.pending", label: t("dev.eventRegPending", "registration.pending (Requires Review)") },
+                    { id: "attendee.checked_in", label: t("dev.eventAttendeeCheckedIn", "attendee.checked_in (On-site Scan)") },
                   ].map((ev) => (
                     <label key={ev.id} className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
                       <input
@@ -2317,7 +2318,7 @@ fun main() {
                 onClick={() => setIsNewWebhookModalOpen(false)}
                 className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
               >
-                Cancel
+                {t("common.cancel", "Cancel")}
               </button>
               <button
                 type="button"
@@ -2325,7 +2326,7 @@ fun main() {
                 onClick={handleCreateWebhook}
                 className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50"
               >
-                Register Webhook
+                {t("dev.registerWebhookBtn", "Register Webhook")}
               </button>
             </div>
           </div>
@@ -2339,7 +2340,7 @@ fun main() {
             <div className="flex items-center justify-between border-b pb-3 border-slate-150">
               <div className="flex items-center gap-2 font-extrabold text-sm text-slate-900">
                 <FileCode2 size={18} className="text-blue-600" />
-                <span>Raw Attendee Ingestion Payload</span>
+                <span>{t("dev.modalRawPayloadTitle", "Raw Attendee Ingestion Payload")}</span>
               </div>
               <button
                 onClick={() => setSelectedLogPayload(null)}
@@ -2349,7 +2350,7 @@ fun main() {
               </button>
             </div>
 
-            <pre className="p-4 bg-slate-900 text-emerald-400 rounded-2xl text-[11px] font-mono overflow-x-auto max-h-96 border border-slate-800 leading-relaxed">
+            <pre dir="ltr" className="p-4 bg-slate-900 text-emerald-400 rounded-2xl text-[11px] font-mono text-left overflow-x-auto max-h-96 border border-slate-800 leading-relaxed">
               {JSON.stringify(selectedLogPayload, null, 2)}
             </pre>
 
@@ -2359,7 +2360,7 @@ fun main() {
                 onClick={() => setSelectedLogPayload(null)}
                 className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
               >
-                Close
+                {t("common.close", "Close")}
               </button>
             </div>
           </div>
