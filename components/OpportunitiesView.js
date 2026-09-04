@@ -12,6 +12,7 @@ import {
 import { useLanguage } from "../lib/i18n";
 import SearchableSelect from "./SearchableSelect";
 import CountryPhoneInput from "./CountryPhoneInput";
+import { getLocalizedIndustry } from "../lib/constants";
 
 export const FUNNEL_STAGES = [
   {
@@ -668,7 +669,7 @@ export default function OpportunitiesView({
           </span>
           <div className="mt-3">
             <span className="text-2xl font-black text-slate-900">{formatCurrency(metrics.wonRevenue)}</span>
-            <p className="text-xs text-slate-400 font-medium mt-0.5">{metrics.wonCount} won deals</p>
+            <p className="text-xs text-slate-400 font-medium mt-0.5">{metrics.wonCount} {t("opp.wonDeals", "won deals")}</p>
           </div>
         </div>
 
@@ -679,7 +680,7 @@ export default function OpportunitiesView({
           </span>
           <div className="mt-3 flex items-baseline justify-between">
             <span className="text-3xl font-black text-emerald-700">{metrics.wonSponsorsCount}</span>
-            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">Confirmed</span>
+            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">{t("overview.confirmedBadge", "Confirmed")}</span>
           </div>
         </div>
 
@@ -690,7 +691,7 @@ export default function OpportunitiesView({
           </span>
           <div className="mt-3 flex items-baseline justify-between">
             <span className="text-3xl font-black text-teal-700">{metrics.wonExhibitorsCount}</span>
-            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-800">Confirmed</span>
+            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-800">{t("overview.confirmedBadge", "Confirmed")}</span>
           </div>
         </div>
 
@@ -706,7 +707,7 @@ export default function OpportunitiesView({
                 <div className="bg-amber-500 h-full rounded-full" style={{ width: `${Math.min(metrics.winRate, 100)}%` }} />
               </div>
             </div>
-            <p className="text-xs text-slate-400 font-medium mt-0.5">{metrics.wonSponsorsCount + metrics.wonExhibitorsCount} won deals</p>
+            <p className="text-xs text-slate-400 font-medium mt-0.5">{metrics.wonSponsorsCount + metrics.wonExhibitorsCount} {t("opp.wonDeals", "won deals")}</p>
           </div>
         </div>
       </div>
@@ -763,7 +764,7 @@ export default function OpportunitiesView({
         </div>
 
         <div className="text-xs font-semibold text-slate-500 shrink-0 self-end md:self-center">
-          Showing <span className="font-bold text-slate-800">{filteredOpportunities.length}</span> prospects
+          {t("opp.showingProspects", "Showing")} <span className="font-bold text-slate-800">{filteredOpportunities.length}</span> {t("opp.prospects", "prospects")}
         </div>
       </div>
 
@@ -808,7 +809,7 @@ export default function OpportunitiesView({
 
                 {/* Sub-header stage value */}
                 <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 px-1">
-                  <span>Volume</span>
+                  <span>{t("opp.volume", "Volume")}</span>
                   <span className="text-slate-700 font-black">{formatCurrency(stageTotalVal)}</span>
                 </div>
 
@@ -850,24 +851,24 @@ export default function OpportunitiesView({
       {viewMode === "table" && (
         <div className="bg-white border border-slate-200 rounded-3xl shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
+            <table className="w-full text-start border-collapse text-xs">
               <thead>
                 <tr className="bg-slate-50/80 border-b border-slate-200 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 select-none">
-                  <th className="py-3.5 px-4 font-extrabold">Company / Prospect</th>
-                  <th className="py-3.5 px-4 font-extrabold">Target Role</th>
-                  <th className="py-3.5 px-4 font-extrabold">Funnel Stage</th>
-                  <th className="py-3.5 px-4 font-extrabold">Deal Value</th>
-                  <th className="py-3.5 px-4 font-extrabold">Probability</th>
-                  <th className="py-3.5 px-4 font-extrabold">Contact</th>
-                  <th className="py-3.5 px-4 font-extrabold">Priority</th>
-                  <th className="py-3.5 px-4 font-extrabold text-right">Actions</th>
+                  <th className="py-3.5 px-4 font-extrabold">{t("opp.thCompany", "Company / Prospect")}</th>
+                  <th className="py-3.5 px-4 font-extrabold">{t("opp.thRole", "Target Role")}</th>
+                  <th className="py-3.5 px-4 font-extrabold">{t("opp.thStage", "Funnel Stage")}</th>
+                  <th className="py-3.5 px-4 font-extrabold">{t("opp.thValue", "Deal Value")}</th>
+                  <th className="py-3.5 px-4 font-extrabold">{t("opp.thProbability", "Probability")}</th>
+                  <th className="py-3.5 px-4 font-extrabold">{t("opp.thContact", "Contact")}</th>
+                  <th className="py-3.5 px-4 font-extrabold">{t("opp.thPriority", "Priority")}</th>
+                  <th className="py-3.5 px-4 font-extrabold text-right">{t("table.actions", "Actions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
                 {filteredOpportunities.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="py-16 text-center text-slate-400">
-                      No matching prospects found.
+                      {t("opp.noProspectsFound", "No matching prospects found")}.
                     </td>
                   </tr>
                 ) : (
@@ -887,7 +888,7 @@ export default function OpportunitiesView({
                             )}
                             <div>
                               <span className="font-bold text-slate-900 block truncate max-w-[180px]">{opp.companyName || opp.name}</span>
-                              <span className="text-[10px] text-slate-400 truncate block max-w-[180px]">{opp.industry || "General"}</span>
+                              <span className="text-[10px] text-slate-400 truncate block max-w-[180px]">{getLocalizedIndustry(opp.industry, t) || t("common.general", "General")}</span>
                             </div>
                           </div>
                         </td>
@@ -961,18 +962,18 @@ export default function OpportunitiesView({
                                 setShowDrawer(true);
                               }}
                               className="px-2 py-1 text-slate-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                              title="Edit Prospect"
+                              title={t("opp.editProspect", "Edit Prospect")}
                             >
-                              Edit
+                              {t("common.edit", "Edit")}
                             </button>
 
                             {opp.stage !== "won_sponsor" && (
                               <button
                                 onClick={() => handleMoveStage(opp.id, "won_sponsor")}
                                 className="px-2 py-1 text-emerald-700 hover:bg-emerald-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                                title="Convert to Sponsor"
+                                title={t("opp.convertToSponsor", "Convert to Sponsor")}
                               >
-                                Sponsor
+                                {t("table.sponsor", "Sponsor")}
                               </button>
                             )}
 
@@ -980,9 +981,9 @@ export default function OpportunitiesView({
                               <button
                                 onClick={() => handleMoveStage(opp.id, "won_exhibitor")}
                                 className="px-2 py-1 text-teal-700 hover:bg-teal-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                                title="Convert to Exhibitor"
+                                title={t("opp.convertToExhibitor", "Convert to Exhibitor")}
                               >
-                                Exhibitor
+                                {t("table.exhibitor", "Exhibitor")}
                               </button>
                             )}
                           </div>
@@ -1057,7 +1058,7 @@ export default function OpportunitiesView({
                 </div>
                 <div className="min-w-0">
                   <h4 className="text-xs font-black text-slate-900 truncate">{convertingOpp.companyName || convertingOpp.name}</h4>
-                  <p className="text-[11px] text-slate-500 truncate">{convertingOpp.industry || "General"} • {convertingOpp.contactName || "No contact"}</p>
+                  <p className="text-[11px] text-slate-500 truncate">{getLocalizedIndustry(convertingOpp.industry, t) || t("common.general", "General")} • {convertingOpp.contactName || t("common.noContact", "No contact")}</p>
                 </div>
               </div>
 
@@ -1310,17 +1311,17 @@ function OpportunityCard({
           {showMenu && (
             <div
               onClick={(e) => e.stopPropagation()}
-              className="absolute right-0 top-7 w-40 bg-white border border-slate-200 rounded-xl shadow-xl z-20 py-1.5 flex flex-col text-xs font-semibold text-slate-700 animate-scale-up"
+              className="absolute end-0 top-7 w-40 bg-white border border-slate-200 rounded-xl shadow-xl z-20 py-1.5 flex flex-col text-xs font-semibold text-slate-700 animate-scale-up"
             >
               <button
                 onClick={() => {
                   setShowMenu(false);
                   onEdit();
                 }}
-                className="px-3 py-1.5 text-left hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2 cursor-pointer"
+                className="px-3 py-1.5 text-start hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2 cursor-pointer"
               >
                 <Edit3 size={12} />
-                <span>Edit Prospect</span>
+                <span>{t("opp.editProspect", "Edit Prospect")}</span>
               </button>
 
               {!isWonSponsor && (
@@ -1329,10 +1330,10 @@ function OpportunityCard({
                     setShowMenu(false);
                     onMoveStage(opp.id, "won_sponsor");
                   }}
-                  className="px-3 py-1.5 text-left hover:bg-emerald-50 text-emerald-700 flex items-center gap-2 cursor-pointer font-bold"
+                  className="px-3 py-1.5 text-start hover:bg-emerald-50 text-emerald-700 flex items-center gap-2 cursor-pointer font-bold"
                 >
                   <Sparkles size={12} />
-                  <span>Convert Sponsor</span>
+                  <span>{t("opp.convertToSponsor", "Convert Sponsor")}</span>
                 </button>
               )}
 
@@ -1342,10 +1343,10 @@ function OpportunityCard({
                     setShowMenu(false);
                     onMoveStage(opp.id, "won_exhibitor");
                   }}
-                  className="px-3 py-1.5 text-left hover:bg-teal-50 text-teal-700 flex items-center gap-2 cursor-pointer font-bold"
+                  className="px-3 py-1.5 text-start hover:bg-teal-50 text-teal-700 flex items-center gap-2 cursor-pointer font-bold"
                 >
                   <Store size={12} />
-                  <span>Convert Exhibitor</span>
+                  <span>{t("opp.convertToExhibitor", "Convert Exhibitor")}</span>
                 </button>
               )}
 
@@ -1355,10 +1356,10 @@ function OpportunityCard({
                     setShowMenu(false);
                     onMoveStage(opp.id, "lost");
                   }}
-                  className="px-3 py-1.5 text-left hover:bg-rose-50 text-rose-600 flex items-center gap-2 cursor-pointer"
+                  className="px-3 py-1.5 text-start hover:bg-rose-50 text-rose-600 flex items-center gap-2 cursor-pointer"
                 >
                   <XCircle size={12} />
-                  <span>Mark as Lost</span>
+                  <span>{t("opp.markLost", "Mark as Lost")}</span>
                 </button>
               )}
 
@@ -1368,10 +1369,10 @@ function OpportunityCard({
                     setShowMenu(false);
                     onReopen(opp);
                   }}
-                  className="px-3 py-1.5 text-left hover:bg-blue-50 text-blue-700 flex items-center gap-2 cursor-pointer"
+                  className="px-3 py-1.5 text-start hover:bg-blue-50 text-blue-700 flex items-center gap-2 cursor-pointer"
                 >
                   <RotateCcw size={12} />
-                  <span>Re-open Deal</span>
+                  <span>{t("opp.reopen", "Re-open Deal")}</span>
                 </button>
               )}
 
@@ -1384,10 +1385,10 @@ function OpportunityCard({
                       setShowMenu(false);
                       if (onRestore) onRestore(opp.id);
                     }}
-                    className="px-3 py-1.5 text-left hover:bg-emerald-50 text-emerald-600 flex items-center gap-2 cursor-pointer"
+                    className="px-3 py-1.5 text-start hover:bg-emerald-50 text-emerald-600 flex items-center gap-2 cursor-pointer"
                   >
                     <RotateCcw size={12} />
-                    <span>Restore</span>
+                    <span>{t("table.restore", "Restore")}</span>
                   </button>
                   <button
                     onClick={() => {
@@ -1395,10 +1396,10 @@ function OpportunityCard({
                       if (onPermanentDelete) onPermanentDelete(opp.id);
                       else if (onArchive) onArchive(opp.id);
                     }}
-                    className="px-3 py-1.5 text-left hover:bg-rose-50 text-rose-600 flex items-center gap-2 cursor-pointer"
+                    className="px-3 py-1.5 text-start hover:bg-rose-50 text-rose-600 flex items-center gap-2 cursor-pointer"
                   >
                     <Trash2 size={12} />
-                    <span>Delete Permanently</span>
+                    <span>{t("table.deletePermanently", "Delete Permanently")}</span>
                   </button>
                 </>
               ) : (
@@ -1408,20 +1409,20 @@ function OpportunityCard({
                       setShowMenu(false);
                       onArchive(opp.id);
                     }}
-                    className="px-3 py-1.5 text-left hover:bg-amber-50 text-slate-500 hover:text-amber-600 flex items-center gap-2 cursor-pointer"
+                    className="px-3 py-1.5 text-start hover:bg-amber-50 text-slate-500 hover:text-amber-600 flex items-center gap-2 cursor-pointer"
                   >
                     <Archive size={12} />
-                    <span>Archive</span>
+                    <span>{t("common.archive", "Archive")}</span>
                   </button>
                   <button
                     onClick={() => {
                       setShowMenu(false);
                       if (onPermanentDelete) onPermanentDelete(opp.id);
                     }}
-                    className="px-3 py-1.5 text-left hover:bg-rose-50 text-slate-400 hover:text-rose-600 flex items-center gap-2 cursor-pointer"
+                    className="px-3 py-1.5 text-start hover:bg-rose-50 text-slate-400 hover:text-rose-600 flex items-center gap-2 cursor-pointer"
                   >
                     <Trash2 size={12} />
-                    <span>Delete Permanently</span>
+                    <span>{t("table.deletePermanently", "Delete Permanently")}</span>
                   </button>
                 </>
               )}
@@ -1445,7 +1446,7 @@ function OpportunityCard({
             <h4 className="font-black text-xs text-slate-900 truncate leading-tight group-hover:text-blue-600 transition-colors">
               {opp.companyName || opp.name}
             </h4>
-            <p className="text-[10px] text-slate-400 truncate mt-0.5 font-medium">{opp.industry || "General Industry"}</p>
+            <p className="text-[10px] text-slate-400 truncate mt-0.5 font-medium">{getLocalizedIndustry(opp.industry, t) || t("opp.generalIndustry", "General Industry")}</p>
           </div>
         </div>
 
@@ -1726,9 +1727,9 @@ function ProspectDrawer({
                 <SearchableSelect
                   value={industry}
                   onChange={(val) => setIndustry(val)}
-                  options={INDUSTRY_OPTIONS}
-                  placeholder="Select industry..."
-                  searchPlaceholder="Search industry..."
+                  options={INDUSTRY_OPTIONS.map(ind => ({ value: ind, label: getLocalizedIndustry(ind, t) }))}
+                  placeholder={t("opp.selectIndustry", "Select industry...")}
+                  searchPlaceholder={t("opp.searchIndustry", "Search industry...")}
                 />
               </div>
             </div>

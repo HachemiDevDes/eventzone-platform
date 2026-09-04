@@ -1624,10 +1624,10 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                 <tr>
                   <td colSpan={6 + (selectedTicketType === "all" || selectedTicketType === "archived" ? 1 : 0) + dynamicCols.length} className="text-center text-slate-450 py-14">
                     {selectedTicketType === "archived" 
-                      ? "No archived attendees found." 
+                      ? t("table.noArchivedAttendees", "No archived attendees found.") 
                       : selectedTicketType !== "all" 
-                        ? `No attendees registered for ${selectedTicketType}.` 
-                        : "No attendees registered yet."}
+                        ? t("table.noAttendeesForTier", `No attendees registered for ${selectedTicketType}.`) 
+                        : t("table.noAttendeesDesc", "No attendees registered yet.")}
                   </td>
                 </tr>
               ) : (
@@ -1950,10 +1950,10 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                   type="button"
                   onClick={() => handleBulkCheckin(true)}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white transition-colors cursor-pointer shadow-2xs font-semibold"
-                  title="Mark selected as checked-in"
+                  title={t("table.checkInBtn", "Mark selected as checked-in")}
                 >
                   <CheckCircle2 size={14} />
-                  <span>Check In</span>
+                  <span>{t("table.checkInBtn", "Check In")}</span>
                 </button>
 
                 {/* 2. Bulk Undo Check-In */}
@@ -1961,10 +1961,10 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                   type="button"
                   onClick={() => handleBulkCheckin(false)}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer border border-slate-200/80 font-semibold"
-                  title="Undo check-in for selected attendees"
+                  title={t("table.bulkUndoCheckIn", "Undo check-in for selected attendees")}
                 >
                   <RotateCcw size={14} className="text-slate-500" />
-                  <span>Undo Check-In</span>
+                  <span>{t("table.bulkUndoCheckIn", "Undo Check-In")}</span>
                 </button>
 
                 {/* 3. Bulk Print Badges */}
@@ -1972,10 +1972,10 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                   type="button"
                   onClick={handleBulkPrintBadges}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer border border-slate-200/80 font-semibold"
-                  title="Print A4 badges for selected attendees"
+                  title={t("table.printBadges", "Print A4 badges for selected attendees")}
                 >
                   <Printer size={14} className="text-slate-500" />
-                  <span>Print Badges</span>
+                  <span>{t("table.printBadges", "Print Badges")}</span>
                 </button>
 
                 {/* 4. Bulk Send Email */}
@@ -1987,10 +1987,10 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                     }
                   }}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer border border-slate-200/80 font-semibold"
-                  title="Send email to selected"
+                  title={t("table.bulkEmail", "Send email to selected")}
                 >
                   <Mail size={14} className="text-slate-500" />
-                  <span>Send Email</span>
+                  <span>{t("table.bulkEmail", "Send Email")}</span>
                 </button>
 
                 {/* 5. Bulk Archive */}
@@ -1998,10 +1998,10 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                   type="button"
                   onClick={handleBulkArchive}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors cursor-pointer border border-rose-200 font-semibold"
-                  title="Archive selected attendees"
+                  title={t("common.archive", "Archive selected attendees")}
                 >
                   <Archive size={14} className="text-rose-500" />
-                  <span>Archive</span>
+                  <span>{t("common.archive", "Archive")}</span>
                 </button>
               </div>
             ) : (
@@ -2012,10 +2012,10 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                   type="button"
                   onClick={handleBulkRestore}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer border border-slate-200/80 font-semibold"
-                  title="Restore selected attendees"
+                  title={t("table.restore", "Restore selected attendees")}
                 >
                   <RotateCcw size={14} className="text-slate-500" />
-                  <span>Restore</span>
+                  <span>{t("table.restore", "Restore")}</span>
                 </button>
 
                 {/* 2. Bulk Delete */}
@@ -2023,10 +2023,10 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                   type="button"
                   onClick={handleBulkDelete}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white transition-colors cursor-pointer shadow-2xs font-semibold"
-                  title="Permanently delete selected attendees"
+                  title={t("table.deletePermanently", "Permanently delete selected attendees")}
                 >
                   <Trash2 size={14} />
-                  <span>Delete Permanently</span>
+                  <span>{t("table.deletePermanently", "Delete Permanently")}</span>
                 </button>
               </div>
             )}
@@ -2060,7 +2060,8 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
             style={{
               position: 'fixed',
               top: activeActionsMenu.top,
-                left: activeActionsMenu.left,
+              bottom: activeActionsMenu.bottom,
+              left: activeActionsMenu.left,
               right: activeActionsMenu.right,
               zIndex: 99999
             }}
@@ -2200,7 +2201,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                     className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer text-start group"
                   >
                     <Trash2 size={15} className="text-rose-500 group-hover:scale-105 transition-transform" />
-                    <span>{t("common.delete", "Delete")}</span>
+                    <span>{t("table.deletePermanently", "Delete Permanently")}</span>
                   </button>
                 </>
               );
