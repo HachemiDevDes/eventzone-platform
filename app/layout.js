@@ -18,7 +18,7 @@ const cairo = Cairo({
 });
 
 export const metadata = {
-  title: "Eventzone | Premium Event Platform",
+  title: "Eventzone - All-in-One Event Management Solution",
   description: "A premium event organizer platform to design floor layouts and manage schedules.",
   icons: {
     icon: [
