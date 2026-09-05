@@ -450,34 +450,35 @@ export default function PlatformAdminView({
       {/* ─────────────────────────────────────────────
           PRIMARY NAVIGATION TABS (LIGHT MODE)
       ───────────────────────────────────────────── */}
-      <nav className="bg-white border-b border-slate-200 px-6 py-1.5 flex items-center gap-1 overflow-x-auto scrollbar-none">
+      <nav className="bg-white border-b border-slate-200 px-6 flex items-center gap-1 overflow-x-auto scrollbar-none">
         {[
-          { id: "overview", label: "Executive Overview", icon: BarChart3 },
-          { id: "organizers", label: "Organizers & Quotas", icon: Building2, count: organizers.length },
-          { id: "hero", label: "Homepage Hero Curator", icon: Star, count: curatedHeroEvents.length },
-          { id: "events", label: "Master Events Directory", icon: Calendar, count: events.length },
-          { id: "financials", label: "Chargily Financials", icon: CreditCard, count: payments.length }
+          { id: "overview", label: "Executive Overview" },
+          { id: "organizers", label: "Organizers & Quotas", count: organizers.length },
+          { id: "hero", label: "Homepage Hero Curator", count: curatedHeroEvents.length },
+          { id: "events", label: "Master Events Directory", count: events.length },
+          { id: "financials", label: "Chargily Financials", count: payments.length }
         ].map(tab => {
-          const Icon = tab.icon;
           const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border cursor-pointer ${
+              className={`relative flex items-center gap-2 px-4 py-3 font-bold text-xs transition-all cursor-pointer !rounded-none whitespace-nowrap ${
                 isActive
-                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 shadow-2xs font-bold"
-                  : "text-slate-600 border-transparent hover:text-slate-900 hover:bg-slate-50"
+                  ? "text-blue-600 font-black bg-blue-50/50"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
               }`}
             >
-              <Icon className={`w-4 h-4 ${isActive ? "text-emerald-600" : "text-slate-400"}`} />
               <span>{tab.label}</span>
               {tab.count !== undefined && (
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
-                  isActive ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600"
+                <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
+                  isActive ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"
                 }`}>
-                  {tab.count}
+                  <bdi dir="ltr">{tab.count}</bdi>
                 </span>
+              )}
+              {isActive && (
+                <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-blue-600" />
               )}
             </button>
           );
