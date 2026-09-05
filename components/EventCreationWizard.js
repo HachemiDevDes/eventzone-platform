@@ -10,7 +10,7 @@ import {
   Upload, Loader2, Trash2, Camera, RefreshCw, ChevronDown, AlertCircle, Mail, Copy, CheckCheck,
   Zap, Rocket, Award, TrendingUp
 } from "lucide-react";
-import { uploadFileToBucket } from "../lib/db";
+import { uploadFileToBucket, checkEventSlugAvailability } from "../lib/db";
 import { useLanguage } from "../lib/i18n";
 import { getLocalizedIndustry } from "../lib/constants";
 import CustomDatePicker from "./CustomDatePicker";
@@ -125,12 +125,18 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [isCustomBanner, setIsCustomBanner] = useState(false);
 
+  // Slug Availability Verification State
+  const [slugStatus, setSlugStatus] = useState("idle"); // "idle" | "checking" | "available" | "taken" | "invalid"
+  const [slugError, setSlugError] = useState("");
+  const [slugSuggestions, setSlugSuggestions] = useState([]);
+  const slugDebounceRef = useRef(null);
+
   // Determine initial capacity constrained by organizer quota
   const initialCapacity = currentUser?.maxAttendees ? Math.min(800, currentUser.maxAttendees) : 800;
 
   const [formData, setFormData] = useState({
     title: "",
-    slug: "myevent",
+    slug: "",
     tagline: "",
     eventTypeCategory: "Professional Event",
     structureType: "Multiple dates, times or sessions",
@@ -212,6 +218,80 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
 
   const mainStep = getMainStepNumber();
 
+  // Reusable slug verification against reserved words & Supabase events table
+  const verifySlugAvailability = async (candidateSlug) => {
+    const clean = String(candidateSlug || "")
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9-]+/g, "")
+      .replace(/^-+|-+$/g, "");
+
+    if (!clean || clean.length < 3) {
+      setSlugStatus("invalid");
+      setSlugError(clean.length === 0 ? "Please enter a URL for your event." : "Link must be at least 3 characters long.");
+      setSlugSuggestions([]);
+      return false;
+    }
+
+    setSlugStatus("checking");
+    setSlugError("");
+
+    try {
+      const res = await checkEventSlugAvailability(clean);
+      if (res.available) {
+        setSlugStatus("available");
+        setSlugError("");
+        setSlugSuggestions([]);
+        return true;
+      } else {
+        setSlugStatus("taken");
+        setSlugError(res.reason || "This link is already taken by another event. Please choose an available link.");
+        setSlugSuggestions(res.suggestions || []);
+        return false;
+      }
+    } catch (err) {
+      console.warn("verifySlugAvailability error:", err);
+      setSlugStatus("available");
+      return true;
+    }
+  };
+
+  const handleSlugInputChange = (e) => {
+    const raw = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "");
+    handleChange("slug", raw);
+
+    if (slugDebounceRef.current) clearTimeout(slugDebounceRef.current);
+
+    if (!raw || raw.trim().length < 3) {
+      setSlugStatus("invalid");
+      setSlugError(raw.trim().length === 0 ? "Please enter a URL for your event." : "Link must be at least 3 characters long.");
+      setSlugSuggestions([]);
+      return;
+    }
+
+    setSlugStatus("checking");
+    slugDebounceRef.current = setTimeout(() => {
+      verifySlugAvailability(raw);
+    }, 350);
+  };
+
+  const handlePickSlugSuggestion = (suggestion) => {
+    handleChange("slug", suggestion);
+    verifySlugAvailability(suggestion);
+  };
+
+  // Automatically check slug whenever entering Step 2E
+  useEffect(() => {
+    if (currentScreen === "2E") {
+      if (formData.slug && formData.slug.trim()) {
+        verifySlugAvailability(formData.slug);
+      } else {
+        setSlugStatus("invalid");
+        setSlugError("Please enter a URL for your event.");
+      }
+    }
+  }, [currentScreen]);
+
   // Navigation handlers
   const handleNextFrom1A = (e) => {
     if (e) e.preventDefault();
@@ -222,6 +302,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
     const autoSlug = formData.title.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
     if (autoSlug && (!formData.slug || formData.slug === "myevent")) {
       handleChange("slug", autoSlug);
+      verifySlugAvailability(autoSlug);
     }
     setCurrentScreen("2A");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -255,7 +336,15 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleNextFrom2E = () => {
+  const handleNextFrom2E = async () => {
+    if (slugStatus === "checking") return;
+
+    const isAvailable = await verifySlugAvailability(formData.slug);
+    if (!isAvailable) {
+      alert("This event link is already taken by another event. Please choose an available link to continue.");
+      return;
+    }
+
     setCurrentScreen("3");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -285,6 +374,15 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
       alert(`Event Quota Limit Reached: Your organizer tier permits up to ${currentUser.maxEvents} events. Please contact the platform admin to upgrade your quota.`);
       return;
     }
+
+    // Final pre-submit verification of event slug uniqueness
+    const isSlugAvailable = await verifySlugAvailability(formData.slug);
+    if (!isSlugAvailable) {
+      alert("This event URL is already taken by another event. Please choose an available URL before launching.");
+      setCurrentScreen("2E");
+      return;
+    }
+
     setLoading(true);
     try {
       const sanitizedCapacity = currentUser?.maxAttendees
@@ -1003,9 +1101,13 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
                   EVENT URL
                 </label>
                 <div className={`bg-white border-2 rounded-2xl p-3.5 sm:p-4 flex items-center justify-between transition-all ${
-                  formData.slug.trim() 
-                    ? "border-emerald-500 ring-4 ring-emerald-50 shadow-xs" 
-                    : "border-slate-300"
+                  slugStatus === "available"
+                    ? "border-emerald-500 ring-4 ring-emerald-50 shadow-xs"
+                    : slugStatus === "taken" || slugStatus === "invalid"
+                      ? "border-rose-500 ring-4 ring-rose-50 shadow-xs"
+                      : slugStatus === "checking"
+                        ? "border-blue-400 ring-4 ring-blue-50 shadow-xs"
+                        : "border-slate-300"
                 }`}>
                   <div className="flex items-center flex-1 overflow-hidden pr-2">
                     <span className="text-slate-500 font-semibold text-xs sm:text-sm select-none shrink-0 pr-1">
@@ -1017,25 +1119,107 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
                       required
                       placeholder="my-event"
                       value={formData.slug}
-                      onChange={(e) => handleChange("slug", e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                      onChange={handleSlugInputChange}
                       className="w-full text-slate-900 font-bold text-base sm:text-lg outline-none bg-transparent placeholder-slate-400"
                     />
                   </div>
-                  <div className="w-7 h-7 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-600 flex items-center justify-center shrink-0">
-                    <Check size={16} className="stroke-[2.5]" />
-                  </div>
+
+                  {slugStatus === "checking" && (
+                    <div className="w-7 h-7 rounded-full bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center shrink-0">
+                      <Loader2 size={15} className="animate-spin text-blue-600 stroke-[2.5]" />
+                    </div>
+                  )}
+                  {slugStatus === "available" && (
+                    <div className="w-7 h-7 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-600 flex items-center justify-center shrink-0 animate-scale-up">
+                      <Check size={16} className="stroke-[2.5]" />
+                    </div>
+                  )}
+                  {(slugStatus === "taken" || slugStatus === "invalid") && (
+                    <div className="w-7 h-7 rounded-full bg-rose-50 border border-rose-300 text-rose-600 flex items-center justify-center shrink-0 animate-scale-up">
+                      <X size={16} className="stroke-[2.5]" />
+                    </div>
+                  )}
+                  {slugStatus === "idle" && (
+                    <div className="w-7 h-7 rounded-full bg-slate-50 border border-slate-200 text-slate-400 flex items-center justify-center shrink-0">
+                      <LinkIcon size={14} />
+                    </div>
+                  )}
                 </div>
-                <p className="text-[11px] text-slate-400 font-medium mt-2">
-                  Direct Guest Link: <span className="text-blue-600 font-bold">{typeof window !== "undefined" ? `${window.location.origin}/${formData.slug || "my-event"}` : `https://eventzone.pro/${formData.slug || "my-event"}`}</span>
-                </p>
+
+                {/* Status feedback & error messaging */}
+                {slugStatus === "checking" && (
+                  <p className="text-[12px] text-blue-600 font-semibold flex items-center gap-1.5 mt-2.5">
+                    <Loader2 size={13} className="animate-spin shrink-0" />
+                    <span>Checking link availability...</span>
+                  </p>
+                )}
+
+                {slugStatus === "available" && (
+                  <div className="mt-2.5 flex items-center justify-between flex-wrap gap-1">
+                    <p className="text-[12px] text-emerald-600 font-bold flex items-center gap-1.5">
+                      <CheckCircle2 size={14} className="shrink-0" />
+                      <span>Link is available!</span>
+                    </p>
+                    <p className="text-[11px] text-slate-400 font-medium">
+                      Direct link: <span className="text-blue-600 font-bold">https://eventzone.pro/{formData.slug}</span>
+                    </p>
+                  </div>
+                )}
+
+                {(slugStatus === "taken" || slugStatus === "invalid") && (
+                  <div className="mt-2.5 space-y-2.5 animate-fade-in">
+                    <p className="text-[12px] text-rose-600 font-bold flex items-center gap-1.5">
+                      <AlertCircle size={14} className="shrink-0" />
+                      <span>{slugError || "This link is already taken by another event. Please choose an available link."}</span>
+                    </p>
+                    {slugSuggestions.length > 0 && (
+                      <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 space-y-1.5">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block">
+                          Suggested available links:
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {slugSuggestions.map((sug) => (
+                            <button
+                              key={sug}
+                              type="button"
+                              onClick={() => handlePickSlugSuggestion(sug)}
+                              className="px-2.5 py-1 rounded-xl bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-300 text-slate-800 hover:text-blue-700 text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
+                            >
+                              <span className="text-blue-600 font-black">+</span>
+                              <span>{sug}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {slugStatus === "idle" && (
+                  <p className="text-[11px] text-slate-400 font-medium mt-2">
+                    Direct Guest Link: <span className="text-blue-600 font-bold">{typeof window !== "undefined" ? `${window.location.origin}/${formData.slug || "my-event"}` : `https://eventzone.pro/${formData.slug || "my-event"}`}</span>
+                  </p>
+                )}
               </div>
 
               <button
                 type="button"
                 onClick={handleNextFrom2E}
-                className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-xs shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center cursor-pointer mt-4"
+                disabled={slugStatus !== "available" || loading}
+                className={`w-full py-4 rounded-2xl font-bold text-xs transition-all flex items-center justify-center gap-2 mt-4 ${
+                  slugStatus === "available" && !loading
+                    ? "bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/30 cursor-pointer"
+                    : "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
+                }`}
               >
-                Next: Create Account
+                {slugStatus === "checking" ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    <span>Verifying Link...</span>
+                  </>
+                ) : (
+                  <span>Next: Create Account</span>
+                )}
               </button>
             </div>
 
