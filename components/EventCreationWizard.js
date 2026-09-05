@@ -7,7 +7,7 @@ import {
   Image as ImageIcon, Users, ArrowRight, ArrowLeft, 
   CheckCircle2, X, Globe, Video, LayoutDashboard, Layers,
   ChevronRight, Compass, ShieldCheck, Tag, Info, Clock, Check, Link as LinkIcon,
-  Upload, Loader2, Trash2, Camera, RefreshCw, ChevronDown, AlertCircle
+  Upload, Loader2, Trash2, Camera, RefreshCw, ChevronDown, AlertCircle, Mail, Copy, CheckCheck
 } from "lucide-react";
 import { uploadFileToBucket } from "../lib/db";
 import { useLanguage } from "../lib/i18n";
@@ -95,6 +95,19 @@ const TIMEZONES = [
 export default function EventCreationWizard({ onCancel, onEventCreated, userId, onUploadFile, currentUser, userEventsCount = 0 }) {
   const { t, lang, setLang, isRTL, languages } = useLanguage();
   const [langMenuOpen, setLangMenuOpen] = useState(false);
+  const [copiedEmail, setCopiedEmail] = useState(false);
+
+  // Compute actual event count and quota limit status
+  const actualEventsCount = Math.max(
+    typeof userEventsCount === "number" ? userEventsCount : 0,
+    currentUser?.eventsCount || 0
+  );
+  const isLimitReached = Boolean(
+    currentUser &&
+    currentUser.maxEvents !== null &&
+    currentUser.maxEvents !== undefined &&
+    actualEventsCount >= Number(currentUser.maxEvents)
+  );
 
   // Current screen state:
   // "1A": Event Name input
@@ -288,6 +301,154 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
     }
   };
 
+  // Render dedicated full-page screen if organizer event limit is reached
+  if (isLimitReached) {
+    return (
+      <div className="min-h-screen bg-slate-50/60 flex flex-col font-sans selection:bg-blue-600 selection:text-white" dir={isRTL ? "rtl" : "ltr"}>
+        {/* Top Header Bar with Logo & Return Action */}
+        <header className="bg-white border-b border-slate-200 px-6 py-4 sticky top-0 z-40 flex items-center justify-between shadow-xs">
+          <div 
+            onClick={onCancel} 
+            className="cursor-pointer select-none flex items-center gap-2"
+            title={t("wizard.backToEvents", "Back to Events")}
+          >
+            <img 
+              src="https://i.imgur.com/jFDrQbM.png" 
+              alt="eventzone" 
+              style={{ height: '28px', width: 'auto', maxWidth: '160px', objectFit: 'contain' }} 
+              className="h-7 w-auto object-contain" 
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-2xs"
+          >
+            <ArrowLeft className={`w-3.5 h-3.5 ${isRTL ? "rotate-180" : ""}`} />
+            <span>{t("wizard.backToEvents", "Back to Events")}</span>
+          </button>
+        </header>
+
+        {/* Dedicated Limit Reached Screen */}
+        <main className="flex-1 flex items-center justify-center p-6 sm:p-10">
+          <div className="max-w-2xl w-full bg-white border border-slate-200/90 rounded-3xl shadow-xl shadow-slate-200/50 overflow-hidden relative animate-fade-in text-center">
+            {/* Top Amber Accent Bar */}
+            <div className="h-2.5 w-full bg-gradient-to-r from-amber-400 via-orange-500 to-amber-500" />
+
+            {/* Soft Ambient Amber Glow */}
+            <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="p-8 sm:p-12 relative z-10">
+              {/* Alert Circle Icon */}
+              <div className="w-20 h-20 rounded-3xl bg-amber-50 border-2 border-amber-200/80 flex items-center justify-center text-amber-600 shadow-xs mx-auto mb-6">
+                <AlertCircle className="w-10 h-10 stroke-[2.2]" />
+              </div>
+
+              {/* Exact Back-Office Badge from Screenshot: '4 / 1' + 'LIMIT REACHED' */}
+              <div className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-amber-50/90 border border-amber-200 font-mono text-xs shadow-2xs mb-5">
+                <span className="font-extrabold text-amber-700 text-sm">
+                  {actualEventsCount} / {currentUser.maxEvents}
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300">
+                  {t("wizard.limitReachedBadge", "LIMIT REACHED")}
+                </span>
+              </div>
+
+              {/* Headline */}
+              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mb-3">
+                {t("wizard.limitReachedTitle", "Event Quota Limit Reached")}
+              </h1>
+
+              {/* Description */}
+              <p className="text-slate-600 text-xs sm:text-sm leading-relaxed max-w-lg mx-auto mb-8">
+                {t(
+                  "wizard.limitReachedDesc",
+                  `You have reached the maximum number of events permitted for your organizer plan (${actualEventsCount} of ${currentUser.maxEvents} allowed events hosted). To add, host, or publish more events, please contact the EventZone team to upgrade your quota.`
+                ).replace("{count}", String(actualEventsCount)).replace("{max}", String(currentUser.maxEvents))}
+              </p>
+
+              {/* Quota Breakdown Box */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-lg mx-auto p-4 bg-slate-50 border border-slate-200/80 rounded-2xl mb-8 text-start rtl:text-right">
+                <div className="p-2 sm:border-r sm:rtl:border-r-0 sm:rtl:border-l sm:border-slate-200">
+                  <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Events Created</div>
+                  <div className="text-lg font-black text-slate-900 mt-0.5">{actualEventsCount}</div>
+                </div>
+                <div className="p-2 sm:border-r sm:rtl:border-r-0 sm:rtl:border-l sm:border-slate-200">
+                  <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Plan Limit</div>
+                  <div className="text-lg font-black text-slate-900 mt-0.5">{currentUser.maxEvents} Max</div>
+                </div>
+                <div className="p-2">
+                  <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Max Attendees</div>
+                  <div className="text-lg font-black text-slate-900 mt-0.5">
+                    {currentUser.maxAttendees ? `${currentUser.maxAttendees.toLocaleString()} / ev` : "Unlimited"}
+                  </div>
+                </div>
+              </div>
+
+              {/* Contact Card & Actions */}
+              <div className="bg-blue-50/70 border border-blue-100 rounded-2xl p-6 max-w-lg mx-auto mb-8 text-start rtl:text-right space-y-3">
+                <div className="flex items-center gap-2 text-blue-900 font-bold text-sm">
+                  <Mail className="w-4 h-4 text-blue-600 shrink-0" />
+                  <span>{t("wizard.contactTeamTitle", "Contact the EventZone Team to Add More")}</span>
+                </div>
+                <p className="text-xs text-blue-800/80 leading-relaxed">
+                  {t("wizard.contactTeamDesc", "Our team can instantly increase your event quota or adjust attendee limits for enterprise summits.")}
+                </p>
+                <div className="pt-2 flex flex-wrap items-center gap-2.5">
+                  <a
+                    href={`mailto:contact@eventzone.pro?subject=${encodeURIComponent(`Event Quota Limit Increase Request - ${currentUser.fullName || currentUser.email}`)}&body=${encodeURIComponent(`Hello EventZone Team,\n\nI have reached my event hosting limit (${actualEventsCount} / ${currentUser.maxEvents} events) and would like to request an upgrade to add more events to my organizer account.\n\nOrganizer: ${currentUser.fullName || 'Organizer'}\nAccount Email: ${currentUser.email}\nCompany: ${currentUser.companyName || 'N/A'}\n\nThank you!`)}`}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-600/20 transition-all cursor-pointer"
+                  >
+                    <Mail className="w-3.5 h-3.5" />
+                    <span>{t("wizard.sendQuotaRequest", "Send Quota Request Email")}</span>
+                  </a>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (typeof navigator !== "undefined" && navigator.clipboard) {
+                        navigator.clipboard.writeText("contact@eventzone.pro");
+                        setCopiedEmail(true);
+                        setTimeout(() => setCopiedEmail(false), 2500);
+                      }
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold transition-all cursor-pointer"
+                    title="Copy support email address"
+                  >
+                    {copiedEmail ? (
+                      <>
+                        <CheckCheck className="w-3.5 h-3.5 text-emerald-600" />
+                        <span className="text-emerald-700 font-bold">Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5 text-slate-500" />
+                        <span>contact@eventzone.pro</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Navigation Back to Dashboard */}
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={onCancel}
+                  className="w-full sm:w-auto px-7 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+                >
+                  <ArrowLeft className={`w-4 h-4 ${isRTL ? "rotate-180" : ""}`} />
+                  <span>{t("wizard.backToEventsHub", "Return to Events Hub")}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
       {/* ==================================================================== */}
@@ -428,18 +589,6 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
             <p className="text-sm text-slate-500 font-medium mt-2 mb-8 max-w-md mx-auto">
               {t("wizard.step1Desc", "Give your event a clear, memorable title. You can customize the subtitle and banner next.")}
             </p>
-
-            {currentUser?.maxEvents !== null && currentUser?.maxEvents !== undefined && userEventsCount >= currentUser.maxEvents && (
-              <div className="max-w-xl mx-auto mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-start flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="text-xs font-bold text-amber-900 uppercase tracking-wide">Event Quota Limit Reached</h4>
-                  <p className="text-xs text-amber-800 mt-1 leading-relaxed">
-                    Your organizer tier permits up to <strong>{currentUser.maxEvents}</strong> events (you currently have {userEventsCount} created). Please contact the platform admin to upgrade your quota.
-                  </p>
-                </div>
-              </div>
-            )}
 
             <form onSubmit={handleNextFrom1A} className="space-y-6 max-w-xl mx-auto text-start">
               <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs space-y-4">

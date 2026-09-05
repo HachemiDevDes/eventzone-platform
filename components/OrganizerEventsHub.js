@@ -92,7 +92,17 @@ export default function OrganizerEventsHub({
             <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex items-center justify-between">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t("eventsHub.totalHosted", "Total Hosted Events")}</span>
-                <h3 className="text-2xl font-black text-slate-900 mt-1">{events.length}</h3>
+                <div className="flex items-center gap-2 mt-1">
+                  <h3 className="text-2xl font-black text-slate-900">{events.length}</h3>
+                  {user?.maxEvents !== null && user?.maxEvents !== undefined && (
+                    <span className="text-xs font-mono font-bold text-slate-400">/ {user.maxEvents}</span>
+                  )}
+                  {user?.maxEvents !== null && user?.maxEvents !== undefined && events.length >= user.maxEvents && (
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200">
+                      LIMIT REACHED
+                    </span>
+                  )}
+                </div>
                 <span className="text-[11px] font-semibold text-blue-600 mt-0.5 inline-block">{totalPublished} {t("eventsHub.published", "Published")}</span>
               </div>
               <div className="w-11 h-11 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
