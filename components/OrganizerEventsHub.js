@@ -8,6 +8,7 @@ import {
   Archive, RotateCcw, Globe, Sparkles, LayoutDashboard, Layers, Filter, CheckCircle2, Home, ChevronDown, Check
 } from "lucide-react";
 import { useLanguage } from "../lib/i18n";
+import { truncateDescription } from "../lib/constants";
 import UniversalTopBar from "./UniversalTopBar";
 import { EventsHubSkeleton } from "./SkeletonLoaders";
 
@@ -281,7 +282,7 @@ export default function OrganizerEventsHub({
                         {ev.title}
                       </h3>
                       <p className="text-xs text-slate-500 line-clamp-2 mt-1 font-medium leading-relaxed">
-                        {ev.tagline || ev.description || "The premier global industry gathering."}
+                        {truncateDescription(ev.tagline || ev.description || "The premier global industry gathering.", 40)}
                       </p>
                     </div>
 

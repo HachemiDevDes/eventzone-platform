@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import QRCode from "qrcode";
 import { useLanguage } from "../lib/i18n";
-import { INDUSTRIES, getLocalizedIndustry } from "../lib/constants";
+import { INDUSTRIES, getLocalizedIndustry, truncateDescription } from "../lib/constants";
 import UniversalTopBar from "./UniversalTopBar";
 import SearchableSelect from "./SearchableSelect";
 import { HomePageSkeleton } from "./SkeletonLoaders";
@@ -421,13 +421,18 @@ export default function MainHomePage({
 
 
                 {/* Title & Tagline */}
-                <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-tight">
+                <h1 
+                  onClick={() => onViewLivePage(activeSlide.id)}
+                  className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-tight cursor-pointer hover:text-blue-200 transition-colors"
+                >
                   {activeSlide.title}
                 </h1>
 
-                <p className="text-slate-300 text-base sm:text-lg font-normal leading-relaxed max-w-4xl">
-                  {activeSlide.tagline || activeSlide.description}
-                </p>
+                {(activeSlide.tagline || activeSlide.description) && (
+                  <p className="text-slate-300 text-base sm:text-lg font-normal leading-relaxed max-w-4xl line-clamp-2">
+                    {truncateDescription(activeSlide.tagline || activeSlide.description, 40)}
+                  </p>
+                )}
 
                 {/* Meta: Dates & Location Chips */}
                 <div className="flex flex-wrap items-center gap-2.5 pt-1">
@@ -641,7 +646,7 @@ export default function MainHomePage({
                         {ev.title}
                       </h3>
                       <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed font-normal">
-                        {ev.tagline || ev.description || "Join leading delegates for keynotes, workshops, and exhibitions."}
+                        {truncateDescription(ev.tagline || ev.description || t("home.cardDefaultDesc", "Join leading delegates for keynotes, workshops, and exhibitions."), 40)}
                       </p>
 
                       {/* Clean, Enhanced Date & Location */}
