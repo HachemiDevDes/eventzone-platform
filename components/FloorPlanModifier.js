@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { 
   Undo2, Redo2, Trash2, Copy, Grid, Layers, Download, Save, 
@@ -127,21 +127,7 @@ function PropertyInput({ value, onChange, type = "number", min, max, step, class
 }
 
 function FloorItem({ floor, isActive, isOnly, onSelect, onRename, onDelete }) {
-  const { t, lang, isRTL } = useLanguage();
-
-  const localizedFilterOptions = useMemo(() => [
-    { value: "all", label: t("floor.filter_all", "Show All Locations"), icon: Globe, iconColor: "text-indigo-500" },
-    { value: "draft", label: t("floor.filter_draft", "Draft Booths"), icon: Folder, iconColor: "text-amber-500" },
-    { value: "available", label: t("floor.filter_available", "Available Booths"), icon: Circle, iconColor: "text-emerald-500" },
-    { value: "reserved", label: t("floor.filter_reserved", "Reserved Booths"), icon: Clock, iconColor: "text-orange-500" },
-    { value: "sold", label: t("floor.filter_sold", "Sold Booths"), icon: CheckCircle2, iconColor: "text-red-500" },
-    { value: "checked_in", label: t("floor.filter_checked_in", "Checked In Booths"), icon: Shield, iconColor: "text-emerald-600" },
-    { value: "empty", label: t("floor.filter_empty", "Empty Booths"), icon: Square, iconColor: "text-purple-400" },
-    { value: "equipped", label: t("floor.filter_equipped", "Equipped Booths"), icon: Briefcase, iconColor: "text-rose-500" },
-    { value: "tables", label: t("floor.filter_tables", "Banquet Seating Tables"), icon: Utensils, iconColor: "text-indigo-650" },
-    { value: "logistics", label: t("floor.filter_logistics", "Logistics & Utilities"), icon: AlertTriangle, iconColor: "text-amber-600" },
-  ], [t]);
-
+  const { t } = useLanguage();
   const [isEditing, setIsEditing] = useState(false);
   const [tempName, setTempName] = useState(floor.name);
 

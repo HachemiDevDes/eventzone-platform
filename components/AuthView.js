@@ -180,6 +180,7 @@ export default function AuthView({
           email: email.trim(),
           password: password,
           options: {
+            emailRedirectTo: typeof window !== "undefined" ? window.location.origin : undefined,
             data: {
               full_name: fullName.trim(),
               role: selectedRole,
