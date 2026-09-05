@@ -424,7 +424,7 @@ export function HomeContent() {
 
         const profileMeta = profile?.metadata && typeof profile?.metadata === 'object' ? profile.metadata : {};
         const profileSocials = typeof profile?.social_links === 'object' && profile?.social_links !== null && !Array.isArray(profile?.social_links) ? profile.social_links : {};
-        const isSuperAdmin = profile?.role === 'super_admin' || profile?.is_admin === true || profileMeta.role === 'super_admin' || userMeta.role === 'super_admin';
+        const isSuperAdmin = profile?.role === 'super_admin' || profile?.is_admin === true || profileMeta.role === 'super_admin' || userMeta.role === 'super_admin' || session.user.email?.toLowerCase() === 'eventzone114@gmail.com';
 
         const rawMaxEvents = profile?.max_events !== undefined && profile?.max_events !== null
           ? profile.max_events
@@ -495,7 +495,7 @@ export function HomeContent() {
 
                   const updatedMeta = updated.metadata && typeof updated.metadata === 'object' ? updated.metadata : {};
                   const updatedSocials = typeof updated.social_links === 'object' && updated.social_links !== null && !Array.isArray(updated.social_links) ? updated.social_links : {};
-                  const isSuperAdminUpdated = updated.role === 'super_admin' || updated.is_admin === true || updatedMeta.role === 'super_admin';
+                  const isSuperAdminUpdated = updated.role === 'super_admin' || updated.is_admin === true || updatedMeta.role === 'super_admin' || session.user.email?.toLowerCase() === 'eventzone114@gmail.com';
 
                   const rawMaxEvUpdated = updated.max_events !== undefined && updated.max_events !== null
                     ? updated.max_events
@@ -3701,7 +3701,7 @@ export function HomeContent() {
               <span>{t("dash.developers", "Developers & API")}</span>
             </button>
 
-            {(currentUser?.role === 'super_admin' || currentUser?.isAdmin) && (
+            {(currentUser?.role === 'super_admin' || currentUser?.isAdmin || currentUser?.email?.toLowerCase() === 'eventzone114@gmail.com') && (
               <div className="pt-3 mt-3 border-t border-slate-100">
                 <button
                   onClick={() => setCurrentView("admin")}

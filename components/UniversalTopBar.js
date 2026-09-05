@@ -250,7 +250,7 @@ export default function UniversalTopBar({
                 </button>
 
                 {/* Super Admin Back Office Option */}
-                {(currentUser?.role === 'super_admin' || currentUser?.isAdmin) && (
+                {(currentUser?.role === 'super_admin' || currentUser?.isAdmin || currentUser?.email?.toLowerCase() === 'eventzone114@gmail.com') && (
                   <button
                     onClick={() => {
                       setProfileOpen(false);
