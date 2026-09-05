@@ -867,24 +867,6 @@ export default function PlatformAdminView({
             ═══════════════════════════════════════════ */}
             {activeTab === "hero" && (
               <div className="space-y-6 animate-in fade-in duration-300">
-                {/* Curator Banner */}
-                <div className="bg-linear-to-r from-emerald-50/80 via-teal-50/50 to-white border border-emerald-200/80 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4 shadow-2xs">
-                  <div className="space-y-1 max-w-2xl">
-                    <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                      <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-                      Homepage Hero Section Curator
-                    </h3>
-                    <p className="text-xs text-slate-600 leading-relaxed">
-                      Choose which published events appear in the prominent top carousel of the EventZone homepage (<span className="text-emerald-700 font-mono font-bold">MainHomePage.js</span>). Pinned events override default chronological ordering.
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <span className="px-3 py-1.5 rounded-xl bg-white border border-emerald-200 text-xs font-mono font-semibold text-slate-700 shadow-2xs">
-                      Currently Pinned: <span className="font-bold text-emerald-600">{curatedHeroEvents.length}</span> events
-                    </span>
-                  </div>
-                </div>
 
                 {/* Hero Carousel Live Simulation */}
                 {curatedHeroEvents.length > 0 && (
