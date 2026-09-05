@@ -156,6 +156,13 @@ export default function PlatformAdminView({
     if (!editingOrganizer) return;
     setIsSavingQuota(true);
 
+    if (quotaStatus !== 'active' && editingOrganizer.status === 'active') {
+      if (!confirm(`Are you sure you want to set ${editingOrganizer.fullName}'s account to ${quotaStatus.toUpperCase()}?`)) {
+        setIsSavingQuota(false);
+        return;
+      }
+    }
+
     const parsedMaxEvents = quotaMaxEvents.trim() === "" ? null : parseInt(quotaMaxEvents, 10);
     const parsedMaxAttendees = quotaMaxAttendees.trim() === "" ? null : parseInt(quotaMaxAttendees, 10);
 
