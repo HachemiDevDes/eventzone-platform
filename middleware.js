@@ -18,6 +18,17 @@ export function middleware(request) {
     }
   }
 
+  // Redirect /en, /fr, and /ar locale prefix paths to root /
+  const pathname = (url.pathname || "").toLowerCase();
+  if (pathname === "/en" || pathname === "/fr" || pathname === "/ar") {
+    url.pathname = "/";
+    return NextResponse.redirect(url, 308);
+  }
+  if (pathname.startsWith("/en/") || pathname.startsWith("/fr/") || pathname.startsWith("/ar/")) {
+    url.pathname = pathname.replace(/^\/(en|fr|ar)/, "") || "/";
+    return NextResponse.redirect(url, 308);
+  }
+
   return NextResponse.next();
 }
 

@@ -83,7 +83,12 @@ export default function DynamicEventLandingPage() {
   useEffect(() => {
     if (!slug) return;
 
-    // Check if slug is a reserved system path or app view
+    // Check if slug is a language code or reserved app view
+    if (["en", "fr", "ar"].includes(slug.toLowerCase())) {
+      router.replace("/");
+      return;
+    }
+
     const appViews = ["create-event", "events-hub", "my-tickets", "profile", "auth", "admin"];
     if (appViews.includes(slug.toLowerCase())) {
       router.replace(`/?view=${slug.toLowerCase()}`);
