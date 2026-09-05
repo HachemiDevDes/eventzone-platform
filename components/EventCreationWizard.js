@@ -96,7 +96,6 @@ const TIMEZONES = [
 export default function EventCreationWizard({ onCancel, onEventCreated, userId, onUploadFile, currentUser, userEventsCount = 0 }) {
   const { t, lang, setLang, isRTL, languages } = useLanguage();
   const [langMenuOpen, setLangMenuOpen] = useState(false);
-  const [copiedEmail, setCopiedEmail] = useState(false);
 
   // Compute actual event count and quota limit status
   const actualEventsCount = Math.max(
@@ -357,83 +356,14 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
             </p>
           </div>
 
-          {/* Primary Action Card: Contact Team */}
-          <div className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
-            {/* Accent Top Gradient Line */}
-            <div className="h-1.5 w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-400 absolute top-0 left-0" />
-
-            <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mb-2">
-              {t("wizard.contactTeamTitle", "Contact the EventZone Team to Add More")}
-            </h2>
-
-            <p className="text-slate-600 text-xs sm:text-sm leading-relaxed mb-6 font-medium">
-              {t(
-                "wizard.contactTeamDesc",
-                "Our team can instantly increase your event quota or adjust attendee limits for enterprise summits. Quota requests are typically approved in less than 2 hours."
-              )}
-            </p>
-
-            {/* Primary Action Buttons */}
-            <div className="flex flex-wrap items-center gap-3 mb-6">
-              <a
-                href={`mailto:contact@eventzone.pro?subject=${encodeURIComponent(`Event Quota Limit Increase Request - ${currentUser?.fullName || currentUser?.email}`)}&body=${encodeURIComponent(`Hello EventZone Team,\n\nI have reached my event hosting limit (${actualEventsCount} / ${quotaCap} events) and would like to request an upgrade to add more events to my organizer account.\n\nOrganizer: ${currentUser?.fullName || 'Organizer'}\nAccount Email: ${currentUser?.email}\nCompany: ${currentUser?.companyName || 'N/A'}\n\nThank you!`)}`}
-                className="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white font-bold text-xs sm:text-sm shadow-lg shadow-blue-600/25 hover:shadow-blue-600/35 transition-all cursor-pointer group"
-              >
-                <Mail className="w-4 h-4" />
-                <span>{t("wizard.sendQuotaRequest", "Send Quota Request Email")}</span>
-                <ArrowRight className={`w-4 h-4 group-hover:translate-x-0.5 transition-transform ${isRTL ? "rotate-180 group-hover:-translate-x-0.5" : ""}`} />
-              </a>
-
-              <button
-                type="button"
-                onClick={() => {
-                  if (typeof navigator !== "undefined" && navigator.clipboard) {
-                    navigator.clipboard.writeText("contact@eventzone.pro");
-                    setCopiedEmail(true);
-                    setTimeout(() => setCopiedEmail(false), 2500);
-                  }
-                }}
-                className="inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 active:scale-[0.98] text-slate-700 border border-slate-200 text-xs sm:text-sm font-semibold transition-all cursor-pointer"
-                title="Copy support email address"
-              >
-                {copiedEmail ? (
-                  <>
-                    <CheckCheck className="w-4 h-4 text-emerald-600" />
-                    <span className="text-emerald-700 font-bold">{t("common.copied", "Copied!")}</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-4 h-4 text-slate-400" />
-                    <span>contact@eventzone.pro</span>
-                  </>
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={onCancel}
-                className="inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 active:scale-[0.98] text-white text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-xs"
-              >
-                <ArrowLeft className={`w-4 h-4 ${isRTL ? "rotate-180" : ""}`} />
-                <span>{t("wizard.backToEventsHub", "Return to Events Hub")}</span>
-              </button>
-            </div>
-
-            {/* Trust Guarantees */}
-            <div className="pt-6 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-3 text-[11px] text-slate-500 font-semibold">
-              <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                <span>{t("wizard.zeroDowntime", "Zero downtime for live events")}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                <span>{t("wizard.instantActivation", "Instant quota activation")}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                <span>{t("wizard.customAgencies", "Custom tiers for agencies")}</span>
-              </div>
-            </div>
+          {/* Contact Team Button (no icons) */}
+          <div className="pt-2">
+            <a
+              href={`mailto:contact@eventzone.pro?subject=${encodeURIComponent(`Event Quota Limit Increase Request - ${currentUser?.fullName || currentUser?.email}`)}&body=${encodeURIComponent(`Hello EventZone Team,\n\nI have reached my event hosting limit (${actualEventsCount} / ${quotaCap} events) and would like to request an upgrade to add more events to my organizer account.\n\nOrganizer: ${currentUser?.fullName || 'Organizer'}\nAccount Email: ${currentUser?.email}\nCompany: ${currentUser?.companyName || 'N/A'}\n\nThank you!`)}`}
+              className="inline-flex items-center justify-center px-7 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white font-bold text-sm sm:text-base shadow-lg shadow-blue-600/25 hover:shadow-blue-600/35 transition-all cursor-pointer"
+            >
+              {t("wizard.contactTeam", "Contact Team")}
+            </a>
           </div>
         </main>
       </div>
