@@ -7,16 +7,10 @@ import {
   Calendar,
   MapPin,
   Download,
-  ArrowRight,
-  Ticket,
   QrCode,
-  ShieldCheck,
-  Building2,
-  Mail,
   User,
-  ExternalLink,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
 } from "lucide-react";
 
 function PaymentSuccessContent() {
@@ -56,7 +50,6 @@ function PaymentSuccessContent() {
           setPaymentData(data.payment);
           setParticipantData(data.participant);
 
-          // If still pending, poll a few times as webhooks can take 1-3 seconds
           if (data.payment?.status === "pending" && pollCount < 5) {
             timer = setTimeout(() => {
               setPollCount((prev) => prev + 1);
@@ -83,7 +76,7 @@ function PaymentSuccessContent() {
     if (!participantData?.qrCode) return;
     const link = document.createElement("a");
     link.href = participantData.qrCode;
-    link.download = `${participantData.name || "ticket"}_badge_${participantData.badgeCode || "pass"}.png`;
+    link.download = `${participantData.name || "attendee"}_badge_${participantData.badgeCode || "pass"}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -100,15 +93,15 @@ function PaymentSuccessContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-16 h-16 rounded-3xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 mb-6 animate-pulse">
-          <RefreshCw className="w-8 h-8 animate-spin text-blue-400" />
+      <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col items-center justify-center p-6 text-center font-sans antialiased">
+        <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-center text-emerald-600 mb-4">
+          <RefreshCw className="w-6 h-6 animate-spin" />
         </div>
-        <h2 className="text-xl sm:text-2xl font-black tracking-tight mb-2">
-          Verifying Your Payment...
+        <h2 className="text-lg font-bold text-slate-900 mb-1">
+          Verifying Payment...
         </h2>
-        <p className="text-sm text-slate-400 max-w-md leading-relaxed">
-          Please wait while we confirm your EDAHABIA / CIB transaction with Chargily Pay.
+        <p className="text-xs text-slate-500 max-w-xs">
+          Confirming your transaction with Chargily Pay.
         </p>
       </div>
     );
@@ -116,140 +109,131 @@ function PaymentSuccessContent() {
 
   if (error || !paymentData) {
     return (
-      <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-16 h-16 rounded-3xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 mb-6 shadow-xl">
-          <AlertCircle size={32} />
+      <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col items-center justify-center p-6 text-center font-sans antialiased">
+        <div className="w-full max-w-sm bg-white rounded-3xl border border-slate-200/80 shadow-xl shadow-slate-200/50 p-8">
+          <div className="w-14 h-14 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-500 mx-auto mb-4">
+            <AlertCircle size={28} />
+          </div>
+          <h2 className="text-lg font-bold text-slate-900 mb-2">Payment Notice</h2>
+          <p className="text-xs text-slate-500 mb-6 leading-relaxed">
+            {error || "Could not retrieve payment information."}
+          </p>
+          <button
+            onClick={() => router.push("/")}
+            className="w-full py-3 px-5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-xs font-bold transition-all cursor-pointer"
+          >
+            Return to Events
+          </button>
         </div>
-        <h2 className="text-xl sm:text-2xl font-black tracking-tight mb-2">Payment Verification Notice</h2>
-        <p className="text-sm text-slate-400 max-w-md mb-8 leading-relaxed">
-          {error || "We couldn't confirm this transaction. If you were charged, your registration will be processed shortly via email."}
-        </p>
-        <button
-          onClick={() => router.push("/")}
-          className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-xs font-bold transition-all shadow-lg shadow-blue-600/30 cursor-pointer"
-        >
-          Return to Events
-        </button>
       </div>
     );
   }
 
-  const isPaid = paymentData.status === "paid";
   const eventInfo = paymentData.event || {};
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white py-12 px-4 sm:px-6 flex flex-col items-center justify-center">
-      <div className="w-full max-w-2xl space-y-8">
-        {/* Header Confirmation Card */}
-        <div className="text-center space-y-3">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 shadow-2xl shadow-emerald-500/20 mb-2 animate-in zoom-in-95 duration-300">
-            <CheckCircle2 size={40} className="stroke-[2.5]" />
-          </div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold uppercase tracking-wider">
-            <ShieldCheck size={14} />
-            <span>Chargily Pay Verified</span>
-          </div>
-          <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-white">
-            {isPaid ? "Payment Confirmed!" : "Transaction Processed"}
-          </h1>
-          <p className="text-sm sm:text-base text-slate-400 max-w-md mx-auto">
-            Your admission pass has been secured. A confirmation email with your digital badge has been sent to{" "}
-            <span className="text-white font-semibold">{paymentData.customerEmail}</span>.
-          </p>
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 py-12 px-4 sm:px-6 flex flex-col items-center justify-center font-sans antialiased">
+      <div className="w-full max-w-md bg-white rounded-3xl border border-slate-200/80 shadow-xl shadow-slate-200/50 p-7 sm:p-9 text-center">
+        {/* Success Icon */}
+        <div className="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 mx-auto mb-4">
+          <CheckCircle2 size={32} className="stroke-[2.5]" />
         </div>
 
-        {/* Digital Ticket & Badge Card */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl relative overflow-hidden">
-          {/* Top Decorative Banner */}
-          <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-500" />
+        {/* Clean Bold Headline */}
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
+          Payment Confirmed
+        </h1>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-            {/* Left/Middle Column: Pass details */}
-            <div className="md:col-span-2 space-y-5">
-              <div>
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-400 text-[11px] font-extrabold uppercase tracking-wider mb-2">
-                  <Ticket size={12} />
-                  <span>{paymentData.ticketTier || "Official Admission"}</span>
-                </div>
-                <h3 className="text-xl sm:text-2xl font-black text-white leading-tight">
-                  {eventInfo.name || "Eventzone Summit"}
-                </h3>
+        {/* Event Details Single Column */}
+        <div className="mt-6 pt-6 border-t border-slate-100 text-left space-y-4">
+          <div>
+            <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-100 mb-2">
+              {paymentData.ticketTier || "Official Admission"}
+            </span>
+            <h2 className="text-lg sm:text-xl font-bold text-slate-900 leading-snug">
+              {eventInfo.name || "Eventzone Summit"}
+            </h2>
+          </div>
+
+          <div className="space-y-2.5 text-xs sm:text-sm text-slate-600">
+            {eventInfo.start_date && (
+              <div className="flex items-center gap-2.5">
+                <Calendar size={16} className="text-slate-400 shrink-0" />
+                <span>
+                  {new Date(eventInfo.start_date).toLocaleDateString(undefined, {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </span>
               </div>
-
-              <div className="space-y-2 text-xs text-slate-300">
-                {eventInfo.start_date && (
-                  <div className="flex items-center gap-2.5">
-                    <Calendar size={15} className="text-blue-400 shrink-0" />
-                    <span>{new Date(eventInfo.start_date).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" })}</span>
-                  </div>
-                )}
-                {eventInfo.location && (
-                  <div className="flex items-center gap-2.5">
-                    <MapPin size={15} className="text-rose-400 shrink-0" />
-                    <span className="truncate">{eventInfo.location}</span>
-                  </div>
-                )}
-                <div className="flex items-center gap-2.5">
-                  <User size={15} className="text-emerald-400 shrink-0" />
-                  <span className="font-semibold text-white">{paymentData.customerName}</span>
-                </div>
+            )}
+            {eventInfo.location && (
+              <div className="flex items-center gap-2.5">
+                <MapPin size={16} className="text-slate-400 shrink-0" />
+                <span className="truncate">{eventInfo.location}</span>
               </div>
-
-              <div className="pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
-                <div>
-                  <span className="text-slate-400 text-[11px]">Amount Paid: </span>
-                  <span className="font-extrabold text-emerald-400 text-sm">
-                    {Number(paymentData.amount).toLocaleString()} {paymentData.currency}
-                  </span>
-                </div>
-                {participantData?.badgeCode && (
-                  <div className="bg-slate-800 px-2.5 py-1 rounded-lg font-mono text-[11px] text-slate-300 border border-slate-700">
-                    Badge: <span className="text-white font-bold">{participantData.badgeCode}</span>
-                  </div>
-                )}
+            )}
+            {paymentData.customerName && (
+              <div className="flex items-center gap-2.5">
+                <User size={16} className="text-slate-400 shrink-0" />
+                <span className="font-medium text-slate-800">
+                  {paymentData.customerName}
+                </span>
               </div>
-            </div>
+            )}
+          </div>
 
-            {/* Right Column: QR Code */}
-            <div className="flex flex-col items-center justify-center p-4 bg-white rounded-2xl shadow-inner text-slate-900 text-center">
+          {/* QR Code Pass */}
+          <div className="pt-2 flex flex-col items-center justify-center">
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 flex flex-col items-center">
               {participantData?.qrCode ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
                   src={participantData.qrCode}
                   alt="Entry QR Code"
-                  className="w-36 h-36 object-contain rounded-lg"
+                  className="w-44 h-44 object-contain rounded-xl"
                 />
               ) : (
-                <div className="w-36 h-36 flex flex-col items-center justify-center text-slate-400 gap-2 border border-dashed border-slate-300 rounded-lg">
-                  <QrCode size={36} />
-                  <span className="text-[10px] font-semibold">Generating QR...</span>
+                <div className="w-44 h-44 flex flex-col items-center justify-center text-slate-400 gap-2">
+                  <QrCode size={40} className="stroke-1" />
+                  <span className="text-xs">Preparing badge...</span>
                 </div>
               )}
-              <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mt-2">
-                Fast-Track Entry Pass
-              </span>
+              {participantData?.badgeCode && (
+                <div className="mt-3 px-3 py-1 bg-white rounded-lg border border-slate-200/80 font-mono text-xs font-bold text-slate-700 tracking-wider">
+                  {participantData.badgeCode}
+                </div>
+              )}
             </div>
+          </div>
+
+          {/* Amount Paid */}
+          <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <span>Amount Paid</span>
+            <span className="font-bold text-slate-900 text-sm">
+              {Number(paymentData.amount).toLocaleString()} {paymentData.currency}
+            </span>
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-          {participantData?.qrCode && (
-            <button
-              onClick={handleDownloadQr}
-              className="w-full sm:w-auto px-6 py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-xs shadow-lg shadow-emerald-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <Download size={16} />
-              <span>Download Digital Pass</span>
-            </button>
-          )}
+        {/* Single Action Button: Download Badge */}
+        <div className="mt-6">
+          <button
+            onClick={handleDownloadQr}
+            disabled={!participantData?.qrCode}
+            className="w-full py-3.5 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] disabled:opacity-50 text-white font-bold text-sm shadow-lg shadow-emerald-600/20 hover:shadow-emerald-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <Download size={16} />
+            <span>Download Badge</span>
+          </button>
 
           <button
             onClick={handleReturnToEvent}
-            className="w-full sm:w-auto px-6 py-3.5 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer border border-slate-700"
+            className="mt-3.5 text-xs text-slate-400 hover:text-slate-600 transition-colors inline-block cursor-pointer"
           >
-            <span>Return to Event Page</span>
-            <ArrowRight size={16} />
+            Return to event
           </button>
         </div>
       </div>
@@ -261,8 +245,8 @@ export default function PaymentSuccessPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
-          <div className="w-10 h-10 border-4 border-slate-800 border-t-emerald-500 rounded-full animate-spin" />
+        <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
+          <div className="w-8 h-8 border-3 border-slate-200 border-t-emerald-600 rounded-full animate-spin" />
         </div>
       }
     >
