@@ -11,6 +11,7 @@ import {
   User,
   RefreshCw,
   AlertCircle,
+  Receipt,
 } from "lucide-react";
 
 
@@ -25,6 +26,7 @@ function PaymentSuccessContent() {
 
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
+  const [downloadingReceipt, setDownloadingReceipt] = useState(false);
   const [paymentData, setPaymentData] = useState(null);
   const [participantData, setParticipantData] = useState(null);
   const [error, setError] = useState(null);
@@ -116,6 +118,46 @@ function PaymentSuccessContent() {
       window.open(`/api/tickets/badge-pdf?${fallbackQuery}`, "_blank");
     } finally {
       setDownloading(false);
+    }
+  };
+
+  const handleDownloadReceipt = async () => {
+    if (downloadingReceipt) return;
+    setDownloadingReceipt(true);
+    try {
+      const queryParam = paymentId
+        ? `payment_id=${paymentId}`
+        : checkoutId
+        ? `checkout_id=${checkoutId}`
+        : "";
+
+      const res = await fetch(`/api/payments/receipt-pdf?${queryParam}`);
+      if (!res.ok) {
+        throw new Error("Failed to generate receipt PDF");
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      const cleanName = (paymentData?.customerName || "attendee")
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "_");
+      link.download = `${cleanName}_official_receipt.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Receipt PDF download error:", err);
+      // Fallback: direct browser trigger
+      const fallbackQuery = paymentId
+        ? `payment_id=${paymentId}`
+        : checkoutId
+        ? `checkout_id=${checkoutId}`
+        : "";
+      window.open(`/api/payments/receipt-pdf?${fallbackQuery}`, "_blank");
+    } finally {
+      setDownloadingReceipt(false);
     }
   };
 
@@ -250,8 +292,8 @@ function PaymentSuccessContent() {
           </div>
         </div>
 
-        {/* Single Action Button: Download Badge */}
-        <div className="mt-6">
+        {/* Action Buttons: Download Badge & Download Receipt */}
+        <div className="mt-6 space-y-3">
           <button
             onClick={handleDownloadBadge}
             disabled={downloading}
@@ -271,8 +313,26 @@ function PaymentSuccessContent() {
           </button>
 
           <button
+            onClick={handleDownloadReceipt}
+            disabled={downloadingReceipt}
+            className="w-full py-3.5 px-6 rounded-2xl bg-white hover:bg-slate-50 active:scale-[0.99] disabled:opacity-50 text-slate-700 font-semibold text-sm border border-slate-200 shadow-sm hover:border-slate-300 transition-all flex items-center justify-center gap-2 cursor-pointer"
+          >
+            {downloadingReceipt ? (
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin text-slate-400" />
+                <span>Generating Receipt PDF...</span>
+              </>
+            ) : (
+              <>
+                <Receipt size={16} className="text-slate-500" />
+                <span>Download Receipt</span>
+              </>
+            )}
+          </button>
+
+          <button
             onClick={handleReturnToEvent}
-            className="mt-3.5 text-xs text-slate-400 hover:text-slate-600 transition-colors inline-block cursor-pointer"
+            className="pt-1 text-xs text-slate-400 hover:text-slate-600 transition-colors inline-block cursor-pointer"
           >
             Return to event
           </button>
