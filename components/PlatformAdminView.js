@@ -27,7 +27,7 @@ import { supabase, safeLocalStorageSet, sanitizeUserForStorage } from "../lib/su
 const ALGERIA_WILAYAS = COUNTRY_CITIES_MAP["Algeria"] || [];
 
 const HERO_POSITION_OPTIONS = [
-  { value: "1", label: "Position #1" },
+  { value: "1", label: "Position #1 (First slide)" },
   { value: "2", label: "Position #2" },
   { value: "3", label: "Position #3" },
   { value: "4", label: "Position #4" },
@@ -69,7 +69,7 @@ export default function PlatformAdminView({
   });
   const [recentCheckIns, setRecentCheckIns] = useState([]);
 
-  // Filter states
+  // Search & Filter states
   const [organizerSearch, setOrganizerSearch] = useState("");
   const [organizerWilayaFilter, setOrganizerWilayaFilter] = useState("All");
   const [organizerStatusFilter, setOrganizerStatusFilter] = useState("All");
@@ -87,7 +87,7 @@ export default function PlatformAdminView({
   const [searchedAttendees, setSearchedAttendees] = useState([]);
   const [isSearchingAttendees, setIsSearchingAttendees] = useState(false);
 
-  // Edit Quota Modal state
+  // Organizer Quota Edit Drawer state
   const [editingOrganizer, setEditingOrganizer] = useState(null);
   const [quotaMaxEvents, setQuotaMaxEvents] = useState("");
   const [quotaMaxAttendees, setQuotaMaxAttendees] = useState("");
@@ -146,8 +146,8 @@ export default function PlatformAdminView({
   // ─────────────────────────────────────────────
   const openEditQuotaModal = (org) => {
     setEditingOrganizer(org);
-    setQuotaMaxEvents(org.maxEvents !== null ? String(org.maxEvents) : "");
-    setQuotaMaxAttendees(org.maxAttendees !== null ? String(org.maxAttendees) : "");
+    setQuotaMaxEvents(org.maxEvents !== null && org.maxEvents !== undefined ? String(org.maxEvents) : "");
+    setQuotaMaxAttendees(org.maxAttendees !== null && org.maxAttendees !== undefined ? String(org.maxAttendees) : "");
     setQuotaStatus(org.status || "active");
     setQuotaRole(org.role || "organizer");
   };
@@ -298,23 +298,23 @@ export default function PlatformAdminView({
   };
 
   // ─────────────────────────────────────────────
-  //  COMPUTED & FILTERED DATA
+  //  MEMOIZED FILTERED LISTS
   // ─────────────────────────────────────────────
-  // Pinned hero events for preview
+  // Curated Hero Events
   const curatedHeroEvents = useMemo(() => {
     return events
-      .filter(e => e.isHeroFeatured)
+      .filter(e => e.status === "published" && (e.isHeroFeatured || e.is_hero_featured))
       .sort((a, b) => (a.heroOrder || 99) - (b.heroOrder || 99));
   }, [events]);
 
   // Filtered Organizers
   const filteredOrganizers = useMemo(() => {
     return organizers.filter(org => {
-      const matchesSearch = !organizerSearch.trim() || 
+      const matchesSearch = !organizerSearch.trim() ||
         org.fullName.toLowerCase().includes(organizerSearch.toLowerCase()) ||
         org.email.toLowerCase().includes(organizerSearch.toLowerCase()) ||
-        org.companyName.toLowerCase().includes(organizerSearch.toLowerCase());
-      
+        (org.companyName && org.companyName.toLowerCase().includes(organizerSearch.toLowerCase()));
+
       const matchesWilaya = organizerWilayaFilter === "All" || org.location === organizerWilayaFilter;
       const matchesStatus = organizerStatusFilter === "All" || org.status === organizerStatusFilter;
 
@@ -369,16 +369,16 @@ export default function PlatformAdminView({
 
   if (!isAuthorized) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-6 text-center selection:bg-emerald-500 selection:text-white">
-        <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-4 text-amber-400 shadow-xl shadow-amber-500/5">
+      <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center mb-4 text-amber-600 shadow-sm">
           <ShieldAlert className="w-8 h-8" />
         </div>
-        <h2 className="text-2xl font-black text-white tracking-tight mb-2">Platform Super Admin Console</h2>
-        <p className="text-slate-400 max-w-md text-sm mb-6 leading-relaxed">
+        <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-2">Platform Super Admin Console</h2>
+        <p className="text-slate-600 max-w-md text-sm mb-6 leading-relaxed">
           This console is reserved for platform owners to govern cross-platform events, organizer quotas, homepage hero curation, and Chargily payments.
           {currentUser?.email ? (
-            <span className="block mt-2 font-mono text-xs text-slate-300 bg-slate-900 border border-slate-800 rounded-lg p-2">
-              Signed in as: <strong className="text-emerald-400">{currentUser.email}</strong> (Role: {currentUser.role || 'organizer'})
+            <span className="block mt-3 font-mono text-xs text-slate-700 bg-white border border-slate-200 rounded-xl p-3 shadow-2xs">
+              Signed in as: <strong className="text-emerald-600">{currentUser.email}</strong> (Role: {currentUser.role || 'organizer'})
             </span>
           ) : (
             <span className="block mt-2 text-xs text-slate-500">
@@ -389,7 +389,7 @@ export default function PlatformAdminView({
         <div className="flex flex-wrap items-center justify-center gap-3">
           <button
             onClick={onExitAdmin}
-            className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-sm font-semibold transition-all cursor-pointer border border-slate-700/60"
+            className="px-5 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 text-sm font-semibold transition-all cursor-pointer border border-slate-300 shadow-xs"
           >
             Return to Homepage
           </button>
@@ -407,7 +407,7 @@ export default function PlatformAdminView({
                   window.location.reload();
                 }
               }}
-              className="px-5 py-2.5 rounded-xl bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-sm font-bold shadow-lg shadow-emerald-600/25 transition-all cursor-pointer flex items-center gap-2 border border-emerald-500/30"
+              className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-sm shadow-emerald-600/30 transition-all cursor-pointer flex items-center gap-2"
             >
               <ShieldCheck className="w-4 h-4" />
               Claim Super Admin Role & Enter
@@ -419,36 +419,36 @@ export default function PlatformAdminView({
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 border text-sm font-medium animate-in fade-in slide-in-from-top-4 duration-300 ${
+        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl shadow-xl flex items-center gap-3 border text-sm font-semibold animate-in fade-in slide-in-from-top-4 duration-300 ${
           toastMessage.type === "error" 
-            ? "bg-rose-950/90 text-rose-200 border-rose-800" 
-            : "bg-emerald-950/90 text-emerald-200 border-emerald-800"
+            ? "bg-rose-50 text-rose-800 border-rose-200" 
+            : "bg-emerald-50 text-emerald-800 border-emerald-200"
         }`}>
-          {toastMessage.type === "error" ? <AlertCircle className="w-4 h-4 text-rose-400" /> : <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+          {toastMessage.type === "error" ? <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" /> : <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />}
           <span>{toastMessage.text}</span>
         </div>
       )}
 
       {/* ─────────────────────────────────────────────
-          EXECUTIVE BACK OFFICE HEADER
+          EXECUTIVE BACK OFFICE HEADER (LIGHT MODE)
       ───────────────────────────────────────────── */}
-      <header className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-6 py-3.5 flex flex-wrap items-center justify-between gap-4">
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 px-6 py-3.5 flex flex-wrap items-center justify-between gap-4 shadow-2xs">
         <div className="flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/20 ring-2 ring-emerald-500/30">
+          <div className="w-10 h-10 rounded-xl bg-linear-to-tr from-emerald-600 to-teal-500 flex items-center justify-center shadow-md shadow-emerald-500/20 ring-2 ring-emerald-500/20">
             <ShieldCheck className="w-5 h-5 text-white" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-lg font-bold text-white tracking-tight">EventZone Back Office</h1>
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <h1 className="text-lg font-bold text-slate-900 tracking-tight">EventZone Back Office</h1>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 SUPER ADMIN
               </span>
             </div>
-            <p className="text-xs text-slate-400">Platform Command Console &amp; Cross-Tenant Operations</p>
+            <p className="text-xs text-slate-500">Platform Command Console &amp; Cross-Tenant Operations</p>
           </div>
         </div>
 
@@ -456,17 +456,17 @@ export default function PlatformAdminView({
           <button
             onClick={handleManualRefresh}
             disabled={isRefreshing}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-medium transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold transition-colors shadow-2xs cursor-pointer"
             title="Refresh All Records"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin text-emerald-400" : ""}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin text-emerald-600" : "text-slate-500"}`} />
             <span>{isRefreshing ? "Syncing..." : "Sync Live Data"}</span>
           </button>
 
           {onExitAdmin && (
             <button
               onClick={onExitAdmin}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-colors shadow-sm shadow-emerald-600/30"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-sm shadow-emerald-600/25 cursor-pointer"
             >
               <ArrowRight className="w-3.5 h-3.5 rotate-180" />
               <span>Exit to Platform</span>
@@ -476,9 +476,9 @@ export default function PlatformAdminView({
       </header>
 
       {/* ─────────────────────────────────────────────
-          PRIMARY NAVIGATION TABS
+          PRIMARY NAVIGATION TABS (LIGHT MODE)
       ───────────────────────────────────────────── */}
-      <nav className="bg-slate-900 border-b border-slate-800 px-6 py-1 flex items-center gap-1 overflow-x-auto scrollbar-none">
+      <nav className="bg-white border-b border-slate-200 px-6 py-1.5 flex items-center gap-1 overflow-x-auto scrollbar-none">
         {[
           { id: "overview", label: "Executive Overview", icon: BarChart3 },
           { id: "organizers", label: "Organizers & Quotas", icon: Building2, count: organizers.length },
@@ -493,17 +493,17 @@ export default function PlatformAdminView({
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all border ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border cursor-pointer ${
                 isActive
-                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-sm"
-                  : "text-slate-400 border-transparent hover:text-slate-200 hover:bg-slate-800/60"
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 shadow-2xs font-bold"
+                  : "text-slate-600 border-transparent hover:text-slate-900 hover:bg-slate-50"
               }`}
             >
-              <Icon className={`w-4 h-4 ${isActive ? "text-emerald-400" : "text-slate-400"}`} />
+              <Icon className={`w-4 h-4 ${isActive ? "text-emerald-600" : "text-slate-400"}`} />
               <span>{tab.label}</span>
               {tab.count !== undefined && (
-                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
-                  isActive ? "bg-emerald-500/20 text-emerald-300" : "bg-slate-800 text-slate-400"
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                  isActive ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600"
                 }`}>
                   {tab.count}
                 </span>
@@ -514,14 +514,16 @@ export default function PlatformAdminView({
       </nav>
 
       {/* ─────────────────────────────────────────────
-          MAIN CONTENT CONTAINER
+          MAIN CONTENT CONTAINER (LIGHT MODE)
       ───────────────────────────────────────────── */}
       <main className="flex-1 p-6 max-w-[1600px] w-full mx-auto">
         {isLoading ? (
           <div className="py-24 flex flex-col items-center justify-center gap-4 text-center">
-            <RefreshCw className="w-8 h-8 text-emerald-500 animate-spin" />
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
+              <RefreshCw className="w-6 h-6 animate-spin" />
+            </div>
             <div>
-              <h3 className="text-base font-semibold text-slate-200">Aggregating Platform Data...</h3>
+              <h3 className="text-base font-bold text-slate-800">Aggregating Platform Data...</h3>
               <p className="text-xs text-slate-500 mt-1">Fetching organizers, Chargily DZD ledger, and global events</p>
             </div>
           </div>
@@ -534,76 +536,86 @@ export default function PlatformAdminView({
               <div className="space-y-6 animate-in fade-in duration-300">
                 {/* Metric Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                  <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
-                    <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
+                  <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs hover:shadow-xs hover:border-slate-300 transition-all">
+                    <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
                       <span>Total Settled GMV</span>
-                      <CreditCard className="w-4 h-4 text-emerald-400" />
+                      <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100">
+                        <CreditCard className="w-4 h-4" />
+                      </div>
                     </div>
                     <div className="mt-3">
-                      <div className="text-2xl font-black text-white tracking-tight font-mono">
-                        {(paymentMetrics.totalGmv || 0).toLocaleString()} <span className="text-xs font-bold text-emerald-400">DZD</span>
+                      <div className="text-2xl font-black text-slate-900 tracking-tight font-mono">
+                        {(paymentMetrics.totalGmv || 0).toLocaleString()} <span className="text-xs font-bold text-emerald-600">DZD</span>
                       </div>
-                      <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1">
-                        <span className="text-emerald-400 font-semibold">{paymentMetrics.paidCount}</span> successful transactions
+                      <p className="text-[11px] text-slate-500 mt-1 flex items-center gap-1">
+                        <span className="text-emerald-700 font-bold">{paymentMetrics.paidCount}</span> successful transactions
                       </p>
                     </div>
                   </div>
 
-                  <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
-                    <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
+                  <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs hover:shadow-xs hover:border-slate-300 transition-all">
+                    <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
                       <span>Registered Organizers</span>
-                      <Building2 className="w-4 h-4 text-blue-400" />
+                      <div className="p-2 rounded-xl bg-blue-50 text-blue-600 border border-blue-100">
+                        <Building2 className="w-4 h-4" />
+                      </div>
                     </div>
                     <div className="mt-3">
-                      <div className="text-2xl font-black text-white tracking-tight font-mono">
+                      <div className="text-2xl font-black text-slate-900 tracking-tight font-mono">
                         {organizers.length}
                       </div>
-                      <p className="text-[11px] text-slate-400 mt-1">
-                        {organizers.filter(o => o.status === "active").length} active accounts
+                      <p className="text-[11px] text-slate-500 mt-1">
+                        <span className="text-blue-700 font-bold">{organizers.filter(o => o.status === "active").length}</span> active accounts
                       </p>
                     </div>
                   </div>
 
-                  <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
-                    <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
+                  <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs hover:shadow-xs hover:border-slate-300 transition-all">
+                    <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
                       <span>Active Events</span>
-                      <Calendar className="w-4 h-4 text-amber-400" />
+                      <div className="p-2 rounded-xl bg-amber-50 text-amber-600 border border-amber-100">
+                        <Calendar className="w-4 h-4" />
+                      </div>
                     </div>
                     <div className="mt-3">
-                      <div className="text-2xl font-black text-white tracking-tight font-mono">
+                      <div className="text-2xl font-black text-slate-900 tracking-tight font-mono">
                         {events.filter(e => e.status === "published").length}
                       </div>
-                      <p className="text-[11px] text-slate-400 mt-1">
+                      <p className="text-[11px] text-slate-500 mt-1">
                         {events.length} total events in directory
                       </p>
                     </div>
                   </div>
 
-                  <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
-                    <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
+                  <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs hover:shadow-xs hover:border-slate-300 transition-all">
+                    <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
                       <span>Hero Curated Events</span>
-                      <Star className="w-4 h-4 text-yellow-400" />
+                      <div className="p-2 rounded-xl bg-yellow-50 text-yellow-600 border border-yellow-100">
+                        <Star className="w-4 h-4 fill-yellow-500" />
+                      </div>
                     </div>
                     <div className="mt-3">
-                      <div className="text-2xl font-black text-white tracking-tight font-mono">
-                        {curatedHeroEvents.length} <span className="text-xs font-normal text-slate-400">/ 4</span>
+                      <div className="text-2xl font-black text-slate-900 tracking-tight font-mono">
+                        {curatedHeroEvents.length} <span className="text-xs font-medium text-slate-400">/ 4</span>
                       </div>
-                      <p className="text-[11px] text-slate-400 mt-1">
+                      <p className="text-[11px] text-slate-500 mt-1">
                         {curatedHeroEvents.length >= 1 ? "Custom priority active" : "Default order active"}
                       </p>
                     </div>
                   </div>
 
-                  <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
-                    <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
+                  <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs hover:shadow-xs hover:border-slate-300 transition-all">
+                    <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
                       <span>Live Check-Ins</span>
-                      <UserCheck className="w-4 h-4 text-teal-400" />
+                      <div className="p-2 rounded-xl bg-teal-50 text-teal-600 border border-teal-100">
+                        <UserCheck className="w-4 h-4" />
+                      </div>
                     </div>
                     <div className="mt-3">
-                      <div className="text-2xl font-black text-white tracking-tight font-mono">
+                      <div className="text-2xl font-black text-slate-900 tracking-tight font-mono">
                         {recentCheckIns.length}
                       </div>
-                      <p className="text-[11px] text-slate-400 mt-1">
+                      <p className="text-[11px] text-slate-500 mt-1">
                         Recent verified gate passes
                       </p>
                     </div>
@@ -613,27 +625,27 @@ export default function PlatformAdminView({
                 {/* Split Insights */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Financial Breakdown */}
-                  <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-                    <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                      <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                        <CreditCard className="w-4 h-4 text-emerald-400" />
+                  <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                      <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                        <CreditCard className="w-4 h-4 text-emerald-600" />
                         Chargily Gateway Breakdown
                       </h3>
-                      <span className="text-xs text-slate-400 font-mono">Algeria DZD</span>
+                      <span className="text-xs text-slate-500 font-mono font-bold">Algeria DZD</span>
                     </div>
 
                     <div className="mt-4 space-y-4">
                       <div>
                         <div className="flex items-center justify-between text-xs mb-1.5">
-                          <span className="text-slate-300 font-medium flex items-center gap-1.5">
+                          <span className="text-slate-700 font-semibold flex items-center gap-1.5">
                             <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
                             EDAHABIA Volume
                           </span>
-                          <span className="font-mono text-white font-semibold">
+                          <span className="font-mono text-slate-900 font-bold">
                             {(paymentMetrics.edahabiaGmv || 0).toLocaleString()} DZD ({paymentMetrics.edahabiaCount || 0})
                           </span>
                         </div>
-                        <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                        <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                           <div
                             className="h-full bg-amber-500 rounded-full"
                             style={{ width: `${paymentMetrics.totalGmv > 0 ? (paymentMetrics.edahabiaGmv / paymentMetrics.totalGmv) * 100 : 50}%` }}
@@ -643,15 +655,15 @@ export default function PlatformAdminView({
 
                       <div>
                         <div className="flex items-center justify-between text-xs mb-1.5">
-                          <span className="text-slate-300 font-medium flex items-center gap-1.5">
+                          <span className="text-slate-700 font-semibold flex items-center gap-1.5">
                             <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
                             CIB Card Volume
                           </span>
-                          <span className="font-mono text-white font-semibold">
+                          <span className="font-mono text-slate-900 font-bold">
                             {(paymentMetrics.cibGmv || 0).toLocaleString()} DZD ({paymentMetrics.cibCount || 0})
                           </span>
                         </div>
-                        <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                        <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                           <div
                             className="h-full bg-blue-500 rounded-full"
                             style={{ width: `${paymentMetrics.totalGmv > 0 ? (paymentMetrics.cibGmv / paymentMetrics.totalGmv) * 100 : 50}%` }}
@@ -659,34 +671,34 @@ export default function PlatformAdminView({
                         </div>
                       </div>
 
-                      <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
-                        <span>Checkout Conversion Rate:</span>
-                        <span className="font-mono text-emerald-400 font-bold">{paymentMetrics.successRate}%</span>
+                      <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                        <span className="font-medium">Checkout Conversion Rate:</span>
+                        <span className="font-mono text-emerald-600 font-bold">{paymentMetrics.successRate}%</span>
                       </div>
                     </div>
                   </div>
 
                   {/* Top Regional Distribution */}
-                  <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-                    <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                      <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-blue-400" />
+                  <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                      <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                        <MapPin className="w-4 h-4 text-blue-600" />
                         Top Algerian Wilayas
                       </h3>
-                      <span className="text-xs text-slate-400">Events Hosted</span>
+                      <span className="text-xs text-slate-500 font-medium">Events Hosted</span>
                     </div>
 
                     <div className="mt-4 space-y-3">
                       {wilayaDistribution.length === 0 ? (
-                        <p className="text-xs text-slate-500 py-4 text-center">No location records yet</p>
+                        <p className="text-xs text-slate-400 py-4 text-center">No location records yet</p>
                       ) : (
                         wilayaDistribution.map(([wilaya, count], idx) => (
                           <div key={wilaya} className="flex items-center justify-between text-xs">
                             <div className="flex items-center gap-2">
-                              <span className="w-4 text-slate-500 font-mono">#{idx + 1}</span>
-                              <span className="text-slate-300 font-medium truncate max-w-[180px]">{wilaya}</span>
+                              <span className="w-4 text-slate-400 font-mono font-bold">#{idx + 1}</span>
+                              <span className="text-slate-700 font-medium truncate max-w-[180px]">{wilaya}</span>
                             </div>
-                            <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono text-[11px] font-semibold">
+                            <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-mono text-[11px] font-bold">
                               {count} {count === 1 ? "event" : "events"}
                             </span>
                           </div>
@@ -696,27 +708,27 @@ export default function PlatformAdminView({
                   </div>
 
                   {/* Live Check-in Pulse */}
-                  <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-                    <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                      <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                        <UserCheck className="w-4 h-4 text-teal-400" />
+                  <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                      <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                        <UserCheck className="w-4 h-4 text-teal-600" />
                         Live Gate Check-in Pulse
                       </h3>
-                      <span className="text-xs text-slate-400">Real-time</span>
+                      <span className="text-xs text-slate-500 font-medium">Real-time</span>
                     </div>
 
                     <div className="mt-4 space-y-2.5 max-h-[220px] overflow-y-auto pr-1 scrollbar-none">
                       {recentCheckIns.length === 0 ? (
-                        <p className="text-xs text-slate-500 py-6 text-center">No recent gate check-ins logged</p>
+                        <p className="text-xs text-slate-400 py-6 text-center">No recent gate check-ins logged</p>
                       ) : (
                         recentCheckIns.slice(0, 6).map((ci, i) => (
-                          <div key={ci.id || i} className="p-2 rounded-lg bg-slate-800/60 border border-slate-700/50 flex items-center justify-between text-xs">
+                          <div key={ci.id || i} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs hover:bg-slate-100/70 transition-colors">
                             <div className="truncate mr-2">
-                              <div className="font-semibold text-slate-200 truncate">{ci.first_name} {ci.last_name}</div>
-                              <div className="text-[10px] text-slate-400 truncate">{ci.events?.name || "Official Event"}</div>
+                              <div className="font-semibold text-slate-900 truncate">{ci.first_name} {ci.last_name}</div>
+                              <div className="text-[10px] text-slate-500 truncate">{ci.events?.name || "Official Event"}</div>
                             </div>
-                            <div className="text-right flex-shrink-0">
-                              <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                            <div className="text-right shrink-0">
+                              <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                                 {ci.badge_code || "PASS"}
                               </span>
                             </div>
@@ -735,15 +747,15 @@ export default function PlatformAdminView({
             {activeTab === "organizers" && (
               <div className="space-y-4 animate-in fade-in duration-300">
                 {/* Search & Filters */}
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
+                <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
                   <div className="relative flex-1 min-w-[260px]">
-                    <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                       type="text"
                       value={organizerSearch}
                       onChange={(e) => setOrganizerSearch(e.target.value)}
                       placeholder="Search organizer by name, company, email..."
-                      className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                      className="w-full bg-slate-50 border border-slate-200 focus:bg-white rounded-xl pl-10 pr-4 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all font-medium"
                     />
                   </div>
 
@@ -754,6 +766,7 @@ export default function PlatformAdminView({
                         onChange={setOrganizerWilayaFilter}
                         options={[{ value: "All", label: "All Wilayas" }, ...ALGERIA_WILAYAS.map(w => ({ value: w, label: w }))]}
                         placeholder="Filter Wilaya"
+                        buttonClassName="bg-white! border-slate-200! text-slate-800! text-xs! rounded-xl!"
                       />
                     </div>
 
@@ -768,30 +781,31 @@ export default function PlatformAdminView({
                           { value: "banned", label: "Banned" }
                         ]}
                         placeholder="Status"
+                        buttonClassName="bg-white! border-slate-200! text-slate-800! text-xs! rounded-xl!"
                       />
                     </div>
                   </div>
                 </div>
 
                 {/* Organizers Table */}
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+                <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-800/70 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800">
+                      <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold text-[11px] border-b border-slate-200">
                         <tr>
-                          <th className="py-3 px-4">Organizer / Company</th>
-                          <th className="py-3 px-4">Contact</th>
-                          <th className="py-3 px-4">Wilaya</th>
-                          <th className="py-3 px-4">Events Created / Quota</th>
-                          <th className="py-3 px-4">Max Capacity Cap</th>
-                          <th className="py-3 px-4">Status</th>
-                          <th className="py-3 px-4 text-right">Actions</th>
+                          <th className="py-3.5 px-4">Organizer / Company</th>
+                          <th className="py-3.5 px-4">Contact</th>
+                          <th className="py-3.5 px-4">Wilaya</th>
+                          <th className="py-3.5 px-4">Events Created / Quota</th>
+                          <th className="py-3.5 px-4">Max Capacity Cap</th>
+                          <th className="py-3.5 px-4">Status</th>
+                          <th className="py-3.5 px-4 text-right">Actions</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-800/80">
+                      <tbody className="divide-y divide-slate-100">
                         {filteredOrganizers.length === 0 ? (
                           <tr>
-                            <td colSpan={7} className="py-12 text-center text-slate-500 text-xs">
+                            <td colSpan={7} className="py-12 text-center text-slate-400 text-xs">
                               No organizers match current search criteria.
                             </td>
                           </tr>
@@ -799,66 +813,66 @@ export default function PlatformAdminView({
                           filteredOrganizers.map(org => {
                             const isAtOrOverLimit = org.maxEvents !== null && org.eventsCount >= org.maxEvents;
                             return (
-                              <tr key={org.id} className="hover:bg-slate-800/40 transition-colors">
-                                <td className="py-3 px-4">
-                                  <div className="font-semibold text-white">{org.fullName}</div>
-                                  <div className="text-[11px] text-slate-400">{org.companyName || org.jobTitle || "Independent"}</div>
+                              <tr key={org.id} className="hover:bg-slate-50/80 transition-colors">
+                                <td className="py-3.5 px-4">
+                                  <div className="font-bold text-slate-900">{org.fullName}</div>
+                                  <div className="text-[11px] text-slate-500">{org.companyName || org.jobTitle || "Independent Organizer"}</div>
                                 </td>
-                                <td className="py-3 px-4 text-slate-300">
-                                  <div>{org.email}</div>
-                                  {org.phone && <div className="text-[10px] text-slate-500">{org.phone}</div>}
+                                <td className="py-3.5 px-4 text-slate-700">
+                                  <div className="font-medium">{org.email}</div>
+                                  {org.phone && <div className="text-[10px] text-slate-400 font-mono mt-0.5">{org.phone}</div>}
                                 </td>
-                                <td className="py-3 px-4 text-slate-300">
+                                <td className="py-3.5 px-4 text-slate-600 font-medium">
                                   {org.location || "Algeria"}
                                 </td>
-                                <td className="py-3 px-4">
+                                <td className="py-3.5 px-4">
                                   <div className="flex items-center gap-1.5">
-                                    <span className={`font-mono font-bold ${isAtOrOverLimit ? "text-amber-400" : "text-emerald-400"}`}>
+                                    <span className={`font-mono font-bold ${isAtOrOverLimit ? "text-amber-600" : "text-emerald-600"}`}>
                                       {org.eventsCount}
                                     </span>
-                                    <span className="text-slate-500 font-mono">/</span>
-                                    <span className="font-mono text-slate-400">
-                                      {org.maxEvents !== null ? org.maxEvents : "Unlimited"}
+                                    <span className="text-slate-400 font-mono">/</span>
+                                    <span className="font-mono text-slate-600 font-semibold">
+                                      {org.maxEvents !== null && org.maxEvents !== undefined ? org.maxEvents : "Unlimited"}
                                     </span>
                                     {isAtOrOverLimit && (
-                                      <span className="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
                                         LIMIT REACHED
                                       </span>
                                     )}
                                   </div>
                                 </td>
-                                <td className="py-3 px-4 font-mono text-slate-300">
-                                  {org.maxAttendees !== null ? (
-                                    <span>{org.maxAttendees.toLocaleString()} attendees</span>
+                                <td className="py-3.5 px-4 font-mono text-slate-700">
+                                  {org.maxAttendees !== null && org.maxAttendees !== undefined ? (
+                                    <span className="font-semibold">{org.maxAttendees.toLocaleString()} attendees</span>
                                   ) : (
-                                    <span className="text-emerald-400">Unlimited</span>
+                                    <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/60">Unlimited</span>
                                   )}
                                 </td>
-                                <td className="py-3 px-4">
-                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize border ${
+                                <td className="py-3.5 px-4">
+                                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold capitalize border ${
                                     org.status === "active" 
-                                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" 
+                                      ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
                                       : org.status === "suspended" 
-                                      ? "bg-amber-500/10 text-amber-400 border-amber-500/30" 
-                                      : "bg-rose-500/10 text-rose-400 border-rose-500/30"
+                                      ? "bg-amber-50 text-amber-700 border-amber-200" 
+                                      : "bg-rose-50 text-rose-700 border-rose-200"
                                   }`}>
                                     {org.status}
                                   </span>
                                 </td>
-                                <td className="py-3 px-4 text-right">
+                                <td className="py-3.5 px-4 text-right">
                                   <div className="flex items-center justify-end gap-1.5">
                                     <button
                                       onClick={() => openEditQuotaModal(org)}
-                                      className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-emerald-600 hover:text-white text-slate-300 border border-slate-700 text-xs font-medium transition-colors flex items-center gap-1"
-                                      title="Edit Event Quotas & Limits"
+                                      className="px-3 py-1.5 rounded-xl bg-white hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 text-slate-700 border border-slate-200 text-xs font-semibold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                                      title="Edit Event Quotas & Limits (Right Drawer)"
                                     >
-                                      <Sliders className="w-3.5 h-3.5" />
+                                      <Sliders className="w-3.5 h-3.5 text-emerald-600" />
                                       <span>Edit Quotas</span>
                                     </button>
 
                                     <button
                                       onClick={() => setSelectedOrgEvents(events.filter(e => e.organizerId === org.id))}
-                                      className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700 text-xs font-medium transition-colors"
+                                      className="px-3 py-1.5 rounded-xl bg-white hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 text-slate-700 border border-slate-200 text-xs font-semibold transition-all shadow-2xs cursor-pointer"
                                       title="View all events by this organizer"
                                     >
                                       Events ({org.eventsCount})
@@ -882,45 +896,45 @@ export default function PlatformAdminView({
             {activeTab === "hero" && (
               <div className="space-y-6 animate-in fade-in duration-300">
                 {/* Curator Banner */}
-                <div className="bg-gradient-to-r from-emerald-950/40 via-slate-900 to-slate-900 border border-emerald-800/40 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4">
+                <div className="bg-linear-to-r from-emerald-50/80 via-teal-50/50 to-white border border-emerald-200/80 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4 shadow-2xs">
                   <div className="space-y-1 max-w-2xl">
-                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                      <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                    <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                      <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
                       Homepage Hero Section Curator
                     </h3>
-                    <p className="text-xs text-slate-400 leading-relaxed">
-                      Choose which published events appear in the prominent top carousel of the EventZone homepage (<span className="text-emerald-400 font-mono">MainHomePage.js</span>). Pinned events override default chronological ordering.
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      Choose which published events appear in the prominent top carousel of the EventZone homepage (<span className="text-emerald-700 font-mono font-bold">MainHomePage.js</span>). Pinned events override default chronological ordering.
                     </p>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className="px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-xs font-mono text-slate-300">
-                      Currently Pinned: <span className="font-bold text-emerald-400">{curatedHeroEvents.length}</span> events
+                    <span className="px-3 py-1.5 rounded-xl bg-white border border-emerald-200 text-xs font-mono font-semibold text-slate-700 shadow-2xs">
+                      Currently Pinned: <span className="font-bold text-emerald-600">{curatedHeroEvents.length}</span> events
                     </span>
                   </div>
                 </div>
 
                 {/* Hero Carousel Live Simulation */}
                 {curatedHeroEvents.length > 0 && (
-                  <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-                    <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+                  <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
                       <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                        <span className="text-xs font-bold text-white uppercase tracking-wider">Live Homepage Hero Simulation</span>
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                        <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">Live Homepage Hero Simulation</span>
                       </div>
                       <div className="flex items-center gap-1.5 text-xs">
                         <button
                           onClick={() => setHeroPreviewIndex(prev => (prev - 1 + curatedHeroEvents.length) % curatedHeroEvents.length)}
-                          className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300"
+                          className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
                         >
                           <ChevronLeft className="w-4 h-4" />
                         </button>
-                        <span className="font-mono text-slate-400 px-2">
+                        <span className="font-mono font-semibold text-slate-600 px-2">
                           Slide {heroPreviewIndex + 1} of {curatedHeroEvents.length}
                         </span>
                         <button
                           onClick={() => setHeroPreviewIndex(prev => (prev + 1) % curatedHeroEvents.length)}
-                          className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300"
+                          className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
                         >
                           <ChevronRight className="w-4 h-4" />
                         </button>
@@ -932,27 +946,27 @@ export default function PlatformAdminView({
                       const curEv = curatedHeroEvents[heroPreviewIndex] || curatedHeroEvents[0];
                       if (!curEv) return null;
                       return (
-                        <div className="relative rounded-2xl overflow-hidden aspect-[21/9] max-h-[360px] border border-slate-800 group">
+                        <div className="relative rounded-2xl overflow-hidden aspect-[21/9] max-h-[360px] border border-slate-200 shadow-sm group">
                           <img
                             src={curEv.banner || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1600&auto=format&fit=crop&q=80"}
                             alt={curEv.title}
                             className="w-full h-full object-cover"
                           />
-                          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent p-6 flex flex-col justify-end">
+                          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent p-6 flex flex-col justify-end text-white">
                             <div className="flex items-center gap-2 mb-2">
-                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-yellow-500 text-slate-950 flex items-center gap-1">
+                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-slate-950 flex items-center gap-1 shadow-xs">
                                 <Star className="w-3 h-3 fill-slate-950" />
                                 HERO POSITION #{curEv.heroOrder || (heroPreviewIndex + 1)}
                               </span>
-                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/20 backdrop-blur-md text-white border border-white/20">
                                 {curEv.category}
                               </span>
-                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-800/80 text-slate-300 border border-slate-700">
+                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/10 backdrop-blur-md text-slate-200 border border-white/10">
                                 {curEv.city || curEv.location || "Algeria"}
                               </span>
                             </div>
-                            <h2 className="text-xl md:text-2xl font-black text-white">{curEv.title}</h2>
-                            <p className="text-xs text-slate-300 line-clamp-2 mt-1 max-w-2xl">{curEv.tagline || curEv.description}</p>
+                            <h2 className="text-xl md:text-2xl font-black text-white drop-shadow-sm">{curEv.title}</h2>
+                            <p className="text-xs text-slate-200 line-clamp-2 mt-1 max-w-2xl">{curEv.tagline || curEv.description}</p>
                           </div>
                         </div>
                       );
@@ -961,55 +975,57 @@ export default function PlatformAdminView({
                 )}
 
                 {/* Published Events Selection Table */}
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
-                  <div className="p-4 border-b border-slate-800 flex items-center justify-between gap-4">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Available Published Events for Hero</h4>
-                    <span className="text-xs text-slate-500">Toggle PIN and assign slide priority</span>
+                <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
+                  <div className="p-4 border-b border-slate-100 flex items-center justify-between gap-4 bg-slate-50/50">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">Available Published Events for Hero</h4>
+                    <span className="text-xs text-slate-500 font-medium">Toggle PIN and assign slide priority</span>
                   </div>
 
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-800/70 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800">
+                      <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold text-[11px] border-b border-slate-200">
                         <tr>
-                          <th className="py-3 px-4">Event Title</th>
-                          <th className="py-3 px-4">Organizer</th>
-                          <th className="py-3 px-4">Wilaya</th>
-                          <th className="py-3 px-4">Category</th>
-                          <th className="py-3 px-4 text-center">Hero Priority</th>
-                          <th className="py-3 px-4 text-right">Hero Pin Status</th>
+                          <th className="py-3.5 px-4">Event Title</th>
+                          <th className="py-3.5 px-4">Organizer</th>
+                          <th className="py-3.5 px-4">Wilaya</th>
+                          <th className="py-3.5 px-4">Category</th>
+                          <th className="py-3.5 px-4 text-center">Hero Priority</th>
+                          <th className="py-3.5 px-4 text-right">Hero Pin Status</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-800/80">
+                      <tbody className="divide-y divide-slate-100">
                         {events.filter(e => e.status === "published").map(ev => (
-                          <tr key={ev.id} className={`hover:bg-slate-800/40 transition-colors ${ev.isHeroFeatured ? "bg-emerald-950/10" : ""}`}>
-                            <td className="py-3 px-4">
+                          <tr key={ev.id} className={`hover:bg-slate-50/80 transition-colors ${ev.isHeroFeatured ? "bg-emerald-50/40" : ""}`}>
+                            <td className="py-3.5 px-4">
                               <div className="flex items-center gap-3">
                                 <img
                                   src={ev.banner || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=300&auto=format&fit=crop&q=80"}
                                   alt={ev.title}
-                                  className="w-12 h-8 rounded-lg object-cover border border-slate-700 flex-shrink-0"
+                                  className="w-12 h-8 rounded-lg object-cover border border-slate-200 shrink-0"
                                 />
                                 <div>
-                                  <div className="font-semibold text-white flex items-center gap-1.5">
+                                  <div className="font-bold text-slate-900 flex items-center gap-1.5">
                                     {ev.title}
                                     {ev.isHeroFeatured && (
-                                      <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400 flex-shrink-0" />
+                                      <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
                                     )}
                                   </div>
-                                  <div className="text-[10px] text-slate-400">{ev.startDate || "Date TBA"}</div>
+                                  <div className="text-[10px] text-slate-500">{ev.startDate || "Date TBA"}</div>
                                 </div>
                               </div>
                             </td>
-                            <td className="py-3 px-4 text-slate-300">
+                            <td className="py-3.5 px-4 text-slate-700 font-medium">
                               {ev.organizerFullName || "Organizer"}
                             </td>
-                            <td className="py-3 px-4 text-slate-300">
+                            <td className="py-3.5 px-4 text-slate-600">
                               {ev.city || ev.location || "Algeria"}
                             </td>
-                            <td className="py-3 px-4 text-slate-300">
-                              {ev.category}
+                            <td className="py-3.5 px-4 text-slate-600">
+                              <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-medium text-[11px]">
+                                {ev.category}
+                              </span>
                             </td>
-                            <td className="py-3 px-4 text-center">
+                            <td className="py-3.5 px-4 text-center">
                               {ev.isHeroFeatured ? (
                                 <div className="w-36 mx-auto">
                                   <SearchableSelect
@@ -1017,23 +1033,23 @@ export default function PlatformAdminView({
                                     onChange={(val) => handleUpdateHeroOrder(ev, val)}
                                     options={HERO_POSITION_OPTIONS}
                                     isClearable={false}
-                                    buttonClassName="bg-slate-800! border-emerald-500/40! text-emerald-400! font-mono! font-bold! py-1! px-2! text-xs! rounded-lg!"
+                                    buttonClassName="bg-white! border-emerald-300! text-emerald-700! font-mono! font-bold! py-1! px-2! text-xs! rounded-xl!"
                                   />
                                 </div>
                               ) : (
-                                <span className="text-slate-600 font-mono">—</span>
+                                <span className="text-slate-300 font-mono">—</span>
                               )}
                             </td>
-                            <td className="py-3 px-4 text-right">
+                            <td className="py-3.5 px-4 text-right">
                               <button
                                 onClick={() => handleToggleHeroFeatured(ev)}
-                                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ml-auto ${
+                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ml-auto cursor-pointer shadow-2xs ${
                                   ev.isHeroFeatured
-                                    ? "bg-emerald-600 text-white hover:bg-emerald-500 shadow-sm shadow-emerald-600/30"
-                                    : "bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700"
+                                    ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-600/25"
+                                    : "bg-white hover:bg-slate-100 text-slate-700 border border-slate-200"
                                 }`}
                               >
-                                <Pin className={`w-3.5 h-3.5 ${ev.isHeroFeatured ? "fill-white" : ""}`} />
+                                <Pin className={`w-3.5 h-3.5 ${ev.isHeroFeatured ? "fill-white" : "text-slate-400"}`} />
                                 <span>{ev.isHeroFeatured ? "Pinned to Hero" : "Pin Event"}</span>
                               </button>
                             </td>
@@ -1052,15 +1068,15 @@ export default function PlatformAdminView({
             {activeTab === "events" && (
               <div className="space-y-4 animate-in fade-in duration-300">
                 {/* Search and Filters */}
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
+                <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
                   <div className="relative flex-1 min-w-[260px]">
-                    <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                       type="text"
                       value={eventSearch}
                       onChange={(e) => setEventSearch(e.target.value)}
                       placeholder="Search cross-tenant events by title, organizer, category..."
-                      className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                      className="w-full bg-slate-50 border border-slate-200 focus:bg-white rounded-xl pl-10 pr-4 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all font-medium"
                     />
                   </div>
 
@@ -1071,6 +1087,7 @@ export default function PlatformAdminView({
                         onChange={setEventCategoryFilter}
                         options={[{ value: "All", label: "All Categories" }, ...INDUSTRIES.map(ind => ({ value: ind, label: ind }))]}
                         placeholder="Category"
+                        buttonClassName="bg-white! border-slate-200! text-slate-800! text-xs! rounded-xl!"
                       />
                     </div>
 
@@ -1080,6 +1097,7 @@ export default function PlatformAdminView({
                         onChange={setEventWilayaFilter}
                         options={[{ value: "All", label: "All Wilayas" }, ...ALGERIA_WILAYAS.map(w => ({ value: w, label: w }))]}
                         placeholder="Wilaya"
+                        buttonClassName="bg-white! border-slate-200! text-slate-800! text-xs! rounded-xl!"
                       />
                     </div>
 
@@ -1095,87 +1113,88 @@ export default function PlatformAdminView({
                           { value: "archived", label: "Archived" }
                         ]}
                         placeholder="Status"
+                        buttonClassName="bg-white! border-slate-200! text-slate-800! text-xs! rounded-xl!"
                       />
                     </div>
                   </div>
                 </div>
 
                 {/* Master Events Table */}
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+                <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-800/70 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800">
+                      <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold text-[11px] border-b border-slate-200">
                         <tr>
-                          <th className="py-3 px-4">Event Details</th>
-                          <th className="py-3 px-4">Organizer</th>
-                          <th className="py-3 px-4">Location / Wilaya</th>
-                          <th className="py-3 px-4">Dates</th>
-                          <th className="py-3 px-4">Attendees / Cap</th>
-                          <th className="py-3 px-4">Status</th>
-                          <th className="py-3 px-4 text-right">Moderation Actions</th>
+                          <th className="py-3.5 px-4">Event Details</th>
+                          <th className="py-3.5 px-4">Organizer</th>
+                          <th className="py-3.5 px-4">Location / Wilaya</th>
+                          <th className="py-3.5 px-4">Dates</th>
+                          <th className="py-3.5 px-4">Attendees / Cap</th>
+                          <th className="py-3.5 px-4">Status</th>
+                          <th className="py-3.5 px-4 text-right">Moderation Actions</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-800/80">
+                      <tbody className="divide-y divide-slate-100">
                         {filteredEvents.length === 0 ? (
                           <tr>
-                            <td colSpan={7} className="py-12 text-center text-slate-500 text-xs">
+                            <td colSpan={7} className="py-12 text-center text-slate-400 text-xs">
                               No events found matching current criteria.
                             </td>
                           </tr>
                         ) : (
                           filteredEvents.map(ev => (
-                            <tr key={ev.id} className="hover:bg-slate-800/40 transition-colors">
-                              <td className="py-3 px-4">
+                            <tr key={ev.id} className="hover:bg-slate-50/80 transition-colors">
+                              <td className="py-3.5 px-4">
                                 <div className="flex items-center gap-3">
                                   <img
                                     src={ev.banner || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=200&auto=format&fit=crop&q=80"}
                                     alt={ev.title}
-                                    className="w-10 h-10 rounded-lg object-cover border border-slate-700 flex-shrink-0"
+                                    className="w-10 h-10 rounded-xl object-cover border border-slate-200 shrink-0"
                                   />
                                   <div>
-                                    <div className="font-semibold text-white flex items-center gap-1.5">
+                                    <div className="font-bold text-slate-900 flex items-center gap-1.5">
                                       {ev.title}
                                       {ev.isHeroFeatured && (
-                                        <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-yellow-500/20 text-yellow-400 border border-yellow-500/40">
+                                        <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-100 text-amber-800 border border-amber-300">
                                           HERO #{ev.heroOrder || 1}
                                         </span>
                                       )}
                                     </div>
-                                    <div className="text-[10px] text-slate-400">{ev.category}</div>
+                                    <div className="text-[10px] text-slate-500">{ev.category}</div>
                                   </div>
                                 </div>
                               </td>
-                              <td className="py-3 px-4 text-slate-300">
-                                <div className="font-medium">{ev.organizerFullName}</div>
-                                <div className="text-[10px] text-slate-500">{ev.organizerEmail}</div>
+                              <td className="py-3.5 px-4 text-slate-700">
+                                <div className="font-semibold text-slate-900">{ev.organizerFullName}</div>
+                                <div className="text-[10px] text-slate-400">{ev.organizerEmail}</div>
                               </td>
-                              <td className="py-3 px-4 text-slate-300">
+                              <td className="py-3.5 px-4 text-slate-600 font-medium">
                                 {ev.city || ev.location || "Algeria"}
                               </td>
-                              <td className="py-3 px-4 text-slate-300">
+                              <td className="py-3.5 px-4 text-slate-600 font-medium">
                                 {ev.startDate || "TBA"}
                               </td>
-                              <td className="py-3 px-4 font-mono text-slate-300">
-                                <span className="font-bold text-emerald-400">{ev.registeredCount || 0}</span>
-                                <span className="text-slate-500"> / {ev.capacity || 500}</span>
+                              <td className="py-3.5 px-4 font-mono text-slate-700">
+                                <span className="font-bold text-emerald-600">{ev.registeredCount || 0}</span>
+                                <span className="text-slate-400"> / {ev.capacity || 500}</span>
                               </td>
-                              <td className="py-3 px-4">
-                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize border ${
+                              <td className="py-3.5 px-4">
+                                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold capitalize border ${
                                   ev.status === "published"
-                                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                                     : ev.status === "suspended"
-                                    ? "bg-rose-500/10 text-rose-400 border-rose-500/30"
-                                    : "bg-slate-800 text-slate-400 border-slate-700"
+                                    ? "bg-rose-50 text-rose-700 border-rose-200"
+                                    : "bg-slate-100 text-slate-600 border-slate-200"
                                 }`}>
                                   {ev.status}
                                 </span>
                               </td>
-                              <td className="py-3 px-4 text-right">
+                              <td className="py-3.5 px-4 text-right">
                                 <div className="flex items-center justify-end gap-1.5">
                                   {onViewPublicLandingPage && (
                                     <button
                                       onClick={() => onViewPublicLandingPage(ev.id)}
-                                      className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700"
+                                      className="p-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs transition-colors cursor-pointer"
                                       title="Preview Public Landing Page"
                                     >
                                       <Eye className="w-3.5 h-3.5" />
@@ -1184,20 +1203,20 @@ export default function PlatformAdminView({
 
                                   <button
                                     onClick={() => handleToggleHeroFeatured(ev)}
-                                    className={`p-1.5 rounded-lg border text-xs ${
+                                    className={`p-1.5 rounded-xl border text-xs transition-colors cursor-pointer shadow-2xs ${
                                       ev.isHeroFeatured
-                                        ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/40"
-                                        : "bg-slate-800 text-slate-400 border-slate-700 hover:text-white"
+                                        ? "bg-amber-50 text-amber-700 border-amber-200"
+                                        : "bg-white text-slate-500 border-slate-200 hover:bg-slate-100"
                                     }`}
                                     title={ev.isHeroFeatured ? "Unpin from Hero" : "Pin to Hero"}
                                   >
-                                    <Star className={`w-3.5 h-3.5 ${ev.isHeroFeatured ? "fill-yellow-400" : ""}`} />
+                                    <Star className={`w-3.5 h-3.5 ${ev.isHeroFeatured ? "fill-amber-500" : ""}`} />
                                   </button>
 
                                   {ev.status === "published" ? (
                                     <button
                                       onClick={() => handleUpdateEventStatus(ev, "suspended")}
-                                      className="px-2.5 py-1 rounded-lg bg-rose-950/40 hover:bg-rose-900 text-rose-300 border border-rose-800/60 text-xs font-medium transition-colors"
+                                      className="px-2.5 py-1 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold transition-colors cursor-pointer"
                                       title="Suspend / Takedown event"
                                     >
                                       Suspend
@@ -1205,7 +1224,7 @@ export default function PlatformAdminView({
                                   ) : (
                                     <button
                                       onClick={() => handleUpdateEventStatus(ev, "published")}
-                                      className="px-2.5 py-1 rounded-lg bg-emerald-950/40 hover:bg-emerald-900 text-emerald-300 border border-emerald-800/60 text-xs font-medium transition-colors"
+                                      className="px-2.5 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-semibold transition-colors cursor-pointer"
                                       title="Publish event"
                                     >
                                       Publish
@@ -1230,37 +1249,37 @@ export default function PlatformAdminView({
               <div className="space-y-4 animate-in fade-in duration-300">
                 {/* Metrics Summary */}
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                  <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-                    <span className="text-xs text-slate-400">Total Settled GMV</span>
-                    <div className="text-xl font-black text-white font-mono mt-1">
-                      {(paymentMetrics.totalGmv || 0).toLocaleString()} <span className="text-xs text-emerald-400">DZD</span>
+                  <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs">
+                    <span className="text-xs text-slate-500 font-semibold">Total Settled GMV</span>
+                    <div className="text-xl font-black text-slate-900 font-mono mt-1">
+                      {(paymentMetrics.totalGmv || 0).toLocaleString()} <span className="text-xs text-emerald-600 font-bold">DZD</span>
                     </div>
                   </div>
 
-                  <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-                    <span className="text-xs text-slate-400">EDAHABIA Settled</span>
-                    <div className="text-xl font-black text-amber-400 font-mono mt-1">
-                      {(paymentMetrics.edahabiaGmv || 0).toLocaleString()} <span className="text-xs">DZD</span>
+                  <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs">
+                    <span className="text-xs text-slate-500 font-semibold">EDAHABIA Settled</span>
+                    <div className="text-xl font-black text-amber-700 font-mono mt-1">
+                      {(paymentMetrics.edahabiaGmv || 0).toLocaleString()} <span className="text-xs font-bold text-slate-400">DZD</span>
                     </div>
                   </div>
 
-                  <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-                    <span className="text-xs text-slate-400">CIB Card Settled</span>
-                    <div className="text-xl font-black text-blue-400 font-mono mt-1">
-                      {(paymentMetrics.cibGmv || 0).toLocaleString()} <span className="text-xs">DZD</span>
+                  <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs">
+                    <span className="text-xs text-slate-500 font-semibold">CIB Card Settled</span>
+                    <div className="text-xl font-black text-blue-700 font-mono mt-1">
+                      {(paymentMetrics.cibGmv || 0).toLocaleString()} <span className="text-xs font-bold text-slate-400">DZD</span>
                     </div>
                   </div>
 
-                  <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between">
+                  <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs flex items-center justify-between">
                     <div>
-                      <span className="text-xs text-slate-400">Paid Checkouts</span>
-                      <div className="text-xl font-black text-emerald-400 font-mono mt-1">
+                      <span className="text-xs text-slate-500 font-semibold">Paid Checkouts</span>
+                      <div className="text-xl font-black text-emerald-600 font-mono mt-1">
                         {paymentMetrics.paidCount} / {payments.length}
                       </div>
                     </div>
                     <button
                       onClick={handleExportPaymentsCsv}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-sm transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer"
                       title="Download CSV"
                     >
                       <Download className="w-3.5 h-3.5" />
@@ -1270,15 +1289,15 @@ export default function PlatformAdminView({
                 </div>
 
                 {/* Filters */}
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
+                <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
                   <div className="relative flex-1 min-w-[260px]">
-                    <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                       type="text"
                       value={paymentSearch}
                       onChange={(e) => setPaymentSearch(e.target.value)}
                       placeholder="Search checkout ID, customer name, email..."
-                      className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                      className="w-full bg-slate-50 border border-slate-200 focus:bg-white rounded-xl pl-10 pr-4 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all font-medium"
                     />
                   </div>
 
@@ -1294,6 +1313,7 @@ export default function PlatformAdminView({
                           { value: "failed", label: "Failed" }
                         ]}
                         placeholder="Status"
+                        buttonClassName="bg-white! border-slate-200! text-slate-800! text-xs! rounded-xl!"
                       />
                     </div>
 
@@ -1307,66 +1327,67 @@ export default function PlatformAdminView({
                           { value: "cib", label: "CIB" }
                         ]}
                         placeholder="Payment Method"
+                        buttonClassName="bg-white! border-slate-200! text-slate-800! text-xs! rounded-xl!"
                       />
                     </div>
                   </div>
                 </div>
 
                 {/* Payments Table */}
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+                <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-800/70 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800">
+                      <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold text-[11px] border-b border-slate-200">
                         <tr>
-                          <th className="py-3 px-4">Chargily Checkout ID</th>
-                          <th className="py-3 px-4">Customer</th>
-                          <th className="py-3 px-4">Amount (DZD)</th>
-                          <th className="py-3 px-4">Method</th>
-                          <th className="py-3 px-4">Status</th>
-                          <th className="py-3 px-4">Paid At</th>
+                          <th className="py-3.5 px-4">Chargily Checkout ID</th>
+                          <th className="py-3.5 px-4">Customer</th>
+                          <th className="py-3.5 px-4">Amount (DZD)</th>
+                          <th className="py-3.5 px-4">Method</th>
+                          <th className="py-3.5 px-4">Status</th>
+                          <th className="py-3.5 px-4">Paid At</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-800/80">
+                      <tbody className="divide-y divide-slate-100">
                         {filteredPayments.length === 0 ? (
                           <tr>
-                            <td colSpan={6} className="py-12 text-center text-slate-500 text-xs">
+                            <td colSpan={6} className="py-12 text-center text-slate-400 text-xs">
                               No Chargily payment records found.
                             </td>
                           </tr>
                         ) : (
                           filteredPayments.map(pay => (
-                            <tr key={pay.id} className="hover:bg-slate-800/40 transition-colors font-mono">
-                              <td className="py-3 px-4 font-semibold text-slate-200 truncate max-w-[200px]">
+                            <tr key={pay.id} className="hover:bg-slate-50/80 transition-colors font-mono">
+                              <td className="py-3.5 px-4 font-semibold text-slate-800 truncate max-w-[200px]">
                                 {pay.chargily_checkout_id || pay.id}
                               </td>
-                              <td className="py-3 px-4 font-sans">
-                                <div className="font-medium text-white">{pay.customer_name || "Attendee"}</div>
+                              <td className="py-3.5 px-4 font-sans">
+                                <div className="font-bold text-slate-900">{pay.customer_name || "Attendee"}</div>
                                 <div className="text-[10px] text-slate-400 font-mono">{pay.customer_email}</div>
                               </td>
-                              <td className="py-3 px-4 font-bold text-emerald-400">
+                              <td className="py-3.5 px-4 font-bold text-emerald-600">
                                 {Number(pay.amount || 0).toLocaleString()} DZD
                               </td>
-                              <td className="py-3 px-4">
-                                <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold ${
+                              <td className="py-3.5 px-4">
+                                <span className={`px-2.5 py-0.5 rounded-md text-[10px] uppercase font-bold border ${
                                   (pay.payment_method || '').toLowerCase().includes("edahabia")
-                                    ? "bg-amber-500/10 text-amber-400 border border-amber-500/30"
-                                    : "bg-blue-500/10 text-blue-400 border border-blue-500/30"
+                                    ? "bg-amber-50 text-amber-800 border-amber-200"
+                                    : "bg-blue-50 text-blue-800 border-blue-200"
                                 }`}>
                                   {pay.payment_method || "EDAHABIA"}
                                 </span>
                               </td>
-                              <td className="py-3 px-4">
-                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize border ${
+                              <td className="py-3.5 px-4">
+                                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold capitalize border ${
                                   pay.status === "paid"
-                                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                                     : pay.status === "pending"
-                                    ? "bg-amber-500/10 text-amber-400 border-amber-500/30"
-                                    : "bg-rose-500/10 text-rose-400 border-rose-500/30"
+                                    ? "bg-amber-50 text-amber-700 border-amber-200"
+                                    : "bg-rose-50 text-rose-700 border-rose-200"
                                 }`}>
                                   {pay.status || "pending"}
                                 </span>
                               </td>
-                              <td className="py-3 px-4 text-slate-400 text-[11px]">
+                              <td className="py-3.5 px-4 text-slate-500 text-[11px]">
                                 {pay.paid_at ? new Date(pay.paid_at).toLocaleString() : (pay.created_at ? new Date(pay.created_at).toLocaleString() : "—")}
                               </td>
                             </tr>
@@ -1385,30 +1406,30 @@ export default function PlatformAdminView({
             {activeTab === "attendees" && (
               <div className="space-y-6 animate-in fade-in duration-300">
                 {/* Cross-Event Search Box */}
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-                  <h3 className="text-sm font-bold text-white mb-2 flex items-center gap-2">
-                    <Search className="w-4 h-4 text-emerald-400" />
+                <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs">
+                  <h3 className="text-sm font-bold text-slate-900 mb-1.5 flex items-center gap-2">
+                    <Search className="w-4 h-4 text-emerald-600" />
                     Cross-Platform Attendee Lookup
                   </h3>
-                  <p className="text-xs text-slate-400 mb-4">
+                  <p className="text-xs text-slate-500 mb-4">
                     Search registered attendees across all platform events by First Name, Last Name, Email, Phone, or Badge Code.
                   </p>
 
                   <form onSubmit={handlePerformAttendeeSearch} className="flex gap-2">
                     <div className="relative flex-1">
-                      <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                      <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                       <input
                         type="text"
                         value={attendeeSearchQuery}
                         onChange={(e) => setAttendeeSearchQuery(e.target.value)}
                         placeholder="Search by name, attendee@example.com, +213..., EZ-XXXXXX"
-                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                        className="w-full bg-slate-50 border border-slate-200 focus:bg-white rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all font-medium"
                       />
                     </div>
                     <button
                       type="submit"
                       disabled={isSearchingAttendees || !attendeeSearchQuery.trim()}
-                      className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-colors disabled:opacity-50"
+                      className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all disabled:opacity-50 cursor-pointer shadow-xs"
                     >
                       {isSearchingAttendees ? "Searching..." : "Lookup Attendee"}
                     </button>
@@ -1417,42 +1438,42 @@ export default function PlatformAdminView({
 
                 {/* Search Results */}
                 {searchedAttendees.length > 0 && (
-                  <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
-                    <div className="p-3.5 bg-slate-800/50 border-b border-slate-800 text-xs font-bold text-slate-300">
+                  <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
+                    <div className="p-3.5 bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-700">
                       Found {searchedAttendees.length} Matched Attendees
                     </div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-xs">
-                        <thead className="bg-slate-800/70 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800">
+                        <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold text-[11px] border-b border-slate-200">
                           <tr>
-                            <th className="py-3 px-4">Attendee</th>
-                            <th className="py-3 px-4">Event</th>
-                            <th className="py-3 px-4">Ticket Tier</th>
-                            <th className="py-3 px-4">Badge Code</th>
-                            <th className="py-3 px-4">Gate Check-in</th>
+                            <th className="py-3.5 px-4">Attendee</th>
+                            <th className="py-3.5 px-4">Event</th>
+                            <th className="py-3.5 px-4">Ticket Tier</th>
+                            <th className="py-3.5 px-4">Badge Code</th>
+                            <th className="py-3.5 px-4">Gate Check-in</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-800/80">
+                        <tbody className="divide-y divide-slate-100">
                           {searchedAttendees.map(att => (
-                            <tr key={att.id} className="hover:bg-slate-800/40 transition-colors">
-                              <td className="py-3 px-4">
-                                <div className="font-semibold text-white">{att.first_name} {att.last_name}</div>
-                                <div className="text-[11px] text-slate-400">{att.email} {att.phone ? `• ${att.phone}` : ''}</div>
+                            <tr key={att.id} className="hover:bg-slate-50/80 transition-colors">
+                              <td className="py-3.5 px-4">
+                                <div className="font-bold text-slate-900">{att.first_name} {att.last_name}</div>
+                                <div className="text-[11px] text-slate-500">{att.email} {att.phone ? `• ${att.phone}` : ''}</div>
                               </td>
-                              <td className="py-3 px-4 text-slate-300">
+                              <td className="py-3.5 px-4 text-slate-700 font-medium">
                                 {att.events?.name || "Eventzone Event"}
                               </td>
-                              <td className="py-3 px-4 text-slate-300">
+                              <td className="py-3.5 px-4 text-slate-600">
                                 {att.ticket_type || "Standard"}
                               </td>
-                              <td className="py-3 px-4 font-mono font-semibold text-emerald-400">
+                              <td className="py-3.5 px-4 font-mono font-bold text-emerald-600">
                                 {att.badge_code || "—"}
                               </td>
-                              <td className="py-3 px-4">
-                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                              <td className="py-3.5 px-4">
+                                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
                                   att.checked_in
-                                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-                                    : "bg-slate-800 text-slate-400 border-slate-700"
+                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                    : "bg-slate-100 text-slate-500 border-slate-200"
                                 }`}>
                                   {att.checked_in ? "Checked In" : "Pending Arrival"}
                                 </span>
@@ -1466,50 +1487,50 @@ export default function PlatformAdminView({
                 )}
 
                 {/* Live Recent Check-Ins Log */}
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
-                  <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-                      <UserCheck className="w-4 h-4 text-teal-400" />
+                <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
+                  <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                      <UserCheck className="w-4 h-4 text-teal-600" />
                       Platform-Wide Live Gate Check-ins Stream
                     </h4>
-                    <span className="text-[11px] text-slate-500">Last 30 check-ins</span>
+                    <span className="text-[11px] text-slate-500 font-medium">Last 30 check-ins</span>
                   </div>
 
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-800/70 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800">
+                      <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold text-[11px] border-b border-slate-200">
                         <tr>
-                          <th className="py-3 px-4">Attendee</th>
-                          <th className="py-3 px-4">Event Name</th>
-                          <th className="py-3 px-4">Badge Code</th>
-                          <th className="py-3 px-4">Ticket Type</th>
-                          <th className="py-3 px-4 text-right">Checked In Timestamp</th>
+                          <th className="py-3.5 px-4">Attendee</th>
+                          <th className="py-3.5 px-4">Event Name</th>
+                          <th className="py-3.5 px-4">Badge Code</th>
+                          <th className="py-3.5 px-4">Ticket Type</th>
+                          <th className="py-3.5 px-4 text-right">Checked In Timestamp</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-800/80">
+                      <tbody className="divide-y divide-slate-100">
                         {recentCheckIns.length === 0 ? (
                           <tr>
-                            <td colSpan={5} className="py-12 text-center text-slate-500 text-xs">
+                            <td colSpan={5} className="py-12 text-center text-slate-400 text-xs">
                               No gate check-in activity recorded yet.
                             </td>
                           </tr>
                         ) : (
                           recentCheckIns.map(ci => (
-                            <tr key={ci.id} className="hover:bg-slate-800/40 transition-colors">
-                              <td className="py-3 px-4">
-                                <div className="font-semibold text-white">{ci.first_name} {ci.last_name}</div>
+                            <tr key={ci.id} className="hover:bg-slate-50/80 transition-colors">
+                              <td className="py-3.5 px-4">
+                                <div className="font-bold text-slate-900">{ci.first_name} {ci.last_name}</div>
                                 <div className="text-[10px] text-slate-400">{ci.email}</div>
                               </td>
-                              <td className="py-3 px-4 text-slate-300">
+                              <td className="py-3.5 px-4 text-slate-700 font-medium">
                                 {ci.events?.name || "Official Event"}
                               </td>
-                              <td className="py-3 px-4 font-mono font-bold text-emerald-400">
+                              <td className="py-3.5 px-4 font-mono font-bold text-emerald-600">
                                 {ci.badge_code || "PASS"}
                               </td>
-                              <td className="py-3 px-4 text-slate-400">
+                              <td className="py-3.5 px-4 text-slate-600">
                                 {ci.ticket_type || "General"}
                               </td>
-                              <td className="py-3 px-4 text-right text-slate-400 font-mono text-[11px]">
+                              <td className="py-3.5 px-4 text-right text-slate-400 font-mono text-[11px]">
                                 {ci.checked_in_at ? new Date(ci.checked_in_at).toLocaleTimeString() : "Just now"}
                               </td>
                             </tr>
@@ -1526,184 +1547,216 @@ export default function PlatformAdminView({
       </main>
 
       {/* ─────────────────────────────────────────────
-          MODAL: EDIT ORGANIZER QUOTAS & LIMITS
+          DRAWER: EDIT ORGANIZER QUOTAS & LIMITS (FROM THE RIGHT)
       ───────────────────────────────────────────── */}
       {editingOrganizer && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
-            {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <Sliders className="w-4 h-4 text-emerald-400" />
-                  Edit Organizer Quotas &amp; Limits
-                </h3>
-                <p className="text-xs text-slate-400">{editingOrganizer.fullName} ({editingOrganizer.companyName || "Organizer"})</p>
-              </div>
-              <button
-                onClick={() => setEditingOrganizer(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+        <div className="fixed inset-0 z-50 overflow-hidden">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity animate-in fade-in duration-300 cursor-pointer"
+            onClick={() => setEditingOrganizer(null)}
+          />
 
-            {/* Modal Body */}
-            <div className="p-6 space-y-5 text-xs">
-              {/* Allowed Number of Events */}
-              <div>
-                <label className="block font-semibold text-slate-300 mb-1">
-                  Allowed Number of Events
-                </label>
-                <p className="text-slate-500 mb-2">Maximum number of events this organizer can create before hitting the platform paywall.</p>
-                <div className="flex items-center gap-2 mb-2">
-                  {["1", "3", "5", "10", "25", "Unlimited"].map(preset => (
-                    <button
-                      key={preset}
-                      type="button"
-                      onClick={() => setQuotaMaxEvents(preset === "Unlimited" ? "" : preset)}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors ${
-                        (preset === "Unlimited" && quotaMaxEvents === "") || (quotaMaxEvents === preset)
-                          ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-bold"
-                          : "bg-slate-800 text-slate-400 border-slate-700 hover:text-white"
-                      }`}
-                    >
-                      {preset}
-                    </button>
-                  ))}
+          {/* Slide-over panel container on the right */}
+          <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
+            <div className="w-screen max-w-md bg-white border-l border-slate-200 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+              {/* Drawer Header */}
+              <div className="px-6 py-5 border-b border-slate-200 flex items-center justify-between bg-slate-50/60">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shadow-2xs shrink-0">
+                    <Sliders className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">Edit Organizer Quotas &amp; Limits</h3>
+                    <p className="text-xs text-slate-500 font-medium truncate max-w-[240px]">
+                      {editingOrganizer.fullName} ({editingOrganizer.companyName || "Organizer"})
+                    </p>
+                  </div>
                 </div>
-                <input
-                  type="number"
-                  min="1"
-                  value={quotaMaxEvents}
-                  onChange={(e) => setQuotaMaxEvents(e.target.value)}
-                  placeholder="Leave empty for Unlimited"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
-                />
+                <button
+                  onClick={() => setEditingOrganizer(null)}
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
 
-              {/* Max Attendee Capacity per Event */}
-              <div>
-                <label className="block font-semibold text-slate-300 mb-1">
-                  Maximum Attendee Capacity per Event
-                </label>
-                <p className="text-slate-500 mb-2">The highest attendee threshold this organizer can configure on any single event.</p>
-                <div className="flex items-center gap-2 mb-2">
-                  {["50", "150", "500", "1000", "2500", "Unlimited"].map(preset => (
-                    <button
-                      key={preset}
-                      type="button"
-                      onClick={() => setQuotaMaxAttendees(preset === "Unlimited" ? "" : preset)}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors ${
-                        (preset === "Unlimited" && quotaMaxAttendees === "") || (quotaMaxAttendees === preset)
-                          ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-bold"
-                          : "bg-slate-800 text-slate-400 border-slate-700 hover:text-white"
-                      }`}
-                    >
-                      {preset}
-                    </button>
-                  ))}
-                </div>
-                <input
-                  type="number"
-                  min="10"
-                  step="50"
-                  value={quotaMaxAttendees}
-                  onChange={(e) => setQuotaMaxAttendees(e.target.value)}
-                  placeholder="Leave empty for Unlimited"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-
-              {/* Account Status & Role */}
-              <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-800">
+              {/* Drawer Scrollable Body */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6 text-xs">
+                {/* Allowed Number of Events */}
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1.5">Account Status</label>
-                  <SearchableSelect
-                    value={quotaStatus}
-                    onChange={(val) => setQuotaStatus(val)}
-                    options={QUOTA_STATUS_OPTIONS}
-                    isClearable={false}
-                    buttonClassName="bg-slate-800! border-slate-700! text-white! text-xs! rounded-xl! py-2! px-3!"
+                  <label className="block font-bold text-slate-900 mb-1">
+                    Allowed Number of Events
+                  </label>
+                  <p className="text-slate-500 mb-2.5 text-[11px]">
+                    Maximum number of events this organizer can create before hitting the platform paywall.
+                  </p>
+                  <div className="flex items-center gap-1.5 flex-wrap mb-2.5">
+                    {["1", "3", "5", "10", "25", "Unlimited"].map(preset => {
+                      const isSelected = (preset === "Unlimited" && quotaMaxEvents === "") || (quotaMaxEvents === preset);
+                      return (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => setQuotaMaxEvents(preset === "Unlimited" ? "" : preset)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                            isSelected
+                              ? "bg-emerald-600 text-white border-emerald-600 shadow-2xs font-bold"
+                              : "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200"
+                          }`}
+                        >
+                          {preset}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <input
+                    type="number"
+                    min="1"
+                    value={quotaMaxEvents}
+                    onChange={(e) => setQuotaMaxEvents(e.target.value)}
+                    placeholder="Leave empty for Unlimited"
+                    className="w-full bg-slate-50 border border-slate-200 focus:bg-white rounded-xl px-3.5 py-2.5 text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-xs"
                   />
                 </div>
 
+                {/* Maximum Attendee Capacity per Event */}
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1.5">Platform Role</label>
-                  <SearchableSelect
-                    value={quotaRole}
-                    onChange={(val) => setQuotaRole(val)}
-                    options={QUOTA_ROLE_OPTIONS}
-                    isClearable={false}
-                    buttonClassName="bg-slate-800! border-slate-700! text-white! text-xs! rounded-xl! py-2! px-3!"
+                  <label className="block font-bold text-slate-900 mb-1">
+                    Maximum Attendee Capacity per Event
+                  </label>
+                  <p className="text-slate-500 mb-2.5 text-[11px]">
+                    The highest attendee threshold this organizer can configure on any single event.
+                  </p>
+                  <div className="flex items-center gap-1.5 flex-wrap mb-2.5">
+                    {["50", "150", "500", "1000", "2500", "Unlimited"].map(preset => {
+                      const isSelected = (preset === "Unlimited" && quotaMaxAttendees === "") || (quotaMaxAttendees === preset);
+                      return (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => setQuotaMaxAttendees(preset === "Unlimited" ? "" : preset)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                            isSelected
+                              ? "bg-emerald-600 text-white border-emerald-600 shadow-2xs font-bold"
+                              : "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200"
+                          }`}
+                        >
+                          {preset}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <input
+                    type="number"
+                    min="10"
+                    step="50"
+                    value={quotaMaxAttendees}
+                    onChange={(e) => setQuotaMaxAttendees(e.target.value)}
+                    placeholder="Leave empty for Unlimited"
+                    className="w-full bg-slate-50 border border-slate-200 focus:bg-white rounded-xl px-3.5 py-2.5 text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-xs"
                   />
                 </div>
-              </div>
-            </div>
 
-            {/* Modal Footer */}
-            <div className="px-6 py-4 bg-slate-800/50 border-t border-slate-800 flex items-center justify-end gap-2.5">
-              <button
-                type="button"
-                onClick={() => setEditingOrganizer(null)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveQuotas}
-                disabled={isSavingQuota}
-                className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-colors disabled:opacity-50 flex items-center gap-1.5 shadow-sm shadow-emerald-600/30"
-              >
-                {isSavingQuota ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                <span>Save Quotas</span>
-              </button>
+                {/* Account Status & Role */}
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100">
+                  <div>
+                    <label className="block font-bold text-slate-900 mb-1.5">Account Status</label>
+                    <SearchableSelect
+                      value={quotaStatus}
+                      onChange={(val) => setQuotaStatus(val)}
+                      options={QUOTA_STATUS_OPTIONS}
+                      isClearable={false}
+                      buttonClassName="bg-slate-50! border-slate-200! text-slate-900! text-xs! font-semibold! rounded-xl! py-2! px-3!"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-900 mb-1.5">Platform Role</label>
+                    <SearchableSelect
+                      value={quotaRole}
+                      onChange={(val) => setQuotaRole(val)}
+                      options={QUOTA_ROLE_OPTIONS}
+                      isClearable={false}
+                      buttonClassName="bg-slate-50! border-slate-200! text-slate-900! text-xs! font-semibold! rounded-xl! py-2! px-3!"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Drawer Footer */}
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setEditingOrganizer(null)}
+                  className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveQuotas}
+                  disabled={isSavingQuota}
+                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-1.5 shadow-sm shadow-emerald-600/30 cursor-pointer"
+                >
+                  {isSavingQuota ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                  <span>Save Quotas &amp; Limits</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
       {/* ─────────────────────────────────────────────
-          DRAWER: ORGANIZER EVENTS PREVIEW
+          DRAWER: ORGANIZER EVENTS PREVIEW (FROM THE RIGHT)
       ───────────────────────────────────────────── */}
       {selectedOrgEvents && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex justify-end">
-          <div className="bg-slate-900 border-l border-slate-800 w-full max-w-lg h-full p-6 overflow-y-auto space-y-4 animate-in slide-in-from-right duration-300">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-emerald-400" />
-                Organizer Hosted Events ({selectedOrgEvents.length})
-              </h3>
-              <button
-                onClick={() => setSelectedOrgEvents(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+        <div className="fixed inset-0 z-50 overflow-hidden">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity animate-in fade-in duration-300 cursor-pointer"
+            onClick={() => setSelectedOrgEvents(null)}
+          />
 
-            {selectedOrgEvents.length === 0 ? (
-              <p className="text-xs text-slate-500 py-8 text-center">This organizer has not created any events yet.</p>
-            ) : (
-              <div className="space-y-3">
-                {selectedOrgEvents.map(ev => (
-                  <div key={ev.id} className="p-3.5 rounded-xl bg-slate-800/60 border border-slate-700/60 flex items-center justify-between gap-3 text-xs">
-                    <div>
-                      <div className="font-semibold text-white">{ev.title}</div>
-                      <div className="text-[10px] text-slate-400 mt-0.5">{ev.category} • {ev.city || ev.location}</div>
-                    </div>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize border ${
-                      ev.status === "published"
-                        ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-                        : "bg-slate-700 text-slate-300 border-slate-600"
-                    }`}>
-                      {ev.status}
-                    </span>
-                  </div>
-                ))}
+          {/* Slide-over panel on the right */}
+          <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
+            <div className="w-screen max-w-md bg-white border-l border-slate-200 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+              <div className="px-6 py-5 border-b border-slate-200 flex items-center justify-between bg-slate-50/60">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-emerald-600" />
+                  Organizer Hosted Events ({selectedOrgEvents.length})
+                </h3>
+                <button
+                  onClick={() => setSelectedOrgEvents(null)}
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
-            )}
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-3">
+                {selectedOrgEvents.length === 0 ? (
+                  <p className="text-xs text-slate-400 py-12 text-center">This organizer has not created any events yet.</p>
+                ) : (
+                  selectedOrgEvents.map(ev => (
+                    <div key={ev.id} className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-3 text-xs hover:bg-slate-100/60 transition-colors">
+                      <div>
+                        <div className="font-bold text-slate-900">{ev.title}</div>
+                        <div className="text-[11px] text-slate-500 mt-0.5">{ev.category} • {ev.city || ev.location}</div>
+                      </div>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold capitalize border ${
+                        ev.status === "published"
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          : "bg-slate-100 text-slate-600 border-slate-200"
+                      }`}>
+                        {ev.status}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
