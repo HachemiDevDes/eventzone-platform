@@ -405,26 +405,18 @@ export default function MainHomePage({
                 </p>
 
                 {/* Meta: Dates & Location Chips */}
-                <div className="flex flex-wrap items-center gap-3 sm:gap-3.5 pt-1">
+                <div className="flex flex-wrap items-center gap-2.5 pt-1">
                   {activeSlide.startDate && (
-                    <div className="inline-flex items-center gap-2.5 px-4 py-2 sm:py-2.5 rounded-full bg-slate-900/70 hover:bg-slate-900/90 backdrop-blur-xl border border-white/15 hover:border-blue-400/40 shadow-lg shadow-black/30 transition-all duration-300 group">
-                      <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-400 shrink-0 group-hover:scale-105 group-hover:bg-blue-500/30 transition-all">
-                        <Calendar size={13} className="stroke-[2.5]" />
-                      </div>
-                      <span className="text-xs sm:text-sm font-semibold tracking-tight text-white">
-                        {formatEventDateRange(activeSlide.startDate, activeSlide.endDate)}
-                      </span>
+                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/15 backdrop-blur-md border border-white/10 text-xs sm:text-sm font-medium text-white shadow-xs transition-colors">
+                      <Calendar size={14} className="text-blue-300 shrink-0" />
+                      <span>{formatEventDateRange(activeSlide.startDate, activeSlide.endDate)}</span>
                     </div>
                   )}
 
                   {activeSlide.location && (
-                    <div className="inline-flex items-center gap-2.5 px-4 py-2 sm:py-2.5 rounded-full bg-slate-900/70 hover:bg-slate-900/90 backdrop-blur-xl border border-white/15 hover:border-blue-400/40 shadow-lg shadow-black/30 transition-all duration-300 group">
-                      <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-400 shrink-0 group-hover:scale-105 group-hover:bg-blue-500/30 transition-all">
-                        <MapPin size={13} className="stroke-[2.5]" />
-                      </div>
-                      <span className="text-xs sm:text-sm font-semibold tracking-tight text-white">
-                        {activeSlide.location}
-                      </span>
+                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/15 backdrop-blur-md border border-white/10 text-xs sm:text-sm font-medium text-white shadow-xs transition-colors">
+                      <MapPin size={14} className="text-blue-300 shrink-0" />
+                      <span>{activeSlide.location}</span>
                     </div>
                   )}
                 </div>
