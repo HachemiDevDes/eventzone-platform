@@ -104,7 +104,7 @@ export default function AuthView({
       if (typeof window !== "undefined") {
         sessionStorage.setItem("eventzone_auth_return_view", "events-hub");
       }
-      const redirectUrl = typeof window !== "undefined" ? window.location.origin : undefined;
+      const redirectUrl = typeof window !== "undefined" ? `${window.location.origin}/` : undefined;
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {

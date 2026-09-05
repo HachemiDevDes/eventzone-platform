@@ -201,9 +201,9 @@ export async function POST(request) {
       communicationId: commRecord?.id || null,
     };
 
-    const SUPABASE_EDGE_TRACK_URL = "https://awkreadldqmidcrrqukm.supabase.co/functions/v1/track-email";
+    const SUPABASE_EDGE_TRACK_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/track-email` : "";
     const isPublicHttps = origin.startsWith("https://") && !origin.includes("localhost") && !origin.includes("127.0.0.1");
-    const trackEndpoint = isPublicHttps ? `${origin}/api/email/track` : SUPABASE_EDGE_TRACK_URL;
+    const trackEndpoint = isPublicHttps ? `${origin}/api/email/track` : (SUPABASE_EDGE_TRACK_URL || `${origin}/api/email/track`);
 
     // 2. Dispatch emails with anti-spam batching, connection pooling & pacing
     const BATCH_SIZE = 3;
