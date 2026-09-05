@@ -1722,9 +1722,9 @@ function generateUuid() {
                   </div>
                   {linkedTickets.length > 0 ? (
                     <div className="flex flex-wrap gap-1.5 pt-1">
-                      {linkedTickets.map(t => (
-                        <span key={t.id || t.tier || t.name} className="px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-200 text-blue-800 font-bold text-xs">
-                          {t.name || t.tier}
+                      {linkedTickets.map(tk => (
+                        <span key={tk.id || tk.tier || tk.name} className="px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-200 text-blue-800 font-bold text-xs">
+                          {tk.name || tk.tier}
                         </span>
                       ))}
                     </div>

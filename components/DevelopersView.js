@@ -1418,46 +1418,46 @@ fun main() {
               </div>
             ) : (
               <div className="divide-y divide-slate-100 border border-slate-150 rounded-2xl overflow-hidden">
-                {tickets.map((t) => {
-                  const isFree = !t.price || Number(t.price) === 0;
-                  const ticketEmbedUrl = `${origin}/embed/tickets?eventId=${currentEventId}&ticketId=${t.id}`;
-                  const ticketIframeCode = `<iframe src="${ticketEmbedUrl}" width="100%" height="600" frameborder="0" style="border:none;border-radius:24px;width:100%;min-height:520px;" title="${t.name} Registration"></iframe>`;
+                {tickets.map((ticket) => {
+                  const isFree = !ticket.price || Number(ticket.price) === 0;
+                  const ticketEmbedUrl = `${origin}/embed/tickets?eventId=${currentEventId}&ticketId=${ticket.id}`;
+                  const ticketIframeCode = `<iframe src="${ticketEmbedUrl}" width="100%" height="600" frameborder="0" style="border:none;border-radius:24px;width:100%;min-height:520px;" title="${ticket.name} Registration"></iframe>`;
 
                   return (
-                    <div key={t.id} className="p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-slate-50/60 transition-colors">
+                    <div key={ticket.id} className="p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-slate-50/60 transition-colors">
                       <div className="space-y-1.5 flex-1 min-w-0">
                         <div className="flex items-center gap-2.5">
-                          <span className="text-sm font-extrabold text-slate-900">{t.name}</span>
+                          <span className="text-sm font-extrabold text-slate-900">{ticket.name}</span>
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
                             isFree ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-blue-50 text-blue-700 border border-blue-200"
                           }`}>
-                            {isFree ? t("dev.freePassBadge", "Free Pass") : `${Number(t.price).toLocaleString()} DZD`}
+                            {isFree ? t("dev.freePassBadge", "Free Pass") : `${Number(ticket.price).toLocaleString()} DZD`}
                           </span>
-                          {t.requiresApproval && (
+                          {ticket.requiresApproval && (
                             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
                               {t("dev.requiresApprovalBadge", "Requires Approval")}
                             </span>
                           )}
                         </div>
                         <div className="flex items-center gap-3 text-xs text-slate-500 font-mono">
-                          <span className="truncate max-w-md font-mono" dir="ltr">ID: {t.id}</span>
+                          <span className="truncate max-w-md font-mono" dir="ltr">ID: {ticket.id}</span>
                         </div>
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2 shrink-0">
                         <button
                           type="button"
-                          onClick={() => handleCopy(ticketIframeCode, `iframe-${t.id}`)}
+                          onClick={() => handleCopy(ticketIframeCode, `iframe-${ticket.id}`)}
                           className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
                         >
-                          {copiedKey === `iframe-${t.id}` ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
-                          <span>{copiedKey === `iframe-${t.id}` ? t("dev.copied", "Copied!") : t("dev.copyEmbedCode", "Copy Embed Code")}</span>
+                          {copiedKey === `iframe-${ticket.id}` ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+                          <span>{copiedKey === `iframe-${ticket.id}` ? t("dev.copied", "Copied!") : t("dev.copyEmbedCode", "Copy Embed Code")}</span>
                         </button>
 
                         <button
                           type="button"
                           onClick={() => {
-                            setSelectedTicketId(t.id);
+                            setSelectedTicketId(ticket.id);
                             setActiveTab("embed_builder");
                           }}
                           className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
@@ -1568,13 +1568,13 @@ fun main() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-2">
-                  {tickets.map((t) => {
-                    const isSelected = selectedTicketId === t.id;
-                    const isFree = !t.price || Number(t.price) === 0;
+                  {tickets.map((ticket) => {
+                    const isSelected = selectedTicketId === ticket.id;
+                    const isFree = !ticket.price || Number(ticket.price) === 0;
                     return (
                       <div
-                        key={t.id}
-                        onClick={() => setSelectedTicketId(t.id)}
+                        key={ticket.id}
+                        onClick={() => setSelectedTicketId(ticket.id)}
                         className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
                           isSelected
                             ? "bg-blue-50/70 border-blue-500 ring-2 ring-blue-500/20 shadow-xs"
@@ -1588,15 +1588,15 @@ fun main() {
                             {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                           </div>
                           <div>
-                            <span className="text-xs font-extrabold text-slate-900 block leading-tight">{t.name}</span>
-                            <span className="text-[10px] font-mono text-slate-400">{t.id}</span>
+                            <span className="text-xs font-extrabold text-slate-900 block leading-tight">{ticket.name}</span>
+                            <span className="text-[10px] font-mono text-slate-400">{ticket.id}</span>
                           </div>
                         </div>
 
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
                           isFree ? "bg-emerald-100 text-emerald-800" : "bg-blue-100 text-blue-800"
                         }`}>
-                          {isFree ? t("dev.freeBadge", "Free") : `${Number(t.price).toLocaleString()} DZD`}
+                          {isFree ? t("dev.freeBadge", "Free") : `${Number(ticket.price).toLocaleString()} DZD`}
                         </span>
                       </div>
                     );
@@ -1912,18 +1912,18 @@ fun main() {
                 <span className="text-[11px] text-slate-500">{t("dev.selectTicketTierForApiDesc", "Each ticket tier has its own parameters (name, id, and price).")}</span>
               </div>
               <div className="flex items-center gap-2 overflow-x-auto">
-                {tickets.map((t) => (
+                {tickets.map((ticket) => (
                   <button
-                    key={t.id}
+                    key={ticket.id}
                     type="button"
-                    onClick={() => setSelectedTicketId(t.id)}
+                    onClick={() => setSelectedTicketId(ticket.id)}
                     className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer shrink-0 ${
-                      selectedTicketId === t.id
+                      selectedTicketId === ticket.id
                         ? "bg-blue-600 border-blue-600 text-white shadow-xs"
                         : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
                     }`}
                   >
-                    {t.name}
+                    {ticket.name}
                   </button>
                 ))}
               </div>
