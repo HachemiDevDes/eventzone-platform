@@ -307,9 +307,6 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
 
     const quotaCap = Number(currentUser?.maxEvents) || 1;
     const isExceeded = actualEventsCount >= quotaCap;
-    const overLimitBy = Math.max(0, actualEventsCount - quotaCap);
-    const quotaPercent = Math.min(100, Math.round((actualEventsCount / quotaCap) * 100));
-
     return (
       <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50/80 flex flex-col font-sans selection:bg-blue-600 selection:text-white relative overflow-hidden">
         {/* Subtle Ambient Depth Lighting */}
@@ -331,11 +328,6 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
                 className="h-7 w-auto object-contain transition-transform group-hover:scale-[1.02]" 
               />
             </div>
-            <span className="hidden sm:inline-block text-slate-300 font-light">/</span>
-            <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 border border-slate-200/80">
-              <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
-              {t("wizard.organizerQuotaNotice", "Organizer Plan Quota")}
-            </span>
           </div>
 
           <button
@@ -349,32 +341,15 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
         </header>
 
         {/* Main Content Area */}
-        <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-8 py-8 sm:py-12 space-y-10 relative z-10 animate-fade-in">
+        <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-8 py-10 sm:py-16 space-y-8 relative z-10 animate-fade-in text-left rtl:text-right">
           
-          {/* 1. BIG HEADER SECTION (ALIGNED TO THE LEFT) */}
-          <div className="text-left rtl:text-right space-y-4 max-w-4xl">
-            {/* Live Status Pill */}
-            <div className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-amber-50/95 border border-amber-200/90 font-mono text-xs shadow-xs">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-              </span>
-              <span className="font-extrabold text-amber-900 tracking-tight">
-                {actualEventsCount} / {quotaCap} {t("wizard.eventsHosted", "Events Hosted")}
-              </span>
-              <span className="w-1 h-1 rounded-full bg-amber-400" />
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300">
-                {t("wizard.limitReachedBadge", "LIMIT REACHED")}
-              </span>
-            </div>
-
-            {/* Big Headline */}
+          {/* BIG HEADER SECTION */}
+          <div className="space-y-4">
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-[1.08]">
               {t("wizard.limitReachedTitle", "Event Quota Limit Reached")}
             </h1>
 
-            {/* Subtitle */}
-            <p className="text-slate-600 text-sm sm:text-base md:text-lg leading-relaxed font-medium">
+            <p className="text-slate-600 text-sm sm:text-base md:text-lg leading-relaxed font-medium max-w-2xl">
               {t(
                 "wizard.limitReachedDesc",
                 `You have reached the maximum number of events permitted for your organizer plan (${actualEventsCount} of ${quotaCap} allowed events hosted). To add, host, or publish more events, our concierge team can instantly expand your quota.`
@@ -382,281 +357,82 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
             </p>
           </div>
 
-          {/* 2. TWO-COLUMN BENTO GRID */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
-            
-            {/* LEFT / MAIN COLUMN: ACTIONS & UPGRADE CONCIERGE (7 COLS) */}
-            <div className="lg:col-span-7 space-y-6 text-left rtl:text-right">
-              
-              {/* Primary Action Card: Fast-Track Quota Expansion */}
-              <div className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
-                {/* Accent Top Gradient Line */}
-                <div className="h-1.5 w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-400 absolute top-0 left-0" />
+          {/* Primary Action Card: Contact Team */}
+          <div className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+            {/* Accent Top Gradient Line */}
+            <div className="h-1.5 w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-400 absolute top-0 left-0" />
 
-                <div className="flex items-center gap-2 text-blue-600 font-black text-xs uppercase tracking-wider mb-3">
-                  <div className="w-6 h-6 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 border border-blue-100">
-                    <Zap className="w-3.5 h-3.5 fill-blue-600" />
-                  </div>
-                  <span>{t("wizard.conciergeTag", "Fast-Track Quota Expansion")}</span>
-                </div>
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mb-2">
+              {t("wizard.contactTeamTitle", "Contact the EventZone Team to Add More")}
+            </h2>
 
-                <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mb-2">
-                  {t("wizard.contactTeamTitle", "Contact the EventZone Team to Add More")}
-                </h2>
+            <p className="text-slate-600 text-xs sm:text-sm leading-relaxed mb-6 font-medium">
+              {t(
+                "wizard.contactTeamDesc",
+                "Our team can instantly increase your event quota or adjust attendee limits for enterprise summits. Quota requests are typically approved in less than 2 hours."
+              )}
+            </p>
 
-                <p className="text-slate-600 text-xs sm:text-sm leading-relaxed mb-6 font-medium">
-                  {t(
-                    "wizard.contactTeamDesc",
-                    "Our team can instantly increase your event quota or adjust attendee limits for enterprise summits. Quota requests are typically approved in less than 2 hours."
-                  )}
-                </p>
+            {/* Primary Action Buttons */}
+            <div className="flex flex-wrap items-center gap-3 mb-6">
+              <a
+                href={`mailto:contact@eventzone.pro?subject=${encodeURIComponent(`Event Quota Limit Increase Request - ${currentUser?.fullName || currentUser?.email}`)}&body=${encodeURIComponent(`Hello EventZone Team,\n\nI have reached my event hosting limit (${actualEventsCount} / ${quotaCap} events) and would like to request an upgrade to add more events to my organizer account.\n\nOrganizer: ${currentUser?.fullName || 'Organizer'}\nAccount Email: ${currentUser?.email}\nCompany: ${currentUser?.companyName || 'N/A'}\n\nThank you!`)}`}
+                className="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white font-bold text-xs sm:text-sm shadow-lg shadow-blue-600/25 hover:shadow-blue-600/35 transition-all cursor-pointer group"
+              >
+                <Mail className="w-4 h-4" />
+                <span>{t("wizard.sendQuotaRequest", "Send Quota Request Email")}</span>
+                <ArrowRight className={`w-4 h-4 group-hover:translate-x-0.5 transition-transform ${isRTL ? "rotate-180 group-hover:-translate-x-0.5" : ""}`} />
+              </a>
 
-                {/* Primary Action Buttons */}
-                <div className="flex flex-wrap items-center gap-3 mb-6">
-                  <a
-                    href={`mailto:contact@eventzone.pro?subject=${encodeURIComponent(`Event Quota Limit Increase Request - ${currentUser?.fullName || currentUser?.email}`)}&body=${encodeURIComponent(`Hello EventZone Team,\n\nI have reached my event hosting limit (${actualEventsCount} / ${quotaCap} events) and would like to request an upgrade to add more events to my organizer account.\n\nOrganizer: ${currentUser?.fullName || 'Organizer'}\nAccount Email: ${currentUser?.email}\nCompany: ${currentUser?.companyName || 'N/A'}\n\nThank you!`)}`}
-                    className="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white font-bold text-xs sm:text-sm shadow-lg shadow-blue-600/25 hover:shadow-blue-600/35 transition-all cursor-pointer group"
-                  >
-                    <Mail className="w-4 h-4" />
-                    <span>{t("wizard.sendQuotaRequest", "Send Quota Request Email")}</span>
-                    <ArrowRight className={`w-4 h-4 group-hover:translate-x-0.5 transition-transform ${isRTL ? "rotate-180 group-hover:-translate-x-0.5" : ""}`} />
-                  </a>
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof navigator !== "undefined" && navigator.clipboard) {
+                    navigator.clipboard.writeText("contact@eventzone.pro");
+                    setCopiedEmail(true);
+                    setTimeout(() => setCopiedEmail(false), 2500);
+                  }
+                }}
+                className="inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 active:scale-[0.98] text-slate-700 border border-slate-200 text-xs sm:text-sm font-semibold transition-all cursor-pointer"
+                title="Copy support email address"
+              >
+                {copiedEmail ? (
+                  <>
+                    <CheckCheck className="w-4 h-4 text-emerald-600" />
+                    <span className="text-emerald-700 font-bold">{t("common.copied", "Copied!")}</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4 text-slate-400" />
+                    <span>contact@eventzone.pro</span>
+                  </>
+                )}
+              </button>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (typeof navigator !== "undefined" && navigator.clipboard) {
-                        navigator.clipboard.writeText("contact@eventzone.pro");
-                        setCopiedEmail(true);
-                        setTimeout(() => setCopiedEmail(false), 2500);
-                      }
-                    }}
-                    className="inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 active:scale-[0.98] text-slate-700 border border-slate-200 text-xs sm:text-sm font-semibold transition-all cursor-pointer"
-                    title="Copy support email address"
-                  >
-                    {copiedEmail ? (
-                      <>
-                        <CheckCheck className="w-4 h-4 text-emerald-600" />
-                        <span className="text-emerald-700 font-bold">{t("common.copied", "Copied!")}</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-4 h-4 text-slate-400" />
-                        <span>contact@eventzone.pro</span>
-                      </>
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={onCancel}
-                    className="inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 active:scale-[0.98] text-white text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-xs"
-                  >
-                    <ArrowLeft className={`w-4 h-4 ${isRTL ? "rotate-180" : ""}`} />
-                    <span>{t("wizard.backToEventsHub", "Return to Events Hub")}</span>
-                  </button>
-                </div>
-
-                {/* Trust Guarantees */}
-                <div className="pt-6 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-3 text-[11px] text-slate-500 font-semibold">
-                  <div className="flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                    <span>{t("wizard.zeroDowntime", "Zero downtime for live events")}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                    <span>{t("wizard.instantActivation", "Instant quota activation")}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                    <span>{t("wizard.customAgencies", "Custom tiers for agencies")}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* What Unlocks on Upgrade Bento */}
-              <div className="space-y-3">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  {t("wizard.whatUnlocksTitle", "What Unlocks With an Organizer Quota Upgrade")}
-                </h3>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                  <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs hover:border-blue-200 transition-colors">
-                    <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-3">
-                      <Rocket className="w-4 h-4" />
-                    </div>
-                    <div className="font-extrabold text-slate-900 text-xs sm:text-sm tracking-tight mb-1">
-                      {t("wizard.unlockConcurrent", "Concurrent Summits")}
-                    </div>
-                    <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
-                      {t("wizard.unlockConcurrentDesc", "Publish multiple conferences, webinars, and expos without restrictions.")}
-                    </p>
-                  </div>
-
-                  <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs hover:border-emerald-200 transition-colors">
-                    <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3">
-                      <Users className="w-4 h-4" />
-                    </div>
-                    <div className="font-extrabold text-slate-900 text-xs sm:text-sm tracking-tight mb-1">
-                      {t("wizard.unlockCapacity", "Higher Attendee Cap")}
-                    </div>
-                    <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
-                      {t("wizard.unlockCapacityDesc", "Scale up to 10,000+ delegates with ultra-fast QR door check-in gates.")}
-                    </p>
-                  </div>
-
-                  <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs hover:border-purple-200 transition-colors">
-                    <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center mb-3">
-                      <Layers className="w-4 h-4" />
-                    </div>
-                    <div className="font-extrabold text-slate-900 text-xs sm:text-sm tracking-tight mb-1">
-                      {t("wizard.unlockFloorPlans", "2D Floor Plans & Badges")}
-                    </div>
-                    <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
-                      {t("wizard.unlockFloorPlansDesc", "Design interactive venue booth layouts and print custom VIP delegate badges.")}
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <button
+                type="button"
+                onClick={onCancel}
+                className="inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 active:scale-[0.98] text-white text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-xs"
+              >
+                <ArrowLeft className={`w-4 h-4 ${isRTL ? "rotate-180" : ""}`} />
+                <span>{t("wizard.backToEventsHub", "Return to Events Hub")}</span>
+              </button>
             </div>
 
-            {/* RIGHT COLUMN: LIVE PLAN METRICS & UTILIZATION (5 COLS) */}
-            <div className="lg:col-span-5 space-y-6 text-left rtl:text-right">
-              
-              {/* Utilization & Metrics Card */}
-              <div className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-7 shadow-sm relative overflow-hidden space-y-6">
-                {/* Amber Top Bar */}
-                <div className="h-1.5 w-full bg-gradient-to-r from-amber-400 via-orange-500 to-amber-500 absolute top-0 left-0" />
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-xl bg-amber-50 border border-amber-200/80 flex items-center justify-center text-amber-600">
-                      <AlertCircle className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-bold text-slate-900">
-                        {t("wizard.planUtilization", "Plan Quota Utilization")}
-                      </div>
-                      <div className="text-[10px] font-semibold text-slate-400">
-                        {t("wizard.standardTier", "Standard Tier Allowance")}
-                      </div>
-                    </div>
-                  </div>
-
-                  <span className="px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-200">
-                    {t("wizard.cappedTag", "100% CAPPED")}
-                  </span>
-                </div>
-
-                {/* Visual Progress Bar */}
-                <div className="space-y-2 p-4 bg-slate-50 border border-slate-200/80 rounded-2xl">
-                  <div className="flex items-center justify-between text-xs font-bold">
-                    <span className="text-slate-700">{t("wizard.eventsHostedAllocation", "Events Allocation")}</span>
-                    <span className="text-amber-700 font-mono font-extrabold">{actualEventsCount} / {quotaCap} ({Math.round((actualEventsCount / quotaCap) * 100)}%)</span>
-                  </div>
-
-                  {/* Progress Track */}
-                  <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden relative">
-                    <div 
-                      className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-700 relative"
-                      style={{ width: `${quotaPercent}%` }}
-                    >
-                      <div className="absolute inset-0 bg-white/20 animate-pulse" />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between text-[10px] font-semibold text-slate-500 pt-1">
-                    <span>{quotaCap} Max allowed</span>
-                    {isExceeded && overLimitBy > 0 && (
-                      <span className="text-amber-700 font-bold">
-                        +{overLimitBy} {overLimitBy === 1 ? 'event over limit' : 'events over limit'}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* 3 Metric Tiles Grid */}
-                <div className="grid grid-cols-3 gap-2.5">
-                  <div className="p-3 bg-slate-50 border border-slate-200/70 rounded-2xl">
-                    <div className="text-[9px] uppercase font-bold text-slate-400 tracking-wider truncate">
-                      {t("wizard.eventsCreated", "Events Created")}
-                    </div>
-                    <div className="text-xl font-black text-slate-900 mt-1">
-                      {actualEventsCount}
-                    </div>
-                    <div className="text-[10px] font-medium text-slate-500 mt-0.5">
-                      Summits
-                    </div>
-                  </div>
-
-                  <div className="p-3 bg-slate-50 border border-slate-200/70 rounded-2xl">
-                    <div className="text-[9px] uppercase font-bold text-slate-400 tracking-wider truncate">
-                      {t("wizard.planLimit", "Plan Limit")}
-                    </div>
-                    <div className="text-xl font-black text-slate-900 mt-1">
-                      {quotaCap} Max
-                    </div>
-                    <div className="text-[10px] font-medium text-slate-500 mt-0.5">
-                      Allocated
-                    </div>
-                  </div>
-
-                  <div className="p-3 bg-slate-50 border border-slate-200/70 rounded-2xl">
-                    <div className="text-[9px] uppercase font-bold text-slate-400 tracking-wider truncate">
-                      {t("wizard.maxAttendees", "Max Attendees")}
-                    </div>
-                    <div className="text-xl font-black text-slate-900 mt-1 truncate">
-                      {currentUser?.maxAttendees ? `${currentUser.maxAttendees}` : "Unlimited"}
-                    </div>
-                    <div className="text-[10px] font-medium text-slate-500 mt-0.5">
-                      Per event
-                    </div>
-                  </div>
-                </div>
-
-                {/* Organizer Account Box */}
-                <div className="p-4 bg-slate-50/90 border border-slate-200/80 rounded-2xl flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-xl bg-blue-600 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-xs">
-                      {(currentUser?.fullName || currentUser?.email || "O").charAt(0).toUpperCase()}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-xs font-bold text-slate-900 truncate">
-                        {currentUser?.fullName || t("common.organizer", "Organizer")}
-                      </div>
-                      <div className="text-[11px] font-medium text-slate-500 truncate">
-                        {currentUser?.email}
-                      </div>
-                    </div>
-                  </div>
-
-                  <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    {currentUser?.status === 'active' ? 'Active' : (currentUser?.status || 'Active')}
-                  </span>
-                </div>
+            {/* Trust Guarantees */}
+            <div className="pt-6 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-3 text-[11px] text-slate-500 font-semibold">
+              <div className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span>{t("wizard.zeroDowntime", "Zero downtime for live events")}</span>
               </div>
-
-              {/* Need Enterprise Assistance Note */}
-              <div className="p-5 bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-3xl shadow-sm space-y-2">
-                <div className="flex items-center gap-2 text-xs font-bold text-blue-300">
-                  <Building2 className="w-4 h-4" />
-                  <span>Enterprise & Agency Solutions</span>
-                </div>
-                <p className="text-xs text-slate-300 leading-relaxed font-medium">
-                  Hosting summits with multiple ticketing tiers, sponsor booths, or custom domains? We provide white-glove onboarding and dedicated infrastructure.
-                </p>
-                <div className="pt-1">
-                  <a
-                    href="mailto:contact@eventzone.pro?subject=Enterprise%20Organizer%20Inquiry"
-                    className="text-xs font-bold text-blue-400 hover:text-blue-300 inline-flex items-center gap-1 underline underline-offset-4 cursor-pointer"
-                  >
-                    <span>Talk to Enterprise Sales</span>
-                    <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" />
-                  </a>
-                </div>
+              <div className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span>{t("wizard.instantActivation", "Instant quota activation")}</span>
               </div>
-
+              <div className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span>{t("wizard.customAgencies", "Custom tiers for agencies")}</span>
+              </div>
             </div>
           </div>
         </main>
