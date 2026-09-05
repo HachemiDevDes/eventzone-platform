@@ -102,6 +102,7 @@ import {
   sanitizeUserForStorage,
   cleanupLocalStorageQuota
 } from "../lib/supabase";
+import { isPlatformSuperAdminEmail } from "../lib/constants";
 
 const INDUSTRIES = [
   "Technology, AI & Software",
@@ -145,7 +146,18 @@ export function HomeContent() {
   // Authentication & Role State
   const [currentUser, setCurrentUser] = useState(() => {
     if (typeof window !== "undefined") {
-      return safeLocalStorageGet("eventzone_user", null);
+      const stored = safeLocalStorageGet("eventzone_user", null);
+      if (stored) {
+        // Never restore super_admin privileges from client storage alone!
+        // Role elevation requires an active verified session & direct database record.
+        return {
+          ...stored,
+          role: stored.role === "super_admin" ? "organizer" : (stored.role || "organizer"),
+          isAdmin: false,
+          is_admin: false,
+          isVerifiedAdmin: false,
+        };
+      }
     }
     return null;
   });
@@ -350,7 +362,13 @@ export function HomeContent() {
       try {
         const stored = safeLocalStorageGet("eventzone_user");
         if (stored && stored.id) {
-          setCurrentUser(stored);
+          setCurrentUser({
+            ...stored,
+            role: stored.role === "super_admin" ? "organizer" : (stored.role || "organizer"),
+            isAdmin: false,
+            is_admin: false,
+            isVerifiedAdmin: false,
+          });
         }
       } catch (e) {
         console.warn("Session restore error:", e);
@@ -364,11 +382,13 @@ export function HomeContent() {
         const userId = session.user.id;
         const userMeta = session.user.user_metadata || {};
 
-        let { data: profile } = await supabase
+        const { data: directProfile } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', userId)
           .maybeSingle();
+
+        let profile = directProfile;
 
         // Check for sibling profiles sharing the same email
         let siblingProfiles = [];
@@ -387,9 +407,9 @@ export function HomeContent() {
           }
         }
 
-        // If no direct profile exists by UUID, pick from sibling profile
+        // If no direct profile exists by UUID, pick from sibling profile (never inherit super_admin role from sibling)
         if (!profile && siblingProfiles.length > 0) {
-          profile = siblingProfiles.find(s => s.role === 'organizer' || s.role === 'super_admin') || siblingProfiles[0];
+          profile = siblingProfiles.find(s => s.role === 'organizer') || siblingProfiles[0];
         }
 
         // Automatically re-link any events previously created under sibling UUIDs to active session userId
@@ -474,7 +494,12 @@ export function HomeContent() {
         }
 
         const resolvedStatus = profile?.status || profileMeta.status || profileSocials.status || siblingWithQuota?.status || siblingMeta.status || 'active';
-        const isSuperAdmin = profile?.role === 'super_admin' || profile?.is_admin === true || session.user.email?.toLowerCase() === 'eventzone114@gmail.com';
+        
+        // Strict Super Admin Check: ONLY direct DB profile role or recognized owner emails
+        const isSuperAdmin = !!(
+          (directProfile?.role === 'super_admin' || directProfile?.is_admin === true) ||
+          isPlatformSuperAdminEmail(session.user.email)
+        );
 
         const resolvedCompany = profile?.company_name || userMeta.company_name || siblingWithDetails?.company_name || "";
         const resolvedJobTitle = profile?.job_title || userMeta.job_title || siblingWithDetails?.job_title || "";
@@ -483,6 +508,7 @@ export function HomeContent() {
         const resolvedLocation = profile?.location || siblingWithDetails?.location || "";
 
         // Dual-persist consolidated quotas and profile data to Supabase for the active session UUID
+        // (Role is strictly database-managed and is never touched or overwritten by client sync)
         try {
           const updatedMeta = {
             ...profileMeta,
@@ -490,12 +516,18 @@ export function HomeContent() {
             max_attendees: rawMaxAttendees !== null ? Number(rawMaxAttendees) : null,
             status: resolvedStatus,
           };
+          delete updatedMeta.role;
+          delete updatedMeta.is_admin;
+
           const updatedSocials = {
             ...profileSocials,
             max_events: rawMaxEvents !== null ? Number(rawMaxEvents) : null,
             max_attendees: rawMaxAttendees !== null ? Number(rawMaxAttendees) : null,
             status: resolvedStatus,
           };
+          delete updatedSocials.role;
+          delete updatedSocials.is_admin;
+
           await supabase.from('profiles').update({
             metadata: updatedMeta,
             social_links: updatedSocials,
@@ -504,7 +536,6 @@ export function HomeContent() {
             phone: resolvedPhone,
             bio: resolvedBio,
             location: resolvedLocation,
-            role: isSuperAdmin ? 'super_admin' : ((retrievedRole === 'attendee' || retrievedRole === 'visitor') ? 'attendee' : 'organizer'),
             updated_at: new Date().toISOString()
           }).eq('id', userId);
         } catch (syncBackErr) {
@@ -545,6 +576,7 @@ export function HomeContent() {
           whatImLookingFor: profile?.what_im_looking_for || siblingWithDetails?.what_im_looking_for || "",
           avatar: profile?.avatar_url || retrievedAvatar,
           isAdmin: isSuperAdmin,
+          isVerifiedAdmin: isSuperAdmin,
           maxEvents: rawMaxEvents !== null && rawMaxEvents !== undefined && rawMaxEvents !== "" ? Number(rawMaxEvents) : null,
           maxAttendees: rawMaxAttendees !== null && rawMaxAttendees !== undefined && rawMaxAttendees !== "" ? Number(rawMaxAttendees) : null,
           eventsCount: calculatedEventsCount,
@@ -588,7 +620,10 @@ export function HomeContent() {
 
                   const updatedMeta = updated.metadata && typeof updated.metadata === 'object' ? updated.metadata : {};
                   const updatedSocials = typeof updated.social_links === 'object' && updated.social_links !== null && !Array.isArray(updated.social_links) ? updated.social_links : {};
-                  const isSuperAdminUpdated = updated.role === 'super_admin' || updated.is_admin === true || session.user.email?.toLowerCase() === 'eventzone114@gmail.com';
+                  const isSuperAdminUpdated = !!(
+                    (updated.role === 'super_admin' || updated.is_admin === true) ||
+                    isPlatformSuperAdminEmail(session.user.email)
+                  );
 
                   const rawMaxEvUpdated = updated.max_events !== undefined && updated.max_events !== null
                     ? updated.max_events
@@ -617,6 +652,7 @@ export function HomeContent() {
                     whatImLookingFor: updated.what_im_looking_for || "",
                     avatar: updatedAvatar,
                     isAdmin: isSuperAdminUpdated,
+                    isVerifiedAdmin: isSuperAdminUpdated,
                     maxEvents: rawMaxEvUpdated !== null && rawMaxEvUpdated !== undefined && rawMaxEvUpdated !== "" ? Number(rawMaxEvUpdated) : null,
                     maxAttendees: rawMaxAttUpdated !== null && rawMaxAttUpdated !== undefined && rawMaxAttUpdated !== "" ? Number(rawMaxAttUpdated) : null,
                     accountStatus: updatedStatus,
@@ -707,10 +743,8 @@ export function HomeContent() {
           const hasAuthParams = searchParams?.has("code") || (typeof window !== "undefined" && window.location.hash.includes("access_token"));
           
           if (!hasAuthParams) {
-            const stored = safeLocalStorageGet("eventzone_user");
-            if (!stored) {
-              setCurrentUser(null);
-            }
+            setCurrentUser(null);
+            safeLocalStorageRemove("eventzone_user");
             setAuthInitialized(true);
             setIsAuthProcessing(false);
           }
@@ -736,16 +770,22 @@ export function HomeContent() {
                   if (retrySession?.session?.user) {
                     await syncUserProfile(retrySession.session);
                   } else {
+                    setCurrentUser(null);
+                    safeLocalStorageRemove("eventzone_user");
                     setAuthInitialized(true);
                     setIsAuthProcessing(false);
                   }
                 }
               }, 1200);
             } else {
+              setCurrentUser(null);
+              safeLocalStorageRemove("eventzone_user");
               setAuthInitialized(true);
               setIsAuthProcessing(false);
             }
           } else {
+            setCurrentUser(null);
+            safeLocalStorageRemove("eventzone_user");
             setAuthInitialized(true);
             setIsAuthProcessing(false);
           }
@@ -1249,11 +1289,11 @@ export function HomeContent() {
   useEffect(() => {
     if (authInitialized && currentView === "admin") {
       const isSuperAdminUser = !!(
-        currentUser && (
-          currentUser.role === 'super_admin' ||
-          currentUser.isAdmin === true ||
-          currentUser.is_admin === true ||
-          (currentUser.email && currentUser.email.toLowerCase() === 'eventzone114@gmail.com')
+        currentUser &&
+        currentUser.id && (
+          currentUser.isVerifiedAdmin === true ||
+          isPlatformSuperAdminEmail(currentUser.email) ||
+          (currentUser.role === 'super_admin' && (currentUser.isAdmin === true || currentUser.is_admin === true))
         )
       );
       if (!isSuperAdminUser && typeof window !== "undefined") {
@@ -1348,9 +1388,16 @@ export function HomeContent() {
 
   // Switch Role Handler
   const handleToggleRole = (targetRole) => {
-    const updated = { ...currentUser, role: targetRole };
+    if (targetRole !== "visitor" && targetRole !== "organizer") return;
+    const updated = {
+      ...currentUser,
+      role: targetRole,
+      isAdmin: false,
+      is_admin: false,
+      isVerifiedAdmin: false,
+    };
     setCurrentUser(updated);
-    safeLocalStorageSet("eventzone_user", updated);
+    safeLocalStorageSet("eventzone_user", sanitizeUserForStorage(updated));
     if (targetRole === "visitor") {
       setCurrentView("home");
     } else {
@@ -1362,16 +1409,24 @@ export function HomeContent() {
   // Profile Update Handler (Supabase Multi-device & App Sync)
   const handleUpdateProfile = async (profileData) => {
     try {
-      const updated = await upsertUserProfile(profileData);
+      const safeProfileData = {
+        ...profileData,
+        role: currentUser?.role === 'super_admin' ? 'super_admin' : (profileData.role === 'attendee' ? 'attendee' : 'organizer'),
+      };
+      delete safeProfileData.isAdmin;
+      delete safeProfileData.is_admin;
+
+      const updated = await upsertUserProfile(safeProfileData);
       const retrievedName = updated?.full_name || profileData.fullName || "Eventzone User";
-      const retrievedRole = updated?.role || profileData.role || "organizer";
+      const isUserSuperAdmin = !!(currentUser?.role === 'super_admin' && (currentUser?.isAdmin || currentUser?.isVerifiedAdmin));
+      const retrievedRole = isUserSuperAdmin ? 'super_admin' : (profileData.role === 'attendee' ? 'visitor' : (profileData.role || 'organizer'));
       const retrievedAvatar = updated?.avatar_url || profileData.avatar;
 
       const syncedUser = {
         id: profileData.id,
         email: profileData.email,
         fullName: retrievedName,
-        role: retrievedRole === 'attendee' ? 'visitor' : retrievedRole,
+        role: retrievedRole,
         companyName: updated?.company_name || profileData.companyName || "",
         jobTitle: updated?.job_title || profileData.jobTitle || "",
         phone: updated?.phone || profileData.phone || "",
@@ -1383,7 +1438,8 @@ export function HomeContent() {
         what_im_looking_for: updated?.what_im_looking_for || profileData.what_im_looking_for || profileData.whatImLookingFor || "",
         whatImLookingFor: updated?.what_im_looking_for || profileData.what_im_looking_for || profileData.whatImLookingFor || "",
         avatar: retrievedAvatar,
-        isAdmin: !!profileData.isAdmin,
+        isAdmin: isUserSuperAdmin,
+        isVerifiedAdmin: !!currentUser?.isVerifiedAdmin,
         maxEvents: currentUser?.maxEvents ?? null,
         maxAttendees: currentUser?.maxAttendees ?? null,
         accountStatus: currentUser?.accountStatus || 'active',
@@ -3032,11 +3088,11 @@ export function HomeContent() {
 
     // 2. Strict Super Admin Check: Only explicitly verified database role or owner email
     const isSuperAdminUser = !!(
-      currentUser && (
-        currentUser.role === 'super_admin' ||
-        currentUser.isAdmin === true ||
-        currentUser.is_admin === true ||
-        (currentUser.email && currentUser.email.toLowerCase() === 'eventzone114@gmail.com')
+      currentUser &&
+      currentUser.id && (
+        currentUser.isVerifiedAdmin === true ||
+        isPlatformSuperAdminEmail(currentUser.email) ||
+        (currentUser.role === 'super_admin' && (currentUser.isAdmin === true || currentUser.is_admin === true))
       )
     );
 
@@ -3905,7 +3961,14 @@ export function HomeContent() {
               <span>{t("dash.developers", "Developers & API")}</span>
             </button>
 
-            {(currentUser?.role === 'super_admin' || currentUser?.isAdmin || currentUser?.email?.toLowerCase() === 'eventzone114@gmail.com') && (
+            {!!(
+              currentUser &&
+              currentUser.id && (
+                currentUser.isVerifiedAdmin === true ||
+                isPlatformSuperAdminEmail(currentUser.email) ||
+                (currentUser.role === 'super_admin' && (currentUser.isAdmin === true || currentUser.is_admin === true))
+              )
+            ) && (
               <div className="pt-3 mt-3 border-t border-slate-100">
                 <button
                   onClick={() => setCurrentView("admin")}
@@ -3971,7 +4034,7 @@ export function HomeContent() {
           {/* Top Banner when Current Module is in Read-Only Viewer Mode */}
           {!effectivePermissions.isAdmin &&
             !effectivePermissions.isOwner &&
-            currentUser?.role !== "super_admin" &&
+            !(currentUser?.role === "super_admin" && (currentUser?.isAdmin || currentUser?.isVerifiedAdmin)) &&
             currentUser?.role !== "admin" &&
             !currentUser?.isAdmin &&
             !(currentUser?.role === "organizer" && !simulatedMemberId) &&
@@ -3989,7 +4052,7 @@ export function HomeContent() {
           {/* Access Restricted Screen if user has No Access to this module */}
           {!effectivePermissions.isAdmin &&
             !effectivePermissions.isOwner &&
-            currentUser?.role !== "super_admin" &&
+            !(currentUser?.role === "super_admin" && (currentUser?.isAdmin || currentUser?.isVerifiedAdmin)) &&
             currentUser?.role !== "admin" &&
             !currentUser?.isAdmin &&
             !(currentUser?.role === "organizer" && !simulatedMemberId) &&

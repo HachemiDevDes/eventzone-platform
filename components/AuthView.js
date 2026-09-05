@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { supabase, safeLocalStorageSet, sanitizeUserForStorage, cleanupLocalStorageQuota } from "../lib/supabase";
 import { useLanguage } from "../lib/i18n";
+import { isPlatformSuperAdminEmail } from "../lib/constants";
 
 export default function AuthView({ 
   onAuthSuccess, 
@@ -257,6 +258,7 @@ export default function AuthView({
         const userId = authUser?.id;
 
         // Fetch User Profile from 'public.profiles'
+        let directProfile = null;
         let userProfile = null;
         let siblingProfiles = [];
         if (userId) {
@@ -266,6 +268,7 @@ export default function AuthView({
               .select("*")
               .eq("id", userId)
               .maybeSingle();
+            directProfile = prof;
             userProfile = prof;
           } catch (e) {
             console.warn("Fetch profile warning:", e);
@@ -303,7 +306,11 @@ export default function AuthView({
         const sibMeta = siblingWithQuota?.metadata && typeof siblingWithQuota?.metadata === 'object' ? siblingWithQuota.metadata : {};
         const sibSocials = typeof siblingWithQuota?.social_links === 'object' && siblingWithQuota?.social_links !== null ? siblingWithQuota.social_links : {};
 
-        const isSuperAdmin = userProfile?.role === "super_admin" || userProfile?.is_admin === true || (email && email.trim().toLowerCase() === "eventzone114@gmail.com");
+        // Strict Super Admin Verification: ONLY direct DB profile role or recognized owner emails
+        const isSuperAdmin = !!(
+          (directProfile?.role === "super_admin" || directProfile?.is_admin === true) ||
+          isPlatformSuperAdminEmail(email)
+        );
 
         let rawMaxEvents = userProfile?.max_events !== undefined && userProfile?.max_events !== null
           ? userProfile.max_events
@@ -335,6 +342,7 @@ export default function AuthView({
           phone: userProfile?.phone || "",
           avatar: retrievedAvatar,
           isAdmin: isSuperAdmin,
+          isVerifiedAdmin: isSuperAdmin,
           maxEvents: rawMaxEvents !== null && rawMaxEvents !== undefined && rawMaxEvents !== "" ? Number(rawMaxEvents) : null,
           maxAttendees: rawMaxAttendees !== null && rawMaxAttendees !== undefined && rawMaxAttendees !== "" ? Number(rawMaxAttendees) : null,
           accountStatus: userProfile?.status || meta.status || socials.status || "active",

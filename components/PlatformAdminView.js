@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import SearchableSelect from "./SearchableSelect";
 import { COUNTRY_CITIES_MAP } from "../lib/formPresets";
-import { INDUSTRIES } from "../lib/constants";
+import { INDUSTRIES, isPlatformSuperAdminEmail } from "../lib/constants";
 import {
   fetchAllPlatformOrganizers,
   updateOrganizerQuotas,
@@ -121,11 +121,11 @@ export default function PlatformAdminView({
   };
 
   const isAuthorized = !!(
-    currentUser && (
-      currentUser.role === 'super_admin' ||
-      currentUser.isAdmin === true ||
-      currentUser.is_admin === true ||
-      (currentUser.email && currentUser.email.toLowerCase() === 'eventzone114@gmail.com')
+    currentUser &&
+    currentUser.id && (
+      currentUser.isVerifiedAdmin === true ||
+      isPlatformSuperAdminEmail(currentUser.email) ||
+      (currentUser.role === 'super_admin' && (currentUser.isAdmin === true || currentUser.is_admin === true))
     )
   );
 

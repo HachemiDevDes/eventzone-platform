@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useLanguage } from "../lib/i18n";
 import { smoothScrollTo } from "../lib/smoothScroll";
+import { isPlatformSuperAdminEmail } from "../lib/constants";
 
 export default function UniversalTopBar({
   currentUser,
@@ -250,7 +251,14 @@ export default function UniversalTopBar({
                 </button>
 
                 {/* Super Admin Back Office Option */}
-                {(currentUser?.role === 'super_admin' || currentUser?.isAdmin || currentUser?.email?.toLowerCase() === 'eventzone114@gmail.com') && (
+                {!!(
+                  currentUser &&
+                  currentUser.id && (
+                    currentUser.isVerifiedAdmin === true ||
+                    isPlatformSuperAdminEmail(currentUser.email) ||
+                    (currentUser.role === 'super_admin' && (currentUser.isAdmin === true || currentUser.is_admin === true))
+                  )
+                ) && (
                   <button
                     onClick={() => {
                       setProfileOpen(false);
