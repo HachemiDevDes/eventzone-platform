@@ -2,6 +2,7 @@ import { Plus_Jakarta_Sans, Cairo } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { LanguageProvider } from "../lib/i18n";
+import CookieConsentBanner from "../components/CookieConsentBanner";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -64,6 +65,7 @@ export default function RootLayout({ children }) {
       <body suppressHydrationWarning className="min-h-full flex flex-col">
         <LanguageProvider>
           {children}
+          <CookieConsentBanner />
         </LanguageProvider>
 
         {/* Google tag (gtag.js) */}
