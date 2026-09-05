@@ -422,7 +422,7 @@ export function HomeContent() {
           || "Eventzone User";
         const retrievedRole = (profile?.role && profile.role !== 'attendee') 
           ? profile.role 
-          : (hasOrganizerSibling ? 'organizer' : (userMeta.role || "organizer"));
+          : (hasOrganizerSibling ? 'organizer' : ((userMeta.role === 'attendee' || userMeta.role === 'visitor') ? 'visitor' : 'organizer'));
         const retrievedAvatar = profile?.avatar_url 
           || userMeta.avatar_url 
           || userMeta.picture 
@@ -474,7 +474,7 @@ export function HomeContent() {
         }
 
         const resolvedStatus = profile?.status || profileMeta.status || profileSocials.status || siblingWithQuota?.status || siblingMeta.status || 'active';
-        const isSuperAdmin = profile?.role === 'super_admin' || profile?.is_admin === true || profileMeta.role === 'super_admin' || userMeta.role === 'super_admin' || session.user.email?.toLowerCase() === 'eventzone114@gmail.com';
+        const isSuperAdmin = profile?.role === 'super_admin' || profile?.is_admin === true || session.user.email?.toLowerCase() === 'eventzone114@gmail.com';
 
         const resolvedCompany = profile?.company_name || userMeta.company_name || siblingWithDetails?.company_name || "";
         const resolvedJobTitle = profile?.job_title || userMeta.job_title || siblingWithDetails?.job_title || "";
@@ -588,7 +588,7 @@ export function HomeContent() {
 
                   const updatedMeta = updated.metadata && typeof updated.metadata === 'object' ? updated.metadata : {};
                   const updatedSocials = typeof updated.social_links === 'object' && updated.social_links !== null && !Array.isArray(updated.social_links) ? updated.social_links : {};
-                  const isSuperAdminUpdated = updated.role === 'super_admin' || updated.is_admin === true || updatedMeta.role === 'super_admin' || session.user.email?.toLowerCase() === 'eventzone114@gmail.com';
+                  const isSuperAdminUpdated = updated.role === 'super_admin' || updated.is_admin === true || session.user.email?.toLowerCase() === 'eventzone114@gmail.com';
 
                   const rawMaxEvUpdated = updated.max_events !== undefined && updated.max_events !== null
                     ? updated.max_events
@@ -1244,6 +1244,27 @@ export function HomeContent() {
     window.addEventListener("popstate", syncStateFromUrl);
     return () => window.removeEventListener("popstate", syncStateFromUrl);
   }, []);
+
+  // Strict URL & security cleanup for admin route: strips ?view=admin if non-super-admin tries to linger
+  useEffect(() => {
+    if (authInitialized && currentView === "admin") {
+      const isSuperAdminUser = !!(
+        currentUser && (
+          currentUser.role === 'super_admin' ||
+          currentUser.isAdmin === true ||
+          currentUser.is_admin === true ||
+          (currentUser.email && currentUser.email.toLowerCase() === 'eventzone114@gmail.com')
+        )
+      );
+      if (!isSuperAdminUser && typeof window !== "undefined") {
+        const url = new URL(window.location.href);
+        if (url.searchParams.get("view") === "admin") {
+          url.searchParams.delete("view");
+          window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
+        }
+      }
+    }
+  }, [authInitialized, currentView, currentUser]);
 
   // Auth Success Handler
   const handleAuthSuccess = async (user) => {
@@ -2992,6 +3013,74 @@ export function HomeContent() {
   // 0.2. DEDICATED FULL-PAGE PLATFORM ADMIN PANEL (BACK OFFICE)
   // ==========================================================================
   if (currentView === "admin") {
+    // 1. If auth is not yet initialized, render loader to prevent premature access denial or role flicker
+    if (!authInitialized) {
+      return (
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center font-sans">
+          <div className="flex flex-col items-center gap-3">
+            <img 
+              src="https://i.imgur.com/jFDrQbM.png" 
+              alt="eventzone" 
+              style={{ width: "130px", height: "32px", objectFit: "contain" }}
+              className="h-8 w-auto object-contain opacity-90 animate-pulse" 
+            />
+            <div className="w-5 h-5 border-2 border-blue-600/20 border-t-blue-600 rounded-full animate-spin mt-1" />
+          </div>
+        </div>
+      );
+    }
+
+    // 2. Strict Super Admin Check: Only explicitly verified database role or owner email
+    const isSuperAdminUser = !!(
+      currentUser && (
+        currentUser.role === 'super_admin' ||
+        currentUser.isAdmin === true ||
+        currentUser.is_admin === true ||
+        (currentUser.email && currentUser.email.toLowerCase() === 'eventzone114@gmail.com')
+      )
+    );
+
+    // 3. Unauthorized access completely blocked with 403 Forbidden screen
+    if (!isSuperAdminUser) {
+      return (
+        <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col items-center justify-center p-6 text-center font-sans">
+          <div className="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center mb-4 text-rose-600 shadow-sm">
+            <ShieldAlert className="w-8 h-8" />
+          </div>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-100 text-rose-800 text-xs font-bold mb-3">
+            <span>403 Forbidden</span>
+          </div>
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-2">Access Denied</h2>
+          <p className="text-slate-600 max-w-md text-sm mb-6 leading-relaxed">
+            You do not have administrative privileges to access the Platform Super Admin Console.
+            Super admin roles are strictly managed directly in the database by platform owners.
+            {currentUser?.email ? (
+              <span className="block mt-3 font-mono text-xs text-slate-700 bg-white border border-slate-200 rounded-xl p-3 shadow-2xs">
+                Signed in as: <strong className="text-slate-900">{currentUser.email}</strong> (Role: {currentUser.role || 'organizer'})
+              </span>
+            ) : (
+              <span className="block mt-2 text-xs text-slate-500">
+                You are currently browsing without an active authenticated session.
+              </span>
+            )}
+          </p>
+          <button
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                const url = new URL(window.location.href);
+                url.searchParams.delete("view");
+                window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
+              }
+              setCurrentView("home");
+            }}
+            className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold shadow-sm transition-all cursor-pointer flex items-center gap-2"
+          >
+            Return to Homepage
+          </button>
+        </div>
+      );
+    }
+
     return (
       <PlatformAdminView
         currentUser={currentUser}
@@ -3001,6 +3090,11 @@ export function HomeContent() {
             if (refreshed) setPublicEvents(refreshed);
           } catch (e) {
             console.error("Error refreshing public events on admin exit:", e);
+          }
+          if (typeof window !== "undefined") {
+            const url = new URL(window.location.href);
+            url.searchParams.delete("view");
+            window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
           }
           setCurrentView("home");
         }}

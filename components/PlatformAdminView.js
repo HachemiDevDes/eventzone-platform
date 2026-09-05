@@ -20,7 +20,6 @@ import {
   updateEventStatusAdmin,
   fetchAllPlatformPayments
 } from "../lib/db";
-import { supabase, safeLocalStorageSet, sanitizeUserForStorage } from "../lib/supabase";
 
 const ALGERIA_WILAYAS = COUNTRY_CITIES_MAP["Algeria"] || [];
 
@@ -36,11 +35,6 @@ const QUOTA_STATUS_OPTIONS = [
   { value: "active", label: "Active" },
   { value: "suspended", label: "Suspended (Frozen)" },
   { value: "banned", label: "Banned" },
-];
-
-const QUOTA_ROLE_OPTIONS = [
-  { value: "organizer", label: "Standard Organizer" },
-  { value: "super_admin", label: "Super Admin" },
 ];
 
 export default function PlatformAdminView({
@@ -126,11 +120,23 @@ export default function PlatformAdminView({
     }
   };
 
+  const isAuthorized = !!(
+    currentUser && (
+      currentUser.role === 'super_admin' ||
+      currentUser.isAdmin === true ||
+      currentUser.is_admin === true ||
+      (currentUser.email && currentUser.email.toLowerCase() === 'eventzone114@gmail.com')
+    )
+  );
+
   useEffect(() => {
-    loadAdminData(true);
-  }, []);
+    if (isAuthorized) {
+      loadAdminData(true);
+    }
+  }, [isAuthorized]);
 
   const handleManualRefresh = () => {
+    if (!isAuthorized) return;
     setIsRefreshing(true);
     loadAdminData(false);
   };
@@ -164,7 +170,6 @@ export default function PlatformAdminView({
       maxEvents: isNaN(parsedMaxEvents) ? null : parsedMaxEvents,
       maxAttendees: isNaN(parsedMaxAttendees) ? null : parsedMaxAttendees,
       status: quotaStatus,
-      role: quotaRole
     });
 
     setIsSavingQuota(false);
@@ -176,7 +181,6 @@ export default function PlatformAdminView({
         maxEvents: isNaN(parsedMaxEvents) ? null : parsedMaxEvents,
         maxAttendees: isNaN(parsedMaxAttendees) ? null : parsedMaxAttendees,
         status: quotaStatus,
-        role: quotaRole
       } : o));
       setEditingOrganizer(null);
     } else {
@@ -421,54 +425,36 @@ export default function PlatformAdminView({
       .slice(0, 6);
   }, [events]);
 
-  const isAuthorized = currentUser?.role === 'super_admin' || currentUser?.isAdmin || currentUser?.email?.toLowerCase() === 'eventzone114@gmail.com';
-
   if (!isAuthorized) {
     return (
-      <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center mb-4 text-amber-600 shadow-sm">
+      <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col items-center justify-center p-6 text-center font-sans">
+        <div className="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center mb-4 text-rose-600 shadow-sm">
           <ShieldAlert className="w-8 h-8" />
         </div>
-        <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-2">Platform Super Admin Console</h2>
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-100 text-rose-800 text-xs font-bold mb-3">
+          <span>403 Forbidden</span>
+        </div>
+        <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-2">Access Denied</h2>
         <p className="text-slate-600 max-w-md text-sm mb-6 leading-relaxed">
-          This console is reserved for platform owners to govern cross-platform events, organizer quotas, homepage hero curation, and Chargily payments.
+          You do not have administrative privileges to access the Platform Super Admin Console.
+          Super admin roles are strictly restricted and can only be provisioned directly in the database by platform owners.
           {currentUser?.email ? (
             <span className="block mt-3 font-mono text-xs text-slate-700 bg-white border border-slate-200 rounded-xl p-3 shadow-2xs">
-              Signed in as: <strong className="text-emerald-600">{currentUser.email}</strong> (Role: {currentUser.role || 'organizer'})
+              Signed in as: <strong className="text-slate-900">{currentUser.email}</strong> (Role: {currentUser.role || 'organizer'})
             </span>
           ) : (
             <span className="block mt-2 text-xs text-slate-500">
-              You are currently browsing without an active session.
+              You are currently browsing without an active authenticated session.
             </span>
           )}
         </p>
-        <div className="flex flex-wrap items-center justify-center gap-3">
+        <div className="flex items-center justify-center gap-3">
           <button
             onClick={onExitAdmin}
-            className="px-5 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 text-sm font-semibold transition-all cursor-pointer border border-slate-300 shadow-xs"
+            className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold shadow-sm transition-all cursor-pointer flex items-center gap-2"
           >
             Return to Homepage
           </button>
-          {currentUser && (
-            <button
-              onClick={async () => {
-                try {
-                  await supabase.from('profiles').update({ role: 'super_admin', is_admin: true }).eq('id', currentUser.id);
-                  currentUser.role = 'super_admin';
-                  currentUser.isAdmin = true;
-                  safeLocalStorageSet("eventzone_user", sanitizeUserForStorage(currentUser));
-                  window.location.reload();
-                } catch (e) {
-                  console.error(e);
-                  window.location.reload();
-                }
-              }}
-              className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-sm shadow-emerald-600/30 transition-all cursor-pointer flex items-center gap-2"
-            >
-              <ShieldCheck className="w-4 h-4" />
-              Claim Super Admin Role & Enter
-            </button>
-          )}
         </div>
       </div>
     );
@@ -1621,13 +1607,27 @@ export default function PlatformAdminView({
 
                   <div>
                     <label className="block font-bold text-slate-900 mb-1.5">Platform Role</label>
-                    <SearchableSelect
-                      value={quotaRole}
-                      onChange={(val) => setQuotaRole(val)}
-                      options={QUOTA_ROLE_OPTIONS}
-                      isClearable={false}
-                      buttonClassName="bg-slate-50! border-slate-200! text-slate-900! text-xs! font-semibold! rounded-xl! py-2! px-3!"
-                    />
+                    <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 flex items-center justify-between min-h-[38px]">
+                      <div className="flex items-center gap-1.5">
+                        {editingOrganizer?.role === "super_admin" ? (
+                          <>
+                            <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                            <span className="font-bold text-emerald-950">Super Admin</span>
+                          </>
+                        ) : (
+                          <>
+                            <Users className="w-4 h-4 text-slate-500 shrink-0" />
+                            <span>Standard Organizer</span>
+                          </>
+                        )}
+                      </div>
+                      <span className="text-[10px] bg-slate-200/80 text-slate-600 px-2 py-0.5 rounded font-mono font-bold">
+                        Database Managed
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Super admin privileges are managed directly in the database.
+                    </p>
                   </div>
                 </div>
               </div>

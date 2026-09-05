@@ -303,7 +303,7 @@ export default function AuthView({
         const sibMeta = siblingWithQuota?.metadata && typeof siblingWithQuota?.metadata === 'object' ? siblingWithQuota.metadata : {};
         const sibSocials = typeof siblingWithQuota?.social_links === 'object' && siblingWithQuota?.social_links !== null ? siblingWithQuota.social_links : {};
 
-        const isSuperAdmin = userProfile?.role === "super_admin" || userProfile?.is_admin === true || meta.role === "super_admin" || authUser?.user_metadata?.role === "super_admin";
+        const isSuperAdmin = userProfile?.role === "super_admin" || userProfile?.is_admin === true || (email && email.trim().toLowerCase() === "eventzone114@gmail.com");
 
         let rawMaxEvents = userProfile?.max_events !== undefined && userProfile?.max_events !== null
           ? userProfile.max_events
