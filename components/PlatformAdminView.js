@@ -488,7 +488,7 @@ export default function PlatformAdminView({
       ───────────────────────────────────────────── */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 px-6 py-3.5 flex flex-wrap items-center justify-between gap-4 shadow-2xs">
         <div className="flex items-center">
-          <h1 className="text-lg font-bold text-slate-900 tracking-tight">EventZone Back Office</h1>
+          <h1 className="text-lg font-bold text-slate-900 tracking-tight">Back Office</h1>
         </div>
 
         <div className="flex items-center gap-2.5">
