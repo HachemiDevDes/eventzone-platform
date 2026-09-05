@@ -87,7 +87,7 @@ export default function DevelopersView({
   }, [tickets, selectedTicketId]);
 
   const currentSelectedTicket = useMemo(() => {
-    return tickets.find(t => t.id === selectedTicketId) || tickets[0] || null;
+    return tickets.find(tk => tk.id === selectedTicketId) || tickets[0] || null;
   }, [tickets, selectedTicketId]);
 
   // 1. Embed Builder State
@@ -1263,7 +1263,7 @@ fun main() {
           <div className="mt-3">
             <div className="text-2xl font-black text-slate-900"><bdi dir="ltr">{tickets.length}</bdi></div>
             <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-slate-500">
-              <span className="text-blue-600 font-bold"><bdi dir="ltr">{tickets.filter(t => !t.isSoldOut).length}</bdi></span> {t("dev.activeTicketFormsReady", "active ticket forms ready")}
+              <span className="text-blue-600 font-bold"><bdi dir="ltr">{tickets.filter(tk => !tk.isSoldOut).length}</bdi></span> {t("dev.activeTicketFormsReady", "active ticket forms ready")}
             </div>
           </div>
         </div>
