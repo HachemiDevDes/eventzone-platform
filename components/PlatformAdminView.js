@@ -7,7 +7,7 @@ import {
   CreditCard, Search, Filter, Check, X, ChevronRight, ChevronLeft, ArrowUpRight, 
   ExternalLink, RefreshCw, Star, Download, Eye, AlertCircle, CheckCircle2, 
   Lock, Unlock, Edit3, Pin, ChevronDown, Sliders, BarChart3, TrendingUp,
-  MapPin, Clock, Smartphone, Mail, Globe, ArrowRight, UserCheck
+  MapPin, Clock, Smartphone, Mail, Globe, ArrowRight
 } from "lucide-react";
 import SearchableSelect from "./SearchableSelect";
 import { COUNTRY_CITIES_MAP } from "../lib/formPresets";
@@ -18,8 +18,7 @@ import {
   fetchAllPlatformEventsAdmin,
   updateEventHeroFeatured,
   updateEventStatusAdmin,
-  fetchAllPlatformPayments,
-  fetchRecentPlatformCheckIns
+  fetchAllPlatformPayments
 } from "../lib/db";
 import { supabase, safeLocalStorageSet, sanitizeUserForStorage } from "../lib/supabase";
 
@@ -66,7 +65,6 @@ export default function PlatformAdminView({
   const [paymentMetrics, setPaymentMetrics] = useState({
     totalGmv: 0, paidCount: 0, edahabiaGmv: 0, edahabiaCount: 0, cibGmv: 0, cibCount: 0, failedCount: 0, pendingCount: 0, successRate: 0
   });
-  const [recentCheckIns, setRecentCheckIns] = useState([]);
 
   // Search & Filter states
   const [organizerSearch, setOrganizerSearch] = useState("");
@@ -106,18 +104,16 @@ export default function PlatformAdminView({
   const loadAdminData = async (showLoading = true) => {
     if (showLoading) setIsLoading(true);
     try {
-      const [orgsData, eventsData, paysData, checkInsData] = await Promise.all([
+      const [orgsData, eventsData, paysData] = await Promise.all([
         fetchAllPlatformOrganizers(),
         fetchAllPlatformEventsAdmin(),
-        fetchAllPlatformPayments(),
-        fetchRecentPlatformCheckIns(30)
+        fetchAllPlatformPayments()
       ]);
 
       setOrganizers(orgsData);
       setEvents(eventsData);
       setPayments(paysData.payments);
       setPaymentMetrics(paysData.metrics);
-      setRecentCheckIns(checkInsData);
     } catch (err) {
       console.error("Error loading admin data:", err);
       showToast("Failed to load back-office records", "error");
@@ -507,7 +503,7 @@ export default function PlatformAdminView({
             {activeTab === "overview" && (
               <div className="space-y-6 animate-in fade-in duration-300">
                 {/* Metric Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs hover:shadow-xs hover:border-slate-300 transition-all">
                     <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
                       <span>Total Settled GMV</span>
@@ -575,27 +571,10 @@ export default function PlatformAdminView({
                       </p>
                     </div>
                   </div>
-
-                  <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs hover:shadow-xs hover:border-slate-300 transition-all">
-                    <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
-                      <span>Live Check-Ins</span>
-                      <div className="p-2 rounded-xl bg-teal-50 text-teal-600 border border-teal-100">
-                        <UserCheck className="w-4 h-4" />
-                      </div>
-                    </div>
-                    <div className="mt-3">
-                      <div className="text-2xl font-black text-slate-900 tracking-tight font-mono">
-                        {recentCheckIns.length}
-                      </div>
-                      <p className="text-[11px] text-slate-500 mt-1">
-                        Recent verified gate passes
-                      </p>
-                    </div>
-                  </div>
                 </div>
 
                 {/* Split Insights */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Financial Breakdown */}
                   <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs">
                     <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -673,37 +652,6 @@ export default function PlatformAdminView({
                             <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-mono text-[11px] font-bold">
                               {count} {count === 1 ? "event" : "events"}
                             </span>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Live Check-in Pulse */}
-                  <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs">
-                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                      <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                        <UserCheck className="w-4 h-4 text-teal-600" />
-                        Live Gate Check-in Pulse
-                      </h3>
-                      <span className="text-xs text-slate-500 font-medium">Real-time</span>
-                    </div>
-
-                    <div className="mt-4 space-y-2.5 max-h-[220px] overflow-y-auto pr-1 scrollbar-none">
-                      {recentCheckIns.length === 0 ? (
-                        <p className="text-xs text-slate-400 py-6 text-center">No recent gate check-ins logged</p>
-                      ) : (
-                        recentCheckIns.slice(0, 6).map((ci, i) => (
-                          <div key={ci.id || i} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs hover:bg-slate-100/70 transition-colors">
-                            <div className="truncate mr-2">
-                              <div className="font-semibold text-slate-900 truncate">{ci.first_name} {ci.last_name}</div>
-                              <div className="text-[10px] text-slate-500 truncate">{ci.events?.name || "Official Event"}</div>
-                            </div>
-                            <div className="text-right shrink-0">
-                              <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                {ci.badge_code || "PASS"}
-                              </span>
-                            </div>
                           </div>
                         ))
                       )}
