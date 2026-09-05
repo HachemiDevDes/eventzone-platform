@@ -22,7 +22,7 @@ export const metadata = {
   description: "A premium event organizer platform to design floor layouts and manage schedules.",
   icons: {
     icon: [
-      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.png", type: "image/png" },
       { url: "/icon.png", sizes: "32x32", type: "image/png" },
       { url: "/favicon.ico", sizes: "any" },
     ],

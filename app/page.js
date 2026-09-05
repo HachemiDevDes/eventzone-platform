@@ -1043,9 +1043,11 @@ export function HomeContent() {
 
     const queryString = params.toString();
     const newUrl = queryString ? `/?${queryString}` : "/";
+    const isSearchMismatch = window.location.search !== (queryString ? `?${queryString}` : "");
+    const isPathMismatch = window.location.pathname !== "/";
 
-    if (window.location.search !== (queryString ? `?${queryString}` : "")) {
-      if (currentView === "home" || !params.has("eventId")) {
+    if (isSearchMismatch || isPathMismatch) {
+      if (currentView === "home" || !params.has("eventId") || isPathMismatch) {
         window.history.replaceState({}, "", newUrl);
       } else {
         window.history.pushState({}, "", newUrl);
@@ -3004,7 +3006,12 @@ export function HomeContent() {
           return saved;
         }}
         currentUser={currentUser}
-        onBackToHome={() => setCurrentView("home")}
+        onBackToHome={() => {
+          setCurrentView("home");
+          if (typeof window !== "undefined") {
+            window.history.replaceState({}, "", "/");
+          }
+        }}
         onViewFloorPlan={(eventId) => {
           setActiveEventStateId(eventId || activeEventId);
           setCurrentView("floor-plan");
