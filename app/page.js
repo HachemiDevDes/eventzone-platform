@@ -587,18 +587,19 @@ export function HomeContent() {
           }
         }
 
-        // Handle post-login navigation if returning from OAuth / sign in
-        if (typeof window !== "undefined") {
+        // Handle post-login navigation ONLY on explicit SIGNED_IN (never on background TOKEN_REFRESHED or USER_UPDATED)
+        if (event === "SIGNED_IN" && typeof window !== "undefined") {
           const returnView = sessionStorage.getItem("eventzone_auth_return_view");
           if (returnView) {
             sessionStorage.removeItem("eventzone_auth_return_view");
             setCurrentView(returnView);
           } else {
             setCurrentView(prev => {
-              if (prev === "auth" || prev === "home") {
+              // Only redirect if the user was explicitly on the dedicated auth view
+              if (prev === "auth") {
                 const urlParams = new URLSearchParams(window.location.search);
                 const requestedView = urlParams.get("view");
-                return requestedView || "events-hub";
+                return requestedView || (syncedUser?.role === "organizer" ? "events-hub" : "home");
               }
               return prev;
             });

@@ -7,7 +7,7 @@ import {
   CreditCard, Search, Filter, Check, X, ChevronRight, ChevronLeft, ArrowUpRight, 
   ExternalLink, RefreshCw, Star, Download, Eye, AlertCircle, CheckCircle2, 
   Lock, Unlock, Edit3, Pin, ChevronDown, Sliders, BarChart3, TrendingUp,
-  MapPin, Clock, Smartphone, Mail, Globe, ArrowRight
+  MapPin, Clock, Smartphone, Mail, Globe, ArrowRight, ArrowUp, ArrowDown, Plus, Trash2
 } from "lucide-react";
 import SearchableSelect from "./SearchableSelect";
 import { COUNTRY_CITIES_MAP } from "../lib/formPresets";
@@ -91,8 +91,10 @@ export default function PlatformAdminView({
   // Organizer Events Drawer state
   const [selectedOrgEvents, setSelectedOrgEvents] = useState(null);
 
-  // Hero Preview Slider state
-  const [heroPreviewIndex, setHeroPreviewIndex] = useState(0);
+  // Hero Curation search & filter states
+  const [heroSearch, setHeroSearch] = useState("");
+  const [heroWilayaFilter, setHeroWilayaFilter] = useState("All");
+  const [heroCategoryFilter, setHeroCategoryFilter] = useState("All");
 
   // Show Toast
   const showToast = (text, type = "success") => {
@@ -184,33 +186,85 @@ export default function PlatformAdminView({
   // ─────────────────────────────────────────────
   //  HERO CURATION HANDLERS
   // ─────────────────────────────────────────────
-  const handleToggleHeroFeatured = async (event) => {
-    const newFeaturedState = !event.isHeroFeatured;
-    const currentOrder = event.heroOrder || 1;
+  const handleAddToHero = async (event) => {
+    const nextOrder = curatedHeroEvents.length + 1;
 
     // Optimistic UI update
     setEvents(prev => prev.map(e => e.id === event.id ? {
       ...e,
-      isHeroFeatured: newFeaturedState,
-      is_hero_featured: newFeaturedState
+      isHeroFeatured: true,
+      is_hero_featured: true,
+      heroOrder: nextOrder,
+      hero_order: nextOrder
     } : e));
 
     const res = await updateEventHeroFeatured(event.id, {
-      isHeroFeatured: newFeaturedState,
-      heroOrder: currentOrder
+      isHeroFeatured: true,
+      heroOrder: nextOrder
     });
 
     if (res.success) {
-      showToast(newFeaturedState ? `Pinned "${event.title}" to Homepage Hero!` : `Unpinned "${event.title}" from Hero`);
+      showToast(`Added "${event.title}" to Homepage Hero (Slot #${nextOrder})`);
     } else {
-      // Revert optimistic update
       setEvents(prev => prev.map(e => e.id === event.id ? {
         ...e,
-        isHeroFeatured: !newFeaturedState,
-        is_hero_featured: !newFeaturedState
+        isHeroFeatured: false,
+        is_hero_featured: false
       } : e));
-      showToast(res.error || "Could not update hero status", "error");
+      showToast(res.error || "Could not add to hero", "error");
     }
+  };
+
+  const handleRemoveFromHero = async (event) => {
+    // Optimistic UI update
+    setEvents(prev => prev.map(e => e.id === event.id ? {
+      ...e,
+      isHeroFeatured: false,
+      is_hero_featured: false,
+      heroOrder: 99,
+      hero_order: 99
+    } : e));
+
+    const res = await updateEventHeroFeatured(event.id, {
+      isHeroFeatured: false,
+      heroOrder: 99
+    });
+
+    if (res.success) {
+      showToast(`Removed "${event.title}" from Homepage Hero`);
+    } else {
+      setEvents(prev => prev.map(e => e.id === event.id ? {
+        ...e,
+        isHeroFeatured: true,
+        is_hero_featured: true
+      } : e));
+      showToast(res.error || "Could not remove from hero", "error");
+    }
+  };
+
+  const handleMoveHeroEvent = async (event, direction) => {
+    const currentIdx = curatedHeroEvents.findIndex(e => e.id === event.id);
+    if (currentIdx === -1) return;
+    const targetIdx = direction === "up" ? currentIdx - 1 : currentIdx + 1;
+    if (targetIdx < 0 || targetIdx >= curatedHeroEvents.length) return;
+
+    const otherEvent = curatedHeroEvents[targetIdx];
+    const orderA = targetIdx + 1;
+    const orderB = currentIdx + 1;
+
+    // Optimistic UI update
+    setEvents(prev => prev.map(e => {
+      if (e.id === event.id) return { ...e, heroOrder: orderA, hero_order: orderA };
+      if (e.id === otherEvent.id) return { ...e, heroOrder: orderB, hero_order: orderB };
+      return e;
+    }));
+
+    await Promise.all([
+      updateEventHeroFeatured(event.id, { isHeroFeatured: true, heroOrder: orderA }),
+      updateEventHeroFeatured(otherEvent.id, { isHeroFeatured: true, heroOrder: orderB })
+    ]);
+
+    showToast(`Moved "${event.title}" to position #${orderA}`);
   };
 
   const handleUpdateHeroOrder = async (event, newOrder) => {
@@ -284,8 +338,25 @@ export default function PlatformAdminView({
   const curatedHeroEvents = useMemo(() => {
     return events
       .filter(e => e.status === "published" && (e.isHeroFeatured || e.is_hero_featured))
-      .sort((a, b) => (a.heroOrder || 99) - (b.heroOrder || 99));
+      .sort((a, b) => (a.heroOrder || a.hero_order || 99) - (b.heroOrder || b.hero_order || 99));
   }, [events]);
+
+  // Available Published Events for Hero Curator (with search & filters)
+  const heroAvailableEvents = useMemo(() => {
+    return events
+      .filter(ev => ev.status === "published")
+      .filter(ev => {
+        const matchesSearch = !heroSearch.trim() ||
+          ev.title.toLowerCase().includes(heroSearch.toLowerCase()) ||
+          (ev.organizerFullName && ev.organizerFullName.toLowerCase().includes(heroSearch.toLowerCase())) ||
+          (ev.category && ev.category.toLowerCase().includes(heroSearch.toLowerCase()));
+
+        const matchesWilaya = heroWilayaFilter === "All" || ev.city === heroWilayaFilter || ev.location?.includes(heroWilayaFilter);
+        const matchesCategory = heroCategoryFilter === "All" || ev.category === heroCategoryFilter;
+
+        return matchesSearch && matchesWilaya && matchesCategory;
+      });
+  }, [events, heroSearch, heroWilayaFilter, heroCategoryFilter]);
 
   // Filtered Organizers
   const filteredOrganizers = useMemo(() => {
@@ -815,148 +886,261 @@ export default function PlatformAdminView({
             ═══════════════════════════════════════════ */}
             {activeTab === "hero" && (
               <div className="space-y-6 animate-in fade-in duration-300">
-
-                {/* Hero Carousel Live Simulation */}
-                {curatedHeroEvents.length > 0 && (
-                  <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs">
-                    <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                        <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">Live Homepage Hero Simulation</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-xs">
-                        <button
-                          onClick={() => setHeroPreviewIndex(prev => (prev - 1 + curatedHeroEvents.length) % curatedHeroEvents.length)}
-                          className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
-                        >
-                          <ChevronLeft className="w-4 h-4" />
-                        </button>
-                        <span className="font-mono font-semibold text-slate-600 px-2">
-                          Slide {heroPreviewIndex + 1} of {curatedHeroEvents.length}
+                {/* 1. CURRENTLY ACTIVE HERO EVENTS */}
+                <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
+                  <div className="p-5 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-slate-50/50">
+                    <div>
+                      <div className="flex items-center gap-2.5">
+                        <h3 className="text-sm font-bold text-slate-900 tracking-tight">Active Homepage Hero Carousel</h3>
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 font-mono">
+                          {curatedHeroEvents.length} Active {curatedHeroEvents.length === 1 ? "Slide" : "Slides"}
                         </span>
-                        <button
-                          onClick={() => setHeroPreviewIndex(prev => (prev + 1) % curatedHeroEvents.length)}
-                          className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
-                        >
-                          <ChevronRight className="w-4 h-4" />
-                        </button>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-1">
+                        These events are actively rotating in the homepage hero in this exact slide order.
+                      </p>
+                    </div>
+                  </div>
+
+                  {curatedHeroEvents.length === 0 ? (
+                    <div className="p-12 text-center flex flex-col items-center justify-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center">
+                        <Star className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-800">No Events Pinned to Hero</h4>
+                        <p className="text-xs text-slate-500 max-w-md mt-1">
+                          The homepage is currently displaying the latest published events by default. Pick events from the directory below and click <strong className="text-blue-600">+ Add to Hero</strong> to customize your carousel.
+                        </p>
                       </div>
                     </div>
-
-                    {/* Simulation Card */}
-                    {(() => {
-                      const curEv = curatedHeroEvents[heroPreviewIndex] || curatedHeroEvents[0];
-                      if (!curEv) return null;
-                      return (
-                        <div className="relative rounded-2xl overflow-hidden aspect-[21/9] max-h-[360px] border border-slate-200 shadow-sm group">
-                          <img
-                            src={curEv.banner || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1600&auto=format&fit=crop&q=80"}
-                            alt={curEv.title}
-                            className="w-full h-full object-cover"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent p-6 flex flex-col justify-end text-white">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-slate-950 flex items-center gap-1 shadow-xs">
-                                <Star className="w-3 h-3 fill-slate-950" />
-                                HERO POSITION #{curEv.heroOrder || (heroPreviewIndex + 1)}
-                              </span>
-                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/20 backdrop-blur-md text-white border border-white/20">
-                                {curEv.category}
-                              </span>
-                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/10 backdrop-blur-md text-slate-200 border border-white/10">
-                                {curEv.city || curEv.location || "Algeria"}
-                              </span>
+                  ) : (
+                    <div className="divide-y divide-slate-100">
+                      {curatedHeroEvents.map((ev, index) => (
+                        <div key={ev.id} className="p-4 flex flex-wrap items-center justify-between gap-4 hover:bg-slate-50/80 transition-colors">
+                          <div className="flex items-center gap-4 min-w-[280px]">
+                            {/* Slide position badge */}
+                            <div className="flex flex-col items-center justify-center w-12 h-12 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 shrink-0 font-mono">
+                              <span className="text-xs font-black">#{index + 1}</span>
+                              <span className="text-[9px] uppercase font-bold text-blue-500">Slide</span>
                             </div>
-                            <h2 className="text-xl md:text-2xl font-black text-white drop-shadow-sm">{curEv.title}</h2>
-                            <p className="text-xs text-slate-200 line-clamp-2 mt-1 max-w-2xl">{curEv.tagline || curEv.description}</p>
+
+                            {/* Banner Thumbnail */}
+                            <img
+                              src={ev.banner || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=300&auto=format&fit=crop&q=80"}
+                              alt={ev.title}
+                              className="w-20 h-13 rounded-xl object-cover border border-slate-200 shadow-2xs shrink-0"
+                            />
+
+                            {/* Details */}
+                            <div>
+                              <div className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                                <span>{ev.title}</span>
+                                {index === 0 && (
+                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-200">
+                                    Primary Slide
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-xs text-slate-500 mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                                <span>By <strong className="text-slate-700">{ev.organizerFullName || "Organizer"}</strong></span>
+                                <span>•</span>
+                                <span>{ev.city || ev.location || "Algeria"}</span>
+                                <span>•</span>
+                                <span className="text-blue-700 font-medium">{ev.category}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Reorder & Actions */}
+                          <div className="flex items-center gap-2">
+                            {/* Up / Down Buttons */}
+                            <div className="flex items-center bg-slate-100 rounded-xl p-0.5 border border-slate-200">
+                              <button
+                                onClick={() => handleMoveHeroEvent(ev, "up")}
+                                disabled={index === 0}
+                                title="Move up in slide order"
+                                className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-white disabled:opacity-30 disabled:hover:bg-transparent transition-all cursor-pointer"
+                              >
+                                <ArrowUp className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleMoveHeroEvent(ev, "down")}
+                                disabled={index === curatedHeroEvents.length - 1}
+                                title="Move down in slide order"
+                                className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-white disabled:opacity-30 disabled:hover:bg-transparent transition-all cursor-pointer"
+                              >
+                                <ArrowDown className="w-4 h-4" />
+                              </button>
+                            </div>
+
+                            {/* Direct Position Selector */}
+                            <div className="w-36">
+                              <SearchableSelect
+                                value={String(index + 1)}
+                                onChange={(val) => handleUpdateHeroOrder(ev, val)}
+                                options={HERO_POSITION_OPTIONS}
+                                isClearable={false}
+                                buttonClassName="bg-white! border-slate-200! text-slate-700! font-mono! font-bold! py-1.5! px-2.5! text-xs! rounded-xl!"
+                              />
+                            </div>
+
+                            {/* View Public Page */}
+                            {onViewPublicLandingPage && (
+                              <button
+                                onClick={() => onViewPublicLandingPage(ev.id)}
+                                title="View public event page"
+                                className="p-2 rounded-xl bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 text-xs transition-colors cursor-pointer"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+
+                            {/* Remove from Hero Button */}
+                            <button
+                              onClick={() => handleRemoveFromHero(ev)}
+                              title="Remove from hero carousel"
+                              className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Remove</span>
+                            </button>
                           </div>
                         </div>
-                      );
-                    })()}
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  )}
+                </div>
 
-                {/* Published Events Selection Table */}
+                {/* 2. CHOOSE EVENTS TO ADD TO HERO */}
                 <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
-                  <div className="p-4 border-b border-slate-100 flex items-center justify-between gap-4 bg-slate-50/50">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">Available Published Events for Hero</h4>
-                    <span className="text-xs text-slate-500 font-medium">Toggle PIN and assign slide priority</span>
+                  <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900 tracking-tight">Choose Events to Show on Hero</h4>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Select any published event to feature it in the hero carousel.
+                      </p>
+                    </div>
+
+                    {/* Filter controls */}
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <div className="relative min-w-[220px]">
+                        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input
+                          type="text"
+                          value={heroSearch}
+                          onChange={(e) => setHeroSearch(e.target.value)}
+                          placeholder="Filter events or organizers..."
+                          className="w-full bg-white border border-slate-200 focus:bg-white rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium shadow-2xs"
+                        />
+                      </div>
+
+                      <div className="w-40">
+                        <SearchableSelect
+                          value={heroWilayaFilter}
+                          onChange={(val) => setHeroWilayaFilter(val || "All")}
+                          options={[{ value: "All", label: "All Wilayas" }, ...ALGERIA_WILAYAS.map(w => ({ value: w, label: w }))]}
+                          placeholder="Wilaya..."
+                          isClearable={false}
+                          buttonClassName="bg-white! border-slate-200! text-slate-800! text-xs! rounded-xl! py-1.5!"
+                        />
+                      </div>
+
+                      <div className="w-44">
+                        <SearchableSelect
+                          value={heroCategoryFilter}
+                          onChange={(val) => setHeroCategoryFilter(val || "All")}
+                          options={[{ value: "All", label: "All Categories" }, ...INDUSTRIES.map(c => ({ value: c, label: c }))]}
+                          placeholder="Category..."
+                          isClearable={false}
+                          buttonClassName="bg-white! border-slate-200! text-slate-800! text-xs! rounded-xl! py-1.5!"
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs">
                       <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold text-[11px] border-b border-slate-200">
                         <tr>
-                          <th className="py-3.5 px-4">Event Title</th>
-                          <th className="py-3.5 px-4">Organizer</th>
-                          <th className="py-3.5 px-4">Wilaya</th>
-                          <th className="py-3.5 px-4">Category</th>
-                          <th className="py-3.5 px-4 text-center">Hero Priority</th>
-                          <th className="py-3.5 px-4 text-right">Hero Pin Status</th>
+                          <th className="py-3 px-4">Event</th>
+                          <th className="py-3 px-4">Organizer</th>
+                          <th className="py-3 px-4">Wilaya</th>
+                          <th className="py-3 px-4">Category</th>
+                          <th className="py-3 px-4">Date</th>
+                          <th className="py-3 px-4 text-right">Hero Action</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
-                        {events.filter(e => e.status === "published").map(ev => (
-                          <tr key={ev.id} className={`hover:bg-slate-50/80 transition-colors ${ev.isHeroFeatured ? "bg-emerald-50/40" : ""}`}>
-                            <td className="py-3.5 px-4">
-                              <div className="flex items-center gap-3">
-                                <img
-                                  src={ev.banner || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=300&auto=format&fit=crop&q=80"}
-                                  alt={ev.title}
-                                  className="w-12 h-8 rounded-lg object-cover border border-slate-200 shrink-0"
-                                />
-                                <div>
-                                  <div className="font-bold text-slate-900 flex items-center gap-1.5">
-                                    {ev.title}
-                                    {ev.isHeroFeatured && (
-                                      <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
-                                    )}
-                                  </div>
-                                  <div className="text-[10px] text-slate-500">{ev.startDate || "Date TBA"}</div>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="py-3.5 px-4 text-slate-700 font-medium">
-                              {ev.organizerFullName || "Organizer"}
-                            </td>
-                            <td className="py-3.5 px-4 text-slate-600">
-                              {ev.city || ev.location || "Algeria"}
-                            </td>
-                            <td className="py-3.5 px-4 text-slate-600">
-                              <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-medium text-[11px]">
-                                {ev.category}
-                              </span>
-                            </td>
-                            <td className="py-3.5 px-4 text-center">
-                              {ev.isHeroFeatured ? (
-                                <div className="w-36 mx-auto">
-                                  <SearchableSelect
-                                    value={String(ev.heroOrder || 1)}
-                                    onChange={(val) => handleUpdateHeroOrder(ev, val)}
-                                    options={HERO_POSITION_OPTIONS}
-                                    isClearable={false}
-                                    buttonClassName="bg-white! border-emerald-300! text-emerald-700! font-mono! font-bold! py-1! px-2! text-xs! rounded-xl!"
-                                  />
-                                </div>
-                              ) : (
-                                <span className="text-slate-300 font-mono">—</span>
-                              )}
-                            </td>
-                            <td className="py-3.5 px-4 text-right">
-                              <button
-                                onClick={() => handleToggleHeroFeatured(ev)}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ml-auto cursor-pointer shadow-2xs ${
-                                  ev.isHeroFeatured
-                                    ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-600/25"
-                                    : "bg-white hover:bg-slate-100 text-slate-700 border border-slate-200"
-                                }`}
-                              >
-                                <Pin className={`w-3.5 h-3.5 ${ev.isHeroFeatured ? "fill-white" : "text-slate-400"}`} />
-                                <span>{ev.isHeroFeatured ? "Pinned to Hero" : "Pin Event"}</span>
-                              </button>
+                        {heroAvailableEvents.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="py-12 text-center text-slate-400">
+                              No published events match the current filter.
                             </td>
                           </tr>
-                        ))}
+                        ) : (
+                          heroAvailableEvents.map(ev => {
+                            const isCurated = ev.isHeroFeatured || ev.is_hero_featured;
+                            const heroPos = ev.heroOrder || ev.hero_order || 1;
+
+                            return (
+                              <tr key={ev.id} className={`hover:bg-slate-50/80 transition-colors ${isCurated ? "bg-blue-50/30" : ""}`}>
+                                <td className="py-3 px-4">
+                                  <div className="flex items-center gap-3">
+                                    <img
+                                      src={ev.banner || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=300&auto=format&fit=crop&q=80"}
+                                      alt={ev.title}
+                                      className="w-12 h-8 rounded-lg object-cover border border-slate-200 shrink-0"
+                                    />
+                                    <div>
+                                      <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                                        <span>{ev.title}</span>
+                                        {isCurated && (
+                                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 font-mono">
+                                            Position #{heroPos}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="py-3 px-4 text-slate-700 font-medium">
+                                  {ev.organizerFullName || "Organizer"}
+                                </td>
+                                <td className="py-3 px-4 text-slate-600">
+                                  {ev.city || ev.location || "Algeria"}
+                                </td>
+                                <td className="py-3 px-4 text-slate-600">
+                                  <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-medium text-[11px]">
+                                    {ev.category}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4 text-slate-500 font-mono text-[11px]">
+                                  {ev.startDate || "Date TBA"}
+                                </td>
+                                <td className="py-3 px-4 text-right">
+                                  {isCurated ? (
+                                    <button
+                                      onClick={() => handleRemoveFromHero(ev)}
+                                      className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition-all flex items-center gap-1.5 ml-auto cursor-pointer shadow-2xs"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                      <span>Remove</span>
+                                    </button>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleAddToHero(ev)}
+                                      className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 ml-auto cursor-pointer shadow-xs"
+                                    >
+                                      <Plus className="w-3.5 h-3.5" />
+                                      <span>Add to Hero</span>
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
                       </tbody>
                     </table>
                   </div>

@@ -73,9 +73,7 @@ export default function MainHomePage({
       });
 
     if (pinned.length >= 1) {
-      const pinnedIds = new Set(pinned.map(p => p.id));
-      const remaining = published.filter(e => !pinnedIds.has(e.id));
-      return [...pinned, ...remaining].slice(0, 4);
+      return pinned;
     }
     return published.slice(0, 4);
   }, [events]);
