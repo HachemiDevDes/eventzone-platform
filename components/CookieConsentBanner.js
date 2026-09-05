@@ -10,54 +10,73 @@ export default function CookieConsentBanner() {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    try {
-      const consent = localStorage.getItem("eventzone_cookie_consent");
-      if (!consent) {
-        const timer = setTimeout(() => {
-          setIsVisible(true);
-        }, 500);
-        return () => clearTimeout(timer);
+    let isMounted = true;
+
+    async function checkConsent() {
+      try {
+        // Fast local check: if user has already made a selection in this browser, don't show
+        const localConsent = localStorage.getItem("eventzone_cookie_consent");
+        if (localConsent) {
+          return;
+        }
+
+        // Check backend to verify if this machine IP has already been shown the banner
+        const res = await fetch("/api/cookies/consent", {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+          cache: "no-store",
+        });
+
+        if (!res.ok) return;
+
+        const data = await res.json();
+        if (data.showBanner && isMounted) {
+          setTimeout(() => {
+            if (isMounted) setIsVisible(true);
+          }, 500);
+        } else if (!data.showBanner && data.status) {
+          // Sync local storage so subsequent renders in this browser don't query the API again
+          localStorage.setItem("eventzone_cookie_consent", data.status);
+        }
+      } catch (err) {
+        console.warn("Cookie consent check failed:", err);
       }
-    } catch {
-      // Fallback
     }
+
+    checkConsent();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  const handleAcceptAll = () => {
+  const saveConsent = async (status) => {
+    setIsVisible(false);
     try {
-      localStorage.setItem("eventzone_cookie_consent", "accepted");
+      localStorage.setItem("eventzone_cookie_consent", status);
       localStorage.setItem(
         "eventzone_cookie_preferences",
         JSON.stringify({
           essential: true,
           functional: true,
-          analytics: true,
+          analytics: status === "accepted",
           updatedAt: new Date().toISOString(),
         })
       );
-    } catch {
-      // Fallback
+
+      // Report updated consent status to server for this machine IP
+      await fetch("/api/cookies/consent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+    } catch (err) {
+      console.warn("Error saving cookie consent:", err);
     }
-    setIsVisible(false);
   };
 
-  const handleEssentialOnly = () => {
-    try {
-      localStorage.setItem("eventzone_cookie_consent", "essential");
-      localStorage.setItem(
-        "eventzone_cookie_preferences",
-        JSON.stringify({
-          essential: true,
-          functional: true,
-          analytics: false,
-          updatedAt: new Date().toISOString(),
-        })
-      );
-    } catch {
-      // Fallback
-    }
-    setIsVisible(false);
-  };
+  const handleAcceptAll = () => saveConsent("accepted");
+  const handleEssentialOnly = () => saveConsent("essential");
 
   if (!isVisible) return null;
 
