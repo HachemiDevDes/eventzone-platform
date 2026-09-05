@@ -164,7 +164,7 @@ export default function MainHomePage({
     return fmt;
   };
 
-  const formatEventDateRange = (startStr, endStr) => {
+  const formatEventDateRange = (startStr, endStr, monthStyle = "short") => {
     if (!startStr) return "";
     try {
       const parseDateParts = (str) => {
@@ -181,16 +181,15 @@ export default function MainHomePage({
       if (!start) return `${startStr}${endStr ? ` — ${endStr}` : ""}`;
 
       const locale = lang === "ar" ? "ar-DZ" : lang === "fr" ? "fr-FR" : "en-US";
-      const monthFormatter = new Intl.DateTimeFormat(locale, { month: "short" });
+      const monthFormatter = new Intl.DateTimeFormat(locale, { month: monthStyle });
       const dayFormatter = new Intl.DateTimeFormat(locale, { day: "numeric" });
       const yearFormatter = new Intl.DateTimeFormat(locale, { year: "numeric" });
 
-      if (!endStr || startStr === endStr) {
-        return `${dayFormatter.format(start)} ${monthFormatter.format(start)} ${yearFormatter.format(start)}`;
-      }
-
       const end = parseDateParts(endStr);
-      if (!end) {
+      if (!end || startStr === endStr) {
+        if (lang === "en") {
+          return `${monthFormatter.format(start)} ${dayFormatter.format(start)}, ${yearFormatter.format(start)}`;
+        }
         return `${dayFormatter.format(start)} ${monthFormatter.format(start)} ${yearFormatter.format(start)}`;
       }
 
@@ -198,6 +197,9 @@ export default function MainHomePage({
       if (start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth()) {
         if (lang === "ar") {
           return `${dayFormatter.format(start)} - ${dayFormatter.format(end)} ${monthFormatter.format(start)} ${yearFormatter.format(start)}`;
+        }
+        if (lang === "fr") {
+          return `${dayFormatter.format(start)} – ${dayFormatter.format(end)} ${monthFormatter.format(start)} ${yearFormatter.format(start)}`;
         }
         return `${monthFormatter.format(start)} ${dayFormatter.format(start)} – ${dayFormatter.format(end)}, ${yearFormatter.format(start)}`;
       }
@@ -207,11 +209,17 @@ export default function MainHomePage({
         if (lang === "ar") {
           return `${dayFormatter.format(start)} ${monthFormatter.format(start)} - ${dayFormatter.format(end)} ${monthFormatter.format(end)} ${yearFormatter.format(start)}`;
         }
+        if (lang === "fr") {
+          return `${dayFormatter.format(start)} ${monthFormatter.format(start)} – ${dayFormatter.format(end)} ${monthFormatter.format(end)} ${yearFormatter.format(start)}`;
+        }
         return `${monthFormatter.format(start)} ${dayFormatter.format(start)} – ${monthFormatter.format(end)} ${dayFormatter.format(end)}, ${yearFormatter.format(start)}`;
       }
 
       // Different years
-      return `${monthFormatter.format(start)} ${dayFormatter.format(start)} ${yearFormatter.format(start)} – ${monthFormatter.format(end)} ${dayFormatter.format(end)} ${yearFormatter.format(end)}`;
+      if (lang === "ar" || lang === "fr") {
+        return `${dayFormatter.format(start)} ${monthFormatter.format(start)} ${yearFormatter.format(start)} – ${dayFormatter.format(end)} ${monthFormatter.format(end)} ${yearFormatter.format(end)}`;
+      }
+      return `${monthFormatter.format(start)} ${dayFormatter.format(start)}, ${yearFormatter.format(start)} – ${monthFormatter.format(end)} ${dayFormatter.format(end)}, ${yearFormatter.format(end)}`;
     } catch (e) {
       return `${startStr}${endStr ? ` — ${endStr}` : ""}`;
     }
@@ -396,19 +404,27 @@ export default function MainHomePage({
                   {activeSlide.tagline || activeSlide.description}
                 </p>
 
-                {/* Meta: Dates & Location */}
-                <div className="flex flex-wrap items-center gap-4 text-xs sm:text-sm text-slate-200 font-medium pt-1">
+                {/* Meta: Dates & Location Chips */}
+                <div className="flex flex-wrap items-center gap-3 sm:gap-3.5 pt-1">
                   {activeSlide.startDate && (
-                    <div className="flex items-center gap-2 bg-slate-900/80 backdrop-blur-md px-4 py-2.5 rounded-xl border border-slate-800 shadow-sm">
-                      <Calendar size={16} className="text-blue-400 shrink-0" />
-                      <span>{activeSlide.startDate} {activeSlide.endDate ? `— ${activeSlide.endDate}` : ""}</span>
+                    <div className="inline-flex items-center gap-2.5 px-4 py-2 sm:py-2.5 rounded-full bg-slate-900/70 hover:bg-slate-900/90 backdrop-blur-xl border border-white/15 hover:border-blue-400/40 shadow-lg shadow-black/30 transition-all duration-300 group">
+                      <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-400 shrink-0 group-hover:scale-105 group-hover:bg-blue-500/30 transition-all">
+                        <Calendar size={13} className="stroke-[2.5]" />
+                      </div>
+                      <span className="text-xs sm:text-sm font-semibold tracking-tight text-white">
+                        {formatEventDateRange(activeSlide.startDate, activeSlide.endDate)}
+                      </span>
                     </div>
                   )}
 
                   {activeSlide.location && (
-                    <div className="flex items-center gap-2 bg-slate-900/80 backdrop-blur-md px-4 py-2.5 rounded-xl border border-slate-800 shadow-sm">
-                      <MapPin size={16} className="text-blue-400 shrink-0" />
-                      <span>{activeSlide.location}</span>
+                    <div className="inline-flex items-center gap-2.5 px-4 py-2 sm:py-2.5 rounded-full bg-slate-900/70 hover:bg-slate-900/90 backdrop-blur-xl border border-white/15 hover:border-blue-400/40 shadow-lg shadow-black/30 transition-all duration-300 group">
+                      <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-400 shrink-0 group-hover:scale-105 group-hover:bg-blue-500/30 transition-all">
+                        <MapPin size={13} className="stroke-[2.5]" />
+                      </div>
+                      <span className="text-xs sm:text-sm font-semibold tracking-tight text-white">
+                        {activeSlide.location}
+                      </span>
                     </div>
                   )}
                 </div>
