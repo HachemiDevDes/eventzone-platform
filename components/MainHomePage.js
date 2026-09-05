@@ -46,6 +46,14 @@ export default function MainHomePage({
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedFormat, setSelectedFormat] = useState("All");
 
+  // Pagination: Show 9 events at a time with "Show More"
+  const [visibleCount, setVisibleCount] = useState(9);
+
+  // Reset visible events count to 9 when filters change
+  useEffect(() => {
+    setVisibleCount(9);
+  }, [searchQuery, selectedCategory, selectedFormat]);
+
   // Profile Dropdown State
   const [profileOpen, setProfileOpen] = useState(false);
 
@@ -273,6 +281,8 @@ export default function MainHomePage({
     const matchesFormat = selectedFormat === "All" || (ev.type || "Hybrid") === selectedFormat;
     return matchesSearch && matchesCategory && matchesFormat;
   });
+
+  const visibleEvents = filteredEvents.slice(0, visibleCount);
 
   const handleRsvpSubmit = async (e) => {
     e.preventDefault();
@@ -597,86 +607,105 @@ export default function MainHomePage({
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredEvents.map(ev => {
-              const isRegistered = registrations.some(r => r.eventId === ev.id);
+          <div className="space-y-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {visibleEvents.map(ev => {
+                const isRegistered = registrations.some(r => r.eventId === ev.id);
 
-              return (
-                <div
-                  key={ev.id}
-                  className="event-card-rounded bg-white border border-slate-200 hover:border-blue-300 overflow-hidden shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between group"
-                >
-                  <div>
-                    {/* Cover Banner */}
-                    <div className="event-card-banner-rounded h-44 w-full relative overflow-hidden bg-slate-100">
-                      <img 
-                        src={ev.banner || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80"} 
-                        alt={ev.title} 
-                        className="event-card-banner-rounded w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent" />
-                      
-                      <div className="absolute top-3 left-3 rtl:left-auto rtl:right-3">
-                        <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-white/90 backdrop-blur-md text-blue-700 border border-white/40 uppercase tracking-wider shadow-xs">
-                          {getFormatLabel(ev.type || "Hybrid")}
-                        </span>
-                      </div>
-
-                      {isRegistered && (
-                        <div className="absolute top-3 right-3 rtl:right-auto rtl:left-3">
-                          <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-500 text-white shadow-xs flex items-center gap-1">
-                            <CheckCircle2 size={11} />
-                            <span>{t("home.registeredBadge", "Registered")}</span>
+                return (
+                  <div
+                    key={ev.id}
+                    className="event-card-rounded bg-white border border-slate-200 hover:border-blue-300 overflow-hidden shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between group"
+                  >
+                    <div>
+                      {/* Cover Banner */}
+                      <div className="event-card-banner-rounded h-44 w-full relative overflow-hidden bg-slate-100">
+                        <img 
+                          src={ev.banner || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80"} 
+                          alt={ev.title} 
+                          className="event-card-banner-rounded w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent" />
+                        
+                        <div className="absolute top-3 left-3 rtl:left-auto rtl:right-3">
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-white/90 backdrop-blur-md text-blue-700 border border-white/40 uppercase tracking-wider shadow-xs">
+                            {getFormatLabel(ev.type || "Hybrid")}
                           </span>
                         </div>
-                      )}
 
-                      <div className="absolute bottom-3 left-3 right-3">
-                        <span className="text-[10px] font-bold text-blue-200 uppercase tracking-wider block drop-shadow-sm">
-                          {getCategoryLabel(ev.category || "Technology & Software")}
-                        </span>
+                        {isRegistered && (
+                          <div className="absolute top-3 right-3 rtl:right-auto rtl:left-3">
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-500 text-white shadow-xs flex items-center gap-1">
+                              <CheckCircle2 size={11} />
+                              <span>{t("home.registeredBadge", "Registered")}</span>
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="absolute bottom-3 left-3 right-3">
+                          <span className="text-[10px] font-bold text-blue-200 uppercase tracking-wider block drop-shadow-sm">
+                            {getCategoryLabel(ev.category || "Technology & Software")}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Card Content */}
+                      <div className="p-6 space-y-3 text-start rtl:text-right text-left rtl:text-right">
+                        <h3 
+                          onClick={() => onViewLivePage(ev.id)}
+                          className="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1 leading-snug cursor-pointer"
+                        >
+                          {ev.title}
+                        </h3>
+                        <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed font-normal">
+                          {truncateDescription(ev.tagline || ev.description || t("home.cardDefaultDesc", "Join leading delegates for keynotes, workshops, and exhibitions."), 40)}
+                        </p>
+
+                        {/* Clean, Enhanced Date & Location */}
+                        <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-100 text-xs">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-blue-50 text-blue-700 font-bold border border-blue-100/70 shadow-2xs shrink-0">
+                            <Calendar size={13} className="stroke-[2.5]" />
+                            <span>{formatEventDateRange(ev.startDate, ev.endDate)}</span>
+                          </span>
+
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100/90 text-slate-700 font-semibold border border-slate-200/80 max-w-full shadow-2xs">
+                            <MapPin size={13} className="text-slate-500 shrink-0 stroke-[2.2]" />
+                            <span className="truncate">{ev.location || t("home.locationTba", "Location to be announced")}</span>
+                          </span>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Card Content */}
-                    <div className="p-6 space-y-3 text-start rtl:text-right text-left rtl:text-right">
-                      <h3 
+                    {/* Card Footer Action: Single View Event Button */}
+                    <div className="p-6 pt-0">
+                      <button
                         onClick={() => onViewLivePage(ev.id)}
-                        className="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1 leading-snug cursor-pointer"
+                        className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full text-xs font-bold flex items-center justify-center shadow-md shadow-blue-600/20 hover:shadow-lg hover:shadow-blue-600/30 transition-all cursor-pointer"
                       >
-                        {ev.title}
-                      </h3>
-                      <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed font-normal">
-                        {truncateDescription(ev.tagline || ev.description || t("home.cardDefaultDesc", "Join leading delegates for keynotes, workshops, and exhibitions."), 40)}
-                      </p>
-
-                      {/* Clean, Enhanced Date & Location */}
-                      <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-100 text-xs">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-blue-50 text-blue-700 font-bold border border-blue-100/70 shadow-2xs shrink-0">
-                          <Calendar size={13} className="stroke-[2.5]" />
-                          <span>{formatEventDateRange(ev.startDate, ev.endDate)}</span>
-                        </span>
-
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100/90 text-slate-700 font-semibold border border-slate-200/80 max-w-full shadow-2xs">
-                          <MapPin size={13} className="text-slate-500 shrink-0 stroke-[2.2]" />
-                          <span className="truncate">{ev.location || t("home.locationTba", "Location to be announced")}</span>
-                        </span>
-                      </div>
+                        {t("home.viewEventBtn", "View Event")}
+                      </button>
                     </div>
                   </div>
+                );
+              })}
+            </div>
 
-                  {/* Card Footer Action: Single View Event Button */}
-                  <div className="p-6 pt-0">
-                    <button
-                      onClick={() => onViewLivePage(ev.id)}
-                      className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full text-xs font-bold flex items-center justify-center shadow-md shadow-blue-600/20 hover:shadow-lg hover:shadow-blue-600/30 transition-all cursor-pointer"
-                    >
-                      {t("home.viewEventBtn", "View Event")}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+            {/* Show More Button (loads 9 more events) */}
+            {filteredEvents.length > visibleCount && (
+              <div className="flex flex-col items-center justify-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => setVisibleCount(prev => prev + 9)}
+                  className="px-8 py-3.5 bg-white hover:bg-slate-50 text-slate-800 hover:text-blue-600 border border-slate-200 hover:border-blue-300 rounded-2xl text-xs font-bold shadow-xs hover:shadow-md transition-all cursor-pointer flex items-center gap-2 group"
+                >
+                  <span>{t("home.showMore", "Show More")}</span>
+                  <ChevronDown size={15} className="group-hover:translate-y-0.5 transition-transform text-slate-400 group-hover:text-blue-600" />
+                </button>
+                <span className="text-[11px] text-slate-400 mt-2 font-medium">
+                  {t("home.showingCount", `Showing ${visibleEvents.length} of ${filteredEvents.length} events`).replace("{count}", String(visibleEvents.length)).replace("{total}", String(filteredEvents.length))}
+                </span>
+              </div>
+            )}
           </div>
         )}
       </main>
