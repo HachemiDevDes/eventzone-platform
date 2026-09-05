@@ -359,7 +359,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
           {/* Contact Team Button (no icons) */}
           <div className="pt-2">
             <a
-              href={`mailto:contact@eventzone.pro?subject=${encodeURIComponent(`Event Quota Limit Increase Request - ${currentUser?.fullName || currentUser?.email}`)}&body=${encodeURIComponent(`Hello EventZone Team,\n\nI have reached my event hosting limit (${actualEventsCount} / ${quotaCap} events) and would like to request an upgrade to add more events to my organizer account.\n\nOrganizer: ${currentUser?.fullName || 'Organizer'}\nAccount Email: ${currentUser?.email}\nCompany: ${currentUser?.companyName || 'N/A'}\n\nThank you!`)}`}
+              href={`mailto:contact@eventzone.pro?subject=${encodeURIComponent(`Event Quota Limit Increase Request - ${currentUser?.fullName || currentUser?.email}`)}&body=${encodeURIComponent(`Hello Eventzone Team,\n\nI have reached my event hosting limit (${actualEventsCount} / ${quotaCap} events) and would like to request an upgrade to add more events to my organizer account.\n\nOrganizer: ${currentUser?.fullName || 'Organizer'}\nAccount Email: ${currentUser?.email}\nCompany: ${currentUser?.companyName || 'N/A'}\n\nThank you!`)}`}
               className="inline-flex items-center justify-center px-7 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white font-bold text-sm sm:text-base shadow-lg shadow-blue-600/25 hover:shadow-blue-600/35 transition-all cursor-pointer"
             >
               {t("wizard.contactTeam", "Contact Team")}
