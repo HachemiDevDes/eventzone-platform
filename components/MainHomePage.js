@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
+import Link from "next/link";
 import { 
   Compass, Ticket, Calendar, MapPin, 
   Sparkles, ArrowRight, ChevronLeft, ChevronRight, 
@@ -720,51 +721,15 @@ export default function MainHomePage({
       {/* ==================================================================== */}
       <footer className="bg-white border-t border-slate-200 pt-16 pb-12 mt-16 text-slate-600 text-xs font-sans">
         <div className="max-w-7xl mx-auto px-6 sm:px-8 space-y-12">
-          {/* Top Row: Brand & Value + Newsletter */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pb-12 border-b border-slate-100 items-start">
-            <div className="lg:col-span-6 space-y-4 text-start rtl:text-right text-left">
+          {/* Top Row: Brand & Tagline */}
+          <div className="pb-10 border-b border-slate-100">
+            <div className="space-y-3 text-start rtl:text-right text-left max-w-xl">
               <div className="flex items-center gap-3">
                 <img src="https://i.imgur.com/jFDrQbM.png" alt="eventzone" style={{ height: '28px', width: 'auto', maxWidth: '160px', objectFit: 'contain' }} className="h-7 w-auto object-contain" />
-                <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-extrabold uppercase tracking-wider">
-                  Event SaaS Platform
-                </span>
               </div>
-              <p className="text-xs sm:text-sm text-slate-500 max-w-md leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
                 {t("footer.brandTagline", "The modern event management operating system for international summits, conferences, and hybrid exhibitions with real-time 2D floor plans and attendee badge tracking.")}
               </p>
-              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 font-medium">
-                <div className="flex items-center gap-1.5 text-emerald-600">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="font-bold">{t("footer.allSystemsOperational", "Platform Status: All Systems Operational")}</span>
-                </div>
-                <span>•</span>
-                <span>{t("footer.compliance", "SOC2 & GDPR Compliant")}</span>
-              </div>
-            </div>
-
-            {/* Newsletter Box */}
-            <div className="lg:col-span-6 bg-slate-50 border border-slate-200/90 rounded-3xl p-6 text-start rtl:text-right text-left space-y-3 shadow-xs">
-              <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
-                <Sparkles size={16} className="text-blue-600" />
-                <span>{t("footer.bulletinsTitle", "Get Early Access & Summit Bulletins")}</span>
-              </div>
-              <p className="text-xs text-slate-500">
-                {t("footer.bulletinsDesc", "Subscribe to receive upcoming event schedules, keynote announcements, and VIP pass releases.")}
-              </p>
-              <form onSubmit={(e) => { e.preventDefault(); alert(t("footer.subscribedSuccess", "Subscribed to Eventzone bulletins!")); }} className="flex flex-col sm:flex-row gap-2 pt-1">
-                <input
-                  type="email"
-                  required
-                  placeholder={t("footer.emailPlaceholder", "Enter your business email")}
-                  className="flex-1 px-4 py-2.5 bg-white border border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 rounded-xl text-xs font-semibold text-slate-900 placeholder-slate-400 outline-none transition-all"
-                />
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-600/20 shrink-0 cursor-pointer"
-                >
-                  {t("footer.subscribeBtn", "Subscribe")}
-                </button>
-              </form>
             </div>
           </div>
 
@@ -806,18 +771,18 @@ export default function MainHomePage({
             <div className="space-y-3">
               <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">{t("footer.securityLegal", "Security & Legal")}</h4>
               <ul className="space-y-2 text-slate-500 font-medium">
-                <li><span className="hover:text-slate-900 cursor-pointer">{t("footer.privacyPolicy", "Privacy Policy")}</span></li>
-                <li><span className="hover:text-slate-900 cursor-pointer">{t("footer.termsOfService", "Terms of Service")}</span></li>
-                <li><span className="hover:text-slate-900 cursor-pointer">{t("footer.cookieSettings", "Cookie Settings")}</span></li>
-                <li><span className="hover:text-slate-900 cursor-pointer">Enterprise Security</span></li>
-                <li><span className="hover:text-slate-900 cursor-pointer">Compliance &amp; GDPR</span></li>
+                <li><Link href="/privacy" className="hover:text-blue-600 transition-colors">{t("footer.privacyPolicy", "Privacy Policy")}</Link></li>
+                <li><Link href="/terms" className="hover:text-blue-600 transition-colors">{t("footer.termsOfService", "Terms of Service")}</Link></li>
+                <li><Link href="/cookie-settings" className="hover:text-blue-600 transition-colors">{t("footer.cookieSettings", "Cookie Settings")}</Link></li>
+                <li><Link href="/enterprise-security" className="hover:text-blue-600 transition-colors">Enterprise Security</Link></li>
+                <li><Link href="/compliance-gdpr" className="hover:text-blue-600 transition-colors">Compliance &amp; GDPR</Link></li>
               </ul>
             </div>
           </div>
 
           {/* Bottom Row */}
           <div className="pt-8 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
-            <span className="text-slate-400">{t("footer.rightsReserved", "© 2026 Eventzone SaaS Platform. All rights reserved.")}</span>
+            <span className="text-slate-400">{t("footer.rightsReserved", "© 2026 Eventzone. All rights reserved.")}</span>
 
             <button
               onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
