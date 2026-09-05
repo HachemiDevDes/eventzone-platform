@@ -19,7 +19,6 @@ import {
   updateEventHeroFeatured,
   updateEventStatusAdmin,
   fetchAllPlatformPayments,
-  searchPlatformAttendees,
   fetchRecentPlatformCheckIns
 } from "../lib/db";
 import { supabase, safeLocalStorageSet, sanitizeUserForStorage } from "../lib/supabase";
@@ -52,7 +51,7 @@ export default function PlatformAdminView({
   onViewPublicLandingPage,
   onImpersonateOrganizer
 }) {
-  // Navigation tabs: 'overview', 'organizers', 'hero', 'events', 'financials', 'attendees'
+  // Navigation tabs: 'overview', 'organizers', 'hero', 'events', 'financials'
   const [activeTab, setActiveTab] = useState("overview");
 
   // Global loading and feedback states
@@ -82,10 +81,6 @@ export default function PlatformAdminView({
   const [paymentSearch, setPaymentSearch] = useState("");
   const [paymentStatusFilter, setPaymentStatusFilter] = useState("All");
   const [paymentMethodFilter, setPaymentMethodFilter] = useState("All");
-
-  const [attendeeSearchQuery, setAttendeeSearchQuery] = useState("");
-  const [searchedAttendees, setSearchedAttendees] = useState([]);
-  const [isSearchingAttendees, setIsSearchingAttendees] = useState(false);
 
   // Organizer Quota Edit Drawer state
   const [editingOrganizer, setEditingOrganizer] = useState(null);
@@ -257,17 +252,6 @@ export default function PlatformAdminView({
     }
   };
 
-  // ─────────────────────────────────────────────
-  //  ATTENDEE SEARCH HANDLER
-  // ─────────────────────────────────────────────
-  const handlePerformAttendeeSearch = async (e) => {
-    e?.preventDefault();
-    if (!attendeeSearchQuery.trim()) return;
-    setIsSearchingAttendees(true);
-    const results = await searchPlatformAttendees(attendeeSearchQuery);
-    setSearchedAttendees(results);
-    setIsSearchingAttendees(false);
-  };
 
   // ─────────────────────────────────────────────
   //  CSV EXPORT HANDLER (FINANCIALS)
@@ -484,8 +468,7 @@ export default function PlatformAdminView({
           { id: "organizers", label: "Organizers & Quotas", icon: Building2, count: organizers.length },
           { id: "hero", label: "Homepage Hero Curator", icon: Star, count: curatedHeroEvents.length },
           { id: "events", label: "Master Events Directory", icon: Calendar, count: events.length },
-          { id: "financials", label: "Chargily Financials", icon: CreditCard, count: payments.length },
-          { id: "attendees", label: "Attendees & Check-in Pulse", icon: Users }
+          { id: "financials", label: "Chargily Financials", icon: CreditCard, count: payments.length }
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -1389,149 +1372,6 @@ export default function PlatformAdminView({
                               </td>
                               <td className="py-3.5 px-4 text-slate-500 text-[11px]">
                                 {pay.paid_at ? new Date(pay.paid_at).toLocaleString() : (pay.created_at ? new Date(pay.created_at).toLocaleString() : "—")}
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* ═══════════════════════════════════════════
-                TAB 6: GLOBAL ATTENDEE LOOKUP & PULSE
-            ═══════════════════════════════════════════ */}
-            {activeTab === "attendees" && (
-              <div className="space-y-6 animate-in fade-in duration-300">
-                {/* Cross-Event Search Box */}
-                <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs">
-                  <h3 className="text-sm font-bold text-slate-900 mb-1.5 flex items-center gap-2">
-                    <Search className="w-4 h-4 text-emerald-600" />
-                    Cross-Platform Attendee Lookup
-                  </h3>
-                  <p className="text-xs text-slate-500 mb-4">
-                    Search registered attendees across all platform events by First Name, Last Name, Email, Phone, or Badge Code.
-                  </p>
-
-                  <form onSubmit={handlePerformAttendeeSearch} className="flex gap-2">
-                    <div className="relative flex-1">
-                      <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                      <input
-                        type="text"
-                        value={attendeeSearchQuery}
-                        onChange={(e) => setAttendeeSearchQuery(e.target.value)}
-                        placeholder="Search by name, attendee@example.com, +213..., EZ-XXXXXX"
-                        className="w-full bg-slate-50 border border-slate-200 focus:bg-white rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all font-medium"
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      disabled={isSearchingAttendees || !attendeeSearchQuery.trim()}
-                      className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all disabled:opacity-50 cursor-pointer shadow-xs"
-                    >
-                      {isSearchingAttendees ? "Searching..." : "Lookup Attendee"}
-                    </button>
-                  </form>
-                </div>
-
-                {/* Search Results */}
-                {searchedAttendees.length > 0 && (
-                  <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
-                    <div className="p-3.5 bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-700">
-                      Found {searchedAttendees.length} Matched Attendees
-                    </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left text-xs">
-                        <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold text-[11px] border-b border-slate-200">
-                          <tr>
-                            <th className="py-3.5 px-4">Attendee</th>
-                            <th className="py-3.5 px-4">Event</th>
-                            <th className="py-3.5 px-4">Ticket Tier</th>
-                            <th className="py-3.5 px-4">Badge Code</th>
-                            <th className="py-3.5 px-4">Gate Check-in</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {searchedAttendees.map(att => (
-                            <tr key={att.id} className="hover:bg-slate-50/80 transition-colors">
-                              <td className="py-3.5 px-4">
-                                <div className="font-bold text-slate-900">{att.first_name} {att.last_name}</div>
-                                <div className="text-[11px] text-slate-500">{att.email} {att.phone ? `• ${att.phone}` : ''}</div>
-                              </td>
-                              <td className="py-3.5 px-4 text-slate-700 font-medium">
-                                {att.events?.name || "Eventzone Event"}
-                              </td>
-                              <td className="py-3.5 px-4 text-slate-600">
-                                {att.ticket_type || "Standard"}
-                              </td>
-                              <td className="py-3.5 px-4 font-mono font-bold text-emerald-600">
-                                {att.badge_code || "—"}
-                              </td>
-                              <td className="py-3.5 px-4">
-                                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                                  att.checked_in
-                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                    : "bg-slate-100 text-slate-500 border-slate-200"
-                                }`}>
-                                  {att.checked_in ? "Checked In" : "Pending Arrival"}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
-                {/* Live Recent Check-Ins Log */}
-                <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
-                  <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
-                      <UserCheck className="w-4 h-4 text-teal-600" />
-                      Platform-Wide Live Gate Check-ins Stream
-                    </h4>
-                    <span className="text-[11px] text-slate-500 font-medium">Last 30 check-ins</span>
-                  </div>
-
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold text-[11px] border-b border-slate-200">
-                        <tr>
-                          <th className="py-3.5 px-4">Attendee</th>
-                          <th className="py-3.5 px-4">Event Name</th>
-                          <th className="py-3.5 px-4">Badge Code</th>
-                          <th className="py-3.5 px-4">Ticket Type</th>
-                          <th className="py-3.5 px-4 text-right">Checked In Timestamp</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {recentCheckIns.length === 0 ? (
-                          <tr>
-                            <td colSpan={5} className="py-12 text-center text-slate-400 text-xs">
-                              No gate check-in activity recorded yet.
-                            </td>
-                          </tr>
-                        ) : (
-                          recentCheckIns.map(ci => (
-                            <tr key={ci.id} className="hover:bg-slate-50/80 transition-colors">
-                              <td className="py-3.5 px-4">
-                                <div className="font-bold text-slate-900">{ci.first_name} {ci.last_name}</div>
-                                <div className="text-[10px] text-slate-400">{ci.email}</div>
-                              </td>
-                              <td className="py-3.5 px-4 text-slate-700 font-medium">
-                                {ci.events?.name || "Official Event"}
-                              </td>
-                              <td className="py-3.5 px-4 font-mono font-bold text-emerald-600">
-                                {ci.badge_code || "PASS"}
-                              </td>
-                              <td className="py-3.5 px-4 text-slate-600">
-                                {ci.ticket_type || "General"}
-                              </td>
-                              <td className="py-3.5 px-4 text-right text-slate-400 font-mono text-[11px]">
-                                {ci.checked_in_at ? new Date(ci.checked_in_at).toLocaleTimeString() : "Just now"}
                               </td>
                             </tr>
                           ))
