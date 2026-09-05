@@ -75,12 +75,12 @@ export default function SearchableSelect({
 
   // Current selected option object
   const selectedOption = useMemo(() => {
-    const stringVal = String(value || "");
+    const stringVal = String(value ?? "");
     if (!stringVal) return null;
-    const found = normalizedOptions.find((opt) => opt.value === stringVal);
+    const found = normalizedOptions.find((opt) => String(opt.value) === stringVal);
     if (found) return found;
-    return { value: stringVal, label: getAutoLabel(stringVal, stringVal) };
-  }, [normalizedOptions, value, t]);
+    return { value: stringVal, label: stringVal };
+  }, [normalizedOptions, value]);
 
   // Filtered options based on search query
   const filteredOptions = useMemo(() => {
