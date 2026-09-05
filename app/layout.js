@@ -19,6 +19,17 @@ const cairo = Cairo({
 export const metadata = {
   title: "Eventzone | Premium Event Platform",
   description: "A premium event organizer platform to design floor layouts and manage schedules.",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon.ico", sizes: "any" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: [
+      { url: "/apple-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
 };
 
 export default function RootLayout({ children }) {
