@@ -93,15 +93,22 @@ export default function OrganizerEventsHub({
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t("eventsHub.totalHosted", "Total Hosted Events")}</span>
                 <div className="flex items-center gap-2 mt-1">
-                  <h3 className="text-2xl font-black text-slate-900">{events.length}</h3>
-                  {user?.maxEvents !== null && user?.maxEvents !== undefined && (
-                    <span className="text-xs font-mono font-bold text-slate-400">/ {user.maxEvents}</span>
-                  )}
-                  {user?.maxEvents !== null && user?.maxEvents !== undefined && events.length >= user.maxEvents && (
-                    <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200">
-                      LIMIT REACHED
-                    </span>
-                  )}
+                  {(() => {
+                    const actualEventsCount = Math.max(events.length, user?.eventsCount || 0);
+                    return (
+                      <>
+                        <h3 className="text-2xl font-black text-slate-900">{actualEventsCount}</h3>
+                        {user?.maxEvents !== null && user?.maxEvents !== undefined && (
+                          <span className="text-xs font-mono font-bold text-slate-400">/ {user.maxEvents}</span>
+                        )}
+                        {user?.maxEvents !== null && user?.maxEvents !== undefined && actualEventsCount >= user.maxEvents && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200">
+                            LIMIT REACHED
+                          </span>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
                 <span className="text-[11px] font-semibold text-blue-600 mt-0.5 inline-block">{totalPublished} {t("eventsHub.published", "Published")}</span>
               </div>

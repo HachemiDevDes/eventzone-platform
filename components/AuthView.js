@@ -258,6 +258,7 @@ export default function AuthView({
 
         // Fetch User Profile from 'public.profiles'
         let userProfile = null;
+        let siblingProfiles = [];
         if (userId) {
           try {
             const { data: prof } = await supabase
@@ -271,18 +272,58 @@ export default function AuthView({
           }
         }
 
-        const retrievedName = userProfile?.full_name || authUser?.user_metadata?.full_name || authUser?.user_metadata?.name || email.split("@")[0] || "Eventzone User";
+        if (email) {
+          try {
+            const { data: sibs } = await supabase
+              .from("profiles")
+              .select("*")
+              .ilike("email", email.trim())
+              .order("created_at", { ascending: true });
+            if (Array.isArray(sibs) && sibs.length > 0) {
+              siblingProfiles = sibs;
+              if (!userProfile) {
+                userProfile = sibs.find(s => s.role === 'organizer') || sibs[0];
+              }
+            }
+          } catch (e) {}
+        }
+
+        const siblingWithQuota = siblingProfiles.find(s => {
+          const sm = s.metadata || {};
+          const ss = s.social_links || {};
+          return (s.max_events !== undefined && s.max_events !== null) ||
+                 (sm.max_events !== undefined && sm.max_events !== null) ||
+                 (ss.max_events !== undefined && ss.max_events !== null);
+        });
+
+        const siblingWithDetails = siblingProfiles.find(s => s.company_name || s.phone || s.job_title);
+        const retrievedName = userProfile?.full_name || siblingWithDetails?.full_name || authUser?.user_metadata?.full_name || authUser?.user_metadata?.name || email.split("@")[0] || "Eventzone User";
         const meta = userProfile?.metadata && typeof userProfile?.metadata === 'object' ? userProfile.metadata : {};
         const socials = typeof userProfile?.social_links === 'object' && userProfile?.social_links !== null && !Array.isArray(userProfile?.social_links) ? userProfile.social_links : {};
+        const sibMeta = siblingWithQuota?.metadata && typeof siblingWithQuota?.metadata === 'object' ? siblingWithQuota.metadata : {};
+        const sibSocials = typeof siblingWithQuota?.social_links === 'object' && siblingWithQuota?.social_links !== null ? siblingWithQuota.social_links : {};
+
         const isSuperAdmin = userProfile?.role === "super_admin" || userProfile?.is_admin === true || meta.role === "super_admin" || authUser?.user_metadata?.role === "super_admin";
 
-        const rawMaxEvents = userProfile?.max_events !== undefined && userProfile?.max_events !== null
+        let rawMaxEvents = userProfile?.max_events !== undefined && userProfile?.max_events !== null
           ? userProfile.max_events
           : (meta.max_events !== undefined && meta.max_events !== null ? meta.max_events : (socials.max_events !== undefined && socials.max_events !== null ? socials.max_events : null));
 
-        const rawMaxAttendees = userProfile?.max_attendees !== undefined && userProfile?.max_attendees !== null
+        if (rawMaxEvents === null && siblingWithQuota) {
+          rawMaxEvents = siblingWithQuota.max_events !== undefined && siblingWithQuota.max_events !== null
+            ? siblingWithQuota.max_events
+            : (sibMeta.max_events !== undefined && sibMeta.max_events !== null ? sibMeta.max_events : (sibSocials.max_events !== undefined && sibSocials.max_events !== null ? sibSocials.max_events : null));
+        }
+
+        let rawMaxAttendees = userProfile?.max_attendees !== undefined && userProfile?.max_attendees !== null
           ? userProfile.max_attendees
           : (meta.max_attendees !== undefined && meta.max_attendees !== null ? meta.max_attendees : (socials.max_attendees !== undefined && socials.max_attendees !== null ? socials.max_attendees : null));
+
+        if (rawMaxAttendees === null && siblingWithQuota) {
+          rawMaxAttendees = siblingWithQuota.max_attendees !== undefined && siblingWithQuota.max_attendees !== null
+            ? siblingWithQuota.max_attendees
+            : (sibMeta.max_attendees !== undefined && sibMeta.max_attendees !== null ? sibMeta.max_attendees : (sibSocials.max_attendees !== undefined && sibSocials.max_attendees !== null ? sibSocials.max_attendees : null));
+        }
 
         const signedInUser = {
           id: userId || `user-${Date.now()}`,

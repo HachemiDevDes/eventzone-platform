@@ -300,8 +300,8 @@ export function HomeContent() {
   const [simulatedMemberId, setSimulatedMemberId] = useState(null);
 
   const effectivePermissions = useMemo(() => {
-    return getEffectivePermissions(currentUser, eventDetails, team, simulatedMemberId);
-  }, [currentUser, eventDetails, team, simulatedMemberId]);
+    return getEffectivePermissions(currentUser, eventDetails, team, simulatedMemberId, userEvents, activeEventId);
+  }, [currentUser, eventDetails, team, simulatedMemberId, userEvents, activeEventId]);
 
   const [isLoading, setIsLoading] = useState(true);
   const isInitializedRef = useRef(false);
@@ -370,37 +370,63 @@ export function HomeContent() {
           .eq('id', userId)
           .maybeSingle();
 
-        // If no direct profile exists by UUID, check if an existing profile exists for this email
-        if (!profile && session.user.email) {
-          const { data: existingEmailProfile } = await supabase
-            .from('profiles')
-            .select('*')
-            .ilike('email', session.user.email.trim())
-            .order('created_at', { ascending: true })
-            .limit(1)
-            .maybeSingle();
-          if (existingEmailProfile) {
-            profile = existingEmailProfile;
-            // Also automatically re-link any events previously created under the old profile UUID to the active session UUID
-            try {
-              await supabase.from('events').update({ organizer_id: userId }).eq('organizer_id', existingEmailProfile.id);
-            } catch (linkErr) {
-              console.warn("Auto event re-link notice:", linkErr);
+        // Check for sibling profiles sharing the same email
+        let siblingProfiles = [];
+        if (session.user.email) {
+          try {
+            const { data: siblings } = await supabase
+              .from('profiles')
+              .select('*')
+              .ilike('email', session.user.email.trim())
+              .order('created_at', { ascending: true });
+            if (Array.isArray(siblings) && siblings.length > 0) {
+              siblingProfiles = siblings;
             }
+          } catch (sibErr) {
+            console.warn("Sibling profiles fetch warning:", sibErr);
           }
         }
+
+        // If no direct profile exists by UUID, pick from sibling profile
+        if (!profile && siblingProfiles.length > 0) {
+          profile = siblingProfiles.find(s => s.role === 'organizer' || s.role === 'super_admin') || siblingProfiles[0];
+        }
+
+        // Automatically re-link any events previously created under sibling UUIDs to active session userId
+        const siblingIds = siblingProfiles.filter(s => s.id !== userId).map(s => s.id);
+        if (siblingIds.length > 0) {
+          try {
+            await supabase.from('events').update({ organizer_id: userId }).in('organizer_id', siblingIds);
+            await supabase.from('events').update({ owner_id: userId }).in('owner_id', siblingIds);
+          } catch (linkErr) {
+            console.warn("Auto event re-link notice:", linkErr);
+          }
+        }
+
+        // Locate sibling with defined quotas or rich details if current profile lacks them
+        const siblingWithQuota = siblingProfiles.find(s => {
+          const sm = s.metadata || {};
+          const ss = s.social_links || {};
+          return (s.max_events !== undefined && s.max_events !== null) ||
+                 (sm.max_events !== undefined && sm.max_events !== null) ||
+                 (ss.max_events !== undefined && ss.max_events !== null);
+        });
+        const siblingWithDetails = siblingProfiles.find(s => s.company_name || s.phone || s.job_title);
+        const hasOrganizerSibling = siblingProfiles.some(s => s.role === 'organizer');
 
         const retrievedName = profile?.full_name 
           || userMeta.full_name 
           || userMeta.name 
+          || siblingWithDetails?.full_name
           || session.user.email?.split('@')[0] 
           || "Eventzone User";
-        const retrievedRole = profile?.role 
-          || userMeta.role 
-          || "organizer";
+        const retrievedRole = (profile?.role && profile.role !== 'attendee') 
+          ? profile.role 
+          : (hasOrganizerSibling ? 'organizer' : (userMeta.role || "organizer"));
         const retrievedAvatar = profile?.avatar_url 
           || userMeta.avatar_url 
           || userMeta.picture 
+          || siblingWithDetails?.avatar_url
           || `https://ui-avatars.com/api/?name=${encodeURIComponent(retrievedName)}&background=0b5cdb&color=fff`;
 
         if (!profile) {
@@ -424,37 +450,104 @@ export function HomeContent() {
 
         const profileMeta = profile?.metadata && typeof profile?.metadata === 'object' ? profile.metadata : {};
         const profileSocials = typeof profile?.social_links === 'object' && profile?.social_links !== null && !Array.isArray(profile?.social_links) ? profile.social_links : {};
-        const isSuperAdmin = profile?.role === 'super_admin' || profile?.is_admin === true || profileMeta.role === 'super_admin' || userMeta.role === 'super_admin' || session.user.email?.toLowerCase() === 'eventzone114@gmail.com';
+        const siblingMeta = siblingWithQuota?.metadata && typeof siblingWithQuota?.metadata === 'object' ? siblingWithQuota.metadata : {};
+        const siblingSocials = typeof siblingWithQuota?.social_links === 'object' && siblingWithQuota?.social_links !== null && !Array.isArray(siblingWithQuota?.social_links) ? siblingWithQuota.social_links : {};
 
-        const rawMaxEvents = profile?.max_events !== undefined && profile?.max_events !== null
+        let rawMaxEvents = profile?.max_events !== undefined && profile?.max_events !== null
           ? profile.max_events
           : (profileMeta.max_events !== undefined && profileMeta.max_events !== null ? profileMeta.max_events : (profileSocials.max_events !== undefined && profileSocials.max_events !== null ? profileSocials.max_events : null));
 
-        const rawMaxAttendees = profile?.max_attendees !== undefined && profile?.max_attendees !== null
+        if (rawMaxEvents === null && siblingWithQuota) {
+          rawMaxEvents = siblingWithQuota.max_events !== undefined && siblingWithQuota.max_events !== null
+            ? siblingWithQuota.max_events
+            : (siblingMeta.max_events !== undefined && siblingMeta.max_events !== null ? siblingMeta.max_events : (siblingSocials.max_events !== undefined && siblingSocials.max_events !== null ? siblingSocials.max_events : null));
+        }
+
+        let rawMaxAttendees = profile?.max_attendees !== undefined && profile?.max_attendees !== null
           ? profile.max_attendees
           : (profileMeta.max_attendees !== undefined && profileMeta.max_attendees !== null ? profileMeta.max_attendees : (profileSocials.max_attendees !== undefined && profileSocials.max_attendees !== null ? profileSocials.max_attendees : null));
 
-        const resolvedStatus = profile?.status || profileMeta.status || profileSocials.status || 'active';
+        if (rawMaxAttendees === null && siblingWithQuota) {
+          rawMaxAttendees = siblingWithQuota.max_attendees !== undefined && siblingWithQuota.max_attendees !== null
+            ? siblingWithQuota.max_attendees
+            : (siblingMeta.max_attendees !== undefined && siblingMeta.max_attendees !== null ? siblingMeta.max_attendees : (siblingSocials.max_attendees !== undefined && siblingSocials.max_attendees !== null ? siblingSocials.max_attendees : null));
+        }
+
+        const resolvedStatus = profile?.status || profileMeta.status || profileSocials.status || siblingWithQuota?.status || siblingMeta.status || 'active';
+        const isSuperAdmin = profile?.role === 'super_admin' || profile?.is_admin === true || profileMeta.role === 'super_admin' || userMeta.role === 'super_admin' || session.user.email?.toLowerCase() === 'eventzone114@gmail.com';
+
+        const resolvedCompany = profile?.company_name || userMeta.company_name || siblingWithDetails?.company_name || "";
+        const resolvedJobTitle = profile?.job_title || userMeta.job_title || siblingWithDetails?.job_title || "";
+        const resolvedPhone = profile?.phone || siblingWithDetails?.phone || "";
+        const resolvedBio = profile?.bio || siblingWithDetails?.bio || "";
+        const resolvedLocation = profile?.location || siblingWithDetails?.location || "";
+
+        // Dual-persist consolidated quotas and profile data to Supabase for the active session UUID
+        try {
+          const updatedMeta = {
+            ...profileMeta,
+            max_events: rawMaxEvents !== null ? Number(rawMaxEvents) : null,
+            max_attendees: rawMaxAttendees !== null ? Number(rawMaxAttendees) : null,
+            status: resolvedStatus,
+          };
+          const updatedSocials = {
+            ...profileSocials,
+            max_events: rawMaxEvents !== null ? Number(rawMaxEvents) : null,
+            max_attendees: rawMaxAttendees !== null ? Number(rawMaxAttendees) : null,
+            status: resolvedStatus,
+          };
+          await supabase.from('profiles').update({
+            metadata: updatedMeta,
+            social_links: updatedSocials,
+            company_name: resolvedCompany,
+            job_title: resolvedJobTitle,
+            phone: resolvedPhone,
+            bio: resolvedBio,
+            location: resolvedLocation,
+            role: isSuperAdmin ? 'super_admin' : ((retrievedRole === 'attendee' || retrievedRole === 'visitor') ? 'attendee' : 'organizer'),
+            updated_at: new Date().toISOString()
+          }).eq('id', userId);
+        } catch (syncBackErr) {
+          console.warn("Profile sync backfill warning:", syncBackErr);
+        }
+
+        // Prefetch total events count across all matching IDs/email
+        let calculatedEventsCount = 0;
+        try {
+          const allUserIds = [userId, ...siblingIds];
+          const orConditions = allUserIds.map(id => `organizer_id.eq.${id}`);
+          if (session.user.email) {
+            orConditions.push(`contact_email.ilike.${session.user.email.trim()}`);
+          }
+          const { count } = await supabase
+            .from('events')
+            .select('*', { count: 'exact', head: true })
+            .or(orConditions.join(','));
+          if (typeof count === 'number') calculatedEventsCount = count;
+        } catch (cErr) {
+          console.warn("Event count prefetch note:", cErr);
+        }
 
         const syncedUser = {
           id: userId,
           email: session.user.email,
           fullName: profile?.full_name || retrievedName,
-          role: isSuperAdmin ? 'super_admin' : ((profile?.role === 'attendee' || profile?.role === 'visitor' || retrievedRole === 'attendee' || retrievedRole === 'visitor') ? 'visitor' : 'organizer'),
-          companyName: profile?.company_name || userMeta.company_name || "",
-          jobTitle: profile?.job_title || userMeta.job_title || "",
-          phone: profile?.phone || "",
-          bio: profile?.bio || "",
-          location: profile?.location || "",
-          interests: Array.isArray(profile?.interests) ? profile.interests : [],
+          role: isSuperAdmin ? 'super_admin' : ((retrievedRole === 'attendee' || retrievedRole === 'visitor') ? 'visitor' : 'organizer'),
+          companyName: resolvedCompany,
+          jobTitle: resolvedJobTitle,
+          phone: resolvedPhone,
+          bio: resolvedBio,
+          location: resolvedLocation,
+          interests: Array.isArray(profile?.interests) && profile.interests.length > 0 ? profile.interests : (Array.isArray(siblingWithDetails?.interests) ? siblingWithDetails.interests : []),
           socialLinks: Array.isArray(profile?.social_links) ? profile.social_links : (typeof profile?.social_links === 'object' && profile?.social_links !== null ? Object.entries(profile.social_links).map(([platform, url]) => ({ platform, url })) : []),
           metadata: profileMeta,
-          what_im_looking_for: profile?.what_im_looking_for || "",
-          whatImLookingFor: profile?.what_im_looking_for || "",
+          what_im_looking_for: profile?.what_im_looking_for || siblingWithDetails?.what_im_looking_for || "",
+          whatImLookingFor: profile?.what_im_looking_for || siblingWithDetails?.what_im_looking_for || "",
           avatar: profile?.avatar_url || retrievedAvatar,
           isAdmin: isSuperAdmin,
           maxEvents: rawMaxEvents !== null && rawMaxEvents !== undefined && rawMaxEvents !== "" ? Number(rawMaxEvents) : null,
           maxAttendees: rawMaxAttendees !== null && rawMaxAttendees !== undefined && rawMaxAttendees !== "" ? Number(rawMaxAttendees) : null,
+          eventsCount: calculatedEventsCount,
           accountStatus: resolvedStatus,
           status: resolvedStatus,
         };
@@ -3782,7 +3875,13 @@ export function HomeContent() {
           )}
 
           {/* Top Banner when Current Module is in Read-Only Viewer Mode */}
-          {!effectivePermissions.isAdmin && !effectivePermissions.isOwner && effectivePermissions.permissions[currentView] === "viewer" && (
+          {!effectivePermissions.isAdmin &&
+            !effectivePermissions.isOwner &&
+            currentUser?.role !== "super_admin" &&
+            currentUser?.role !== "admin" &&
+            !currentUser?.isAdmin &&
+            !(currentUser?.role === "organizer" && !simulatedMemberId) &&
+            effectivePermissions.permissions[currentView] === "viewer" && (
             <div className="mb-5 px-4 py-3 bg-sky-50 border border-sky-200/80 rounded-2xl flex items-center justify-between text-xs text-sky-800 font-semibold shadow-xs">
               <div className="flex items-center gap-2.5">
                 <Eye size={16} className="text-sky-600 shrink-0" />
@@ -3794,7 +3893,15 @@ export function HomeContent() {
           )}
 
           {/* Access Restricted Screen if user has No Access to this module */}
-          {!effectivePermissions.isAdmin && !effectivePermissions.isOwner && (!effectivePermissions.permissions[currentView] || effectivePermissions.permissions[currentView] === "none") && currentView !== "my-team" && currentView !== "overview" ? (
+          {!effectivePermissions.isAdmin &&
+            !effectivePermissions.isOwner &&
+            currentUser?.role !== "super_admin" &&
+            currentUser?.role !== "admin" &&
+            !currentUser?.isAdmin &&
+            !(currentUser?.role === "organizer" && !simulatedMemberId) &&
+            (!effectivePermissions.permissions[currentView] || effectivePermissions.permissions[currentView] === "none") &&
+            currentView !== "my-team" &&
+            currentView !== "overview" ? (
             <div className="flex flex-col items-center justify-center p-16 text-center bg-white rounded-3xl border border-slate-200 shadow-xs gap-4 max-w-lg mx-auto my-12">
               <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
                 <ShieldAlert size={32} />
