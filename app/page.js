@@ -166,6 +166,14 @@ export function HomeContent() {
   const [activeEventId, setActiveEventStateId] = useState(() => {
     if (typeof window !== "undefined") {
       const searchParams = new URLSearchParams(window.location.search);
+      const viewParam = searchParams.get("view");
+      const rsvpParam = searchParams.get("rsvp");
+      const isEventLanding = rsvpParam === "true" || viewParam === "public-rsvp" || (viewParam === "rsvp" && searchParams.get("public") === "true") || searchParams.get("ref");
+      const nonEventViews = ["home", "auth", "profile", "events-hub", "my-tickets", "create-event"];
+      const isHome = !viewParam || nonEventViews.includes(viewParam);
+      if (isHome && !isEventLanding) {
+        return DEFAULT_EVENT_ID;
+      }
       return searchParams.get("eventId") || searchParams.get("event") || DEFAULT_EVENT_ID;
     }
     return DEFAULT_EVENT_ID;
@@ -999,11 +1007,12 @@ export function HomeContent() {
       return;
     }
 
+    const nonEventViews = ["home", "auth", "profile", "events-hub", "my-tickets", "create-event"];
     const params = new URLSearchParams();
     if (currentView !== "home") {
       params.set("view", currentView);
     }
-    if (activeEventId) {
+    if (!nonEventViews.includes(currentView) && activeEventId) {
       if (activeEventId !== DEFAULT_EVENT_ID || currentView === "register" || currentView === "rsvp") {
         params.set("eventId", activeEventId);
       }
@@ -1035,8 +1044,12 @@ export function HomeContent() {
     const queryString = params.toString();
     const newUrl = queryString ? `/?${queryString}` : "/";
 
-    if (window.location.search !== `?${queryString}` && (window.location.search !== "" || queryString !== "")) {
-      window.history.pushState({}, "", newUrl);
+    if (window.location.search !== (queryString ? `?${queryString}` : "")) {
+      if (currentView === "home" || !params.has("eventId")) {
+        window.history.replaceState({}, "", newUrl);
+      } else {
+        window.history.pushState({}, "", newUrl);
+      }
     }
   }, [currentView, activeFloorPlanId, initialPreviewMode, activeEventId, eventDetails?.slug, isLoading]);
 
@@ -1052,8 +1065,14 @@ export function HomeContent() {
       const previewParam = searchParams.get("preview");
       const rsvpParam = searchParams.get("rsvp");
 
-      if (eventIdParam && eventIdParam !== activeEventId) {
+      const nonEventViews = ["home", "auth", "profile", "events-hub", "my-tickets", "create-event"];
+      const isEventLanding = rsvpParam === "true" || viewParam === "public-rsvp" || (viewParam === "rsvp" && searchParams.get("public") === "true") || searchParams.get("ref");
+      const isHome = !viewParam || nonEventViews.includes(viewParam);
+
+      if (eventIdParam && eventIdParam !== activeEventId && (!isHome || isEventLanding)) {
         setActiveEventStateId(eventIdParam);
+      } else if (isHome && !isEventLanding && activeEventId !== DEFAULT_EVENT_ID) {
+        setActiveEventStateId(DEFAULT_EVENT_ID);
       }
       
       if (rsvpParam === "true" || viewParam === "public-rsvp" || (viewParam === "rsvp" && searchParams.get("public") === "true")) {
@@ -1164,7 +1183,12 @@ export function HomeContent() {
     setUserEvents([]);
     setVisitorRegistrations([]);
     setCurrentUser(null);
+    setActiveEventStateId(DEFAULT_EVENT_ID);
+    setEventDetails(null);
     setCurrentView("home");
+    if (typeof window !== "undefined") {
+      window.history.replaceState({}, "", "/");
+    }
   };
 
 
