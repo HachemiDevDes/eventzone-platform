@@ -420,20 +420,8 @@ export default function PlatformAdminView({
           EXECUTIVE BACK OFFICE HEADER (LIGHT MODE)
       ───────────────────────────────────────────── */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 px-6 py-3.5 flex flex-wrap items-center justify-between gap-4 shadow-2xs">
-        <div className="flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-linear-to-tr from-emerald-600 to-teal-500 flex items-center justify-center shadow-md shadow-emerald-500/20 ring-2 ring-emerald-500/20">
-            <ShieldCheck className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg font-bold text-slate-900 tracking-tight">EventZone Back Office</h1>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                SUPER ADMIN
-              </span>
-            </div>
-            <p className="text-xs text-slate-500">Platform Command Console &amp; Cross-Tenant Operations</p>
-          </div>
+        <div className="flex items-center">
+          <h1 className="text-lg font-bold text-slate-900 tracking-tight">EventZone Back Office</h1>
         </div>
 
         <div className="flex items-center gap-2.5">
