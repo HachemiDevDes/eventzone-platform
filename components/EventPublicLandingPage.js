@@ -2422,7 +2422,7 @@ export default function EventPublicLandingPage({
               <div>
                 <div className="mb-6 space-y-1.5 text-start rtl:text-right text-left max-w-2xl mx-auto">
                   <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                    {t("reg.title", "Event Registration")}
+                    {selectedTicket?.name || selectedTicket?.tier || selectedTier || eventTickets[0]?.name || eventTickets[0]?.tier || t("reg.title", "Event Registration")}
                   </h1>
                   <p className="text-xs sm:text-sm text-slate-500 font-medium max-w-xl">
                     {t("reg.subtitle", "Complete your registration details below to attend.")}
