@@ -73,17 +73,19 @@ export default function MainHomePage({
       });
 
     if (pinned.length >= 1) {
-      return pinned;
+      const pinnedIds = new Set(pinned.map(p => p.id));
+      const remaining = published.filter(e => !pinnedIds.has(e.id));
+      return [...pinned, ...remaining].slice(0, 4);
     }
     return published.slice(0, 4);
   }, [events]);
 
-  // Auto-rotate hero slides
+  // Auto-rotate hero slides every 3 seconds
   useEffect(() => {
     if (!isAutoPlay || heroEvents.length <= 1) return;
     const interval = setInterval(() => {
       setCurrentSlideIndex(prev => (prev + 1) % heroEvents.length);
-    }, 5500);
+    }, 3000);
     return () => clearInterval(interval);
   }, [isAutoPlay, heroEvents.length]);
 
