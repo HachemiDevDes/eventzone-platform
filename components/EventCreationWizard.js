@@ -7,7 +7,7 @@ import {
   Image as ImageIcon, Users, ArrowRight, ArrowLeft, 
   CheckCircle2, X, Globe, Video, LayoutDashboard, Layers,
   ChevronRight, Compass, ShieldCheck, Tag, Info, Clock, Check, Link as LinkIcon,
-  Upload, Loader2, Trash2, Camera, RefreshCw, ChevronDown
+  Upload, Loader2, Trash2, Camera, RefreshCw, ChevronDown, AlertCircle
 } from "lucide-react";
 import { uploadFileToBucket } from "../lib/db";
 import { useLanguage } from "../lib/i18n";
@@ -92,7 +92,7 @@ const TIMEZONES = [
   { id: "UTC", name: "UTC (Coordinated Universal Time)", offset: "GMT+0", time: "12:08 PM now" }
 ];
 
-export default function EventCreationWizard({ onCancel, onEventCreated, userId, onUploadFile, currentUser }) {
+export default function EventCreationWizard({ onCancel, onEventCreated, userId, onUploadFile, currentUser, userEventsCount = 0 }) {
   const { t, lang, setLang, isRTL, languages } = useLanguage();
   const [langMenuOpen, setLangMenuOpen] = useState(false);
 
@@ -111,6 +111,9 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
   const fileInputRef = useRef(null);
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [isCustomBanner, setIsCustomBanner] = useState(false);
+
+  // Determine initial capacity constrained by organizer quota
+  const initialCapacity = currentUser?.maxAttendees ? Math.min(800, currentUser.maxAttendees) : 800;
 
   const [formData, setFormData] = useState({
     title: "",
@@ -131,7 +134,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
     timezone: "Africa/Algiers",
     description: "",
     banner: "",
-    capacity: 800,
+    capacity: initialCapacity,
     hostName: currentUser?.fullName || "",
     hostEmail: currentUser?.email || "",
     organization: currentUser?.companyName || "",
@@ -265,10 +268,18 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
+    if (currentUser?.maxEvents !== null && currentUser?.maxEvents !== undefined && userEventsCount >= currentUser.maxEvents) {
+      alert(`Event Quota Limit Reached: Your organizer tier permits up to ${currentUser.maxEvents} events. Please contact the platform admin to upgrade your quota.`);
+      return;
+    }
     setLoading(true);
     try {
+      const sanitizedCapacity = currentUser?.maxAttendees
+        ? Math.min(Number(formData.capacity) || 500, currentUser.maxAttendees)
+        : (Number(formData.capacity) || 500);
+
       if (onEventCreated) {
-        await onEventCreated(formData);
+        await onEventCreated({ ...formData, capacity: sanitizedCapacity });
       }
     } catch (err) {
       console.error("Error creating event:", err);
@@ -417,6 +428,18 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
             <p className="text-sm text-slate-500 font-medium mt-2 mb-8 max-w-md mx-auto">
               {t("wizard.step1Desc", "Give your event a clear, memorable title. You can customize the subtitle and banner next.")}
             </p>
+
+            {currentUser?.maxEvents !== null && currentUser?.maxEvents !== undefined && userEventsCount >= currentUser.maxEvents && (
+              <div className="max-w-xl mx-auto mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-start flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-xs font-bold text-amber-900 uppercase tracking-wide">Event Quota Limit Reached</h4>
+                  <p className="text-xs text-amber-800 mt-1 leading-relaxed">
+                    Your organizer tier permits up to <strong>{currentUser.maxEvents}</strong> events (you currently have {userEventsCount} created). Please contact the platform admin to upgrade your quota.
+                  </p>
+                </div>
+              </div>
+            )}
 
             <form onSubmit={handleNextFrom1A} className="space-y-6 max-w-xl mx-auto text-start">
               <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs space-y-4">

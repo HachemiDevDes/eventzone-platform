@@ -4,7 +4,7 @@
 import React, { useState } from "react";
 import { 
   Globe, ChevronDown, User, Ticket, 
-  Building2, LogOut, Plus, Check 
+  Building2, LogOut, Plus, Check, ShieldCheck 
 } from "lucide-react";
 import { useLanguage } from "../lib/i18n";
 import { smoothScrollTo } from "../lib/smoothScroll";
@@ -18,6 +18,7 @@ export default function UniversalTopBar({
   onOpenPassesModal,
   onOpenCreationWizard,
   onOpenEventsHub,
+  onOpenAdminView,
   onSignOut,
   rightExtra = null,
 }) {
@@ -247,6 +248,29 @@ export default function UniversalTopBar({
                     {registrations.length}
                   </span>
                 </button>
+
+                {/* Super Admin Back Office Option */}
+                {(currentUser?.role === 'super_admin' || currentUser?.isAdmin) && (
+                  <button
+                    onClick={() => {
+                      setProfileOpen(false);
+                      if (onOpenAdminView) {
+                        onOpenAdminView();
+                      } else if (typeof window !== "undefined") {
+                        window.location.href = "/?view=admin";
+                      }
+                    }}
+                    className="w-full text-start px-3 py-2.5 rounded-xl text-xs font-bold text-slate-900 bg-emerald-50/90 hover:bg-emerald-100 flex items-center justify-between transition-colors cursor-pointer border border-emerald-200/80 my-1"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <ShieldCheck size={15} className="text-emerald-600 shrink-0" />
+                      <span>{t("nav.adminPanel", "Super Admin Back Office")}</span>
+                    </div>
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-emerald-600 text-white tracking-wider">
+                      ADMIN
+                    </span>
+                  </button>
+                )}
 
                 {/* 3. Add an Event Button in Menu */}
                 <button

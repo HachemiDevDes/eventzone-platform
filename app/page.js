@@ -57,6 +57,7 @@ import RSVPView from "../components/RSVPView";
 import LogisticsView from "../components/LogisticsView";
 import DocumentsView from "../components/DocumentsView";
 import DevelopersView from "../components/DevelopersView";
+import PlatformAdminView from "../components/PlatformAdminView";
 import PublicRSVPModal from "../components/PublicRSVPModal";
 import TicketDrawer from "../components/TicketDrawer";
 import AttendeeDrawer from "../components/AttendeeDrawer";
@@ -169,7 +170,7 @@ export function HomeContent() {
       const viewParam = searchParams.get("view");
       const rsvpParam = searchParams.get("rsvp");
       const isEventLanding = rsvpParam === "true" || viewParam === "public-rsvp" || (viewParam === "rsvp" && searchParams.get("public") === "true") || searchParams.get("ref");
-      const nonEventViews = ["home", "auth", "profile", "events-hub", "my-tickets", "create-event"];
+      const nonEventViews = ["home", "auth", "profile", "events-hub", "my-tickets", "create-event", "admin"];
       const isHome = !viewParam || nonEventViews.includes(viewParam);
       if (isHome && !isEventLanding) {
         return DEFAULT_EVENT_ID;
@@ -210,7 +211,7 @@ export function HomeContent() {
         "home", "auth", "profile", "my-tickets", "events-hub", "create-event", "event-landing", "register", "visitor-portal", "attendee-portal", "overview", "page-builder", "calendar", "event-details", 
         "attendees", "pending", "organizations", "sponsors", 
         "exhibitors", "speakers", "opportunities", "influencers", "tickets", "forms", "rsvp", "logistics", "documents", "check-in", 
-        "my-team", "developers", "analytics", "communications", "certificates", "floor-plan", "portal-settings"
+        "my-team", "developers", "analytics", "communications", "certificates", "floor-plan", "portal-settings", "admin"
       ];
       if (viewParam && validViews.includes(viewParam)) {
         return viewParam;
@@ -421,11 +422,25 @@ export function HomeContent() {
           }
         }
 
+        const profileMeta = profile?.metadata && typeof profile?.metadata === 'object' ? profile.metadata : {};
+        const profileSocials = typeof profile?.social_links === 'object' && profile?.social_links !== null && !Array.isArray(profile?.social_links) ? profile.social_links : {};
+        const isSuperAdmin = profile?.role === 'super_admin' || profile?.is_admin === true || profileMeta.role === 'super_admin' || userMeta.role === 'super_admin';
+
+        const rawMaxEvents = profile?.max_events !== undefined && profile?.max_events !== null
+          ? profile.max_events
+          : (profileMeta.max_events !== undefined && profileMeta.max_events !== null ? profileMeta.max_events : (profileSocials.max_events !== undefined && profileSocials.max_events !== null ? profileSocials.max_events : null));
+
+        const rawMaxAttendees = profile?.max_attendees !== undefined && profile?.max_attendees !== null
+          ? profile.max_attendees
+          : (profileMeta.max_attendees !== undefined && profileMeta.max_attendees !== null ? profileMeta.max_attendees : (profileSocials.max_attendees !== undefined && profileSocials.max_attendees !== null ? profileSocials.max_attendees : null));
+
+        const resolvedStatus = profile?.status || profileMeta.status || profileSocials.status || 'active';
+
         const syncedUser = {
           id: userId,
           email: session.user.email,
           fullName: profile?.full_name || retrievedName,
-          role: (profile?.role === 'attendee' || profile?.role === 'visitor' || retrievedRole === 'attendee' || retrievedRole === 'visitor') ? 'visitor' : 'organizer',
+          role: isSuperAdmin ? 'super_admin' : ((profile?.role === 'attendee' || profile?.role === 'visitor' || retrievedRole === 'attendee' || retrievedRole === 'visitor') ? 'visitor' : 'organizer'),
           companyName: profile?.company_name || userMeta.company_name || "",
           jobTitle: profile?.job_title || userMeta.job_title || "",
           phone: profile?.phone || "",
@@ -433,11 +448,15 @@ export function HomeContent() {
           location: profile?.location || "",
           interests: Array.isArray(profile?.interests) ? profile.interests : [],
           socialLinks: Array.isArray(profile?.social_links) ? profile.social_links : (typeof profile?.social_links === 'object' && profile?.social_links !== null ? Object.entries(profile.social_links).map(([platform, url]) => ({ platform, url })) : []),
-          metadata: profile?.metadata || {},
+          metadata: profileMeta,
           what_im_looking_for: profile?.what_im_looking_for || "",
           whatImLookingFor: profile?.what_im_looking_for || "",
           avatar: profile?.avatar_url || retrievedAvatar,
-          isAdmin: !!profile?.is_admin,
+          isAdmin: isSuperAdmin,
+          maxEvents: rawMaxEvents !== null && rawMaxEvents !== undefined && rawMaxEvents !== "" ? Number(rawMaxEvents) : null,
+          maxAttendees: rawMaxAttendees !== null && rawMaxAttendees !== undefined && rawMaxAttendees !== "" ? Number(rawMaxAttendees) : null,
+          accountStatus: resolvedStatus,
+          status: resolvedStatus,
         };
 
         if (isMounted) {
@@ -474,11 +493,25 @@ export function HomeContent() {
                   const updatedRole = updated.role || "organizer";
                   const updatedAvatar = updated.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(updatedName)}&background=0b5cdb&color=fff`;
 
+                  const updatedMeta = updated.metadata && typeof updated.metadata === 'object' ? updated.metadata : {};
+                  const updatedSocials = typeof updated.social_links === 'object' && updated.social_links !== null && !Array.isArray(updated.social_links) ? updated.social_links : {};
+                  const isSuperAdminUpdated = updated.role === 'super_admin' || updated.is_admin === true || updatedMeta.role === 'super_admin';
+
+                  const rawMaxEvUpdated = updated.max_events !== undefined && updated.max_events !== null
+                    ? updated.max_events
+                    : (updatedMeta.max_events !== undefined && updatedMeta.max_events !== null ? updatedMeta.max_events : (updatedSocials.max_events !== undefined && updatedSocials.max_events !== null ? updatedSocials.max_events : null));
+
+                  const rawMaxAttUpdated = updated.max_attendees !== undefined && updated.max_attendees !== null
+                    ? updated.max_attendees
+                    : (updatedMeta.max_attendees !== undefined && updatedMeta.max_attendees !== null ? updatedMeta.max_attendees : (updatedSocials.max_attendees !== undefined && updatedSocials.max_attendees !== null ? updatedSocials.max_attendees : null));
+
+                  const updatedStatus = updated.status || updatedMeta.status || updatedSocials.status || 'active';
+
                   const updatedUser = {
                     id: userId,
                     email: updated.email || session.user.email,
                     fullName: updatedName,
-                    role: (updatedRole === 'attendee' || updatedRole === 'visitor') ? 'visitor' : 'organizer',
+                    role: isSuperAdminUpdated ? 'super_admin' : ((updatedRole === 'attendee' || updatedRole === 'visitor') ? 'visitor' : 'organizer'),
                     companyName: updated.company_name || "",
                     jobTitle: updated.job_title || "",
                     phone: updated.phone || "",
@@ -486,11 +519,15 @@ export function HomeContent() {
                     location: updated.location || "",
                     interests: Array.isArray(updated.interests) ? updated.interests : [],
                     socialLinks: Array.isArray(updated.social_links) ? updated.social_links : [],
-                    metadata: updated.metadata || {},
+                    metadata: updatedMeta,
                     what_im_looking_for: updated.what_im_looking_for || "",
                     whatImLookingFor: updated.what_im_looking_for || "",
                     avatar: updatedAvatar,
-                    isAdmin: !!updated.is_admin,
+                    isAdmin: isSuperAdminUpdated,
+                    maxEvents: rawMaxEvUpdated !== null && rawMaxEvUpdated !== undefined && rawMaxEvUpdated !== "" ? Number(rawMaxEvUpdated) : null,
+                    maxAttendees: rawMaxAttUpdated !== null && rawMaxAttUpdated !== undefined && rawMaxAttUpdated !== "" ? Number(rawMaxAttUpdated) : null,
+                    accountStatus: updatedStatus,
+                    status: updatedStatus,
                   };
 
                   setCurrentUser(updatedUser);
@@ -1007,7 +1044,7 @@ export function HomeContent() {
       return;
     }
 
-    const nonEventViews = ["home", "auth", "profile", "events-hub", "my-tickets", "create-event"];
+    const nonEventViews = ["home", "auth", "profile", "events-hub", "my-tickets", "create-event", "admin"];
     const params = new URLSearchParams();
     if (currentView !== "home") {
       params.set("view", currentView);
@@ -1067,7 +1104,7 @@ export function HomeContent() {
       const previewParam = searchParams.get("preview");
       const rsvpParam = searchParams.get("rsvp");
 
-      const nonEventViews = ["home", "auth", "profile", "events-hub", "my-tickets", "create-event"];
+      const nonEventViews = ["home", "auth", "profile", "events-hub", "my-tickets", "create-event", "admin"];
       const isEventLanding = rsvpParam === "true" || viewParam === "public-rsvp" || (viewParam === "rsvp" && searchParams.get("public") === "true") || searchParams.get("ref");
       const isHome = !viewParam || nonEventViews.includes(viewParam);
 
@@ -1093,7 +1130,7 @@ export function HomeContent() {
             "home", "auth", "profile", "my-tickets", "events-hub", "create-event", "event-landing", "register", "visitor-portal", "overview", "page-builder", "calendar", "event-details", 
             "attendees", "pending", "organizations", "sponsors", 
             "exhibitors", "speakers", "opportunities", "influencers", "tickets", "forms", "rsvp", "logistics", "documents", "check-in", 
-            "my-team", "analytics", "communications", "floor-plan"
+            "my-team", "analytics", "communications", "floor-plan", "admin"
           ];
           if (validViews.includes(viewParam)) {
             setCurrentView(viewParam);
@@ -1232,10 +1269,13 @@ export function HomeContent() {
         whatImLookingFor: updated?.what_im_looking_for || profileData.what_im_looking_for || profileData.whatImLookingFor || "",
         avatar: retrievedAvatar,
         isAdmin: !!profileData.isAdmin,
+        maxEvents: currentUser?.maxEvents ?? null,
+        maxAttendees: currentUser?.maxAttendees ?? null,
+        accountStatus: currentUser?.accountStatus || 'active',
       };
 
       setCurrentUser(syncedUser);
-      safeLocalStorageSet("eventzone_user", syncedUser);
+      safeLocalStorageSet("eventzone_user", sanitizeUserForStorage(syncedUser));
       return { success: true };
     } catch (err) {
       console.error("Profile update error:", err);
@@ -1258,8 +1298,23 @@ export function HomeContent() {
       return;
     }
 
+    // Enforce organizer maxEvents quota
+    if (currentUser?.maxEvents !== null && currentUser?.maxEvents !== undefined && userEvents.length >= currentUser.maxEvents) {
+      alert(`Event Limit Reached: Your current quota permits up to ${currentUser.maxEvents} events. Please contact the platform administrator to increase your organizer limit.`);
+      return;
+    }
+
+    // Sanitize capacity against organizer maxAttendees cap if set
+    const sanitizedFormData = { ...formData };
+    if (currentUser?.maxAttendees !== null && currentUser?.maxAttendees !== undefined) {
+      const requestedCap = Number(formData.capacity) || 500;
+      if (requestedCap > currentUser.maxAttendees) {
+        sanitizedFormData.capacity = currentUser.maxAttendees;
+      }
+    }
+
     try {
-      const created = await createEvent(formData, currentUser.id);
+      const created = await createEvent(sanitizedFormData, currentUser.id);
       setUserEvents(prev => [created, ...prev]);
       setPublicEvents(prev => [created, ...prev]);
       setActiveEventStateId(created.id);
@@ -1591,13 +1646,20 @@ export function HomeContent() {
   const handleUpdateState = (key, val) => {
     switch (key) {
       case "eventDetails":
-        setEventDetails(val);
-        if (val) {
-          safeLocalStorageSet(`eventzone_cached_event_${activeEventId}`, val);
+        let sanitizedVal = val;
+        if (val && currentUser?.maxAttendees !== null && currentUser?.maxAttendees !== undefined) {
+          const cap = Number(val.capacity);
+          if (!isNaN(cap) && cap > currentUser.maxAttendees) {
+            sanitizedVal = { ...val, capacity: currentUser.maxAttendees };
+          }
         }
-        setPublicEvents(prev => prev.map(e => (activeEventId ? (e.id === activeEventId ? { ...e, ...val } : e) : e)));
-        setUserEvents(prev => prev.map(e => (activeEventId ? (e.id === activeEventId ? { ...e, ...val } : e) : e)));
-        updateEventDetails(val, activeEventId).catch(console.error);
+        setEventDetails(sanitizedVal);
+        if (sanitizedVal) {
+          safeLocalStorageSet(`eventzone_cached_event_${activeEventId}`, sanitizedVal);
+        }
+        setPublicEvents(prev => prev.map(e => (activeEventId ? (e.id === activeEventId ? { ...e, ...sanitizedVal } : e) : e)));
+        setUserEvents(prev => prev.map(e => (activeEventId ? (e.id === activeEventId ? { ...e, ...sanitizedVal } : e) : e)));
+        updateEventDetails(sanitizedVal, activeEventId).catch(console.error);
         break;
       case "sessions":
         syncArrayToDb(sessions, val, upsertSession, deleteSession);
@@ -2833,6 +2895,29 @@ export function HomeContent() {
   }
 
   // ==========================================================================
+  // 0.2. DEDICATED FULL-PAGE PLATFORM ADMIN PANEL (BACK OFFICE)
+  // ==========================================================================
+  if (currentView === "admin") {
+    return (
+      <PlatformAdminView
+        currentUser={currentUser}
+        onExitAdmin={() => setCurrentView("home")}
+        onViewEventDetails={(eid) => {
+          setActiveEventStateId(eid);
+          setCurrentView("overview");
+        }}
+        onViewPublicLandingPage={(eid) => {
+          setActiveEventStateId(eid);
+          setCurrentView("event-landing");
+        }}
+        onImpersonateOrganizer={(orgId) => {
+          setCurrentView("events-hub");
+        }}
+      />
+    );
+  }
+
+  // ==========================================================================
   // 0.5. DEDICATED FULL-PAGE AUTHENTICATION VIEW (SIGN IN / SIGN UP)
   // ==========================================================================
   if (currentView === "auth") {
@@ -2949,6 +3034,7 @@ export function HomeContent() {
         }}
         onRegisterForEvent={handleVisitorRegister}
         onOpenCreationWizard={() => setCurrentView("create-event")}
+        onOpenAdminView={() => setCurrentView("admin")}
         onSwitchToOrganizer={() => {
           if (!currentUser) {
             setAuthModalInitialMode("signup");
@@ -3135,6 +3221,7 @@ export function HomeContent() {
         onEventCreated={handleEventCreated}
         userId={currentUser?.id}
         currentUser={currentUser}
+        userEventsCount={userEvents.length}
         onUploadFile={uploadFileToBucket}
       />
     );
@@ -3613,6 +3700,23 @@ export function HomeContent() {
               <Code2 size={14} className={`shrink-0 ${currentView === "developers" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
               <span>{t("dash.developers", "Developers & API")}</span>
             </button>
+
+            {(currentUser?.role === 'super_admin' || currentUser?.isAdmin) && (
+              <div className="pt-3 mt-3 border-t border-slate-100">
+                <button
+                  onClick={() => setCurrentView("admin")}
+                  className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl font-bold text-xs transition-all text-start group bg-linear-to-r from-blue-500/10 via-indigo-500/10 to-violet-500/10 border border-blue-200/50 hover:border-blue-400 text-blue-700 shadow-2xs hover:shadow-xs cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <ShieldAlert size={14} className="shrink-0 text-blue-600 animate-pulse" />
+                    <span>Back Office</span>
+                  </div>
+                  <span className="text-[9px] font-black uppercase tracking-wider py-0.5 px-1.5 rounded-md bg-blue-600 text-white">
+                    Admin
+                  </span>
+                </button>
+              </div>
+            )}
           </nav>
         </div>
       </aside>

@@ -272,19 +272,31 @@ export default function AuthView({
         }
 
         const retrievedName = userProfile?.full_name || authUser?.user_metadata?.full_name || authUser?.user_metadata?.name || email.split("@")[0] || "Eventzone User";
-        const retrievedRole = userProfile?.role || authUser?.user_metadata?.role || "organizer";
-        const retrievedAvatar = userProfile?.avatar_url || authUser?.user_metadata?.avatar_url || authUser?.user_metadata?.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(retrievedName)}&background=0b5cdb&color=fff`;
+        const meta = userProfile?.metadata && typeof userProfile?.metadata === 'object' ? userProfile.metadata : {};
+        const socials = typeof userProfile?.social_links === 'object' && userProfile?.social_links !== null && !Array.isArray(userProfile?.social_links) ? userProfile.social_links : {};
+        const isSuperAdmin = userProfile?.role === "super_admin" || userProfile?.is_admin === true || meta.role === "super_admin" || authUser?.user_metadata?.role === "super_admin";
+
+        const rawMaxEvents = userProfile?.max_events !== undefined && userProfile?.max_events !== null
+          ? userProfile.max_events
+          : (meta.max_events !== undefined && meta.max_events !== null ? meta.max_events : (socials.max_events !== undefined && socials.max_events !== null ? socials.max_events : null));
+
+        const rawMaxAttendees = userProfile?.max_attendees !== undefined && userProfile?.max_attendees !== null
+          ? userProfile.max_attendees
+          : (meta.max_attendees !== undefined && meta.max_attendees !== null ? meta.max_attendees : (socials.max_attendees !== undefined && socials.max_attendees !== null ? socials.max_attendees : null));
 
         const signedInUser = {
           id: userId || `user-${Date.now()}`,
           email: email.trim(),
           fullName: retrievedName,
-          role: retrievedRole === "attendee" || retrievedRole === "visitor" ? "visitor" : "organizer",
+          role: isSuperAdmin ? "super_admin" : (retrievedRole === "attendee" || retrievedRole === "visitor" ? "visitor" : "organizer"),
           companyName: userProfile?.company_name || "",
           jobTitle: userProfile?.job_title || "",
           phone: userProfile?.phone || "",
           avatar: retrievedAvatar,
-          isAdmin: !!userProfile?.is_admin,
+          isAdmin: isSuperAdmin,
+          maxEvents: rawMaxEvents !== null && rawMaxEvents !== undefined && rawMaxEvents !== "" ? Number(rawMaxEvents) : null,
+          maxAttendees: rawMaxAttendees !== null && rawMaxAttendees !== undefined && rawMaxAttendees !== "" ? Number(rawMaxAttendees) : null,
+          accountStatus: userProfile?.status || meta.status || socials.status || "active",
         };
 
         // Ensure profile exists in DB

@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { 
   Compass, Ticket, Calendar, MapPin, 
   Sparkles, ArrowRight, ChevronLeft, ChevronRight, 
@@ -33,7 +33,8 @@ export default function MainHomePage({
   onViewLivePage,
   onRegisterForEvent,
   onOpenCreationWizard,
-  onSwitchToOrganizer
+  onSwitchToOrganizer,
+  onOpenAdminView
 }) {
   // Hero Carousel State
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
@@ -60,8 +61,24 @@ export default function MainHomePage({
   const [rsvpSuccess, setRsvpSuccess] = useState(null);
   const [qrCodeUrls, setQrCodeUrls] = useState({});
 
-  // Hero Events slice
-  const heroEvents = events.slice(0, 4);
+  // Curated Hero Events: Prioritize admin-pinned events in exact heroOrder sequence
+  const heroEvents = useMemo(() => {
+    const published = (events || []).filter(e => e.status === "published" || !e.status);
+    const pinned = published
+      .filter(e => e.isHeroFeatured || e.is_hero_featured || e.portalSettings?.is_hero_featured || e.portal_settings?.is_hero_featured)
+      .sort((a, b) => {
+        const orderA = a.heroOrder || a.hero_order || a.portalSettings?.hero_order || a.portal_settings?.hero_order || 99;
+        const orderB = b.heroOrder || b.hero_order || b.portalSettings?.hero_order || b.portal_settings?.hero_order || 99;
+        return orderA - orderB;
+      });
+
+    if (pinned.length >= 1) {
+      const pinnedIds = new Set(pinned.map(p => p.id));
+      const remaining = published.filter(e => !pinnedIds.has(e.id));
+      return [...pinned, ...remaining].slice(0, 4);
+    }
+    return published.slice(0, 4);
+  }, [events]);
 
   // Auto-rotate hero slides
   useEffect(() => {
@@ -305,6 +322,7 @@ export default function MainHomePage({
         onOpenPassesModal={onOpenVisitorPasses}
         onOpenCreationWizard={onOpenCreationWizard}
         onOpenEventsHub={onOpenEventsHub}
+        onOpenAdminView={onOpenAdminView}
         onSignOut={onSignOut}
       />
 
