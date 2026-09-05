@@ -48,7 +48,8 @@ export default function PlatformAdminView({
   onExitAdmin,
   onViewEventDetails,
   onViewPublicLandingPage,
-  onImpersonateOrganizer
+  onImpersonateOrganizer,
+  onEventsUpdated
 }) {
   // Navigation tabs: 'overview', 'organizers', 'hero', 'events', 'financials'
   const [activeTab, setActiveTab] = useState("overview");
@@ -205,6 +206,7 @@ export default function PlatformAdminView({
 
     if (res.success) {
       showToast(`Added "${event.title}" to Homepage Hero (Slot #${nextOrder})`);
+      onEventsUpdated?.();
     } else {
       setEvents(prev => prev.map(e => e.id === event.id ? {
         ...e,
@@ -232,6 +234,7 @@ export default function PlatformAdminView({
 
     if (res.success) {
       showToast(`Removed "${event.title}" from Homepage Hero`);
+      onEventsUpdated?.();
     } else {
       setEvents(prev => prev.map(e => e.id === event.id ? {
         ...e,
@@ -265,6 +268,7 @@ export default function PlatformAdminView({
     ]);
 
     showToast(`Moved "${event.title}" to position #${orderA}`);
+    onEventsUpdated?.();
   };
 
   const handleUpdateHeroOrder = async (event, newOrder) => {
@@ -283,6 +287,7 @@ export default function PlatformAdminView({
 
     if (res.success) {
       showToast(`Set "${event.title}" hero priority to #${parsedOrder}`);
+      onEventsUpdated?.();
     }
   };
 

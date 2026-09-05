@@ -2902,7 +2902,23 @@ export function HomeContent() {
     return (
       <PlatformAdminView
         currentUser={currentUser}
-        onExitAdmin={() => setCurrentView("home")}
+        onExitAdmin={async () => {
+          try {
+            const refreshed = await fetchPublicEvents();
+            if (refreshed) setPublicEvents(refreshed);
+          } catch (e) {
+            console.error("Error refreshing public events on admin exit:", e);
+          }
+          setCurrentView("home");
+        }}
+        onEventsUpdated={async () => {
+          try {
+            const refreshed = await fetchPublicEvents();
+            if (refreshed) setPublicEvents(refreshed);
+          } catch (e) {
+            console.error("Error refreshing public events:", e);
+          }
+        }}
         onViewEventDetails={(eid) => {
           setActiveEventStateId(eid);
           setCurrentView("overview");

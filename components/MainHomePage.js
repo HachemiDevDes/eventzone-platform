@@ -65,20 +65,27 @@ export default function MainHomePage({
   const heroEvents = useMemo(() => {
     const published = (events || []).filter(e => e.status === "published" || !e.status);
     const pinned = published
-      .filter(e => e.isHeroFeatured || e.is_hero_featured || e.portalSettings?.is_hero_featured || e.portal_settings?.is_hero_featured)
+      .filter(e => e.isHeroFeatured === true || e.is_hero_featured === true || e.portalSettings?.is_hero_featured === true || e.portal_settings?.is_hero_featured === true)
       .sort((a, b) => {
         const orderA = a.heroOrder || a.hero_order || a.portalSettings?.hero_order || a.portal_settings?.hero_order || 99;
         const orderB = b.heroOrder || b.hero_order || b.portalSettings?.hero_order || b.portal_settings?.hero_order || 99;
         return orderA - orderB;
       });
 
-    if (pinned.length >= 1) {
-      const pinnedIds = new Set(pinned.map(p => p.id));
-      const remaining = published.filter(e => !pinnedIds.has(e.id));
-      return [...pinned, ...remaining].slice(0, 4);
+    // When admin has curated hero events, show ONLY those curated events
+    if (pinned.length > 0) {
+      return pinned;
     }
+    // Fallback to latest published events only when no hero events have been curated
     return published.slice(0, 4);
   }, [events]);
+
+  // Keep slide index within bounds when heroEvents changes
+  useEffect(() => {
+    if (currentSlideIndex >= heroEvents.length && heroEvents.length > 0) {
+      setCurrentSlideIndex(0);
+    }
+  }, [heroEvents.length, currentSlideIndex]);
 
   // Auto-rotate hero slides every 3 seconds
   useEffect(() => {
