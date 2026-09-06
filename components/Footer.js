@@ -48,11 +48,11 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses }) {
         <div className="max-w-7xl mx-auto px-6 sm:px-8">
           {/* A. Hero Newsletter Section inside the Dome */}
           <section className="relative pt-2 sm:pt-4 pb-12 sm:pb-16 text-center max-w-3xl mx-auto">
-            {/* Ambient decorative glow */}
+            {/* Ambient blue decorative glow */}
             <div
               className="absolute inset-0 pointer-events-none -z-10 opacity-35"
               style={{
-                background: "radial-gradient(circle at 50% 30%, rgba(220, 38, 38, 0.18), transparent 70%)",
+                background: "radial-gradient(circle at 50% 30%, rgba(11, 92, 219, 0.25), transparent 70%)",
               }}
             />
 
@@ -63,9 +63,12 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses }) {
               {t("footer.newsletterSubtitle", "to stay up to date on all the latest news and offers from us")}
             </p>
 
-            {/* Newsletter Pill Capsule */}
+            {/* Newsletter Capsule Form with Fully Rounded Button */}
             <form onSubmit={handleNewsletterSubmit} className="mt-7 sm:mt-8 max-w-xl mx-auto">
-              <div className="bg-white rounded-full p-1 sm:p-1.5 pl-5 sm:pl-6 flex items-center shadow-2xl border border-white/20 transition-all focus-within:ring-2 focus-within:ring-red-500/60">
+              <div
+                className="bg-white rounded-full p-1.5 pl-6 sm:pl-7 flex items-center shadow-2xl border border-white/20 transition-all focus-within:ring-2 focus-within:ring-[#0b5cdb]/60"
+                style={{ borderRadius: "9999px" }}
+              >
                 <input
                   type="email"
                   value={newsletterEmail}
@@ -79,9 +82,10 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses }) {
                 />
                 <button
                   type="submit"
-                  className="shrink-0 px-6 sm:px-8 py-2.5 sm:py-3 rounded-full text-white font-bold text-xs sm:text-sm bg-red-600 hover:bg-red-700 transition-all shadow-md shadow-red-600/30 cursor-pointer active:scale-95"
+                  className="shrink-0 px-7 sm:px-9 py-3 sm:py-3.5 rounded-full text-white font-bold text-xs sm:text-sm bg-[#0b5cdb] hover:bg-blue-700 transition-all shadow-md shadow-blue-600/30 cursor-pointer active:scale-95 flex items-center justify-center"
+                  style={{ borderRadius: "9999px" }}
                 >
-                  {t("footer.subscribeBtn", "Subscribe")}
+                  {newsletterStatus === "loading" ? t("common.loading", "Loading...") : t("footer.subscribeBtn", "Subscribe")}
                 </button>
               </div>
 
@@ -103,20 +107,20 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses }) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-0 py-8 border-y border-slate-800/80 text-start rtl:text-right text-left">
             {/* Column 1: Contact us */}
             <div className="md:pr-8 md:border-r border-slate-800/80 space-y-2.5">
-              <p className="text-red-500 font-bold text-xs sm:text-sm tracking-wide">
+              <p className="text-blue-400 font-bold text-xs sm:text-sm tracking-wide">
                 {t("footer.contactUs", "Contact us")}
               </p>
               <div className="space-y-1 text-xs sm:text-sm text-slate-300 font-medium">
                 <p className="flex items-center gap-2">
                   <span className="text-white font-bold">E :</span>
-                  <a href="mailto:support@eventzone.io" className="hover:text-red-400 transition-colors">
-                    support@eventzone.io
+                  <a href="mailto:contact@eventzone.pro" className="hover:text-blue-400 transition-colors">
+                    contact@eventzone.pro
                   </a>
                 </p>
                 <p className="flex items-center gap-2">
                   <span className="text-white font-bold">P :</span>
-                  <a href="tel:+21323000000" className="hover:text-red-400 transition-colors">
-                    +213 (0) 23 00 00 00
+                  <a href="tel:+213781457511" className="hover:text-blue-400 transition-colors">
+                    +213(0) 781 45 75 11
                   </a>
                 </p>
               </div>
@@ -124,7 +128,7 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses }) {
 
             {/* Column 2: Address */}
             <div className="md:px-8 md:border-r border-slate-800/80 space-y-2.5">
-              <p className="text-red-500 font-bold text-xs sm:text-sm tracking-wide">
+              <p className="text-blue-400 font-bold text-xs sm:text-sm tracking-wide">
                 {t("footer.addressTitle", "Headquarters address:")}
               </p>
               <div className="space-y-1 text-xs sm:text-sm text-slate-300 font-medium leading-relaxed">
@@ -135,7 +139,7 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses }) {
 
             {/* Column 3: Hours / Availability */}
             <div className="md:pl-8 space-y-2.5">
-              <p className="text-red-500 font-bold text-xs sm:text-sm tracking-wide">
+              <p className="text-blue-400 font-bold text-xs sm:text-sm tracking-wide">
                 {t("footer.supportHoursTitle", "Platform Opening Times:")}
               </p>
               <div className="space-y-1 text-xs sm:text-sm text-slate-300 font-medium">
@@ -149,7 +153,7 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 pt-8 pb-12 text-start rtl:text-right text-left text-xs">
             {/* Column 1: Product Categories */}
             <div className="space-y-3">
-              <p className="text-red-500 font-bold text-xs sm:text-sm tracking-wide">
+              <p className="text-blue-400 font-bold text-xs sm:text-sm tracking-wide">
                 {t("footer.productCategories", "Product Categories:")}
               </p>
               <ul className="space-y-2 text-slate-400 font-medium">
@@ -183,7 +187,7 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses }) {
 
             {/* Column 2: Resources */}
             <div className="space-y-3">
-              <p className="text-red-500 font-bold text-xs sm:text-sm tracking-wide">
+              <p className="text-blue-400 font-bold text-xs sm:text-sm tracking-wide">
                 {t("footer.resourcesTitle", "Resources:")}
               </p>
               <ul className="space-y-2 text-slate-400 font-medium">
@@ -234,7 +238,7 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses }) {
 
             {/* Column 3: Follow us on */}
             <div className="space-y-3">
-              <p className="text-red-500 font-bold text-xs sm:text-sm tracking-wide">
+              <p className="text-blue-400 font-bold text-xs sm:text-sm tracking-wide">
                 {t("footer.followUsOn", "Follow us on")}
               </p>
               <ul className="space-y-2 text-slate-400 font-medium">
@@ -291,83 +295,42 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses }) {
               </ul>
             </div>
 
-            {/* Column 4: Accepted payments */}
+            {/* Column 4: Accepted payments - EDAHABIA & CIB */}
             <div className="space-y-3">
-              <p className="text-red-500 font-bold text-xs sm:text-sm tracking-wide">
+              <p className="text-blue-400 font-bold text-xs sm:text-sm tracking-wide">
                 {t("footer.acceptedPayments", "Accepted payments")}
               </p>
-              <div className="grid grid-cols-4 gap-2 pt-1 max-w-[260px]">
-                {/* 1. VISA */}
+              <div className="flex flex-wrap items-center gap-3 pt-1.5">
+                {/* 1. EDAHABIA */}
                 <div
-                  title="Visa"
-                  className="w-12 h-7 sm:w-14 sm:h-8 bg-white rounded-md flex items-center justify-center shadow-xs border border-white/20 select-none p-1"
+                  title="Carte EDAHABIA - Algérie Poste"
+                  className="px-4 py-2 sm:px-4 sm:py-2.5 bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 rounded-xl flex items-center gap-2.5 shadow-md border border-amber-300/40 select-none hover:scale-105 transition-transform"
                 >
-                  <span className="text-[#1a1f71] font-black italic text-xs tracking-tighter">VISA</span>
-                </div>
-
-                {/* 2. Mastercard */}
-                <div
-                  title="Mastercard"
-                  className="w-12 h-7 sm:w-14 sm:h-8 bg-white rounded-md flex items-center justify-center shadow-xs border border-white/20 select-none p-1"
-                >
-                  <div className="flex items-center -space-x-2">
-                    <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-[#eb001b]" />
-                    <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-[#f79e1b] opacity-90" />
+                  <div className="w-2.5 h-3.5 rounded-xs bg-amber-200/90 border border-amber-900/30 shadow-2xs" />
+                  <div className="flex flex-col text-start">
+                    <span className="text-white font-black text-xs tracking-wider uppercase leading-none">
+                      EDAHABIA
+                    </span>
+                    <span className="text-amber-100 font-semibold text-[9px] leading-tight mt-0.5">
+                      الذهبية
+                    </span>
                   </div>
                 </div>
 
-                {/* 3. American Express */}
+                {/* 2. CIB */}
                 <div
-                  title="American Express"
-                  className="w-12 h-7 sm:w-14 sm:h-8 bg-[#006fcf] rounded-md flex items-center justify-center shadow-xs border border-white/20 select-none p-0.5"
+                  title="Carte CIB - Carte Interbancaire"
+                  className="px-4 py-2 sm:px-4 sm:py-2.5 bg-gradient-to-r from-emerald-600 to-green-700 rounded-xl flex items-center gap-2.5 shadow-md border border-emerald-300/40 select-none hover:scale-105 transition-transform"
                 >
-                  <span className="text-white font-black text-[8px] sm:text-[9px] tracking-tight">AMEX</span>
-                </div>
-
-                {/* 4. Discover */}
-                <div
-                  title="Discover"
-                  className="w-12 h-7 sm:w-14 sm:h-8 bg-white rounded-md flex items-center justify-center shadow-xs border border-white/20 select-none p-1"
-                >
-                  <span className="text-slate-900 font-extrabold text-[7px] sm:text-[8px] tracking-tight flex items-center">
-                    DISC<span className="w-1.5 h-1.5 rounded-full bg-[#ff6000] inline-block mx-0.5" />VER
-                  </span>
-                </div>
-
-                {/* 5. Edahabia */}
-                <div
-                  title="Carte Edahabia"
-                  className="w-12 h-7 sm:w-14 sm:h-8 bg-gradient-to-r from-amber-500 to-amber-600 rounded-md flex items-center justify-center shadow-xs border border-amber-400/30 select-none p-0.5"
-                >
-                  <span className="text-white font-black text-[7px] sm:text-[8px] tracking-tighter uppercase">
-                    Edahabia
-                  </span>
-                </div>
-
-                {/* 6. CIB */}
-                <div
-                  title="Carte CIB"
-                  className="w-12 h-7 sm:w-14 sm:h-8 bg-[#008752] rounded-md flex items-center justify-center shadow-xs border border-emerald-400/30 select-none p-1"
-                >
-                  <span className="text-white font-black text-[8px] sm:text-[9px] tracking-wider">CIB</span>
-                </div>
-
-                {/* 7. PayPal */}
-                <div
-                  title="PayPal"
-                  className="w-12 h-7 sm:w-14 sm:h-8 bg-white rounded-md flex items-center justify-center shadow-xs border border-white/20 select-none p-1"
-                >
-                  <span className="text-[#003087] font-black italic text-[9px] sm:text-[10px] tracking-tighter">
-                    Pay<span className="text-[#0079c1]">Pal</span>
-                  </span>
-                </div>
-
-                {/* 8. Apple Pay */}
-                <div
-                  title="Apple Pay"
-                  className="w-12 h-7 sm:w-14 sm:h-8 bg-black rounded-md flex items-center justify-center shadow-xs border border-white/20 select-none p-1"
-                >
-                  <span className="text-white font-semibold text-[8px] sm:text-[9px] tracking-tight">Pay</span>
+                  <div className="w-2.5 h-3.5 rounded-xs bg-emerald-200/90 border border-emerald-900/30 shadow-2xs" />
+                  <div className="flex flex-col text-start">
+                    <span className="text-white font-black text-xs tracking-widest leading-none">
+                      CIB
+                    </span>
+                    <span className="text-emerald-100 font-semibold text-[9px] leading-tight mt-0.5">
+                      Interbancaire
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
