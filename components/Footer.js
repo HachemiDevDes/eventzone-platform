@@ -47,16 +47,16 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses }) {
 
   return (
     <div className="w-full mt-20 relative font-sans">
-      {/* 1. Newsletter Arched Dome Section with background image & black overlay */}
-      <div className="relative w-full overflow-hidden bg-[#0a0d14]">
+      {/* 1. Newsletter Arched Dome Section with background image & overlay */}
+      <div className="relative w-full overflow-hidden bg-[#081431]">
         {/* Background photo: waiting_room_with_monitors */}
         <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: "url('/waiting_room_with_monitors.jpg')" }}
         />
 
-        {/* Black overlay for contrast and sleek dark look */}
-        <div className="absolute inset-0 bg-black/80" />
+        {/* Midnight navy overlay for contrast and sleek dark look */}
+        <div className="absolute inset-0 bg-[#081431]/85" />
 
         {/* Top Arched Convex Dome Cutout (masks corners with page bg-slate-50 / #f8fafc) */}
         <div className="absolute top-0 left-0 right-0 w-full overflow-hidden leading-none pointer-events-none select-none z-10 -mt-[1px]">
@@ -124,13 +124,13 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses }) {
       </div>
 
       {/* 2. Main Dark Footer Body */}
-      <footer className="bg-[#0a0d14] text-slate-300 text-xs relative z-10">
+      <footer className="bg-[#081431] text-slate-300 text-xs relative z-10">
         <div className="max-w-7xl mx-auto px-6 sm:px-8">
 
           {/* B. Middle 3-Column Info Strip (Contact, Address, Hours) */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-0 py-8 border-y border-slate-800/80 text-start rtl:text-right text-left">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-0 py-8 border-y border-white/10 text-start rtl:text-right text-left">
             {/* Column 1: Contact us */}
-            <div className="md:pr-8 md:border-r border-slate-800/80 space-y-2.5">
+            <div className="md:pr-8 md:border-r border-white/10 space-y-2.5">
               <p className="text-blue-400 font-bold text-xs sm:text-sm tracking-wide">
                 {t("footer.contactUs", "Contact us")}
               </p>
@@ -151,7 +151,7 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses }) {
             </div>
 
             {/* Column 2: Address */}
-            <div className="md:px-8 md:border-r border-slate-800/80 space-y-2.5">
+            <div className="md:px-8 md:border-r border-white/10 space-y-2.5">
               <p className="text-blue-400 font-bold text-xs sm:text-sm tracking-wide">
                 {t("footer.addressTitle", "Headquarters address:")}
               </p>
@@ -328,7 +328,7 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses }) {
                 {/* 1. EDAHABIA */}
                 <div
                   title="Carte EDAHABIA"
-                  className="px-4 py-2 bg-slate-900 border border-slate-700/80 hover:border-slate-500 rounded-xl flex items-center justify-center h-12 shadow-md transition-all hover:scale-105 select-none"
+                  className="px-4 py-2 bg-[#0c1e4a] border border-[#1b3473]/80 hover:border-blue-500/80 rounded-xl flex items-center justify-center h-12 shadow-md transition-all hover:scale-105 select-none"
                 >
                   <img
                     src="/dahabia_logo.png"
@@ -340,7 +340,7 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses }) {
                 {/* 2. CIB */}
                 <div
                   title="Carte CIB"
-                  className="px-4 py-2 bg-slate-900 border border-slate-700/80 hover:border-slate-500 rounded-xl flex items-center justify-center h-12 shadow-md transition-all hover:scale-105 select-none"
+                  className="px-4 py-2 bg-[#0c1e4a] border border-[#1b3473]/80 hover:border-blue-500/80 rounded-xl flex items-center justify-center h-12 shadow-md transition-all hover:scale-105 select-none"
                 >
                   <img
                     src="/cib_logo.png"
@@ -353,13 +353,13 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses }) {
           </div>
 
           {/* D. Bottom Copyright & Back-to-Top Bar */}
-          <div className="pt-8 pb-8 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
+          <div className="pt-8 pb-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
             <span>{t("footer.rightsReserved", "© 2026 Eventzone. All rights reserved.")}</span>
 
             <button
               type="button"
               onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 transition-all font-semibold cursor-pointer shadow-xs"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0c1e4a] hover:bg-[#112a66] text-slate-300 hover:text-white border border-[#1b3473]/80 transition-all font-semibold cursor-pointer shadow-xs"
             >
               <ArrowUp size={14} />
               <span>{t("footer.backToTop", "Back to Top")}</span>
