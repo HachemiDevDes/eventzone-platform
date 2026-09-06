@@ -832,9 +832,9 @@ export default function ProfileView({
           <div className="border-t border-slate-200 px-3 sm:px-8 flex items-center justify-start sm:justify-center gap-1 sm:gap-4 bg-slate-50/70 overflow-x-auto scrollbar-none whitespace-nowrap">
             <button
               onClick={() => setActiveTab("general")}
-              className={`px-3.5 py-3 sm:px-4 sm:py-3.5 text-xs font-semibold border-b-2 transition-all cursor-pointer shrink-0 ${
+              className={`px-3.5 py-3 sm:px-4 sm:py-3.5 text-xs font-semibold border-b-2 rounded-none transition-all cursor-pointer shrink-0 ${
                 activeTab === "general"
-                  ? "border-blue-600 text-blue-600 bg-white"
+                  ? "border-blue-600 text-blue-600"
                   : "border-transparent text-slate-600 hover:text-slate-900"
               }`}
             >
@@ -843,15 +843,19 @@ export default function ProfileView({
 
             <button
               onClick={() => setActiveTab("looking_for")}
-              className={`px-3.5 py-3 sm:px-4 sm:py-3.5 text-xs font-semibold border-b-2 transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
+              className={`px-3.5 py-3 sm:px-4 sm:py-3.5 text-xs font-semibold border-b-2 rounded-none transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
                 activeTab === "looking_for"
-                  ? "border-blue-600 text-blue-600 bg-white"
+                  ? "border-blue-600 text-blue-600"
                   : "border-transparent text-slate-600 hover:text-slate-900"
               }`}
             >
               <span>What I&apos;m Looking For</span>
               {(Array.isArray(selectedLookingFor) ? selectedLookingFor.length : 0) > 0 && (
-                <span className="px-1.5 py-0.5 rounded-full bg-slate-200 text-slate-700 text-[10px] font-bold">
+                <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                  activeTab === "looking_for"
+                    ? "bg-blue-100 text-blue-700"
+                    : "bg-slate-200 text-slate-700"
+                }`}>
                   {Array.isArray(selectedLookingFor) ? selectedLookingFor.length : 0}
                 </span>
               )}
@@ -859,15 +863,19 @@ export default function ProfileView({
 
             <button
               onClick={() => setActiveTab("interests")}
-              className={`px-3.5 py-3 sm:px-4 sm:py-3.5 text-xs font-semibold border-b-2 transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
+              className={`px-3.5 py-3 sm:px-4 sm:py-3.5 text-xs font-semibold border-b-2 rounded-none transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
                 activeTab === "interests"
-                  ? "border-blue-600 text-blue-600 bg-white"
+                  ? "border-blue-600 text-blue-600"
                   : "border-transparent text-slate-600 hover:text-slate-900"
               }`}
             >
               <span>Interests &amp; Matchmaking</span>
               {(Array.isArray(interests) ? interests.length : 0) > 0 && (
-                <span className="px-1.5 py-0.5 rounded-full bg-slate-200 text-slate-700 text-[10px] font-bold">
+                <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                  activeTab === "interests"
+                    ? "bg-blue-100 text-blue-700"
+                    : "bg-slate-200 text-slate-700"
+                }`}>
                   {Array.isArray(interests) ? interests.length : 0}
                 </span>
               )}
@@ -875,15 +883,19 @@ export default function ProfileView({
 
             <button
               onClick={() => setActiveTab("socials")}
-              className={`px-3.5 py-3 sm:px-4 sm:py-3.5 text-xs font-semibold border-b-2 transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
+              className={`px-3.5 py-3 sm:px-4 sm:py-3.5 text-xs font-semibold border-b-2 rounded-none transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
                 activeTab === "socials"
-                  ? "border-blue-600 text-blue-600 bg-white"
+                  ? "border-blue-600 text-blue-600"
                   : "border-transparent text-slate-600 hover:text-slate-900"
               }`}
             >
               <span>Social Links</span>
               {(Array.isArray(socialLinksList) ? socialLinksList.length : 0) > 0 && (
-                <span className="px-1.5 py-0.5 rounded-full bg-slate-200 text-slate-700 text-[10px] font-bold">
+                <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                  activeTab === "socials"
+                    ? "bg-blue-100 text-blue-700"
+                    : "bg-slate-200 text-slate-700"
+                }`}>
                   {Array.isArray(socialLinksList) ? socialLinksList.length : 0}
                 </span>
               )}
