@@ -621,10 +621,6 @@ export default function MainHomePage({
                           alt={ev.title} 
                           className="event-card-banner-rounded w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent" />
-                        
-
-
                         {isRegistered && (
                           <div className="absolute top-3 right-3 rtl:right-auto rtl:left-3">
                             <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-500 text-white shadow-xs flex items-center gap-1">
@@ -633,12 +629,6 @@ export default function MainHomePage({
                             </span>
                           </div>
                         )}
-
-                        <div className="absolute bottom-3 left-3 right-3">
-                          <span className="text-[10px] font-bold text-blue-200 uppercase tracking-wider block drop-shadow-sm">
-                            {getCategoryLabel(ev.category || "Technology & Software")}
-                          </span>
-                        </div>
                       </div>
 
                       {/* Card Content */}
