@@ -623,11 +623,7 @@ export default function MainHomePage({
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent" />
                         
-                        <div className="absolute top-3 left-3 rtl:left-auto rtl:right-3">
-                          <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-white/90 backdrop-blur-md text-blue-700 border border-white/40 uppercase tracking-wider shadow-xs">
-                            {getFormatLabel(ev.type || "Hybrid")}
-                          </span>
-                        </div>
+
 
                         {isRegistered && (
                           <div className="absolute top-3 right-3 rtl:right-auto rtl:left-3">
