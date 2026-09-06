@@ -74,14 +74,6 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses }) {
           </svg>
         </div>
 
-        {/* Ambient blue decorative glow */}
-        <div
-          className="absolute inset-0 pointer-events-none z-10 opacity-30"
-          style={{
-            background: "radial-gradient(circle at 50% 40%, rgba(11, 92, 219, 0.35), transparent 70%)",
-          }}
-        />
-
         {/* Newsletter Content inside the Dome */}
         <div className="relative z-20 max-w-7xl mx-auto px-6 sm:px-8">
           <section className="pt-24 sm:pt-36 md:pt-44 lg:pt-48 pb-20 sm:pb-24 md:pb-28 text-center max-w-3xl mx-auto">
