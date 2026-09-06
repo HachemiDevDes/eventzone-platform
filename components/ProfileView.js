@@ -358,6 +358,10 @@ export default function ProfileView({
   onGoToHome,
   onOpenAuth,
   onSignOut,
+  onOpenPassesModal,
+  onOpenCreationWizard,
+  onOpenEventsHub,
+  onOpenAdminView,
   registrations = []
 }) {
   const [activeTab, setActiveTab] = useState("general"); // "general" | "looking_for" | "interests" | "socials"
@@ -723,9 +727,10 @@ export default function ProfileView({
         onGoToHome={onGoToHome}
         onOpenAuth={onOpenAuth}
         onOpenProfile={() => {}}
-        onOpenPassesModal={onGoToHome}
-        onOpenCreationWizard={onGoToHome}
-        onOpenEventsHub={onGoToHome}
+        onOpenPassesModal={onOpenPassesModal || (() => { if (typeof window !== "undefined") window.location.href = "/?view=my-tickets"; })}
+        onOpenCreationWizard={onOpenCreationWizard || (() => { if (typeof window !== "undefined") window.location.href = "/?view=create-event"; })}
+        onOpenEventsHub={onOpenEventsHub || (() => { if (typeof window !== "undefined") window.location.href = "/?view=events-hub"; })}
+        onOpenAdminView={onOpenAdminView || (() => { if (typeof window !== "undefined") window.location.href = "/?view=admin"; })}
         onSignOut={onSignOut}
       />
 

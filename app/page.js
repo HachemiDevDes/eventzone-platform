@@ -3211,6 +3211,17 @@ export function HomeContent() {
             setAuthModalInitialMode(mode || "signin");
             setCurrentView("auth");
           }}
+          onOpenPassesModal={() => setCurrentView("my-tickets")}
+          onOpenCreationWizard={() => setCurrentView("create-event")}
+          onOpenEventsHub={() => {
+            if (!currentUser) {
+              setAuthModalInitialMode("signup");
+              setCurrentView("auth");
+            } else {
+              setCurrentView("events-hub");
+            }
+          }}
+          onOpenAdminView={() => setCurrentView("admin")}
           onSignOut={handleSignOut}
           registrations={Array.isArray(visitorRegistrations) ? visitorRegistrations : []}
         />
