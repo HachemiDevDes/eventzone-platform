@@ -325,18 +325,12 @@ export default function UniversalTopBar({
             )}
           </div>
         ) : (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center">
             <button
               onClick={() => onOpenAuth && onOpenAuth("signin")}
               className="px-3.5 py-1.5 text-xs font-bold text-slate-700 hover:text-blue-600 hover:bg-slate-100/70 rounded-xl transition-all cursor-pointer"
             >
               {t("nav.signIn", "Sign In")}
-            </button>
-            <button
-              onClick={() => onOpenAuth && onOpenAuth("signup")}
-              className="px-4 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm shadow-blue-600/20 hover:shadow transition-all cursor-pointer"
-            >
-              {t("nav.signUp", "Sign Up")}
             </button>
           </div>
         )}
