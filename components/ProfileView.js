@@ -811,21 +811,6 @@ export default function ProfileView({
               </div>
             </div>
 
-            {/* Status Badges (Clean 2x2 grid on mobile, flex row on desktop) */}
-            <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center justify-center gap-2 pt-1.5 text-xs text-slate-600 w-full max-w-xs sm:max-w-none">
-              <div className="px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 font-medium text-center">
-                {Array.isArray(registrations) ? registrations.length : 0} Passes
-              </div>
-              <div className="px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 font-medium text-center">
-                {Array.isArray(selectedLookingFor) ? selectedLookingFor.length : 0} Looking For
-              </div>
-              <div className="px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 font-medium text-center">
-                {Array.isArray(interests) ? interests.length : 0} Interests
-              </div>
-              <div className="px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 font-medium text-center">
-                {Array.isArray(socialLinksList) ? socialLinksList.length : 0} Links
-              </div>
-            </div>
           </div>
 
           {/* CLEAN NAVIGATION TABS (SCROLLABLE ON MOBILE) */}
