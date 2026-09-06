@@ -66,6 +66,7 @@ import CompanyDrawer from "../components/CompanyDrawer";
 import SearchableSelect from "../components/SearchableSelect";
 import OrganizerAttendeePortalSettings from "../components/OrganizerAttendeePortalSettings";
 import AttendeePortalView from "../components/AttendeePortalView";
+import ErrorBoundary from "../components/ErrorBoundary";
 import { getEffectivePermissions, canViewModule, canEditModule, getModulePermission } from "../lib/permissions";
 import { LanguageProvider, useLanguage } from "../lib/i18n";
 
@@ -3196,17 +3197,24 @@ export function HomeContent() {
   // ==========================================================================
   if (currentView === "profile") {
     return (
-      <ProfileView
-        currentUser={currentUser}
-        onSaveProfile={handleUpdateProfile}
-        onGoToHome={() => setCurrentView("home")}
-        onOpenAuth={(mode) => {
-          setAuthModalInitialMode(mode || "signin");
-          setCurrentView("auth");
-        }}
-        onSignOut={handleSignOut}
-        registrations={visitorRegistrations}
-      />
+      <ErrorBoundary
+        title="Profile View Unavailable"
+        description="An error occurred while loading your profile. Please try reloading or return to the main dashboard."
+        onGoHome={() => setCurrentView("home")}
+      >
+        <ProfileView
+          currentUser={currentUser}
+          isLoading={!authInitialized && !currentUser}
+          onSaveProfile={handleUpdateProfile}
+          onGoToHome={() => setCurrentView("home")}
+          onOpenAuth={(mode) => {
+            setAuthModalInitialMode(mode || "signin");
+            setCurrentView("auth");
+          }}
+          onSignOut={handleSignOut}
+          registrations={Array.isArray(visitorRegistrations) ? visitorRegistrations : []}
+        />
+      </ErrorBoundary>
     );
   }
 

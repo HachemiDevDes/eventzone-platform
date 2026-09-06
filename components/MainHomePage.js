@@ -463,7 +463,7 @@ export default function MainHomePage({
                 </div>
 
                 {/* CTA */}
-                <div className="pt-1 sm:pt-2">
+                <div className="pt-4 sm:pt-2">
                   <button
                     onClick={() => onViewLivePage(activeSlide.id)}
                     className="px-6 sm:px-8 py-2.5 sm:py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl sm:rounded-2xl font-bold text-xs sm:text-sm shadow-xl shadow-blue-600/40 transition-all cursor-pointer"

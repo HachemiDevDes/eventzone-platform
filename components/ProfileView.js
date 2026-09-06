@@ -86,9 +86,15 @@ const LOOKING_FOR_OPTIONS = [
   }
 ];
 
-// Helper to parse 'what_im_looking_for' comma string into array
+// Helper to parse 'what_im_looking_for' comma string or array into string array
 const parseLookingFor = (raw) => {
-  if (Array.isArray(raw)) return raw;
+  if (Array.isArray(raw)) {
+    return raw.map(item => {
+      if (typeof item === "string") return item.trim();
+      if (item && typeof item === "object") return String(item.label || item.name || item.id || "").trim();
+      return String(item || "").trim();
+    }).filter(Boolean);
+  }
   if (typeof raw === "string" && raw.trim()) {
     return raw.split(",").map(s => s.trim()).filter(Boolean);
   }
@@ -283,45 +289,63 @@ const matchPlatformId = (platStr) => {
 const normalizeSocialLinks = (user) => {
   if (!user) return [];
 
-  // 1. Prioritize metadata.socials (Used by Mobile App)
-  const metaSocials = user.metadata?.socials;
-  if (Array.isArray(metaSocials) && metaSocials.length > 0) {
-    return metaSocials.map((item, idx) => ({
-      id: `social-meta-${idx}-${Date.now()}`,
-      platform: matchPlatformId(item.platform),
-      title: item.label || item.platform || "Social Link",
-      url: item.value || ""
-    })).filter(s => s.url && s.url.trim());
-  }
+  try {
+    // 1. Prioritize metadata.socials (Used by Mobile App)
+    const metaSocials = user.metadata?.socials;
+    if (Array.isArray(metaSocials) && metaSocials.length > 0) {
+      return metaSocials.map((item, idx) => ({
+        id: `social-meta-${idx}-${Date.now()}`,
+        platform: matchPlatformId(item?.platform),
+        title: String(item?.label || item?.platform || "Social Link"),
+        url: String(item?.value || item?.url || "").trim()
+      })).filter(s => s.url);
+    }
 
-  // 2. Check if socialLinks or social_links is an array
-  const rawList = user.socialLinks || user.social_links;
-  if (Array.isArray(rawList) && rawList.length > 0) {
-    return rawList.map((item, idx) => {
-      const plat = item.platform || "Website";
-      return {
-        id: item.id || `social-list-${idx}-${Date.now()}`,
-        platform: matchPlatformId(plat),
-        title: item.title || item.label || plat || "Social Link",
-        url: item.url || item.value || ""
-      };
-    }).filter(s => s.url && s.url.trim());
-  }
+    // 2. Check if socialLinks or social_links is an array
+    const rawList = user.socialLinks || user.social_links;
+    if (Array.isArray(rawList) && rawList.length > 0) {
+      return rawList.map((item, idx) => {
+        if (!item || typeof item !== "object") {
+          const strVal = String(item || "").trim();
+          return {
+            id: `social-list-${idx}-${Date.now()}`,
+            platform: "website",
+            title: "Website",
+            url: strVal
+          };
+        }
+        const plat = item.platform || "Website";
+        return {
+          id: item.id || `social-list-${idx}-${Date.now()}`,
+          platform: matchPlatformId(plat),
+          title: String(item.title || item.label || plat || "Social Link"),
+          url: String(item.url || item.value || "").trim()
+        };
+      }).filter(s => s.url);
+    }
 
-  // 3. Check if social_links is a key-value object { linkedin: "...", email: "..." }
-  if (rawList && typeof rawList === "object") {
-    const list = [];
-    Object.entries(rawList).forEach(([key, val], idx) => {
-      if (val && typeof val === "string") {
-        list.push({
-          id: `social-obj-${idx}-${Date.now()}`,
-          platform: matchPlatformId(key),
-          title: key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' '),
-          url: val
-        });
-      }
-    });
-    if (list.length > 0) return list;
+    // 3. Check if social_links is a key-value object { linkedin: "...", email: "..." }
+    if (rawList && typeof rawList === "object" && !Array.isArray(rawList)) {
+      const list = [];
+      const ignoredKeys = new Set(["status", "max_events", "max_attendees", "account_status", "role", "created_at", "updated_at"]);
+      Object.entries(rawList).forEach(([key, val], idx) => {
+        if (ignoredKeys.has(key.toLowerCase())) return;
+        if (val && typeof val !== "boolean") {
+          const strVal = typeof val === "string" ? val.trim() : (typeof val === "object" && val?.url ? String(val.url).trim() : String(val).trim());
+          if (strVal && (strVal.startsWith("http") || strVal.startsWith("www.") || strVal.startsWith("@") || strVal.startsWith("mailto:") || strVal.startsWith("tel:") || strVal.length > 2)) {
+            list.push({
+              id: `social-obj-${idx}-${Date.now()}`,
+              platform: matchPlatformId(key),
+              title: key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' '),
+              url: strVal
+            });
+          }
+        }
+      });
+      if (list.length > 0) return list;
+    }
+  } catch (err) {
+    console.warn("Error normalizing social links:", err);
   }
 
   return [];
@@ -367,14 +391,15 @@ export default function ProfileView({
   // Populate from currentUser on load
   useEffect(() => {
     if (currentUser) {
-      setFullName(currentUser.fullName || currentUser.full_name || "");
-      setJobTitle(currentUser.jobTitle || currentUser.job_title || "");
-      setCompanyName(currentUser.companyName || currentUser.company_name || currentUser.company || "");
-      setLocation(currentUser.location || currentUser.address || "");
-      setPhone(currentUser.phone || "");
-      setBio(currentUser.bio || "");
-      setAvatar(currentUser.avatar || currentUser.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.fullName || currentUser.full_name || "User")}&background=0b5cdb&color=fff`);
-      setInterests(Array.isArray(currentUser.interests) ? [...currentUser.interests] : []);
+      setFullName(typeof currentUser.fullName === "string" ? currentUser.fullName : (typeof currentUser.full_name === "string" ? currentUser.full_name : ""));
+      setJobTitle(typeof currentUser.jobTitle === "string" ? currentUser.jobTitle : (typeof currentUser.job_title === "string" ? currentUser.job_title : ""));
+      setCompanyName(typeof currentUser.companyName === "string" ? currentUser.companyName : (typeof currentUser.company_name === "string" ? currentUser.company_name : (typeof currentUser.company === "string" ? currentUser.company : "")));
+      setLocation(typeof currentUser.location === "string" ? currentUser.location : (typeof currentUser.address === "string" ? currentUser.address : ""));
+      setPhone(currentUser.phone !== null && currentUser.phone !== undefined ? String(currentUser.phone) : "");
+      setBio(typeof currentUser.bio === "string" ? currentUser.bio : "");
+      const avatarName = currentUser.fullName || currentUser.full_name || "User";
+      setAvatar(currentUser.avatar || currentUser.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(typeof avatarName === "string" ? avatarName : "User")}&background=0b5cdb&color=fff`);
+      setInterests(Array.isArray(currentUser.interests) ? currentUser.interests.map(i => typeof i === "string" ? i : String(i?.name || i?.label || i || "")) : []);
       
       const rawLooking = currentUser.what_im_looking_for || currentUser.whatImLookingFor || "";
       setSelectedLookingFor(parseLookingFor(rawLooking));
@@ -531,11 +556,12 @@ export default function ProfileView({
 
   // Toggle interest chip
   const toggleInterest = (tag) => {
-    if (interests.includes(tag)) {
-      setInterests(interests.filter(t => t !== tag));
+    const list = Array.isArray(interests) ? interests : [];
+    if (list.includes(tag)) {
+      setInterests(list.filter(t => t !== tag));
     } else {
-      if (interests.length < 12) {
-        setInterests([...interests, tag]);
+      if (list.length < 12) {
+        setInterests([...list, tag]);
       }
     }
   };
@@ -543,10 +569,11 @@ export default function ProfileView({
   // Add custom interest tag
   const handleAddCustomTag = (e) => {
     e?.preventDefault();
-    const clean = customTagInput.trim();
-    if (clean && !interests.includes(clean)) {
-      if (interests.length < 12) {
-        setInterests([...interests, clean]);
+    const clean = String(customTagInput || "").trim();
+    const list = Array.isArray(interests) ? interests : [];
+    if (clean && !list.includes(clean)) {
+      if (list.length < 12) {
+        setInterests([...list, clean]);
         setCustomTagInput("");
       }
     }
@@ -554,7 +581,8 @@ export default function ProfileView({
 
   // Remove tag
   const removeInterest = (tagToRemove) => {
-    setInterests(interests.filter(t => t !== tagToRemove));
+    const list = Array.isArray(interests) ? interests : [];
+    setInterests(list.filter(t => t !== tagToRemove));
   };
 
   // Open modal to Add a new social link
@@ -811,16 +839,16 @@ export default function ProfileView({
             {/* Status Badges (Clean 2x2 grid on mobile, flex row on desktop) */}
             <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center justify-center gap-2 pt-1.5 text-xs text-slate-600 w-full max-w-xs sm:max-w-none">
               <div className="px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 font-medium text-center">
-                {registrations.length} Passes
+                {Array.isArray(registrations) ? registrations.length : 0} Passes
               </div>
               <div className="px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 font-medium text-center">
-                {selectedLookingFor.length} Looking For
+                {Array.isArray(selectedLookingFor) ? selectedLookingFor.length : 0} Looking For
               </div>
               <div className="px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 font-medium text-center">
-                {interests.length} Interests
+                {Array.isArray(interests) ? interests.length : 0} Interests
               </div>
               <div className="px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 font-medium text-center">
-                {socialLinksList.length} Links
+                {Array.isArray(socialLinksList) ? socialLinksList.length : 0} Links
               </div>
             </div>
           </div>
@@ -847,9 +875,9 @@ export default function ProfileView({
               }`}
             >
               <span>What I&apos;m Looking For</span>
-              {selectedLookingFor.length > 0 && (
+              {(Array.isArray(selectedLookingFor) ? selectedLookingFor.length : 0) > 0 && (
                 <span className="px-1.5 py-0.5 rounded-full bg-slate-200 text-slate-700 text-[10px] font-bold">
-                  {selectedLookingFor.length}
+                  {Array.isArray(selectedLookingFor) ? selectedLookingFor.length : 0}
                 </span>
               )}
             </button>
@@ -863,9 +891,9 @@ export default function ProfileView({
               }`}
             >
               <span>Interests &amp; Matchmaking</span>
-              {interests.length > 0 && (
+              {(Array.isArray(interests) ? interests.length : 0) > 0 && (
                 <span className="px-1.5 py-0.5 rounded-full bg-slate-200 text-slate-700 text-[10px] font-bold">
-                  {interests.length}
+                  {Array.isArray(interests) ? interests.length : 0}
                 </span>
               )}
             </button>
@@ -879,9 +907,9 @@ export default function ProfileView({
               }`}
             >
               <span>Social Links</span>
-              {socialLinksList.length > 0 && (
+              {(Array.isArray(socialLinksList) ? socialLinksList.length : 0) > 0 && (
                 <span className="px-1.5 py-0.5 rounded-full bg-slate-200 text-slate-700 text-[10px] font-bold">
-                  {socialLinksList.length}
+                  {Array.isArray(socialLinksList) ? socialLinksList.length : 0}
                 </span>
               )}
             </button>
@@ -997,12 +1025,12 @@ export default function ProfileView({
                 </p>
               </div>
               <span className="text-[11px] sm:text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 shrink-0 self-start sm:self-auto">
-                {selectedLookingFor.length} Selected
+                {Array.isArray(selectedLookingFor) ? selectedLookingFor.length : 0} Selected
               </span>
             </div>
 
             {/* Selected Tags */}
-            {selectedLookingFor.length > 0 && (
+            {(Array.isArray(selectedLookingFor) ? selectedLookingFor.length : 0) > 0 && (
               <div className="space-y-2 p-3 sm:p-4 bg-slate-50 rounded-xl sm:rounded-2xl border border-slate-200">
                 <div className="flex items-center justify-between text-xs font-medium text-slate-700">
                   <span>Selected Objectives:</span>
@@ -1015,13 +1043,13 @@ export default function ProfileView({
                   </button>
                 </div>
                 <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                  {selectedLookingFor.map((item, idx) => (
+                  {(selectedLookingFor || []).map((item, idx) => (
                     <span
                       key={idx}
                       className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-white text-slate-900 text-xs font-medium shadow-2xs border border-slate-200 animate-scale-up"
                     >
                       <Check size={12} className="text-blue-600 shrink-0" />
-                      <span className="truncate">{item}</span>
+                      <span className="truncate">{String(item || "")}</span>
                       <button
                         type="button"
                         onClick={() => removeLookingFor(item)}
@@ -1108,7 +1136,7 @@ export default function ProfileView({
                 </p>
               </div>
               <span className="text-[11px] sm:text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 shrink-0 self-start sm:self-auto">
-                {interests.length} / 12 Selected
+                {Array.isArray(interests) ? interests.length : 0} / 12 Selected
               </span>
             </div>
 
@@ -1131,7 +1159,7 @@ export default function ProfileView({
             </form>
 
             {/* Active Selected Tags */}
-            {interests.length > 0 && (
+            {(Array.isArray(interests) ? interests.length : 0) > 0 && (
               <div className="space-y-2 pt-1">
                 <div className="flex items-center justify-between text-xs font-medium text-slate-700">
                   <span>Your Active Tags:</span>
@@ -1144,12 +1172,12 @@ export default function ProfileView({
                   </button>
                 </div>
                 <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                  {interests.map((tag, idx) => (
+                  {(Array.isArray(interests) ? interests : []).map((tag, idx) => (
                     <span
                       key={idx}
                       className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-slate-900 text-white text-xs font-medium shadow-2xs animate-scale-up"
                     >
-                      <span>{tag}</span>
+                      <span>{String(tag)}</span>
                       <button
                         type="button"
                         onClick={() => removeInterest(tag)}
@@ -1170,7 +1198,7 @@ export default function ProfileView({
               </span>
               <div className="flex flex-wrap gap-1.5 sm:gap-2">
                 {CURATED_INTERESTS.map((tag, idx) => {
-                  const isSelected = interests.includes(tag);
+                  const isSelected = Array.isArray(interests) && interests.includes(tag);
                   return (
                     <button
                       key={idx}
@@ -1215,7 +1243,7 @@ export default function ProfileView({
             </div>
 
             {/* List of Added Social Links */}
-            {socialLinksList.length === 0 ? (
+            {(!Array.isArray(socialLinksList) || socialLinksList.length === 0) ? (
               <div className="py-8 sm:py-10 border border-dashed border-slate-200 rounded-2xl text-center space-y-2 bg-slate-50/50 p-4">
                 <h3 className="text-xs font-semibold text-slate-700">No Social Links Added Yet</h3>
                 <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
@@ -1234,7 +1262,7 @@ export default function ProfileView({
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
-                {socialLinksList.map((item) => {
+                {(Array.isArray(socialLinksList) ? socialLinksList : []).map((item) => {
                   const plat = SOCIAL_PLATFORMS.find(p => p.id === item.platform) || SOCIAL_PLATFORMS[3];
                   return (
                     <div
@@ -1248,15 +1276,15 @@ export default function ProfileView({
 
                         <div className="min-w-0 space-y-0.5">
                           <h4 className="text-xs font-semibold text-slate-900 truncate">
-                            {item.title || plat.name}
+                            {String(item?.title || plat?.name || "")}
                           </h4>
                           <a
-                            href={item.url}
+                            href={String(item?.url || "#")}
                             target="_blank"
                             rel="noreferrer"
                             className="text-[11px] text-slate-400 hover:text-blue-600 truncate flex items-center gap-1 transition-colors max-w-[150px] sm:max-w-[200px]"
                           >
-                            <span className="truncate">{item.url}</span>
+                            <span className="truncate">{String(item?.url || "")}</span>
                             <ExternalLink size={10} className="shrink-0" />
                           </a>
                         </div>

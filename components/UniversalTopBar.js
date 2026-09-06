@@ -246,7 +246,7 @@ export default function UniversalTopBar({
                     <span>{t("nav.myTickets", "My Tickets")}</span>
                   </div>
                   <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-white font-black text-[10px]">
-                    {registrations.length}
+                    {Array.isArray(registrations) ? registrations.length : 0}
                   </span>
                 </button>
 

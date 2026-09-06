@@ -188,24 +188,23 @@ export const COUNTRIES = [
 ];
 
 export function parsePhoneNumber(fullStr = "", defaultCountryCode = "DZ") {
-  const str = (fullStr || "").trim();
+  const str = String(fullStr ?? "").trim();
+  const defaultCountry = COUNTRIES.find(c => c.code === defaultCountryCode) || COUNTRIES[0] || { code: "DZ", name: "Algeria", dial: "+213", sample: "550 12 34 56" };
   if (!str) {
-    const fallback = COUNTRIES.find(c => c.code === defaultCountryCode) || COUNTRIES[0];
-    return { country: fallback, nationalNumber: "" };
+    return { country: defaultCountry, nationalNumber: "" };
   }
 
   // If starts with +, match the longest dial code
   if (str.startsWith("+")) {
-    const sorted = [...COUNTRIES].sort((a, b) => b.dial.length - a.dial.length);
+    const sorted = [...COUNTRIES].sort((a, b) => (b.dial?.length || 0) - (a.dial?.length || 0));
     for (const c of sorted) {
-      if (str.startsWith(c.dial)) {
+      if (c.dial && str.startsWith(c.dial)) {
         const national = str.slice(c.dial.length).trim();
         return { country: c, nationalNumber: national };
       }
     }
   }
 
-  const defaultCountry = COUNTRIES.find(c => c.code === defaultCountryCode) || COUNTRIES[0];
   return { country: defaultCountry, nationalNumber: str };
 }
 
@@ -231,14 +230,14 @@ export default function CountryPhoneInput({
     return parsePhoneNumber(value, defaultCountry);
   }, [value, defaultCountry]);
 
-  const [selectedCountry, setSelectedCountry] = useState(parsed.country);
-  const [nationalNumber, setNationalNumber] = useState(parsed.nationalNumber);
+  const [selectedCountry, setSelectedCountry] = useState(parsed?.country || COUNTRIES[0]);
+  const [nationalNumber, setNationalNumber] = useState(parsed?.nationalNumber || "");
 
   // Sync if value prop changes from outside
   useEffect(() => {
     const p = parsePhoneNumber(value, defaultCountry);
-    setSelectedCountry(p.country);
-    setNationalNumber(p.nationalNumber);
+    if (p?.country) setSelectedCountry(p.country);
+    setNationalNumber(String(p?.nationalNumber ?? ""));
   }, [value, defaultCountry]);
 
   // Close dropdown on outside click
@@ -258,34 +257,37 @@ export default function CountryPhoneInput({
     if (!search) return COUNTRIES;
     const s = search.toLowerCase();
     return COUNTRIES.filter(
-      c => c.name.toLowerCase().includes(s) || c.dial.includes(s) || c.code.toLowerCase().includes(s)
+      c => (c.name || "").toLowerCase().includes(s) || (c.dial || "").includes(s) || (c.code || "").toLowerCase().includes(s)
     );
   }, [search]);
 
   const handleCountrySelect = (country) => {
+    if (!country) return;
     setSelectedCountry(country);
     setIsOpen(false);
     setSearch("");
-    const combined = nationalNumber.trim() ? `${country.dial} ${nationalNumber.trim()}` : "";
+    const combined = String(nationalNumber || "").trim() ? `${country.dial} ${String(nationalNumber || "").trim()}` : "";
     if (onChange) onChange(combined);
   };
 
   const handleNumberChange = (e) => {
-    const raw = e.target.value;
+    const raw = String(e?.target?.value ?? "");
 
     // Check if user pasted/typed a full number starting with +
     if (raw.startsWith("+")) {
-      const p = parsePhoneNumber(raw, selectedCountry.code);
-      setSelectedCountry(p.country);
-      setNationalNumber(p.nationalNumber);
-      if (onChange) onChange(p.nationalNumber ? `${p.country.dial} ${p.nationalNumber}` : "");
+      const p = parsePhoneNumber(raw, selectedCountry?.code || defaultCountry);
+      if (p?.country) setSelectedCountry(p.country);
+      setNationalNumber(p?.nationalNumber || "");
+      if (onChange) onChange(p?.nationalNumber ? `${p?.country?.dial || ""} ${p.nationalNumber}`.trim() : "");
       return;
     }
 
     setNationalNumber(raw);
-    const combined = raw.trim() ? `${selectedCountry.dial} ${raw.trim()}` : "";
+    const combined = raw.trim() ? `${selectedCountry?.dial || ""} ${raw.trim()}`.trim() : "";
     if (onChange) onChange(combined);
   };
+
+  const safeCountry = selectedCountry || COUNTRIES[0] || { code: "DZ", name: "Algeria", dial: "+213", sample: "550 12 34 56" };
 
   return (
     <div className={`relative flex items-center ${className}`}>
@@ -296,14 +298,14 @@ export default function CountryPhoneInput({
           disabled={disabled}
           onClick={() => setIsOpen(!isOpen)}
           className="flex items-center gap-1.5 px-3 py-2 border-e border-slate-200 bg-slate-100/80 hover:bg-slate-200/70 rounded-s-xl text-xs font-bold text-slate-800 transition-colors cursor-pointer select-none shrink-0"
-          title={`Selected: ${selectedCountry.name} (${selectedCountry.dial})`}
+          title={`Selected: ${safeCountry.name} (${safeCountry.dial})`}
         >
           <span dir="ltr" className="inline-flex items-center gap-1">
             <span className="text-[11px] font-extrabold text-slate-500 tracking-wider uppercase">
-              {selectedCountry.code}
+              {safeCountry.code}
             </span>
             <span className="text-xs font-bold text-slate-800 font-mono">
-              {"\u200E" + selectedCountry.dial}
+              {"\u200E" + safeCountry.dial}
             </span>
           </span>
           <ChevronDown size={12} className={`text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
@@ -319,7 +321,7 @@ export default function CountryPhoneInput({
           disabled={disabled}
           value={nationalNumber}
           onChange={handleNumberChange}
-          placeholder={placeholder || selectedCountry.sample}
+          placeholder={placeholder || safeCountry.sample}
           className={`flex-1 min-w-0 px-3.5 py-2 bg-transparent text-xs font-semibold text-slate-900 placeholder:text-slate-400 outline-none text-start ${inputClassName}`}
         />
       </div>
