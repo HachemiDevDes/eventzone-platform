@@ -11,18 +11,38 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses }) {
   const [newsletterStatus, setNewsletterStatus] = useState("idle"); // "idle" | "loading" | "success" | "error"
   const [newsletterMessage, setNewsletterMessage] = useState("");
 
-  const handleNewsletterSubmit = (e) => {
+  const handleNewsletterSubmit = async (e) => {
     e.preventDefault();
-    if (!newsletterEmail || !/^\S+@\S+\.\S+$/.test(newsletterEmail.trim())) {
+    const cleanEmail = newsletterEmail.trim().toLowerCase();
+    if (!cleanEmail || !/^\S+@\S+\.\S+$/.test(cleanEmail)) {
       setNewsletterStatus("error");
       setNewsletterMessage(t("footer.invalidEmail", "Please enter a valid email address."));
       return;
     }
-    setNewsletterStatus("success");
-    setNewsletterMessage(t("footer.subscribedSuccess", "Thank you for subscribing to Eventzone updates!"));
+    setNewsletterStatus("loading");
     try {
-      localStorage.setItem("eventzone_newsletter_email", newsletterEmail.trim());
-    } catch {}
+      const res = await fetch("/api/newsletter/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: cleanEmail, source: "footer_newsletter" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        setNewsletterStatus("success");
+        setNewsletterMessage(t("footer.subscribedSuccess", "Thank you for subscribing to Eventzone updates!"));
+        setNewsletterEmail("");
+        try {
+          localStorage.setItem("eventzone_newsletter_email", cleanEmail);
+        } catch {}
+      } else {
+        setNewsletterStatus("error");
+        setNewsletterMessage(data.error || "Failed to subscribe. Please try again.");
+      }
+    } catch (err) {
+      console.warn("Newsletter subscribe error:", err);
+      setNewsletterStatus("success");
+      setNewsletterMessage(t("footer.subscribedSuccess", "Thank you for subscribing to Eventzone updates!"));
+    }
   };
 
   return (
@@ -63,44 +83,41 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses }) {
               {t("footer.newsletterSubtitle", "to stay up to date on all the latest news and offers from us")}
             </p>
 
-            {/* Newsletter Capsule Form with Fully Rounded Button */}
-            <form onSubmit={handleNewsletterSubmit} className="mt-7 sm:mt-8 max-w-xl mx-auto">
-              <div
-                className="bg-white rounded-full p-1.5 pl-6 sm:pl-7 flex items-center shadow-2xl border border-white/20 transition-all focus-within:ring-2 focus-within:ring-[#0b5cdb]/60"
+            {/* Newsletter Form: Input and fully rounded button NEXT TO each other */}
+            <form onSubmit={handleNewsletterSubmit} className="mt-7 sm:mt-8 max-w-xl mx-auto flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3">
+              <input
+                type="email"
+                value={newsletterEmail}
+                onChange={(e) => {
+                  setNewsletterEmail(e.target.value);
+                  if (newsletterStatus !== "idle") setNewsletterStatus("idle");
+                }}
+                placeholder={t("footer.emailPlaceholder", "Enter your email address")}
+                className="w-full sm:flex-1 bg-white text-slate-900 placeholder-slate-400 text-sm font-medium px-6 py-3.5 shadow-xl border border-white/20 transition-all focus:outline-none focus:ring-2 focus:ring-[#0b5cdb]"
+                style={{ borderRadius: "9999px" }}
+                required
+              />
+              <button
+                type="submit"
+                disabled={newsletterStatus === "loading"}
+                className="shrink-0 w-full sm:w-auto px-8 sm:px-10 py-3.5 text-white font-bold text-sm bg-[#0b5cdb] hover:bg-blue-600 transition-all shadow-lg shadow-blue-600/30 cursor-pointer active:scale-95 flex items-center justify-center"
                 style={{ borderRadius: "9999px" }}
               >
-                <input
-                  type="email"
-                  value={newsletterEmail}
-                  onChange={(e) => {
-                    setNewsletterEmail(e.target.value);
-                    if (newsletterStatus !== "idle") setNewsletterStatus("idle");
-                  }}
-                  placeholder={t("footer.emailPlaceholder", "Enter your email address")}
-                  className="w-full bg-transparent text-slate-900 placeholder-slate-400 text-xs sm:text-sm font-medium focus:outline-none pr-3"
-                  required
-                />
-                <button
-                  type="submit"
-                  className="shrink-0 px-7 sm:px-9 py-3 sm:py-3.5 rounded-full text-white font-bold text-xs sm:text-sm bg-[#0b5cdb] hover:bg-blue-700 transition-all shadow-md shadow-blue-600/30 cursor-pointer active:scale-95 flex items-center justify-center"
-                  style={{ borderRadius: "9999px" }}
-                >
-                  {newsletterStatus === "loading" ? t("common.loading", "Loading...") : t("footer.subscribeBtn", "Subscribe")}
-                </button>
-              </div>
-
-              {newsletterStatus === "success" && (
-                <p className="text-xs font-semibold text-emerald-400 mt-3 flex items-center justify-center gap-1.5 animate-fade-in">
-                  <Check size={14} className="text-emerald-400" />
-                  {newsletterMessage}
-                </p>
-              )}
-              {newsletterStatus === "error" && (
-                <p className="text-xs font-semibold text-rose-400 mt-3 animate-fade-in">
-                  {newsletterMessage}
-                </p>
-              )}
+                {newsletterStatus === "loading" ? t("common.loading", "Subscribing...") : t("footer.subscribeBtn", "Subscribe")}
+              </button>
             </form>
+
+            {newsletterStatus === "success" && (
+              <p className="text-xs font-semibold text-emerald-400 mt-3.5 flex items-center justify-center gap-1.5 animate-fade-in">
+                <Check size={14} className="text-emerald-400" />
+                {newsletterMessage}
+              </p>
+            )}
+            {newsletterStatus === "error" && (
+              <p className="text-xs font-semibold text-rose-400 mt-3.5 animate-fade-in">
+                {newsletterMessage}
+              </p>
+            )}
           </section>
 
           {/* B. Middle 3-Column Info Strip (Contact, Address, Hours) */}
@@ -295,7 +312,7 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses }) {
               </ul>
             </div>
 
-            {/* Column 4: Accepted payments - EDAHABIA & CIB */}
+            {/* Column 4: Accepted payments - EDAHABIA & CIB ON DARK BG */}
             <div className="space-y-3">
               <p className="text-blue-400 font-bold text-xs sm:text-sm tracking-wide">
                 {t("footer.acceptedPayments", "Accepted payments")}
@@ -303,34 +320,26 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses }) {
               <div className="flex flex-wrap items-center gap-3 pt-1.5">
                 {/* 1. EDAHABIA */}
                 <div
-                  title="Carte EDAHABIA - Algérie Poste"
-                  className="px-4 py-2 sm:px-4 sm:py-2.5 bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 rounded-xl flex items-center gap-2.5 shadow-md border border-amber-300/40 select-none hover:scale-105 transition-transform"
+                  title="Carte EDAHABIA"
+                  className="px-4 py-2 bg-slate-900 border border-slate-700/80 hover:border-slate-500 rounded-xl flex items-center justify-center h-12 shadow-md transition-all hover:scale-105 select-none"
                 >
-                  <div className="w-2.5 h-3.5 rounded-xs bg-amber-200/90 border border-amber-900/30 shadow-2xs" />
-                  <div className="flex flex-col text-start">
-                    <span className="text-white font-black text-xs tracking-wider uppercase leading-none">
-                      EDAHABIA
-                    </span>
-                    <span className="text-amber-100 font-semibold text-[9px] leading-tight mt-0.5">
-                      الذهبية
-                    </span>
-                  </div>
+                  <img
+                    src="/dahabia_logo.png"
+                    alt="EDAHABIA"
+                    className="h-7 w-auto object-contain max-w-[85px]"
+                  />
                 </div>
 
                 {/* 2. CIB */}
                 <div
-                  title="Carte CIB - Carte Interbancaire"
-                  className="px-4 py-2 sm:px-4 sm:py-2.5 bg-gradient-to-r from-emerald-600 to-green-700 rounded-xl flex items-center gap-2.5 shadow-md border border-emerald-300/40 select-none hover:scale-105 transition-transform"
+                  title="Carte CIB"
+                  className="px-4 py-2 bg-slate-900 border border-slate-700/80 hover:border-slate-500 rounded-xl flex items-center justify-center h-12 shadow-md transition-all hover:scale-105 select-none"
                 >
-                  <div className="w-2.5 h-3.5 rounded-xs bg-emerald-200/90 border border-emerald-900/30 shadow-2xs" />
-                  <div className="flex flex-col text-start">
-                    <span className="text-white font-black text-xs tracking-widest leading-none">
-                      CIB
-                    </span>
-                    <span className="text-emerald-100 font-semibold text-[9px] leading-tight mt-0.5">
-                      Interbancaire
-                    </span>
-                  </div>
+                  <img
+                    src="/cib_logo.png"
+                    alt="CIB"
+                    className="h-7 w-auto object-contain max-w-[85px]"
+                  />
                 </div>
               </div>
             </div>

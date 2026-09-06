@@ -18,7 +18,9 @@ import {
   fetchAllPlatformEventsAdmin,
   updateEventHeroFeatured,
   updateEventStatusAdmin,
-  fetchAllPlatformPayments
+  fetchAllPlatformPayments,
+  fetchAllNewsletterSubscribers,
+  deleteNewsletterSubscriber
 } from "../lib/db";
 
 const ALGERIA_WILAYAS = COUNTRY_CITIES_MAP["Algeria"] || [];
@@ -75,6 +77,11 @@ export default function PlatformAdminView({
   const [paymentStatusFilter, setPaymentStatusFilter] = useState("All");
   const [paymentMethodFilter, setPaymentMethodFilter] = useState("All");
 
+  // Newsletter Subscribers states
+  const [subscribers, setSubscribers] = useState([]);
+  const [subscriberSearch, setSubscriberSearch] = useState("");
+  const [subscriberStatusFilter, setSubscriberStatusFilter] = useState("All");
+
   // Organizer Quota Edit Drawer state
   const [editingOrganizer, setEditingOrganizer] = useState(null);
   const [quotaMaxEvents, setQuotaMaxEvents] = useState("");
@@ -101,16 +108,18 @@ export default function PlatformAdminView({
   const loadAdminData = async (showLoading = true) => {
     if (showLoading) setIsLoading(true);
     try {
-      const [orgsData, eventsData, paysData] = await Promise.all([
+      const [orgsData, eventsData, paysData, subsData] = await Promise.all([
         fetchAllPlatformOrganizers(),
         fetchAllPlatformEventsAdmin(),
-        fetchAllPlatformPayments()
+        fetchAllPlatformPayments(),
+        fetchAllNewsletterSubscribers()
       ]);
 
       setOrganizers(orgsData);
       setEvents(eventsData);
       setPayments(paysData.payments);
       setPaymentMetrics(paysData.metrics);
+      setSubscribers(subsData || []);
     } catch (err) {
       console.error("Error loading admin data:", err);
       showToast("Failed to load back-office records", "error");
@@ -341,8 +350,51 @@ export default function PlatformAdminView({
   };
 
   // ─────────────────────────────────────────────
+  //  NEWSLETTER SUBSCRIBERS HANDLERS
+  // ─────────────────────────────────────────────
+  const handleDeleteSubscriber = async (id, email) => {
+    if (!confirm(`Are you sure you want to remove ${email} from the newsletter list?`)) return;
+    const ok = await deleteNewsletterSubscriber(id);
+    if (ok) {
+      setSubscribers(prev => prev.filter(s => s.id !== id));
+      showToast("Subscriber removed successfully");
+    } else {
+      showToast("Failed to remove subscriber", "error");
+    }
+  };
+
+  const handleExportSubscribersCsv = () => {
+    if (!subscribers.length) return;
+    const headers = ["Email", "Status", "Source", "Subscribed At"];
+    const rows = filteredSubscribers.map(s => [
+      `"${s.email || ''}"`,
+      `"${s.status || 'subscribed'}"`,
+      `"${s.source || 'footer_newsletter'}"`,
+      `"${s.created_at || ''}"`
+    ]);
+
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `eventzone_subscribers_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast("Downloaded subscribers CSV");
+  };
+
+  // ─────────────────────────────────────────────
   //  MEMOIZED FILTERED LISTS
   // ─────────────────────────────────────────────
+  const filteredSubscribers = useMemo(() => {
+    return subscribers.filter(sub => {
+      const q = subscriberSearch.trim().toLowerCase();
+      const matchesSearch = !q || (sub.email || "").toLowerCase().includes(q);
+      const matchesStatus = subscriberStatusFilter === "All" || sub.status === subscriberStatusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [subscribers, subscriberSearch, subscriberStatusFilter]);
   // Curated Hero Events
   const curatedHeroEvents = useMemo(() => {
     return events
@@ -514,7 +566,8 @@ export default function PlatformAdminView({
           { id: "organizers", label: "Organizers & Quotas", count: organizers.length },
           { id: "hero", label: "Homepage Hero Curator", count: curatedHeroEvents.length },
           { id: "events", label: "Master Events Directory", count: events.length },
-          { id: "financials", label: "Chargily Financials", count: payments.length }
+          { id: "financials", label: "Chargily Financials", count: payments.length },
+          { id: "subscribers", label: "Newsletter Subscribers", count: subscribers.length }
         ].map(tab => {
           const isActive = activeTab === tab.id;
           return (
@@ -1473,6 +1526,211 @@ export default function PlatformAdminView({
                       </tbody>
                     </table>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* ─────────────────────────────────────────────
+                TAB 6: NEWSLETTER SUBSCRIBERS
+            ───────────────────────────────────────────── */}
+            {activeTab === "subscribers" && (
+              <div className="space-y-6">
+                {/* Header & Stats Banner */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
+                      <Mail className="w-5 h-5 text-blue-600" />
+                      <span>Newsletter Subscribers</span>
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Real-time feed of emails captured through the homepage footer newsletter form.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <button
+                      onClick={() => loadAdminData(false)}
+                      disabled={isRefreshing}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
+                      <span>Refresh</span>
+                    </button>
+                    <button
+                      onClick={handleExportSubscribersCsv}
+                      disabled={subscribers.length === 0}
+                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Export CSV</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* KPI Metrics */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-500 font-semibold">Total Subscribers</span>
+                      <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                        <Users className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div className="text-2xl font-black text-slate-900 font-mono mt-2">
+                      <bdi dir="ltr">{subscribers.length}</bdi>
+                    </div>
+                    <div className="text-[11px] text-slate-400 font-medium mt-1">
+                      Across all traffic sources
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-500 font-semibold">Active Subscriptions</span>
+                      <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                        <CheckCircle2 className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div className="text-2xl font-black text-emerald-600 font-mono mt-2">
+                      <bdi dir="ltr">{subscribers.filter(s => s.status === "subscribed").length}</bdi>
+                    </div>
+                    <div className="text-[11px] text-slate-400 font-medium mt-1">
+                      Ready for email campaigns
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-500 font-semibold">Primary Capture Source</span>
+                      <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                        <Globe className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div className="text-lg font-black text-slate-900 mt-2 truncate">
+                      Footer Newsletter
+                    </div>
+                    <div className="text-[11px] text-slate-400 font-medium mt-1 truncate">
+                      {subscribers[0] ? `Latest: ${subscribers[0].email}` : "Awaiting first submission"}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Filters & Search Toolbar */}
+                <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
+                  <div className="relative flex-1 min-w-[260px]">
+                    <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      value={subscriberSearch}
+                      onChange={(e) => setSubscriberSearch(e.target.value)}
+                      placeholder="Search subscriber by email address..."
+                      className="w-full bg-slate-50 border border-slate-200 focus:bg-white rounded-xl pl-10 pr-4 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium"
+                    />
+                    {subscriberSearch && (
+                      <button
+                        onClick={() => setSubscriberSearch("")}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="w-44">
+                    <SearchableSelect
+                      value={subscriberStatusFilter}
+                      onChange={setSubscriberStatusFilter}
+                      options={[
+                        { value: "All", label: "All Statuses" },
+                        { value: "subscribed", label: "Subscribed" },
+                        { value: "unsubscribed", label: "Unsubscribed" }
+                      ]}
+                      placeholder="Status"
+                      buttonClassName="bg-white! border-slate-200! text-slate-800! text-xs! rounded-xl!"
+                    />
+                  </div>
+                </div>
+
+                {/* Subscribers Data Table */}
+                <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase text-[10px] tracking-wider">
+                          <th className="py-3 px-4">#</th>
+                          <th className="py-3 px-4">Email Address</th>
+                          <th className="py-3 px-4">Source</th>
+                          <th className="py-3 px-4">Status</th>
+                          <th className="py-3 px-4">Subscribed At</th>
+                          <th className="py-3 px-4 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 font-medium">
+                        {filteredSubscribers.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="py-12 text-center text-slate-400">
+                              <div className="flex flex-col items-center justify-center gap-2">
+                                <Mail className="w-8 h-8 text-slate-300 stroke-1" />
+                                <p className="text-sm font-semibold text-slate-600">No subscribers found</p>
+                                <p className="text-xs text-slate-400">
+                                  {subscribers.length === 0
+                                    ? "No newsletter submissions recorded yet."
+                                    : "No subscribers match your search filter."}
+                                </p>
+                              </div>
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredSubscribers.map((sub, idx) => (
+                            <tr key={sub.id || idx} className="hover:bg-slate-50/80 transition-colors">
+                              <td className="py-3.5 px-4 text-slate-400 font-mono text-[11px]">
+                                {idx + 1}
+                              </td>
+                              <td className="py-3.5 px-4 font-bold text-slate-900">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                                    <Mail className="w-3.5 h-3.5" />
+                                  </div>
+                                  <span className="font-mono text-xs select-all">{sub.email}</span>
+                                </div>
+                              </td>
+                              <td className="py-3.5 px-4">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-700">
+                                  {sub.source === "footer_newsletter" ? "Footer Newsletter" : (sub.source || "Website")}
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-4">
+                                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold capitalize border ${
+                                  sub.status === "subscribed"
+                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                    : "bg-slate-100 text-slate-600 border-slate-200"
+                                }`}>
+                                  {sub.status === "subscribed" && <Check className="w-3 h-3" />}
+                                  {sub.status || "subscribed"}
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-4 text-slate-500 text-[11px] font-mono">
+                                {sub.created_at ? new Date(sub.created_at).toLocaleString() : "—"}
+                              </td>
+                              <td className="py-3.5 px-4 text-right">
+                                <button
+                                  onClick={() => handleDeleteSubscriber(sub.id)}
+                                  className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                                  title="Delete subscriber"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                  {filteredSubscribers.length > 0 && (
+                    <div className="p-3 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 px-4">
+                      <span>Showing {filteredSubscribers.length} of {subscribers.length} subscribers</span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
