@@ -61,14 +61,14 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses }) {
         {/* Top Arched Convex Dome Cutout (masks corners with page bg-slate-50 / #f8fafc) */}
         <div className="absolute top-0 left-0 right-0 w-full overflow-hidden leading-none pointer-events-none select-none z-10 -mt-[1px]">
           <svg
-            viewBox="0 0 1440 100"
+            viewBox="0 0 1440 180"
             fill="none"
             preserveAspectRatio="none"
-            className="w-full h-12 sm:h-20 md:h-28 text-slate-50 block"
+            className="w-full h-20 sm:h-32 md:h-44 lg:h-52 text-slate-50 block"
             aria-hidden="true"
           >
             <path
-              d="M0,0 L1440,0 L1440,100 C1080,10 360,10 0,100 Z"
+              d="M0,0 L1440,0 L1440,180 C1080,10 360,10 0,180 Z"
               fill="currentColor"
             />
           </svg>
@@ -84,7 +84,7 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses }) {
 
         {/* Newsletter Content inside the Dome */}
         <div className="relative z-20 max-w-7xl mx-auto px-6 sm:px-8">
-          <section className="pt-16 sm:pt-24 md:pt-32 pb-14 sm:pb-16 text-center max-w-3xl mx-auto">
+          <section className="pt-24 sm:pt-36 md:pt-44 lg:pt-48 pb-20 sm:pb-24 md:pb-28 text-center max-w-3xl mx-auto">
             <h2 className="text-2xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight drop-shadow-md">
               {t("footer.subscribeNewsletter", "Subscribe to our newsletter")}
             </h2>
