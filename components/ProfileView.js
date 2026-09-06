@@ -727,31 +727,6 @@ export default function ProfileView({
         onOpenCreationWizard={onGoToHome}
         onOpenEventsHub={onGoToHome}
         onSignOut={onSignOut}
-        rightExtra={
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="px-2.5 sm:px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-1 sm:gap-1.5 shadow-sm shadow-blue-600/20 hover:shadow transition-all cursor-pointer disabled:opacity-50 shrink-0"
-          >
-            {saving ? (
-              <>
-                <Loader2 size={13} className="animate-spin" />
-                <span className="hidden xs:inline sm:inline">Saving...</span>
-              </>
-            ) : saveSuccess ? (
-              <>
-                <Check size={13} />
-                <span className="hidden xs:inline sm:inline">Saved!</span>
-              </>
-            ) : (
-              <>
-                <Check size={13} className="sm:hidden" />
-                <span className="hidden sm:inline">Save Profile</span>
-                <span className="sm:hidden text-[11px]">Save</span>
-              </>
-            )}
-          </button>
-        }
       />
 
       {/* ==================================================================== */}
@@ -1316,25 +1291,18 @@ export default function ProfileView({
           </div>
         )}
 
-        {/* BOTTOM SAVE BAR */}
-        <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 text-center sm:text-start rtl:text-right text-left">
-          <div className="text-center sm:text-start rtl:text-right text-left">
-            {saveSuccess ? (
-              <span className="text-xs font-semibold text-emerald-600 animate-fade-in block">
-                Profile updated &amp; synced across platform &amp; mobile app.
-              </span>
-            ) : (
-              <span className="text-xs text-slate-400 block">
-                Changes persist instantly to your shared account.
-              </span>
-            )}
-          </div>
-
+        {/* BOTTOM SAVE BUTTON */}
+        <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-1 pb-8">
+          {saveSuccess && (
+            <span className="text-xs font-semibold text-emerald-600 animate-fade-in">
+              Profile updated &amp; synced across platform &amp; mobile app.
+            </span>
+          )}
           <button
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 shadow-sm shadow-blue-600/20 hover:shadow transition-all cursor-pointer disabled:opacity-50"
+            className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 shadow-sm shadow-blue-600/20 hover:shadow transition-all cursor-pointer disabled:opacity-50"
           >
             {saving ? (
               <>
