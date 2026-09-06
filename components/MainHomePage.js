@@ -507,83 +507,82 @@ export default function MainHomePage({
             </h2>
           </div>
 
-          {/* Polished Search Pill */}
-          <div className="relative w-full sm:w-80 md:w-96 lg:w-[380px] shrink-0">
-            <div className="flex items-center gap-2.5 px-3.5 sm:px-4 h-10 sm:h-11 bg-white border border-slate-200 hover:border-slate-300 focus-within:border-blue-600 focus-within:ring-4 focus-within:ring-blue-600/10 rounded-full shadow-xs transition-all group">
-              <Search size={15} className="text-slate-400 group-focus-within:text-blue-600 transition-colors shrink-0" />
-              <input
-                type="text"
-                placeholder={t("home.searchPlaceholder", "Search events...")}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-transparent text-xs sm:text-sm font-semibold text-slate-800 placeholder:text-slate-400 placeholder:font-normal outline-none"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery("")}
-                  className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors cursor-pointer shrink-0"
-                  title={t("common.clear", "Clear")}
-                >
-                  <X size={13} />
-                </button>
-              )}
+          <div className="flex items-center gap-2.5 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
+            {/* Category Carousel Navigation Arrows */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => scrollCategories("left")}
+                className="w-8 h-8 rounded-full bg-white border border-slate-200 shadow-2xs hover:border-slate-300 hover:shadow-xs flex items-center justify-center text-slate-600 hover:text-blue-600 hover:bg-slate-50 transition-all cursor-pointer p-0 shrink-0"
+                aria-label="Scroll categories left"
+              >
+                <ChevronLeft size={16} className="translate-x-[1px] rtl:-translate-x-[1px]" />
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollCategories("right")}
+                className="w-8 h-8 rounded-full bg-white border border-slate-200 shadow-2xs hover:border-slate-300 hover:shadow-xs flex items-center justify-center text-slate-600 hover:text-blue-600 hover:bg-slate-50 transition-all cursor-pointer p-0 shrink-0"
+                aria-label="Scroll categories right"
+              >
+                <ChevronRight size={16} className="-translate-x-[1px] rtl:translate-x-[1px]" />
+              </button>
+            </div>
+
+            {/* Polished Search Pill */}
+            <div className="relative flex-1 min-w-0 sm:w-80 md:w-96 lg:w-[380px] shrink-0">
+              <div className="flex items-center gap-2.5 px-3.5 sm:px-4 h-10 sm:h-11 bg-white border border-slate-200 hover:border-slate-300 focus-within:border-blue-600 focus-within:ring-4 focus-within:ring-blue-600/10 rounded-full shadow-xs transition-all group">
+                <Search size={15} className="text-slate-400 group-focus-within:text-blue-600 transition-colors shrink-0" />
+                <input
+                  type="text"
+                  placeholder={t("home.searchPlaceholder", "Search events...")}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-transparent text-xs sm:text-sm font-semibold text-slate-800 placeholder:text-slate-400 placeholder:font-normal outline-none"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                    className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors cursor-pointer shrink-0"
+                    title={t("common.clear", "Clear")}
+                  >
+                    <X size={13} />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Category Filter Bar with Smooth Arrow Navigation & Drag-to-Scroll */}
-        <div className="flex items-center gap-2 sm:gap-2.5 w-full">
-          {/* Left Arrow Button */}
-          <button
-            type="button"
-            onClick={() => scrollCategories("left")}
-            className="w-8 h-8 rounded-full bg-white border border-slate-200 shadow-xs hover:border-slate-300 hover:shadow-sm flex items-center justify-center text-slate-600 hover:text-blue-600 hover:bg-slate-50 transition-all cursor-pointer shrink-0"
-            aria-label="Scroll categories left"
-          >
-            <ChevronLeft size={16} />
-          </button>
-
-          {/* Category Chips Scroll Container (Draggable) */}
-          <div 
-            ref={categoriesRef}
-            id="categories" 
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseLeave}
-            className={`flex-1 min-w-0 flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 sm:pb-2 scrollbar-none pt-0.5 scroll-smooth scroll-mt-20 px-0.5 select-none ${
-              isMouseDown ? "cursor-grabbing" : "cursor-grab"
-            }`}
-          >
-            {categories.map(cat => (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => {
-                  if (hasDragged) return;
-                  setSelectedCategory(cat);
-                }}
-                className={`px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-full text-[11px] sm:text-xs font-bold whitespace-nowrap transition-all select-none shrink-0 ${
-                  selectedCategory === cat 
-                    ? "bg-blue-600 text-white shadow-md shadow-blue-600/20" 
-                    : "bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-                }`}
-              >
-                {getCategoryLabel(cat)}
-              </button>
-            ))}
-          </div>
-
-          {/* Right Arrow Button */}
-          <button
-            type="button"
-            onClick={() => scrollCategories("right")}
-            className="w-8 h-8 rounded-full bg-white border border-slate-200 shadow-xs hover:border-slate-300 hover:shadow-sm flex items-center justify-center text-slate-600 hover:text-blue-600 hover:bg-slate-50 transition-all cursor-pointer shrink-0"
-            aria-label="Scroll categories right"
-          >
-            <ChevronRight size={16} />
-          </button>
+        {/* Category Filter Bar with Smooth Drag-to-Scroll (aligned flush to left and right with event cards) */}
+        <div 
+          ref={categoriesRef}
+          id="categories" 
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseLeave}
+          className={`w-full flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 sm:pb-2 scrollbar-none pt-0.5 scroll-smooth scroll-mt-20 px-0.5 select-none ${
+            isMouseDown ? "cursor-grabbing" : "cursor-grab"
+          }`}
+        >
+          {categories.map(cat => (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => {
+                if (hasDragged) return;
+                setSelectedCategory(cat);
+              }}
+              className={`px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-full text-[11px] sm:text-xs font-bold whitespace-nowrap transition-all select-none shrink-0 ${
+                selectedCategory === cat 
+                  ? "bg-blue-600 text-white shadow-md shadow-blue-600/20" 
+                  : "bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+              }`}
+            >
+              {getCategoryLabel(cat)}
+            </button>
+          ))}
         </div>
 
         {/* Event Cards Grid */}
