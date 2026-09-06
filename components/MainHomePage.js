@@ -498,16 +498,13 @@ export default function MainHomePage({
       {/* ==================================================================== */}
       {/* 3. EVENT DISCOVERY & CATALOG SECTION (LIGHT MODE)                    */}
       {/* ==================================================================== */}
-      <main id="explore" className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 pt-4 sm:pt-12 pb-10 sm:pb-16 space-y-3 sm:space-y-8">
+      <main id="explore" className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 pt-6 sm:pt-12 pb-10 sm:pb-16 space-y-3.5 sm:space-y-8">
         {/* Section Header & Filters */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 sm:gap-5">
           <div>
             <h2 className="text-xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
               {t("home.upcomingConferences", "Upcoming Conferences & Expos")}
             </h2>
-            <p className="text-xs sm:text-sm text-slate-500 font-normal mt-0.5 sm:mt-1">
-              {t("home.browsePremierSummits", "Browse premier summits, claim attendee passes, and preview floor plans.")}
-            </p>
           </div>
 
           {/* Polished Search Pill */}
