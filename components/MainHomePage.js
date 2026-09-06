@@ -350,41 +350,41 @@ export default function MainHomePage({
       {/* ==================================================================== */}
       <section 
         id="featured"
-        className="relative overflow-hidden bg-slate-950 text-white border-b border-slate-800 h-[520px] sm:h-[560px] flex items-center justify-center"
+        className="relative overflow-hidden bg-slate-950 text-white border-b border-slate-800 min-h-[350px] h-[370px] sm:h-[520px] lg:h-[560px] flex items-center justify-center"
         onMouseEnter={() => setIsAutoPlay(false)}
         onMouseLeave={() => setIsAutoPlay(true)}
       >
         {heroEvents.length === 0 ? (
-          <div className="relative z-10 max-w-7xl w-full mx-auto px-6 sm:px-8 py-16 flex flex-col md:flex-row items-center justify-between gap-10">
-            <div className="max-w-4xl space-y-5 text-start rtl:text-right text-left">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="px-3 py-1 rounded-full bg-blue-600/20 text-blue-400 border border-blue-500/30 text-xs font-extrabold uppercase tracking-wider flex items-center gap-1.5 shadow-xs backdrop-blur-md">
+          <div className="relative z-10 max-w-7xl w-full mx-auto px-4 sm:px-8 py-8 sm:py-16 flex flex-col md:flex-row items-center justify-between gap-6 sm:gap-10">
+            <div className="max-w-4xl space-y-3 sm:space-y-5 text-start rtl:text-right text-left">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <span className="px-2.5 sm:px-3 py-1 rounded-full bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[11px] sm:text-xs font-extrabold uppercase tracking-wider flex items-center gap-1.5 shadow-xs backdrop-blur-md">
                   <Sparkles size={12} className="text-blue-400" />
                   <span>{t("hero.nextGenExperience", "Next-Gen Event Experience")}</span>
                 </span>
-                <span className="px-2.5 py-1 rounded-full bg-slate-900/80 border border-slate-800 text-slate-300 text-xs font-bold uppercase tracking-wider shadow-xs">
+                <span className="px-2.5 py-1 rounded-full bg-slate-900/80 border border-slate-800 text-slate-300 text-[11px] sm:text-xs font-bold uppercase tracking-wider shadow-xs">
                   {t("hero.interactiveFloorPlans", "Interactive 2D Floor Plans")}
                 </span>
               </div>
 
-              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-tight">
+              <h1 className="text-2xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-tight">
                 {t("hero.platformTagline", "The Modern Platform for Conferences & Summits")}
               </h1>
 
-              <p className="text-slate-300 text-sm sm:text-base font-normal leading-relaxed max-w-3xl">
+              <p className="text-slate-300 text-xs sm:text-base font-normal leading-relaxed max-w-3xl line-clamp-3 sm:line-clamp-none">
                 {t("hero.platformDesc", "Host, discover, and navigate world-class professional events with real-time floor plans, instant digital QR passes, and streamlined session agendas.")}
               </p>
 
-              <div className="pt-3 flex flex-wrap items-center gap-3">
+              <div className="pt-1.5 sm:pt-3 flex flex-wrap items-center gap-2.5 sm:gap-3">
                 <button
                   onClick={onOpenCreationWizard}
-                  className="px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold text-sm shadow-xl shadow-blue-600/40 transition-all cursor-pointer"
+                  className="px-5 sm:px-8 py-2.5 sm:py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl sm:rounded-2xl font-bold text-xs sm:text-sm shadow-xl shadow-blue-600/40 transition-all cursor-pointer"
                 >
                   {t("hero.hostEvent", "Host an Event")}
                 </button>
                 <button
                   onClick={onSwitchToOrganizer}
-                  className="px-6 py-4 bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded-2xl font-bold text-sm transition-all cursor-pointer"
+                  className="px-4 sm:px-6 py-2.5 sm:py-4 bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded-xl sm:rounded-2xl font-bold text-xs sm:text-sm transition-all cursor-pointer"
                 >
                   {t("hero.organizerHub", "Organizer Hub")}
                 </button>
@@ -427,47 +427,46 @@ export default function MainHomePage({
             <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-blue-600/20 rounded-full blur-3xl pointer-events-none" />
 
             {/* Hero Content Container */}
-            <div className="relative z-10 max-w-7xl w-full mx-auto px-6 sm:px-8 py-16 sm:py-20 flex flex-col items-start justify-center">
+            <div className="relative z-10 max-w-7xl w-full mx-auto px-4 sm:px-8 py-6 sm:py-20 flex flex-col items-start justify-center">
               {/* Slide Details */}
-              <div className="max-w-5xl w-full space-y-6 text-start rtl:text-right text-left animate-fade-in">
-
+              <div className="max-w-5xl w-full space-y-2.5 sm:space-y-6 text-start rtl:text-right text-left animate-fade-in">
 
                 {/* Title & Tagline */}
                 <h1 
                   onClick={() => onViewLivePage(activeSlide.id)}
-                  className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-tight cursor-pointer hover:text-blue-200 transition-colors"
+                  className="text-2xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-tight cursor-pointer hover:text-blue-200 transition-colors line-clamp-2"
                 >
                   {activeSlide.title}
                 </h1>
 
                 {(activeSlide.tagline || activeSlide.description) && (
-                  <p className="text-slate-300 text-base sm:text-lg font-normal leading-relaxed max-w-4xl line-clamp-2">
+                  <p className="text-slate-300 text-xs sm:text-base lg:text-lg font-normal leading-snug sm:leading-relaxed max-w-4xl line-clamp-2">
                     {truncateDescription(activeSlide.tagline || activeSlide.description, 40)}
                   </p>
                 )}
 
                 {/* Meta: Dates & Location Chips */}
-                <div className="flex flex-wrap items-center gap-2.5 pt-1">
+                <div className="flex flex-wrap items-center gap-2 pt-0.5 sm:pt-1">
                   {activeSlide.startDate && (
-                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/15 backdrop-blur-md border border-white/10 text-xs sm:text-sm font-medium text-white shadow-xs transition-colors">
-                      <Calendar size={14} className="text-blue-300 shrink-0" />
+                    <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-full bg-white/10 hover:bg-white/15 backdrop-blur-md border border-white/10 text-[11px] sm:text-sm font-medium text-white shadow-xs transition-colors">
+                      <Calendar size={13} className="text-blue-300 shrink-0" />
                       <span>{formatEventDateRange(activeSlide.startDate, activeSlide.endDate)}</span>
                     </div>
                   )}
 
                   {activeSlide.location && (
-                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/15 backdrop-blur-md border border-white/10 text-xs sm:text-sm font-medium text-white shadow-xs transition-colors">
-                      <MapPin size={14} className="text-blue-300 shrink-0" />
-                      <span>{activeSlide.location}</span>
+                    <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-full bg-white/10 hover:bg-white/15 backdrop-blur-md border border-white/10 text-[11px] sm:text-sm font-medium text-white shadow-xs transition-colors max-w-full">
+                      <MapPin size={13} className="text-blue-300 shrink-0" />
+                      <span className="truncate">{activeSlide.location}</span>
                     </div>
                   )}
                 </div>
 
                 {/* CTA */}
-                <div className="pt-2">
+                <div className="pt-1 sm:pt-2">
                   <button
                     onClick={() => onViewLivePage(activeSlide.id)}
-                    className="px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold text-sm shadow-xl shadow-blue-600/40 transition-all cursor-pointer"
+                    className="px-6 sm:px-8 py-2.5 sm:py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl sm:rounded-2xl font-bold text-xs sm:text-sm shadow-xl shadow-blue-600/40 transition-all cursor-pointer"
                   >
                     {t("hero.viewEvent", "View Event")}
                   </button>
@@ -477,15 +476,15 @@ export default function MainHomePage({
 
             {/* Carousel Slide Indicator Dots (Centered) */}
             {heroEvents.length > 1 && (
-              <div className="absolute bottom-6 left-0 right-0 z-20 flex items-center justify-center gap-2">
+              <div className="absolute bottom-3 sm:bottom-6 left-0 right-0 z-20 flex items-center justify-center gap-1.5 sm:gap-2">
                 {heroEvents.map((_, idx) => (
                   <button
                     key={idx}
                     onClick={() => setCurrentSlideIndex(idx)}
-                    className={`h-2 rounded-full transition-all cursor-pointer ${
+                    className={`h-1.5 sm:h-2 rounded-full transition-all cursor-pointer ${
                       currentSlideIndex === idx 
-                        ? "w-8 bg-blue-500 shadow-sm shadow-blue-500/50" 
-                        : "w-2.5 bg-slate-700 hover:bg-slate-500"
+                        ? "w-6 sm:w-8 bg-blue-500 shadow-sm shadow-blue-500/50" 
+                        : "w-2 sm:w-2.5 bg-slate-700 hover:bg-slate-500"
                     }`}
                     title={`Slide ${idx + 1}`}
                   />
@@ -499,22 +498,22 @@ export default function MainHomePage({
       {/* ==================================================================== */}
       {/* 3. EVENT DISCOVERY & CATALOG SECTION (LIGHT MODE)                    */}
       {/* ==================================================================== */}
-      <main id="explore" className="flex-1 max-w-7xl w-full mx-auto px-6 sm:px-8 py-12 space-y-8">
+      <main id="explore" className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 pt-4 sm:pt-12 pb-10 sm:pb-16 space-y-3 sm:space-y-8">
         {/* Section Header & Filters */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 sm:gap-5">
           <div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+            <h2 className="text-xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
               {t("home.upcomingConferences", "Upcoming Conferences & Expos")}
             </h2>
-            <p className="text-xs sm:text-sm text-slate-500 font-normal mt-1">
+            <p className="text-xs sm:text-sm text-slate-500 font-normal mt-0.5 sm:mt-1">
               {t("home.browsePremierSummits", "Browse premier summits, claim attendee passes, and preview floor plans.")}
             </p>
           </div>
 
           {/* Polished Search Pill */}
           <div className="relative w-full sm:w-80 md:w-96 lg:w-[380px] shrink-0">
-            <div className="flex items-center gap-2.5 px-4 h-11 bg-white border border-slate-200 hover:border-slate-300 focus-within:border-blue-600 focus-within:ring-4 focus-within:ring-blue-600/10 rounded-full shadow-xs transition-all group">
-              <Search size={16} className="text-slate-400 group-focus-within:text-blue-600 transition-colors shrink-0" />
+            <div className="flex items-center gap-2.5 px-3.5 sm:px-4 h-10 sm:h-11 bg-white border border-slate-200 hover:border-slate-300 focus-within:border-blue-600 focus-within:ring-4 focus-within:ring-blue-600/10 rounded-full shadow-xs transition-all group">
+              <Search size={15} className="text-slate-400 group-focus-within:text-blue-600 transition-colors shrink-0" />
               <input
                 type="text"
                 placeholder={t("home.searchPlaceholder", "Search events...")}
@@ -529,7 +528,7 @@ export default function MainHomePage({
                   className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors cursor-pointer shrink-0"
                   title={t("common.clear", "Clear")}
                 >
-                  <X size={14} />
+                  <X size={13} />
                 </button>
               )}
             </div>
@@ -556,7 +555,7 @@ export default function MainHomePage({
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseLeave}
-            className={`flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none max-w-full pt-1 scroll-smooth scroll-mt-20 px-0.5 select-none ${
+            className={`flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 sm:pb-2 scrollbar-none max-w-full pt-0.5 scroll-smooth scroll-mt-20 px-0.5 select-none ${
               isMouseDown ? "cursor-grabbing" : "cursor-grab"
             }`}
           >
@@ -568,7 +567,7 @@ export default function MainHomePage({
                   if (hasDragged) return;
                   setSelectedCategory(cat);
                 }}
-                className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all select-none shrink-0 ${
+                className={`px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-full text-[11px] sm:text-xs font-bold whitespace-nowrap transition-all select-none shrink-0 ${
                   selectedCategory === cat 
                     ? "bg-blue-600 text-white shadow-md shadow-blue-600/20" 
                     : "bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50"
@@ -592,7 +591,7 @@ export default function MainHomePage({
 
         {/* Event Cards Grid */}
         {filteredEvents.length === 0 ? (
-          <div className="bg-white border border-dashed border-slate-300 rounded-3xl p-12 text-center flex flex-col items-center justify-center gap-3">
+          <div className="bg-white border border-dashed border-slate-300 rounded-3xl p-8 sm:p-12 text-center flex flex-col items-center justify-center gap-3">
             <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
               <Compass size={28} />
             </div>
@@ -608,8 +607,8 @@ export default function MainHomePage({
             </button>
           </div>
         ) : (
-          <div className="space-y-10">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="space-y-6 sm:space-y-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {visibleEvents.map(ev => {
                 const isRegistered = registrations.some(r => r.eventId === ev.id);
 
