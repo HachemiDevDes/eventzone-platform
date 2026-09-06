@@ -693,18 +693,14 @@ export default function MainHomePage({
 
             {/* Show More Button (loads 9 more events) */}
             {filteredEvents.length > visibleCount && (
-              <div className="flex flex-col items-center justify-center pt-2">
+              <div className="flex justify-center pt-2">
                 <button
                   type="button"
                   onClick={() => setVisibleCount(prev => prev + 9)}
-                  className="px-8 py-3.5 bg-white hover:bg-slate-50 text-slate-800 hover:text-blue-600 border border-slate-200 hover:border-blue-300 rounded-2xl text-xs font-bold shadow-xs hover:shadow-md transition-all cursor-pointer flex items-center gap-2 group"
+                  className="px-8 py-3.5 bg-white hover:bg-slate-50 text-slate-800 hover:text-blue-600 border border-slate-200 hover:border-blue-300 rounded-2xl text-xs font-bold shadow-xs hover:shadow-md transition-all cursor-pointer"
                 >
-                  <span>{t("home.showMore", "Show More")}</span>
-                  <ChevronDown size={15} className="group-hover:translate-y-0.5 transition-transform text-slate-400 group-hover:text-blue-600" />
+                  {t("home.showMore", "Show More")}
                 </button>
-                <span className="text-[11px] text-slate-400 mt-2 font-medium">
-                  {t("home.showingCount", `Showing ${visibleEvents.length} of ${filteredEvents.length} events`).replace("{count}", String(visibleEvents.length)).replace("{total}", String(filteredEvents.length))}
-                </span>
               </div>
             )}
           </div>
