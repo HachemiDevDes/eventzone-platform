@@ -16,6 +16,7 @@ import { INDUSTRIES, getLocalizedIndustry, truncateDescription } from "../lib/co
 import UniversalTopBar from "./UniversalTopBar";
 import SearchableSelect from "./SearchableSelect";
 import { HomePageSkeleton } from "./SkeletonLoaders";
+import Footer from "./Footer";
 
 export default function MainHomePage({
   events = [],
@@ -746,82 +747,12 @@ export default function MainHomePage({
       </section>
 
       {/* ==================================================================== */}
-      {/* 4. MODERN FOOTER (LIGHT MODE)                                        */}
+      {/* 4. MODERN ARCHED DARK FOOTER                                         */}
       {/* ==================================================================== */}
-      <footer className="bg-white border-t border-slate-200 pt-16 pb-12 mt-16 text-slate-600 text-xs font-sans">
-        <div className="max-w-7xl mx-auto px-6 sm:px-8 space-y-12">
-          {/* Top Row: Brand & Tagline */}
-          <div className="pb-10 border-b border-slate-100">
-            <div className="space-y-3 text-start rtl:text-right text-left max-w-xl">
-              <div className="flex items-center gap-3">
-                <img src="https://i.imgur.com/jFDrQbM.png" alt="eventzone" style={{ height: '28px', width: 'auto', maxWidth: '160px', objectFit: 'contain' }} className="h-7 w-auto object-contain" />
-              </div>
-              <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
-                {t("footer.brandTagline", "The modern event management operating system for international summits, conferences, and hybrid exhibitions with real-time 2D floor plans and attendee badge tracking.")}
-              </p>
-            </div>
-          </div>
-
-          {/* Middle Row: Links Columns */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-start rtl:text-right text-left text-xs">
-            <div className="space-y-3">
-              <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">{t("footer.exploreGatherings", "Explore Gatherings")}</h4>
-              <ul className="space-y-2 text-slate-500 font-medium">
-                <li><a href="#explore" className="hover:text-blue-600 transition-colors">Upcoming Conferences</a></li>
-                <li><a href="#explore" className="hover:text-blue-600 transition-colors">Tech &amp; AI Summits</a></li>
-                <li><a href="#explore" className="hover:text-blue-600 transition-colors">Clean Energy Forums</a></li>
-                <li><a href="#explore" className="hover:text-blue-600 transition-colors">Finance &amp; Banking Expos</a></li>
-                <li><a href="#explore" className="hover:text-blue-600 transition-colors">Healthcare &amp; Bio Congresses</a></li>
-              </ul>
-            </div>
-
-            <div className="space-y-3">
-              <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">{t("footer.forOrganizers", "For Organizers")}</h4>
-              <ul className="space-y-2 text-slate-500 font-medium">
-                <li><button onClick={() => onOpenEventsHub()} className="hover:text-blue-600 transition-colors text-start rtl:text-right text-left cursor-pointer">{t("eventsHub.title", "Organizer Event Center")}</button></li>
-                <li><button onClick={() => onOpenEventsHub()} className="hover:text-blue-600 transition-colors text-start rtl:text-right text-left cursor-pointer">{t("dash.floorPlans", "Floor Plans")}</button></li>
-                <li><button onClick={() => onOpenEventsHub()} className="hover:text-blue-600 transition-colors text-start rtl:text-right text-left cursor-pointer">{t("dash.checkIn", "Check-In Command")}</button></li>
-                <li><button onClick={() => onOpenEventsHub()} className="hover:text-blue-600 transition-colors text-start rtl:text-right text-left cursor-pointer">{t("dash.calendar", "Calendar & Agenda")}</button></li>
-                <li><button onClick={() => onOpenEventsHub()} className="hover:text-blue-600 transition-colors text-start rtl:text-right text-left cursor-pointer">{t("dash.tickets", "Ticket Passes")}</button></li>
-              </ul>
-            </div>
-
-            <div className="space-y-3">
-              <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">{t("footer.forAttendees", "For Attendees")}</h4>
-              <ul className="space-y-2 text-slate-500 font-medium">
-                <li><button onClick={() => onOpenVisitorPasses && onOpenVisitorPasses()} className="hover:text-blue-600 transition-colors text-start rtl:text-right text-left cursor-pointer">{t("nav.myTickets", "My Tickets")}</button></li>
-                <li><button onClick={() => onOpenVisitorPasses && onOpenVisitorPasses()} className="hover:text-blue-600 transition-colors text-start rtl:text-right text-left cursor-pointer">{t("passes.downloadQR", "QR Code Passes")}</button></li>
-                <li><a href="#explore" className="hover:text-blue-600 transition-colors">Claim Free Admission</a></li>
-                <li><a href="#explore" className="hover:text-blue-600 transition-colors">VIP Networking Lounges</a></li>
-                <li><a href="#explore" className="hover:text-blue-600 transition-colors">Venue Directions &amp; Transit</a></li>
-              </ul>
-            </div>
-
-            <div className="space-y-3">
-              <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">{t("footer.securityLegal", "Security & Legal")}</h4>
-              <ul className="space-y-2 text-slate-500 font-medium">
-                <li><Link href="/privacy" className="hover:text-blue-600 transition-colors">{t("footer.privacyPolicy", "Privacy Policy")}</Link></li>
-                <li><Link href="/terms" className="hover:text-blue-600 transition-colors">{t("footer.termsOfService", "Terms of Service")}</Link></li>
-                <li><Link href="/cookie-settings" className="hover:text-blue-600 transition-colors">{t("footer.cookieSettings", "Cookie Settings")}</Link></li>
-                <li><Link href="/enterprise-security" className="hover:text-blue-600 transition-colors">Enterprise Security</Link></li>
-                <li><Link href="/compliance-gdpr" className="hover:text-blue-600 transition-colors">Compliance &amp; GDPR</Link></li>
-              </ul>
-            </div>
-          </div>
-
-          {/* Bottom Row */}
-          <div className="pt-8 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
-            <span className="text-slate-400">{t("footer.rightsReserved", "© 2026 Eventzone. All rights reserved.")}</span>
-
-            <button
-              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-              className="px-3.5 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 transition-all font-bold cursor-pointer shadow-xs"
-            >
-              {t("footer.backToTop", "Back to Top")}
-            </button>
-          </div>
-        </div>
-      </footer>
+      <Footer
+        onOpenEventsHub={onOpenEventsHub}
+        onOpenVisitorPasses={onOpenVisitorPasses}
+      />
 
       {/* ==================================================================== */}
       {/* 5. RSVP MODAL (LIGHT MODE)                                           */}
