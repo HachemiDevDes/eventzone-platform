@@ -47,39 +47,48 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses }) {
 
   return (
     <div className="w-full mt-20 relative font-sans">
-      {/* 1. Top Arched Convex Dome Transition */}
-      <div className="w-full overflow-hidden leading-none select-none pointer-events-none -mb-[1px] bg-slate-50">
-        <svg
-          viewBox="0 0 1440 100"
-          fill="none"
-          preserveAspectRatio="none"
-          className="w-full h-12 sm:h-20 md:h-28 text-[#0a0d14] block"
-          aria-hidden="true"
-        >
-          <path
-            d="M0,100 C360,10 1080,10 1440,100 L1440,100 L0,100 Z"
-            fill="currentColor"
-          />
-        </svg>
-      </div>
+      {/* 1. Newsletter Arched Dome Section with background image & black overlay */}
+      <div className="relative w-full overflow-hidden bg-[#0a0d14]">
+        {/* Background photo: waiting_room_with_monitors */}
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: "url('/waiting_room_with_monitors.jpg')" }}
+        />
 
-      {/* 2. Main Dark Footer Body */}
-      <footer className="bg-[#0a0d14] text-slate-300 text-xs relative z-10">
-        <div className="max-w-7xl mx-auto px-6 sm:px-8">
-          {/* A. Hero Newsletter Section inside the Dome */}
-          <section className="relative pt-2 sm:pt-4 pb-12 sm:pb-16 text-center max-w-3xl mx-auto">
-            {/* Ambient blue decorative glow */}
-            <div
-              className="absolute inset-0 pointer-events-none -z-10 opacity-35"
-              style={{
-                background: "radial-gradient(circle at 50% 30%, rgba(11, 92, 219, 0.25), transparent 70%)",
-              }}
+        {/* Black overlay for contrast and sleek dark look */}
+        <div className="absolute inset-0 bg-black/80" />
+
+        {/* Top Arched Convex Dome Cutout (masks corners with page bg-slate-50 / #f8fafc) */}
+        <div className="absolute top-0 left-0 right-0 w-full overflow-hidden leading-none pointer-events-none select-none z-10 -mt-[1px]">
+          <svg
+            viewBox="0 0 1440 100"
+            fill="none"
+            preserveAspectRatio="none"
+            className="w-full h-12 sm:h-20 md:h-28 text-slate-50 block"
+            aria-hidden="true"
+          >
+            <path
+              d="M0,0 L1440,0 L1440,100 C1080,10 360,10 0,100 Z"
+              fill="currentColor"
             />
+          </svg>
+        </div>
 
-            <h2 className="text-2xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight">
+        {/* Ambient blue decorative glow */}
+        <div
+          className="absolute inset-0 pointer-events-none z-10 opacity-30"
+          style={{
+            background: "radial-gradient(circle at 50% 40%, rgba(11, 92, 219, 0.35), transparent 70%)",
+          }}
+        />
+
+        {/* Newsletter Content inside the Dome */}
+        <div className="relative z-20 max-w-7xl mx-auto px-6 sm:px-8">
+          <section className="pt-16 sm:pt-24 md:pt-32 pb-14 sm:pb-16 text-center max-w-3xl mx-auto">
+            <h2 className="text-2xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight drop-shadow-md">
               {t("footer.subscribeNewsletter", "Subscribe to our newsletter")}
             </h2>
-            <p className="text-xs sm:text-sm md:text-base text-slate-400 mt-2.5 sm:mt-3 max-w-xl mx-auto">
+            <p className="text-xs sm:text-sm md:text-base text-slate-300 mt-2.5 sm:mt-3 max-w-xl mx-auto drop-shadow-sm font-medium">
               {t("footer.newsletterSubtitle", "to stay up to date on all the latest news and offers from us")}
             </p>
 
@@ -119,6 +128,12 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses }) {
               </p>
             )}
           </section>
+        </div>
+      </div>
+
+      {/* 2. Main Dark Footer Body */}
+      <footer className="bg-[#0a0d14] text-slate-300 text-xs relative z-10">
+        <div className="max-w-7xl mx-auto px-6 sm:px-8">
 
           {/* B. Middle 3-Column Info Strip (Contact, Address, Hours) */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-0 py-8 border-y border-slate-800/80 text-start rtl:text-right text-left">
