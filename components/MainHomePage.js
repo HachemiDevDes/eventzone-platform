@@ -533,12 +533,12 @@ export default function MainHomePage({
         </div>
 
         {/* Category Filter Bar with Smooth Arrow Navigation & Drag-to-Scroll */}
-        <div className="relative group/chips">
+        <div className="flex items-center gap-2 sm:gap-2.5 w-full">
           {/* Left Arrow Button */}
           <button
             type="button"
             onClick={() => scrollCategories("left")}
-            className="hidden md:flex absolute -left-3 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white border border-slate-200 shadow-md items-center justify-center text-slate-600 hover:text-blue-600 hover:bg-slate-50 transition-all cursor-pointer opacity-0 group-hover/chips:opacity-100 focus:opacity-100"
+            className="w-8 h-8 rounded-full bg-white border border-slate-200 shadow-xs hover:border-slate-300 hover:shadow-sm flex items-center justify-center text-slate-600 hover:text-blue-600 hover:bg-slate-50 transition-all cursor-pointer shrink-0"
             aria-label="Scroll categories left"
           >
             <ChevronLeft size={16} />
@@ -552,7 +552,7 @@ export default function MainHomePage({
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseLeave}
-            className={`flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 sm:pb-2 scrollbar-none max-w-full pt-0.5 scroll-smooth scroll-mt-20 px-0.5 select-none ${
+            className={`flex-1 min-w-0 flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 sm:pb-2 scrollbar-none pt-0.5 scroll-smooth scroll-mt-20 px-0.5 select-none ${
               isMouseDown ? "cursor-grabbing" : "cursor-grab"
             }`}
           >
@@ -579,7 +579,7 @@ export default function MainHomePage({
           <button
             type="button"
             onClick={() => scrollCategories("right")}
-            className="hidden md:flex absolute -right-3 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white border border-slate-200 shadow-md items-center justify-center text-slate-600 hover:text-blue-600 hover:bg-slate-50 transition-all cursor-pointer opacity-0 group-hover/chips:opacity-100 focus:opacity-100"
+            className="w-8 h-8 rounded-full bg-white border border-slate-200 shadow-xs hover:border-slate-300 hover:shadow-sm flex items-center justify-center text-slate-600 hover:text-blue-600 hover:bg-slate-50 transition-all cursor-pointer shrink-0"
             aria-label="Scroll categories right"
           >
             <ChevronRight size={16} />
