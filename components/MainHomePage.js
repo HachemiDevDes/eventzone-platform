@@ -508,26 +508,6 @@ export default function MainHomePage({
           </div>
 
           <div className="flex items-center gap-2.5 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
-            {/* Category Carousel Navigation Arrows */}
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                type="button"
-                onClick={() => scrollCategories("left")}
-                className="w-8 h-8 rounded-full bg-white border border-slate-200 shadow-2xs hover:border-slate-300 hover:shadow-xs flex items-center justify-center text-slate-600 hover:text-blue-600 hover:bg-slate-50 transition-all cursor-pointer p-0 shrink-0"
-                aria-label="Scroll categories left"
-              >
-                <ChevronLeft size={16} className="translate-x-[1px] rtl:-translate-x-[1px]" />
-              </button>
-              <button
-                type="button"
-                onClick={() => scrollCategories("right")}
-                className="w-8 h-8 rounded-full bg-white border border-slate-200 shadow-2xs hover:border-slate-300 hover:shadow-xs flex items-center justify-center text-slate-600 hover:text-blue-600 hover:bg-slate-50 transition-all cursor-pointer p-0 shrink-0"
-                aria-label="Scroll categories right"
-              >
-                <ChevronRight size={16} className="-translate-x-[1px] rtl:translate-x-[1px]" />
-              </button>
-            </div>
-
             {/* Polished Search Pill */}
             <div className="relative flex-1 min-w-0 sm:w-80 md:w-96 lg:w-[380px] shrink-0">
               <div className="flex items-center gap-2.5 px-3.5 sm:px-4 h-10 sm:h-11 bg-white border border-slate-200 hover:border-slate-300 focus-within:border-blue-600 focus-within:ring-4 focus-within:ring-blue-600/10 rounded-full shadow-xs transition-all group">
@@ -550,6 +530,26 @@ export default function MainHomePage({
                   </button>
                 )}
               </div>
+            </div>
+
+            {/* Category Carousel Navigation Arrows */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => scrollCategories("left")}
+                className="w-8 h-8 rounded-full bg-white border border-slate-200 shadow-2xs hover:border-slate-300 hover:shadow-xs flex items-center justify-center text-slate-600 hover:text-blue-600 hover:bg-slate-50 transition-all cursor-pointer p-0 shrink-0"
+                aria-label="Scroll categories left"
+              >
+                <ChevronLeft size={16} className="translate-x-[1px] rtl:-translate-x-[1px]" />
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollCategories("right")}
+                className="w-8 h-8 rounded-full bg-white border border-slate-200 shadow-2xs hover:border-slate-300 hover:shadow-xs flex items-center justify-center text-slate-600 hover:text-blue-600 hover:bg-slate-50 transition-all cursor-pointer p-0 shrink-0"
+                aria-label="Scroll categories right"
+              >
+                <ChevronRight size={16} className="-translate-x-[1px] rtl:translate-x-[1px]" />
+              </button>
             </div>
           </div>
         </div>
