@@ -816,22 +816,32 @@ export default function ProfileView({
           {/* CLEAN NAVIGATION TABS (SCROLLABLE ON MOBILE) */}
           <div className="border-t border-slate-200 px-3 sm:px-8 flex items-center justify-start sm:justify-center gap-1 sm:gap-4 bg-slate-50/70 overflow-x-auto scrollbar-none whitespace-nowrap">
             <button
+              type="button"
               onClick={() => setActiveTab("general")}
-              className={`px-3.5 py-3 sm:px-4 sm:py-3.5 text-xs font-semibold border-b-2 rounded-none transition-all cursor-pointer shrink-0 ${
+              style={{ borderRadius: 0 }}
+              className={`relative px-3.5 py-3 sm:px-4 sm:py-3.5 text-xs font-semibold transition-colors cursor-pointer shrink-0 bg-transparent ${
                 activeTab === "general"
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-slate-600 hover:text-slate-900"
+                  ? "text-blue-600 font-bold"
+                  : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              General Info
+              <span>General Info</span>
+              {activeTab === "general" && (
+                <span
+                  className="absolute inset-x-0 bottom-0 h-[2px] bg-blue-600 pointer-events-none"
+                  style={{ borderRadius: 0 }}
+                />
+              )}
             </button>
 
             <button
+              type="button"
               onClick={() => setActiveTab("looking_for")}
-              className={`px-3.5 py-3 sm:px-4 sm:py-3.5 text-xs font-semibold border-b-2 rounded-none transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
+              style={{ borderRadius: 0 }}
+              className={`relative px-3.5 py-3 sm:px-4 sm:py-3.5 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shrink-0 bg-transparent ${
                 activeTab === "looking_for"
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-slate-600 hover:text-slate-900"
+                  ? "text-blue-600 font-bold"
+                  : "text-slate-600 hover:text-slate-900"
               }`}
             >
               <span>What I&apos;m Looking For</span>
@@ -844,14 +854,22 @@ export default function ProfileView({
                   {Array.isArray(selectedLookingFor) ? selectedLookingFor.length : 0}
                 </span>
               )}
+              {activeTab === "looking_for" && (
+                <span
+                  className="absolute inset-x-0 bottom-0 h-[2px] bg-blue-600 pointer-events-none"
+                  style={{ borderRadius: 0 }}
+                />
+              )}
             </button>
 
             <button
+              type="button"
               onClick={() => setActiveTab("interests")}
-              className={`px-3.5 py-3 sm:px-4 sm:py-3.5 text-xs font-semibold border-b-2 rounded-none transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
+              style={{ borderRadius: 0 }}
+              className={`relative px-3.5 py-3 sm:px-4 sm:py-3.5 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shrink-0 bg-transparent ${
                 activeTab === "interests"
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-slate-600 hover:text-slate-900"
+                  ? "text-blue-600 font-bold"
+                  : "text-slate-600 hover:text-slate-900"
               }`}
             >
               <span>Interests &amp; Matchmaking</span>
@@ -864,14 +882,22 @@ export default function ProfileView({
                   {Array.isArray(interests) ? interests.length : 0}
                 </span>
               )}
+              {activeTab === "interests" && (
+                <span
+                  className="absolute inset-x-0 bottom-0 h-[2px] bg-blue-600 pointer-events-none"
+                  style={{ borderRadius: 0 }}
+                />
+              )}
             </button>
 
             <button
+              type="button"
               onClick={() => setActiveTab("socials")}
-              className={`px-3.5 py-3 sm:px-4 sm:py-3.5 text-xs font-semibold border-b-2 rounded-none transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
+              style={{ borderRadius: 0 }}
+              className={`relative px-3.5 py-3 sm:px-4 sm:py-3.5 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shrink-0 bg-transparent ${
                 activeTab === "socials"
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-slate-600 hover:text-slate-900"
+                  ? "text-blue-600 font-bold"
+                  : "text-slate-600 hover:text-slate-900"
               }`}
             >
               <span>Social Links</span>
@@ -883,6 +909,12 @@ export default function ProfileView({
                 }`}>
                   {Array.isArray(socialLinksList) ? socialLinksList.length : 0}
                 </span>
+              )}
+              {activeTab === "socials" && (
+                <span
+                  className="absolute inset-x-0 bottom-0 h-[2px] bg-blue-600 pointer-events-none"
+                  style={{ borderRadius: 0 }}
+                />
               )}
             </button>
           </div>
