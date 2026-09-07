@@ -153,7 +153,7 @@ export function resolveActiveEventId() {
     }
 
     const savedActive = safeLocalStorageGet("eventzone_active_event_id", null);
-    if (savedActive) {
+    if (savedActive && typeof savedActive === "string" && savedActive.trim() !== "") {
       setActiveEventId(savedActive);
       return savedActive;
     }
@@ -163,43 +163,6 @@ export function resolveActiveEventId() {
       safeLocalStorageSet("eventzone_active_event_id", cachedUserEvents[0].id);
       setActiveEventId(cachedUserEvents[0].id);
       return cachedUserEvents[0].id;
-    }
-
-    // Resilient offline fallback: scan localStorage for any active cache or offline queues
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith("eventzone_cache_attendees_")) {
-        const eid = key.slice("eventzone_cache_attendees_".length);
-        if (eid && eid !== DEFAULT_EVENT_ID) {
-          const list = safeLocalStorageGet(key, null);
-          if (Array.isArray(list) && list.length > 0) {
-            safeLocalStorageSet("eventzone_active_event_id", eid);
-            setActiveEventId(eid);
-            return eid;
-          }
-        }
-      }
-      if (key && key.startsWith("eventzone_offline_queue_")) {
-        const eid = key.slice("eventzone_offline_queue_".length);
-        if (eid && eid !== DEFAULT_EVENT_ID) {
-          const q = safeLocalStorageGet(key, null);
-          if (Array.isArray(q) && q.length > 0) {
-            safeLocalStorageSet("eventzone_active_event_id", eid);
-            setActiveEventId(eid);
-            return eid;
-          }
-        }
-      }
-      if (key && (key.startsWith("eventzone_cached_event_") || key.startsWith("eventzone_cache_event_"))) {
-        const eid = key.startsWith("eventzone_cached_event_")
-          ? key.slice("eventzone_cached_event_".length)
-          : key.slice("eventzone_cache_event_".length);
-        if (eid && eid !== DEFAULT_EVENT_ID) {
-          safeLocalStorageSet("eventzone_active_event_id", eid);
-          setActiveEventId(eid);
-          return eid;
-        }
-      }
     }
   } catch (e) {}
   setActiveEventId(DEFAULT_EVENT_ID);
@@ -266,6 +229,17 @@ export function HomeContent() {
     if (id) {
       safeLocalStorageSet("eventzone_active_event_id", id);
       setActiveEventId(id);
+      if (typeof window !== "undefined") {
+        try {
+          const sp = new URLSearchParams(window.location.search);
+          const nonEventViews = ["home", "auth", "profile", "events-hub", "my-tickets", "create-event", "admin"];
+          const currView = sp.get("view") || "home";
+          if (!nonEventViews.includes(currView)) {
+            sp.set("eventId", id);
+            window.history.replaceState({}, "", `?${sp.toString()}`);
+          }
+        } catch (e) {}
+      }
     }
     setActiveEventStateIdRaw(id);
   }, []);
@@ -340,17 +314,7 @@ export function HomeContent() {
         if (cached) {
           const parsed = JSON.parse(cached);
           if (parsed !== undefined && parsed !== null) {
-            if (!Array.isArray(parsed) || parsed.length > 0) return parsed;
-          }
-        }
-        // Fallback: check if there's ANY non-empty cache for this key across localStorage
-        if (Array.isArray(fallback)) {
-          for (let i = 0; i < localStorage.length; i++) {
-            const lk = localStorage.key(i);
-            if (lk && lk.startsWith(`eventzone_cache_${key}_`)) {
-              const val = safeLocalStorageGet(lk, null);
-              if (Array.isArray(val) && val.length > 0) return val;
-            }
+            return parsed;
           }
         }
       } catch (e) {}
@@ -365,13 +329,11 @@ export function HomeContent() {
         const cached = localStorage.getItem(`eventzone_cached_event_${targetId}`) || localStorage.getItem(`eventzone_cache_event_${targetId}`);
         if (cached) return JSON.parse(cached);
 
-        // Fallback: check any cached event in localStorage
-        for (let i = 0; i < localStorage.length; i++) {
-          const lk = localStorage.key(i);
-          if (lk && (lk.startsWith("eventzone_cached_event_") || lk.startsWith("eventzone_cache_event_"))) {
-            const val = safeLocalStorageGet(lk, null);
-            if (val && typeof val === "object" && (val.title || val.id || val.name)) return val;
-          }
+        // Check if event exists in cached user events for targetId
+        const userEventsCache = safeLocalStorageGet("eventzone_cache_user_events", []);
+        if (Array.isArray(userEventsCache)) {
+          const found = userEventsCache.find(e => e && e.id === targetId);
+          if (found) return found;
         }
       } catch (e) {}
     }
@@ -1031,7 +993,9 @@ export function HomeContent() {
         const cachedUEvents = safeLocalStorageGet("eventzone_cache_user_events", []);
         if (Array.isArray(cachedUEvents) && cachedUEvents.length > 0) {
           setUserEvents(cachedUEvents);
-          const targetId = safeLocalStorageGet("eventzone_active_event_id", null) || cachedUEvents[0]?.id;
+          const urlParam = typeof window !== "undefined" ? (new URLSearchParams(window.location.search).get("eventId") || new URLSearchParams(window.location.search).get("event")) : null;
+          const savedActive = safeLocalStorageGet("eventzone_active_event_id", null);
+          const targetId = urlParam || savedActive || activeEventId;
           if (targetId && activeEventId !== targetId) {
             setActiveEventStateId(targetId);
           }
@@ -1105,7 +1069,11 @@ export function HomeContent() {
           const raw = localStorage.getItem(`eventzone_cache_${k}_${activeEventId}`);
           return raw ? JSON.parse(raw) : null;
         };
-        const cEvent = getCache("event") || (localStorage.getItem(`eventzone_cached_event_${activeEventId}`) ? JSON.parse(localStorage.getItem(`eventzone_cached_event_${activeEventId}`)) : null);
+        let cEvent = getCache("event") || (localStorage.getItem(`eventzone_cached_event_${activeEventId}`) ? JSON.parse(localStorage.getItem(`eventzone_cached_event_${activeEventId}`)) : null);
+        if (!cEvent) {
+          const cachedUE = safeLocalStorageGet("eventzone_cache_user_events", []);
+          cEvent = Array.isArray(cachedUE) ? cachedUE.find(e => e && e.id === activeEventId) : null;
+        }
         if (cEvent) setEventDetails(cEvent);
         const cAtts = getCache("attendees");
         if (cAtts) setAttendees(cAtts);

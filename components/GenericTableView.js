@@ -1094,45 +1094,25 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Resilient offline cache re-hydration: if attendees state is empty, self-heal from localStorage
+  // Resilient offline cache re-hydration: if attendees state is empty, self-heal from localStorage for this event only
   useEffect(() => {
     if ((!attendees || attendees.length === 0) && typeof window !== "undefined") {
       const targetId = activeEventId || safeLocalStorageGet("eventzone_active_event_id", null);
-      let foundAtts = targetId ? safeLocalStorageGet(`eventzone_cache_attendees_${targetId}`, null) : null;
-      if (!foundAtts || !Array.isArray(foundAtts) || foundAtts.length === 0) {
-        // Fallback search across all cache keys in localStorage
-        for (let i = 0; i < localStorage.length; i++) {
-          const k = localStorage.key(i);
-          if (k && k.startsWith("eventzone_cache_attendees_")) {
-            const list = safeLocalStorageGet(k, null);
-            if (Array.isArray(list) && list.length > 0) {
-              foundAtts = list;
-              break;
-            }
-          }
+      if (targetId) {
+        const foundAtts = safeLocalStorageGet(`eventzone_cache_attendees_${targetId}`, null);
+        if (Array.isArray(foundAtts) && foundAtts.length > 0) {
+          onUpdateState("attendees", foundAtts);
         }
-      }
-      if (Array.isArray(foundAtts) && foundAtts.length > 0) {
-        onUpdateState("attendees", foundAtts);
       }
 
-      // Also self-heal tickets if empty
+      // Also self-heal tickets if empty for this event only
       if (!tickets || tickets.length === 0) {
-        let foundTickets = targetId ? safeLocalStorageGet(`eventzone_cache_tickets_${targetId}`, null) : null;
-        if (!foundTickets || !Array.isArray(foundTickets) || foundTickets.length === 0) {
-          for (let i = 0; i < localStorage.length; i++) {
-            const k = localStorage.key(i);
-            if (k && k.startsWith("eventzone_cache_tickets_")) {
-              const list = safeLocalStorageGet(k, null);
-              if (Array.isArray(list) && list.length > 0) {
-                foundTickets = list;
-                break;
-              }
-            }
+        const targetId = activeEventId || safeLocalStorageGet("eventzone_active_event_id", null);
+        if (targetId) {
+          const foundTickets = safeLocalStorageGet(`eventzone_cache_tickets_${targetId}`, null);
+          if (Array.isArray(foundTickets) && foundTickets.length > 0) {
+            onUpdateState("tickets", foundTickets);
           }
-        }
-        if (Array.isArray(foundTickets) && foundTickets.length > 0) {
-          onUpdateState("tickets", foundTickets);
         }
       }
     }
