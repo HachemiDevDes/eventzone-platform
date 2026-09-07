@@ -55,6 +55,25 @@ export default function RootLayout({ children }) {
             `,
           }}
         />
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#4f46e5" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+                window.addEventListener("load", function() {
+                  navigator.serviceWorker.register("/sw.js", { scope: "/" })
+                    .then(function(reg) {
+                      reg.update().catch(function() {});
+                    })
+                    .catch(function(err) {
+                      console.warn("Eventzone SW registration error:", err);
+                    });
+                });
+              }
+            `,
+          }}
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link

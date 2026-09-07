@@ -176,8 +176,18 @@ export function HomeContent() {
   const [authModalInitialMode, setAuthModalInitialMode] = useState("signin");
 
   // Multi-Event State
-  const [publicEvents, setPublicEvents] = useState([]);
-  const [userEvents, setUserEvents] = useState([]);
+  const [publicEvents, setPublicEvents] = useState(() => {
+    if (typeof window !== "undefined") {
+      return safeLocalStorageGet("eventzone_cache_public_events", []);
+    }
+    return [];
+  });
+  const [userEvents, setUserEvents] = useState(() => {
+    if (typeof window !== "undefined") {
+      return safeLocalStorageGet("eventzone_cache_user_events", []);
+    }
+    return [];
+  });
   const [activeEventId, setActiveEventStateId] = useState(() => {
     if (typeof window !== "undefined") {
       const searchParams = new URLSearchParams(window.location.search);
@@ -761,6 +771,15 @@ export function HomeContent() {
         if (sessionData?.session?.user && isMounted) {
           await syncUserProfile(sessionData.session);
         } else {
+          // If offline, preserve the local cached session so user is not logged out
+          if (typeof navigator !== "undefined" && !navigator.onLine) {
+            if (isMounted) {
+              setAuthInitialized(true);
+              setIsAuthProcessing(false);
+            }
+            return;
+          }
+
           // If code is in URL and after 1s still not signed in, do a retry check
           if (typeof window !== "undefined") {
             const searchParams = new URLSearchParams(window.location.search);
@@ -772,6 +791,7 @@ export function HomeContent() {
                   if (retrySession?.session?.user) {
                     await syncUserProfile(retrySession.session);
                   } else {
+                    if (typeof navigator !== "undefined" && !navigator.onLine) return;
                     setCurrentUser(null);
                     safeLocalStorageRemove("eventzone_user");
                     setAuthInitialized(true);
@@ -813,15 +833,24 @@ export function HomeContent() {
   // Load User Events & Public Events
   useEffect(() => {
     const loadEventsData = async () => {
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        return;
+      }
       try {
         const [pEvents, uEvents, vRegs] = await Promise.all([
           fetchPublicEvents(),
           currentUser?.id ? fetchUserEvents(currentUser.id, currentUser.email) : Promise.resolve([]),
           currentUser?.email ? fetchVisitorRegistrations(currentUser.email) : Promise.resolve([]),
         ]);
-        setPublicEvents(pEvents || []);
-        setUserEvents(uEvents || []);
-        setVisitorRegistrations(vRegs || []);
+        if (pEvents) {
+          setPublicEvents(pEvents);
+          safeLocalStorageSet("eventzone_cache_public_events", pEvents);
+        }
+        if (uEvents) {
+          setUserEvents(uEvents);
+          safeLocalStorageSet("eventzone_cache_user_events", uEvents);
+        }
+        if (vRegs) setVisitorRegistrations(vRegs);
 
         // Auto-select organizer's latest event if opening dashboard on demo default
         if (typeof window !== "undefined" && uEvents && uEvents.length > 0) {
@@ -839,6 +868,13 @@ export function HomeContent() {
     };
 
     loadEventsData();
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("online", loadEventsData);
+      return () => {
+        window.removeEventListener("online", loadEventsData);
+      };
+    }
   }, [currentUser]);
 
 
@@ -895,6 +931,13 @@ export function HomeContent() {
     const loadEventData = async () => {
       setActiveEventId(activeEventId);
 
+      // If browser is currently offline, retain state already hydrated from localStorage
+      // and do not attempt network requests that would fail and potentially clear state.
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        setIsLoading(false);
+        return;
+      }
+
       const fetchAndSet = (promise, setter, cacheKey) => {
         return promise.then((data) => {
           if (data !== undefined && data !== null) {
@@ -939,68 +982,72 @@ export function HomeContent() {
 
         // 3. Single coordinated parallel fetch for attendees, pending & submissions
         const [loadedTickets, loadedSubmissions, rawAttendees, rawPending] = await Promise.all([
-          fetchTickets(activeEventId).catch(() => []),
-          fetchFormSubmissions(activeEventId).catch(() => []),
-          fetchAttendees(activeEventId).catch(() => []),
-          fetchPending(activeEventId).catch(() => [])
+          fetchTickets(activeEventId).catch(() => null),
+          fetchFormSubmissions(activeEventId).catch(() => null),
+          fetchAttendees(activeEventId).catch(() => null),
+          fetchPending(activeEventId).catch(() => null)
         ]);
 
-        if (loadedTickets) {
+        if (loadedTickets && Array.isArray(loadedTickets)) {
           setTickets(loadedTickets);
           safeLocalStorageSet(`eventzone_cache_tickets_${activeEventId}`, loadedTickets);
         }
-        if (loadedSubmissions) {
+        if (loadedSubmissions && Array.isArray(loadedSubmissions)) {
           setFormSubmissions(loadedSubmissions);
           safeLocalStorageSet(`eventzone_cache_formSubmissions_${activeEventId}`, loadedSubmissions);
         }
 
         // Process attendees with ticket names and submission answers
-        let processedAtts = rawAttendees || [];
-        if (loadedTickets && loadedTickets.length === 1) {
-          const singleName = loadedTickets[0].name || loadedTickets[0].tier;
-          processedAtts = processedAtts.map(a => ({
-            ...a,
-            ticketType: singleName,
-            ticket_type: singleName
-          }));
+        if (rawAttendees && Array.isArray(rawAttendees)) {
+          let processedAtts = rawAttendees;
+          if (loadedTickets && loadedTickets.length === 1) {
+            const singleName = loadedTickets[0].name || loadedTickets[0].tier;
+            processedAtts = processedAtts.map(a => ({
+              ...a,
+              ticketType: singleName,
+              ticket_type: singleName
+            }));
+          }
+          if (loadedSubmissions && loadedSubmissions.length > 0) {
+            processedAtts = processedAtts.map(a => {
+              const sub = loadedSubmissions.find(s => 
+                s.id === a.id || 
+                (s.respondentEmail && a.email && s.respondentEmail.toLowerCase() === a.email.toLowerCase())
+              );
+              if (sub && sub.answers && typeof sub.answers === 'object') {
+                const mergedAnswers = { ...sub.answers, ...(a.answers || {}) };
+                let formComp = sub.answers.company || sub.answers.f_company || sub.answers.organization || sub.answers.f_organization || a.company || '';
+                let formJob = sub.answers.jobTitle || sub.answers.job_title || sub.answers.f_job_title || sub.answers.function || sub.answers.profession || a.jobTitle || '';
+                return {
+                  ...a,
+                  answers: mergedAnswers,
+                  customAnswers: mergedAnswers,
+                  formAnswers: mergedAnswers,
+                  company: formComp,
+                  jobTitle: formJob,
+                  phone: a.phone || sub.answers.phone || sub.answers.f_core_phone || sub.answers.phoneNumber || ''
+                };
+              }
+              return a;
+            });
+          }
+          setAttendees(processedAtts);
+          safeLocalStorageSet(`eventzone_cache_attendees_${activeEventId}`, processedAtts);
         }
-        if (loadedSubmissions && loadedSubmissions.length > 0) {
-          processedAtts = processedAtts.map(a => {
-            const sub = loadedSubmissions.find(s => 
-              s.id === a.id || 
-              (s.respondentEmail && a.email && s.respondentEmail.toLowerCase() === a.email.toLowerCase())
-            );
-            if (sub && sub.answers && typeof sub.answers === 'object') {
-              const mergedAnswers = { ...sub.answers, ...(a.answers || {}) };
-              let formComp = sub.answers.company || sub.answers.f_company || sub.answers.organization || sub.answers.f_organization || a.company || '';
-              let formJob = sub.answers.jobTitle || sub.answers.job_title || sub.answers.f_job_title || sub.answers.function || sub.answers.profession || a.jobTitle || '';
-              return {
-                ...a,
-                answers: mergedAnswers,
-                customAnswers: mergedAnswers,
-                formAnswers: mergedAnswers,
-                company: formComp,
-                jobTitle: formJob,
-                phone: a.phone || sub.answers.phone || sub.answers.f_core_phone || sub.answers.phoneNumber || ''
-              };
-            }
-            return a;
-          });
-        }
-        setAttendees(processedAtts);
-        safeLocalStorageSet(`eventzone_cache_attendees_${activeEventId}`, processedAtts);
 
-        let processedPending = rawPending || [];
-        if (loadedTickets && loadedTickets.length === 1) {
-          const singleName = loadedTickets[0].name || loadedTickets[0].tier;
-          processedPending = processedPending.map(p => ({
-            ...p,
-            ticketType: singleName,
-            ticket_type: singleName
-          }));
+        if (rawPending && Array.isArray(rawPending)) {
+          let processedPending = rawPending;
+          if (loadedTickets && loadedTickets.length === 1) {
+            const singleName = loadedTickets[0].name || loadedTickets[0].tier;
+            processedPending = processedPending.map(p => ({
+              ...p,
+              ticketType: singleName,
+              ticket_type: singleName
+            }));
+          }
+          setPending(processedPending);
+          safeLocalStorageSet(`eventzone_cache_pending_${activeEventId}`, processedPending);
         }
-        setPending(processedPending);
-        safeLocalStorageSet(`eventzone_cache_pending_${activeEventId}`, processedPending);
 
       } catch (err) {
         console.error("Unexpected error loading data for event:", err);
@@ -1010,6 +1057,13 @@ export function HomeContent() {
     };
 
     loadEventData();
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("online", loadEventData);
+      return () => {
+        window.removeEventListener("online", loadEventData);
+      };
+    }
   }, [activeEventId]);
 
   // Real-time Event Subscription (Cross-tab & Multi-device Live Sync)
