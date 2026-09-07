@@ -163,7 +163,13 @@ export function HomeContent() {
     }
     return null;
   });
-  const [authInitialized, setAuthInitialized] = useState(false);
+  const [authInitialized, setAuthInitialized] = useState(() => {
+    if (typeof window !== "undefined") {
+      const stored = safeLocalStorageGet("eventzone_user", null);
+      if (stored || !navigator.onLine) return true;
+    }
+    return false;
+  });
   const [isAuthProcessing, setIsAuthProcessing] = useState(() => {
     if (typeof window !== "undefined") {
       const searchParams = new URLSearchParams(window.location.search);
@@ -327,7 +333,21 @@ export function HomeContent() {
     return getEffectivePermissions(currentUser, eventDetails, team, simulatedMemberId, userEvents, activeEventId);
   }, [currentUser, eventDetails, team, simulatedMemberId, userEvents, activeEventId]);
 
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => {
+    if (typeof window !== "undefined") {
+      if (!navigator.onLine) return false;
+      try {
+        const searchParams = new URLSearchParams(window.location.search);
+        const evId = searchParams.get("eventId") || searchParams.get("event") || DEFAULT_EVENT_ID;
+        if (evId) {
+          const hasAtts = localStorage.getItem(`eventzone_cache_attendees_${evId}`);
+          const hasEv = localStorage.getItem(`eventzone_cached_event_${evId}`) || localStorage.getItem(`eventzone_cache_event_${evId}`);
+          if (hasAtts || hasEv) return false;
+        }
+      } catch (e) {}
+    }
+    return true;
+  });
   const isInitializedRef = useRef(false);
 
   // Modal State
@@ -390,6 +410,50 @@ export function HomeContent() {
     // Helper to sync user profile from Supabase
     const syncUserProfile = async (session) => {
       if (!session?.user || !isMounted) return null;
+
+      // FAST-PATH FOR OFFLINE MODE:
+      // Avoid hanging or failing remote Supabase network queries when offline.
+      // Immediately hydrate user object from locally cached profile / session metadata.
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        const cachedUser = safeLocalStorageGet("eventzone_user", null);
+        const userId = session.user.id;
+        const userMeta = session.user.user_metadata || {};
+        const retrievedName = cachedUser?.fullName || userMeta.full_name || session.user.email?.split('@')[0] || "Eventzone User";
+        const retrievedAvatar = cachedUser?.avatar || userMeta.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(retrievedName)}&background=0b5cdb&color=fff`;
+
+        const offlineUser = {
+          id: userId,
+          email: session.user.email,
+          fullName: retrievedName,
+          role: cachedUser?.role || "organizer",
+          companyName: cachedUser?.companyName || userMeta.company_name || "",
+          jobTitle: cachedUser?.jobTitle || userMeta.job_title || "",
+          phone: cachedUser?.phone || "",
+          bio: cachedUser?.bio || "",
+          location: cachedUser?.location || "",
+          interests: cachedUser?.interests || [],
+          socialLinks: cachedUser?.socialLinks || [],
+          metadata: cachedUser?.metadata || {},
+          what_im_looking_for: cachedUser?.what_im_looking_for || "",
+          whatImLookingFor: cachedUser?.whatImLookingFor || "",
+          avatar: retrievedAvatar,
+          isAdmin: cachedUser?.isAdmin || false,
+          isVerifiedAdmin: cachedUser?.isVerifiedAdmin || false,
+          maxEvents: cachedUser?.maxEvents ?? null,
+          maxAttendees: cachedUser?.maxAttendees ?? null,
+          eventsCount: cachedUser?.eventsCount || 0,
+          accountStatus: cachedUser?.accountStatus || "active",
+          status: cachedUser?.status || "active",
+        };
+
+        if (isMounted) {
+          setCurrentUser(offlineUser);
+          setAuthInitialized(true);
+          setIsAuthProcessing(false);
+        }
+        return offlineUser;
+      }
+
       try {
         const userId = session.user.id;
         const userMeta = session.user.user_metadata || {};
@@ -682,6 +746,10 @@ export function HomeContent() {
         return syncedUser;
       } catch (err) {
         console.warn("Supabase profile sync error:", err);
+        if (isMounted) {
+          setAuthInitialized(true);
+          setIsAuthProcessing(false);
+        }
         return null;
       }
     };
@@ -750,6 +818,19 @@ export function HomeContent() {
         if (session?.user) {
           await syncUserProfile(session);
         } else {
+          // If offline, preserve the local cached session so user is not logged out
+          if (typeof navigator !== "undefined" && !navigator.onLine) {
+            setAuthInitialized(true);
+            setIsAuthProcessing(false);
+            return;
+          }
+          const cachedUser = safeLocalStorageGet("eventzone_user", null);
+          if (cachedUser) {
+            setAuthInitialized(true);
+            setIsAuthProcessing(false);
+            return;
+          }
+
           // Check if there is an OAuth code or token in URL that is currently processing
           const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
           const hasAuthParams = searchParams?.has("code") || (typeof window !== "undefined" && window.location.hash.includes("access_token"));
@@ -779,6 +860,14 @@ export function HomeContent() {
             }
             return;
           }
+          const cachedUser = safeLocalStorageGet("eventzone_user", null);
+          if (cachedUser) {
+            if (isMounted) {
+              setAuthInitialized(true);
+              setIsAuthProcessing(false);
+            }
+            return;
+          }
 
           // If code is in URL and after 1s still not signed in, do a retry check
           if (typeof window !== "undefined") {
@@ -792,6 +881,8 @@ export function HomeContent() {
                     await syncUserProfile(retrySession.session);
                   } else {
                     if (typeof navigator !== "undefined" && !navigator.onLine) return;
+                    const storedUser = safeLocalStorageGet("eventzone_user", null);
+                    if (storedUser) return;
                     setCurrentUser(null);
                     safeLocalStorageRemove("eventzone_user");
                     setAuthInitialized(true);
@@ -800,12 +891,34 @@ export function HomeContent() {
                 }
               }, 1200);
             } else {
+              if (typeof navigator !== "undefined" && !navigator.onLine) {
+                setAuthInitialized(true);
+                setIsAuthProcessing(false);
+                return;
+              }
+              const storedUser = safeLocalStorageGet("eventzone_user", null);
+              if (storedUser) {
+                setAuthInitialized(true);
+                setIsAuthProcessing(false);
+                return;
+              }
               setCurrentUser(null);
               safeLocalStorageRemove("eventzone_user");
               setAuthInitialized(true);
               setIsAuthProcessing(false);
             }
           } else {
+            if (typeof navigator !== "undefined" && !navigator.onLine) {
+              setAuthInitialized(true);
+              setIsAuthProcessing(false);
+              return;
+            }
+            const storedUser = safeLocalStorageGet("eventzone_user", null);
+            if (storedUser) {
+              setAuthInitialized(true);
+              setIsAuthProcessing(false);
+              return;
+            }
             setCurrentUser(null);
             safeLocalStorageRemove("eventzone_user");
             setAuthInitialized(true);
@@ -3539,7 +3652,7 @@ export function HomeContent() {
   // 2. ORGANIZER EVENTS HUB VIEW
   // ==========================================================================
   if (currentView === "events-hub") {
-    if (isAuthProcessing || !authInitialized) {
+    if ((isAuthProcessing || !authInitialized) && !currentUser) {
       return <EventsHubSkeleton />;
     }
     if (!currentUser) {
@@ -3587,7 +3700,7 @@ export function HomeContent() {
   // 2.5. CREATE NEW EVENT (DEDICATED FULL-PAGE VIEW)
   // ==========================================================================
   if (currentView === "create-event") {
-    if (isAuthProcessing) {
+    if (isAuthProcessing && !currentUser) {
       return <EventsHubSkeleton />;
     }
     return (
@@ -3646,7 +3759,7 @@ export function HomeContent() {
   // ==========================================================================
   // 4. SINGLE EVENT DASHBOARD (ORGANIZER VIEW)
   // ==========================================================================
-  if (isAuthProcessing || !authInitialized) {
+  if ((isAuthProcessing || !authInitialized) && !currentUser) {
     return <OverviewSkeleton />;
   }
   if (!currentUser) {

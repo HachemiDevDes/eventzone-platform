@@ -1,5 +1,5 @@
 // Eventzone Offline Service Worker
-const CACHE_NAME = "eventzone-offline-v1";
+const CACHE_NAME = "eventzone-offline-v2";
 
 const CORE_ASSETS = [
   "/",
@@ -112,8 +112,14 @@ self.addEventListener("fetch", (event) => {
 
   // 3. API requests: Network-First (offline fallback handled by client offline queue)
   event.respondWith(
-    fetch(request).catch(() => {
-      return caches.match(request);
+    fetch(request).catch(async () => {
+      const cached = await caches.match(request);
+      if (cached) return cached;
+      return new Response(JSON.stringify({ error: "Offline - network unavailable", offline: true }), {
+        status: 503,
+        statusText: "Service Unavailable (Offline)",
+        headers: { "Content-Type": "application/json" }
+      });
     })
   );
 });
