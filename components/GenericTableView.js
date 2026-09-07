@@ -43,6 +43,7 @@ import QRCode from "qrcode";
 import { useLanguage } from "../lib/i18n";
 import { logCommunication, fetchCommunications, bulkUpsertAttendees } from "../lib/db";
 import { useOfflineSync } from "../lib/offlineSync";
+import { safeLocalStorageGet } from "../lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
 import A4BadgeSheet, { printA4BadgeDocument, printBulkA4BadgeDocuments } from "./A4BadgeSheet";
 import SearchableSelect from "./SearchableSelect";
@@ -1092,6 +1093,50 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Resilient offline cache re-hydration: if attendees state is empty, self-heal from localStorage
+  useEffect(() => {
+    if ((!attendees || attendees.length === 0) && typeof window !== "undefined") {
+      const targetId = activeEventId || safeLocalStorageGet("eventzone_active_event_id", null);
+      let foundAtts = targetId ? safeLocalStorageGet(`eventzone_cache_attendees_${targetId}`, null) : null;
+      if (!foundAtts || !Array.isArray(foundAtts) || foundAtts.length === 0) {
+        // Fallback search across all cache keys in localStorage
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith("eventzone_cache_attendees_")) {
+            const list = safeLocalStorageGet(k, null);
+            if (Array.isArray(list) && list.length > 0) {
+              foundAtts = list;
+              break;
+            }
+          }
+        }
+      }
+      if (Array.isArray(foundAtts) && foundAtts.length > 0) {
+        onUpdateState("attendees", foundAtts);
+      }
+
+      // Also self-heal tickets if empty
+      if (!tickets || tickets.length === 0) {
+        let foundTickets = targetId ? safeLocalStorageGet(`eventzone_cache_tickets_${targetId}`, null) : null;
+        if (!foundTickets || !Array.isArray(foundTickets) || foundTickets.length === 0) {
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith("eventzone_cache_tickets_")) {
+              const list = safeLocalStorageGet(k, null);
+              if (Array.isArray(list) && list.length > 0) {
+                foundTickets = list;
+                break;
+              }
+            }
+          }
+        }
+        if (Array.isArray(foundTickets) && foundTickets.length > 0) {
+          onUpdateState("tickets", foundTickets);
+        }
+      }
+    }
+  }, [attendees, tickets, activeEventId, onUpdateState]);
 
   // Helper to detect company sponsor/exhibitor role for an attendee
   const getAttendeeRoleInfo = (a) => {

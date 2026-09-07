@@ -105,7 +105,7 @@ import {
   cleanupLocalStorageQuota
 } from "../lib/supabase";
 import { isPlatformSuperAdminEmail } from "../lib/constants";
-import { enqueueOfflineAction, getOfflineQueue, processOfflineQueue } from "../lib/offlineSync";
+import { enqueueOfflineAction, getOfflineQueue, processOfflineQueue, processAllOfflineQueues } from "../lib/offlineSync";
 
 const INDUSTRIES = [
   "Technology, AI & Software",
@@ -147,6 +147,7 @@ export function resolveActiveEventId() {
     const searchParams = new URLSearchParams(window.location.search);
     const urlId = searchParams.get("eventId") || searchParams.get("event");
     if (urlId) {
+      safeLocalStorageSet("eventzone_active_event_id", urlId);
       setActiveEventId(urlId);
       return urlId;
     }
@@ -159,8 +160,46 @@ export function resolveActiveEventId() {
 
     const cachedUserEvents = safeLocalStorageGet("eventzone_cache_user_events", []);
     if (Array.isArray(cachedUserEvents) && cachedUserEvents.length > 0 && cachedUserEvents[0]?.id) {
+      safeLocalStorageSet("eventzone_active_event_id", cachedUserEvents[0].id);
       setActiveEventId(cachedUserEvents[0].id);
       return cachedUserEvents[0].id;
+    }
+
+    // Resilient offline fallback: scan localStorage for any active cache or offline queues
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith("eventzone_cache_attendees_")) {
+        const eid = key.slice("eventzone_cache_attendees_".length);
+        if (eid && eid !== DEFAULT_EVENT_ID) {
+          const list = safeLocalStorageGet(key, null);
+          if (Array.isArray(list) && list.length > 0) {
+            safeLocalStorageSet("eventzone_active_event_id", eid);
+            setActiveEventId(eid);
+            return eid;
+          }
+        }
+      }
+      if (key && key.startsWith("eventzone_offline_queue_")) {
+        const eid = key.slice("eventzone_offline_queue_".length);
+        if (eid && eid !== DEFAULT_EVENT_ID) {
+          const q = safeLocalStorageGet(key, null);
+          if (Array.isArray(q) && q.length > 0) {
+            safeLocalStorageSet("eventzone_active_event_id", eid);
+            setActiveEventId(eid);
+            return eid;
+          }
+        }
+      }
+      if (key && (key.startsWith("eventzone_cached_event_") || key.startsWith("eventzone_cache_event_"))) {
+        const eid = key.startsWith("eventzone_cached_event_")
+          ? key.slice("eventzone_cached_event_".length)
+          : key.slice("eventzone_cache_event_".length);
+        if (eid && eid !== DEFAULT_EVENT_ID) {
+          safeLocalStorageSet("eventzone_active_event_id", eid);
+          setActiveEventId(eid);
+          return eid;
+        }
+      }
     }
   } catch (e) {}
   setActiveEventId(DEFAULT_EVENT_ID);
@@ -300,7 +339,19 @@ export function HomeContent() {
         const cached = localStorage.getItem(`eventzone_cache_${key}_${targetId}`);
         if (cached) {
           const parsed = JSON.parse(cached);
-          if (parsed !== undefined && parsed !== null) return parsed;
+          if (parsed !== undefined && parsed !== null) {
+            if (!Array.isArray(parsed) || parsed.length > 0) return parsed;
+          }
+        }
+        // Fallback: check if there's ANY non-empty cache for this key across localStorage
+        if (Array.isArray(fallback)) {
+          for (let i = 0; i < localStorage.length; i++) {
+            const lk = localStorage.key(i);
+            if (lk && lk.startsWith(`eventzone_cache_${key}_`)) {
+              const val = safeLocalStorageGet(lk, null);
+              if (Array.isArray(val) && val.length > 0) return val;
+            }
+          }
         }
       } catch (e) {}
     }
@@ -313,6 +364,15 @@ export function HomeContent() {
         const targetId = resolveActiveEventId();
         const cached = localStorage.getItem(`eventzone_cached_event_${targetId}`) || localStorage.getItem(`eventzone_cache_event_${targetId}`);
         if (cached) return JSON.parse(cached);
+
+        // Fallback: check any cached event in localStorage
+        for (let i = 0; i < localStorage.length; i++) {
+          const lk = localStorage.key(i);
+          if (lk && (lk.startsWith("eventzone_cached_event_") || lk.startsWith("eventzone_cache_event_"))) {
+            const val = safeLocalStorageGet(lk, null);
+            if (val && typeof val === "object" && (val.title || val.id || val.name)) return val;
+          }
+        }
       } catch (e) {}
     }
     return null;
@@ -1004,10 +1064,17 @@ export function HomeContent() {
           const urlParam = new URLSearchParams(window.location.search).get("eventId") || new URLSearchParams(window.location.search).get("event");
           if (!urlParam && activeEventId === DEFAULT_EVENT_ID) {
             const savedActive = safeLocalStorageGet("eventzone_active_event_id", null);
-            const targetId = savedActive || uEvents[0]?.id;
-            const hasDefault = uEvents.some(ev => ev.id === DEFAULT_EVENT_ID);
-            if ((!hasDefault || savedActive) && targetId) {
-              setActiveEventStateId(targetId);
+            // Only auto-switch if DEFAULT_EVENT_ID does not have any local attendee cache or offline queue items
+            const defaultAtts = safeLocalStorageGet(`eventzone_cache_attendees_${DEFAULT_EVENT_ID}`, []);
+            const defaultQueue = getOfflineQueue(DEFAULT_EVENT_ID);
+            const hasDefaultData = (Array.isArray(defaultAtts) && defaultAtts.length > 0) || (Array.isArray(defaultQueue) && defaultQueue.length > 0);
+
+            if (!hasDefaultData) {
+              const targetId = savedActive || uEvents[0]?.id;
+              const hasDefault = uEvents.some(ev => ev.id === DEFAULT_EVENT_ID);
+              if ((!hasDefault || savedActive) && targetId) {
+                setActiveEventStateId(targetId);
+              }
             }
           }
         }
@@ -1087,14 +1154,11 @@ export function HomeContent() {
         return;
       }
 
-      // If there are pending actions in the offline queue, process them first
-      const pendingQueue = getOfflineQueue(activeEventId);
-      if (pendingQueue.length > 0) {
-        try {
-          await processOfflineQueue(activeEventId);
-        } catch (qErr) {
-          console.warn("Pre-load offline queue flush notice:", qErr);
-        }
+      // Flush all offline queues across all events to Supabase first before fetching
+      try {
+        await processAllOfflineQueues();
+      } catch (qErr) {
+        console.warn("Pre-load offline queue flush notice:", qErr);
       }
 
       const fetchAndSet = (promise, setter, cacheKey) => {
@@ -1256,6 +1320,12 @@ export function HomeContent() {
 
           setAttendees(processedAtts);
           safeLocalStorageSet(`eventzone_cache_attendees_${activeEventId}`, processedAtts);
+        } else {
+          // If rawAttendees is null or undefined (e.g. network failure), retain existing cached attendees
+          const cachedExisting = safeLocalStorageGet(`eventzone_cache_attendees_${activeEventId}`, []);
+          if (Array.isArray(cachedExisting) && cachedExisting.length > 0) {
+            setAttendees(cachedExisting);
+          }
         }
 
         if (rawPending && Array.isArray(rawPending)) {
@@ -1473,9 +1543,41 @@ export function HomeContent() {
       console.warn("Supabase event channel error:", e);
     }
 
+    const handleAttendeeSynced = (e) => {
+      const { eventId, attendee, list } = e?.detail || {};
+      if (eventId && eventId !== activeEventId && eventId !== DEFAULT_EVENT_ID) return;
+      if (Array.isArray(list) && list.length > 0) {
+        setAttendees(list);
+      } else if (attendee) {
+        setAttendees(prev => {
+          const exists = prev.some(a => a.id === attendee.id || (a.email && attendee.email && a.email.toLowerCase() === attendee.email.toLowerCase()));
+          const next = exists ? prev.map(a => (a.id === attendee.id || (a.email && attendee.email && a.email.toLowerCase() === attendee.email.toLowerCase())) ? { ...a, ...attendee } : a) : [attendee, ...prev];
+          safeLocalStorageSet(`eventzone_cache_attendees_${activeEventId}`, next);
+          return next;
+        });
+      }
+    };
+
+    const handleCheckinSynced = (e) => {
+      const { eventId, list } = e?.detail || {};
+      if (eventId && eventId !== activeEventId && eventId !== DEFAULT_EVENT_ID) return;
+      if (Array.isArray(list) && list.length > 0) {
+        setAttendees(list);
+      }
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("eventzone:attendee-synced", handleAttendeeSynced);
+      window.addEventListener("eventzone:checkin-synced", handleCheckinSynced);
+    }
+
     return () => {
       unsubscribeSync();
       eventChannel?.unsubscribe();
+      if (typeof window !== "undefined") {
+        window.removeEventListener("eventzone:attendee-synced", handleAttendeeSynced);
+        window.removeEventListener("eventzone:checkin-synced", handleCheckinSynced);
+      }
     };
   }, [activeEventId]);
 
@@ -1506,9 +1608,7 @@ export function HomeContent() {
       params.set("view", currentView);
     }
     if (!nonEventViews.includes(currentView) && activeEventId) {
-      if (activeEventId !== DEFAULT_EVENT_ID || currentView === "register" || currentView === "rsvp") {
-        params.set("eventId", activeEventId);
-      }
+      params.set("eventId", activeEventId);
     }
     if (currentView === "floor-plan" && activeFloorPlanId) {
       params.set("planId", activeFloorPlanId);
@@ -2431,6 +2531,7 @@ export function HomeContent() {
   const handleSaveAttendee = async (attendeeData) => {
     const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
     const targetEventId = activeEventId || resolveActiveEventId() || DEFAULT_EVENT_ID;
+    safeLocalStorageSet("eventzone_active_event_id", targetEventId);
 
     // Prepare local fallback / record with guaranteed valid UUID
     const localId = isValidUuid(attendeeData.id) ? attendeeData.id : generateUuid();
@@ -2458,8 +2559,8 @@ export function HomeContent() {
       });
 
       setAttendees(prev => {
-        const exists = prev.some(a => a.id === localRecord.id);
-        const next = exists ? prev.map(a => a.id === localRecord.id ? localRecord : a) : [localRecord, ...prev];
+        const exists = prev.some(a => a.id === localRecord.id || (a.email && localRecord.email && a.email.toLowerCase() === localRecord.email.toLowerCase()));
+        const next = exists ? prev.map(a => (a.id === localRecord.id || (a.email && localRecord.email && a.email.toLowerCase() === localRecord.email.toLowerCase())) ? localRecord : a) : [localRecord, ...prev];
         safeLocalStorageSet(`eventzone_cache_attendees_${targetEventId}`, next);
         return next;
       });
@@ -2478,8 +2579,8 @@ export function HomeContent() {
         });
       }
       setAttendees(prev => {
-        const exists = prev.some(a => a.id === saved.id);
-        const next = exists ? prev.map(a => a.id === saved.id ? saved : a) : [saved, ...prev];
+        const exists = prev.some(a => a.id === saved.id || (a.email && saved.email && a.email.toLowerCase() === saved.email.toLowerCase()));
+        const next = exists ? prev.map(a => (a.id === saved.id || (a.email && saved.email && a.email.toLowerCase() === saved.email.toLowerCase())) ? saved : a) : [saved, ...prev];
         safeLocalStorageSet(`eventzone_cache_attendees_${targetEventId}`, next);
         return next;
       });
@@ -2514,8 +2615,8 @@ export function HomeContent() {
       });
 
       setAttendees(prev => {
-        const exists = prev.some(a => a.id === localRecord.id);
-        const next = exists ? prev.map(a => a.id === localRecord.id ? localRecord : a) : [localRecord, ...prev];
+        const exists = prev.some(a => a.id === localRecord.id || (a.email && localRecord.email && a.email.toLowerCase() === localRecord.email.toLowerCase()));
+        const next = exists ? prev.map(a => (a.id === localRecord.id || (a.email && localRecord.email && a.email.toLowerCase() === localRecord.email.toLowerCase())) ? localRecord : a) : [localRecord, ...prev];
         safeLocalStorageSet(`eventzone_cache_attendees_${targetEventId}`, next);
         return next;
       });
