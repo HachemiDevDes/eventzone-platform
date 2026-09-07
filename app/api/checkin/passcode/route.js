@@ -12,6 +12,14 @@ export async function OPTIONS() {
   return new NextResponse(null, { status: 200, headers: CORS_HEADERS });
 }
 
+export async function HEAD() {
+  return new NextResponse(null, { status: 200, headers: CORS_HEADERS });
+}
+
+export async function GET() {
+  return NextResponse.json({ ok: true }, { status: 200, headers: CORS_HEADERS });
+}
+
 export async function POST(request) {
   try {
     const body = await request.json().catch(() => ({}));

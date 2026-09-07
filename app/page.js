@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import React, { useState, useEffect, useRef, useMemo, Suspense } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { 
@@ -146,22 +146,24 @@ export function resolveActiveEventId() {
   try {
     const searchParams = new URLSearchParams(window.location.search);
     const urlId = searchParams.get("eventId") || searchParams.get("event");
-    if (urlId) return urlId;
-
-    const viewParam = searchParams.get("view");
-    const rsvpParam = searchParams.get("rsvp");
-    const isEventLanding = rsvpParam === "true" || viewParam === "public-rsvp" || (viewParam === "rsvp" && searchParams.get("public") === "true") || searchParams.get("ref");
-    const nonEventViews = ["home", "auth", "profile", "events-hub", "my-tickets", "create-event", "admin"];
-    const isHome = !viewParam || nonEventViews.includes(viewParam);
+    if (urlId) {
+      setActiveEventId(urlId);
+      return urlId;
+    }
 
     const savedActive = safeLocalStorageGet("eventzone_active_event_id", null);
-    if (savedActive && (!isHome || isEventLanding)) return savedActive;
+    if (savedActive) {
+      setActiveEventId(savedActive);
+      return savedActive;
+    }
 
     const cachedUserEvents = safeLocalStorageGet("eventzone_cache_user_events", []);
     if (Array.isArray(cachedUserEvents) && cachedUserEvents.length > 0 && cachedUserEvents[0]?.id) {
-      if (!isHome || isEventLanding) return cachedUserEvents[0].id;
+      setActiveEventId(cachedUserEvents[0].id);
+      return cachedUserEvents[0].id;
     }
   } catch (e) {}
+  setActiveEventId(DEFAULT_EVENT_ID);
   return DEFAULT_EVENT_ID;
 }
 
@@ -1212,6 +1214,20 @@ export function HomeContent() {
             });
           }
 
+          // Also preserve any attendees currently in local storage cache (e.g. recently synced, added, or offline-created)
+          const cachedExisting = safeLocalStorageGet(`eventzone_cache_attendees_${activeEventId}`, []);
+          if (Array.isArray(cachedExisting) && cachedExisting.length > 0) {
+            const serverIds = new Set(processedAtts.map(a => a.id));
+            const serverEmails = new Set(processedAtts.filter(a => a.email).map(a => a.email.toLowerCase()));
+            cachedExisting.forEach(cachedAtt => {
+              if (cachedAtt && cachedAtt.id && !serverIds.has(cachedAtt.id) && (!cachedAtt.email || !serverEmails.has(cachedAtt.email.toLowerCase()))) {
+                processedAtts.unshift(cachedAtt);
+                serverIds.add(cachedAtt.id);
+                if (cachedAtt.email) serverEmails.add(cachedAtt.email.toLowerCase());
+              }
+            });
+          }
+
           // Apply any pending offline checkin states
           const pendingCheckins = remainingQueue.filter(a => a.type === "checkin" || a.type === "bulk_checkin");
           if (pendingCheckins.length > 0) {
@@ -1550,8 +1566,6 @@ export function HomeContent() {
 
       if (eventIdParam && eventIdParam !== activeEventId && (!isHome || isEventLanding)) {
         setActiveEventStateId(eventIdParam);
-      } else if (isHome && !isEventLanding && activeEventId !== DEFAULT_EVENT_ID) {
-        setActiveEventStateId(DEFAULT_EVENT_ID);
       }
       
       if (rsvpParam === "true" || viewParam === "public-rsvp" || (viewParam === "rsvp" && searchParams.get("public") === "true")) {
@@ -2416,7 +2430,7 @@ export function HomeContent() {
 
   const handleSaveAttendee = async (attendeeData) => {
     const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
-    const targetEventId = activeEventId;
+    const targetEventId = activeEventId || resolveActiveEventId() || DEFAULT_EVENT_ID;
 
     // Prepare local fallback / record with guaranteed valid UUID
     const localId = isValidUuid(attendeeData.id) ? attendeeData.id : generateUuid();
@@ -2424,6 +2438,8 @@ export function HomeContent() {
     const localRecord = {
       ...attendeeData,
       id: localId,
+      eventId: targetEventId,
+      event_id: targetEventId,
       badgeCode: localBadgeCode,
       badge_code: localBadgeCode,
       registeredDate: attendeeData.registeredDate || new Date().toISOString(),
@@ -2436,6 +2452,7 @@ export function HomeContent() {
       // Immediate offline queue & UI state update
       enqueueOfflineAction(targetEventId, {
         type: "add_attendee",
+        eventId: targetEventId,
         attendeeId: localRecord.id,
         payload: localRecord,
       });
@@ -2455,6 +2472,7 @@ export function HomeContent() {
       if (saved?._syncFailed) {
         enqueueOfflineAction(targetEventId, {
           type: "add_attendee",
+          eventId: targetEventId,
           attendeeId: localRecord.id,
           payload: localRecord,
         });
@@ -2490,6 +2508,7 @@ export function HomeContent() {
       console.warn("Failed to save attendee online, fallback to offline queue:", err);
       enqueueOfflineAction(targetEventId, {
         type: "add_attendee",
+        eventId: targetEventId,
         attendeeId: localRecord.id,
         payload: localRecord,
       });
