@@ -82,7 +82,7 @@ import {
   fetchInfluencers, upsertInfluencer, deleteInfluencer, archiveInfluencer, recordInfluencerClick,
   fetchTickets, upsertTicket, deleteTicket, archiveTicket,
   fetchTeam, upsertTeamMember, deleteTeamMember, archiveTeamMember,
-  fetchFloorPlans, upsertFloorPlan, deleteFloorPlan, archiveFloorPlan, restoreFloorPlan, permanentDeleteFloorPlan, generateUuid,
+  fetchFloorPlans, upsertFloorPlan, deleteFloorPlan, archiveFloorPlan, restoreFloorPlan, permanentDeleteFloorPlan,
   fetchForms, upsertForm, deleteForm, archiveForm,
   fetchFormSubmissions, submitFormResponse, deleteFormSubmission,
   fetchRSVPs, fetchRSVPSettings, upsertRSVPSettings, submitGuestRSVP, updateRSVPStatus, deleteRSVP, archiveRSVP,
@@ -93,7 +93,8 @@ import {
   fetchVisitorRegistrations, registerVisitorForEvent, upsertUserProfile,
   isMatchingEmail, isMatchingPhoneNumber, cleanPhoneNumber,
   setActiveEventId, getActiveEventId, DEFAULT_EVENT_ID, SHOWCASE_EVENTS,
-  subscribeToRealtimeSync, broadcastRealtimeChange
+  subscribeToRealtimeSync, broadcastRealtimeChange,
+  isValidUuid, generateUuid
 } from "../lib/db";
 import { 
   supabase, 
@@ -104,7 +105,7 @@ import {
   cleanupLocalStorageQuota
 } from "../lib/supabase";
 import { isPlatformSuperAdminEmail } from "../lib/constants";
-import { enqueueOfflineAction } from "../lib/offlineSync";
+import { enqueueOfflineAction, getOfflineQueue, processOfflineQueue } from "../lib/offlineSync";
 
 const INDUSTRIES = [
   "Technology, AI & Software",
@@ -139,6 +140,30 @@ const INDUSTRIES = [
   "Arts, Culture & Heritage",
   "Other / General Business"
 ];
+
+export function resolveActiveEventId() {
+  if (typeof window === "undefined") return DEFAULT_EVENT_ID;
+  try {
+    const searchParams = new URLSearchParams(window.location.search);
+    const urlId = searchParams.get("eventId") || searchParams.get("event");
+    if (urlId) return urlId;
+
+    const viewParam = searchParams.get("view");
+    const rsvpParam = searchParams.get("rsvp");
+    const isEventLanding = rsvpParam === "true" || viewParam === "public-rsvp" || (viewParam === "rsvp" && searchParams.get("public") === "true") || searchParams.get("ref");
+    const nonEventViews = ["home", "auth", "profile", "events-hub", "my-tickets", "create-event", "admin"];
+    const isHome = !viewParam || nonEventViews.includes(viewParam);
+
+    const savedActive = safeLocalStorageGet("eventzone_active_event_id", null);
+    if (savedActive && (!isHome || isEventLanding)) return savedActive;
+
+    const cachedUserEvents = safeLocalStorageGet("eventzone_cache_user_events", []);
+    if (Array.isArray(cachedUserEvents) && cachedUserEvents.length > 0 && cachedUserEvents[0]?.id) {
+      if (!isHome || isEventLanding) return cachedUserEvents[0].id;
+    }
+  } catch (e) {}
+  return DEFAULT_EVENT_ID;
+}
 
 export function HomeContent() {
   const searchParamsHook = useSearchParams();
@@ -194,21 +219,15 @@ export function HomeContent() {
     }
     return [];
   });
-  const [activeEventId, setActiveEventStateId] = useState(() => {
-    if (typeof window !== "undefined") {
-      const searchParams = new URLSearchParams(window.location.search);
-      const viewParam = searchParams.get("view");
-      const rsvpParam = searchParams.get("rsvp");
-      const isEventLanding = rsvpParam === "true" || viewParam === "public-rsvp" || (viewParam === "rsvp" && searchParams.get("public") === "true") || searchParams.get("ref");
-      const nonEventViews = ["home", "auth", "profile", "events-hub", "my-tickets", "create-event", "admin"];
-      const isHome = !viewParam || nonEventViews.includes(viewParam);
-      if (isHome && !isEventLanding) {
-        return DEFAULT_EVENT_ID;
-      }
-      return searchParams.get("eventId") || searchParams.get("event") || DEFAULT_EVENT_ID;
+  const [activeEventId, setActiveEventStateIdRaw] = useState(() => resolveActiveEventId());
+
+  const setActiveEventStateId = useCallback((id) => {
+    if (id) {
+      safeLocalStorageSet("eventzone_active_event_id", id);
+      setActiveEventId(id);
     }
-    return DEFAULT_EVENT_ID;
-  });
+    setActiveEventStateIdRaw(id);
+  }, []);
   const [isCreationWizardOpen, setIsCreationWizardOpen] = useState(false);
   const [pendingEventCreation, setPendingEventCreation] = useState(() => {
     if (typeof window !== "undefined") {
@@ -275,8 +294,8 @@ export function HomeContent() {
   const getInitialEventData = (key, fallback) => {
     if (typeof window !== "undefined") {
       try {
-        const urlId = new URLSearchParams(window.location.search).get("eventId") || DEFAULT_EVENT_ID;
-        const cached = localStorage.getItem(`eventzone_cache_${key}_${urlId}`);
+        const targetId = resolveActiveEventId();
+        const cached = localStorage.getItem(`eventzone_cache_${key}_${targetId}`);
         if (cached) {
           const parsed = JSON.parse(cached);
           if (parsed !== undefined && parsed !== null) return parsed;
@@ -289,8 +308,8 @@ export function HomeContent() {
   const [eventDetails, setEventDetails] = useState(() => {
     if (typeof window !== "undefined") {
       try {
-        const urlId = new URLSearchParams(window.location.search).get("eventId") || DEFAULT_EVENT_ID;
-        const cached = localStorage.getItem(`eventzone_cached_event_${urlId}`) || localStorage.getItem(`eventzone_cache_event_${urlId}`);
+        const targetId = resolveActiveEventId();
+        const cached = localStorage.getItem(`eventzone_cached_event_${targetId}`) || localStorage.getItem(`eventzone_cache_event_${targetId}`);
         if (cached) return JSON.parse(cached);
       } catch (e) {}
     }
@@ -316,8 +335,8 @@ export function HomeContent() {
   const [documents, setDocuments] = useState(() => {
     if (typeof window !== "undefined") {
       try {
-        const urlId = new URLSearchParams(window.location.search).get("eventId") || DEFAULT_EVENT_ID;
-        const cached = localStorage.getItem(`eventzone_documents_${urlId}`) || localStorage.getItem(`eventzone_cache_documents_${urlId}`);
+        const targetId = resolveActiveEventId();
+        const cached = localStorage.getItem(`eventzone_documents_${targetId}`) || localStorage.getItem(`eventzone_cache_documents_${targetId}`);
         if (cached) {
           const parsed = JSON.parse(cached);
           if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -337,8 +356,7 @@ export function HomeContent() {
     if (typeof window !== "undefined") {
       if (!navigator.onLine) return false;
       try {
-        const searchParams = new URLSearchParams(window.location.search);
-        const evId = searchParams.get("eventId") || searchParams.get("event") || DEFAULT_EVENT_ID;
+        const evId = resolveActiveEventId();
         if (evId) {
           const hasAtts = localStorage.getItem(`eventzone_cache_attendees_${evId}`);
           const hasEv = localStorage.getItem(`eventzone_cached_event_${evId}`) || localStorage.getItem(`eventzone_cache_event_${evId}`);
@@ -947,6 +965,20 @@ export function HomeContent() {
   useEffect(() => {
     const loadEventsData = async () => {
       if (typeof navigator !== "undefined" && !navigator.onLine) {
+        // Fast path for offline mode: hydrate cached user events and active event
+        const cachedUEvents = safeLocalStorageGet("eventzone_cache_user_events", []);
+        if (Array.isArray(cachedUEvents) && cachedUEvents.length > 0) {
+          setUserEvents(cachedUEvents);
+          const targetId = safeLocalStorageGet("eventzone_active_event_id", null) || cachedUEvents[0]?.id;
+          if (targetId && activeEventId !== targetId) {
+            setActiveEventStateId(targetId);
+          }
+        }
+        const cachedPEvents = safeLocalStorageGet("eventzone_cache_public_events", []);
+        if (Array.isArray(cachedPEvents) && cachedPEvents.length > 0) {
+          setPublicEvents(cachedPEvents);
+        }
+        setIsLoading(false);
         return;
       }
       try {
@@ -969,9 +1001,11 @@ export function HomeContent() {
         if (typeof window !== "undefined" && uEvents && uEvents.length > 0) {
           const urlParam = new URLSearchParams(window.location.search).get("eventId") || new URLSearchParams(window.location.search).get("event");
           if (!urlParam && activeEventId === DEFAULT_EVENT_ID) {
+            const savedActive = safeLocalStorageGet("eventzone_active_event_id", null);
+            const targetId = savedActive || uEvents[0]?.id;
             const hasDefault = uEvents.some(ev => ev.id === DEFAULT_EVENT_ID);
-            if (!hasDefault && uEvents[0]?.id) {
-              setActiveEventStateId(uEvents[0].id);
+            if ((!hasDefault || savedActive) && targetId) {
+              setActiveEventStateId(targetId);
             }
           }
         }
@@ -1051,11 +1085,21 @@ export function HomeContent() {
         return;
       }
 
+      // If there are pending actions in the offline queue, process them first
+      const pendingQueue = getOfflineQueue(activeEventId);
+      if (pendingQueue.length > 0) {
+        try {
+          await processOfflineQueue(activeEventId);
+        } catch (qErr) {
+          console.warn("Pre-load offline queue flush notice:", qErr);
+        }
+      }
+
       const fetchAndSet = (promise, setter, cacheKey) => {
         return promise.then((data) => {
           if (data !== undefined && data !== null) {
             setter(data);
-            if (cacheKey) {
+            if (cacheKey && (!Array.isArray(data) || data.length > 0)) {
               safeLocalStorageSet(`eventzone_cache_${cacheKey}_${activeEventId}`, data);
             }
           }
@@ -1070,7 +1114,7 @@ export function HomeContent() {
         const triggerGranularFetches = () => {
           fetchAndSet(fetchEventDetails(activeEventId), (val) => {
             setEventDetails(val);
-            safeLocalStorageSet(`eventzone_cached_event_${activeEventId}`, val);
+            if (val) safeLocalStorageSet(`eventzone_cached_event_${activeEventId}`, val);
           }, "event");
           fetchAndSet(fetchTickets(activeEventId), setTickets, "tickets");
           fetchAndSet(fetchInfluencers(activeEventId), setInfluencers, "influencers");
@@ -1101,10 +1145,17 @@ export function HomeContent() {
           fetchPending(activeEventId).catch(() => null)
         ]);
 
-        if (loadedTickets && Array.isArray(loadedTickets)) {
+        if (loadedTickets && Array.isArray(loadedTickets) && loadedTickets.length > 0) {
           setTickets(loadedTickets);
           safeLocalStorageSet(`eventzone_cache_tickets_${activeEventId}`, loadedTickets);
+        } else if (loadedTickets && Array.isArray(loadedTickets)) {
+          const cachedTickets = safeLocalStorageGet(`eventzone_cache_tickets_${activeEventId}`, []);
+          if (!cachedTickets || cachedTickets.length === 0) {
+            setTickets(loadedTickets);
+            safeLocalStorageSet(`eventzone_cache_tickets_${activeEventId}`, loadedTickets);
+          }
         }
+
         if (loadedSubmissions && Array.isArray(loadedSubmissions)) {
           setFormSubmissions(loadedSubmissions);
           safeLocalStorageSet(`eventzone_cache_formSubmissions_${activeEventId}`, loadedSubmissions);
@@ -1144,6 +1195,49 @@ export function HomeContent() {
               return a;
             });
           }
+
+          // Merge any locally added attendees from the offline queue that might not have been returned by Supabase yet
+          const remainingQueue = getOfflineQueue(activeEventId);
+          const pendingAdds = remainingQueue.filter(a => a.type === "add_attendee");
+          if (pendingAdds.length > 0) {
+            const serverIds = new Set(processedAtts.map(a => a.id));
+            const serverEmails = new Set(processedAtts.filter(a => a.email).map(a => a.email.toLowerCase()));
+            pendingAdds.forEach(act => {
+              const att = act.payload;
+              if (att && att.id && !serverIds.has(att.id) && (!att.email || !serverEmails.has(att.email.toLowerCase()))) {
+                processedAtts.unshift(att);
+                serverIds.add(att.id);
+                if (att.email) serverEmails.add(att.email.toLowerCase());
+              }
+            });
+          }
+
+          // Apply any pending offline checkin states
+          const pendingCheckins = remainingQueue.filter(a => a.type === "checkin" || a.type === "bulk_checkin");
+          if (pendingCheckins.length > 0) {
+            processedAtts = processedAtts.map(att => {
+              let checked = att.checkedIn;
+              let checkedAt = att.checkedInAt;
+              for (const act of pendingCheckins) {
+                if (act.type === "checkin" && (act.attendeeId === att.id || act.payload?.attendeeId === att.id)) {
+                  checked = Boolean(act.payload?.checkedIn);
+                  checkedAt = checked ? (act.payload?.checkedInAt || new Date().toISOString()) : null;
+                } else if (act.type === "bulk_checkin" && act.payload?.attendeeIds?.includes(att.id)) {
+                  checked = Boolean(act.payload?.checkedIn);
+                  checkedAt = checked ? (act.payload?.checkedInAt || new Date().toISOString()) : null;
+                }
+              }
+              return {
+                ...att,
+                checkedIn: checked,
+                checked_in: checked,
+                status: checked ? "checked_in" : "registered",
+                checkedInAt: checkedAt,
+                checked_in_at: checkedAt
+              };
+            });
+          }
+
           setAttendees(processedAtts);
           safeLocalStorageSet(`eventzone_cache_attendees_${activeEventId}`, processedAtts);
         }
@@ -1171,10 +1265,27 @@ export function HomeContent() {
 
     loadEventData();
 
+    const handleWindowOffline = () => {
+      setIsLoading(false);
+      if (activeEventId) {
+        if (attendees && attendees.length > 0) {
+          safeLocalStorageSet(`eventzone_cache_attendees_${activeEventId}`, attendees);
+        }
+        if (tickets && tickets.length > 0) {
+          safeLocalStorageSet(`eventzone_cache_tickets_${activeEventId}`, tickets);
+        }
+        if (eventDetails) {
+          safeLocalStorageSet(`eventzone_cached_event_${activeEventId}`, eventDetails);
+        }
+      }
+    };
+
     if (typeof window !== "undefined") {
       window.addEventListener("online", loadEventData);
+      window.addEventListener("offline", handleWindowOffline);
       return () => {
         window.removeEventListener("online", loadEventData);
+        window.removeEventListener("offline", handleWindowOffline);
       };
     }
   }, [activeEventId]);
@@ -1241,6 +1352,31 @@ export function HomeContent() {
         });
       } else if (type === "DOCUMENT_DELETED" && payload?.id) {
         setDocuments(prev => prev.filter(d => d.id !== payload.id));
+      } else if (type === "ATTENDEES_SYNCED") {
+        const cached = safeLocalStorageGet(`eventzone_cache_attendees_${activeEventId}`);
+        if (cached && Array.isArray(cached) && cached.length > 0) {
+          setAttendees(cached);
+        } else if (typeof navigator !== "undefined" && navigator.onLine) {
+          fetchAttendees(activeEventId).then(updated => {
+            if (updated) {
+              setAttendees(updated);
+              safeLocalStorageSet(`eventzone_cache_attendees_${activeEventId}`, updated);
+            }
+          });
+        }
+      } else if (type === "ATTENDEE_SAVED" && payload) {
+        setAttendees(prev => {
+          const exists = prev.some(a => a.id === payload.id);
+          const next = exists ? prev.map(a => a.id === payload.id ? { ...a, ...payload } : a) : [payload, ...prev];
+          safeLocalStorageSet(`eventzone_cache_attendees_${activeEventId}`, next);
+          return next;
+        });
+      } else if (type === "ATTENDEE_DELETED" && payload?.id) {
+        setAttendees(prev => {
+          const next = prev.filter(a => a.id !== payload.id);
+          safeLocalStorageSet(`eventzone_cache_attendees_${activeEventId}`, next);
+          return next;
+        });
       }
     });
 
@@ -1275,6 +1411,7 @@ export function HomeContent() {
               return true;
             });
             setAttendees(deduped);
+            safeLocalStorageSet(`eventzone_cache_attendees_${activeEventId}`, deduped);
           }
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'pending_registrations', filter: `event_id=eq.${activeEventId}` }, async () => {
@@ -1969,6 +2106,7 @@ export function HomeContent() {
 
   // Diff sync helper
   const syncArrayToDb = (oldArr, newArr, upsertFn, deleteFn) => {
+    if (typeof navigator !== "undefined" && !navigator.onLine) return;
     const newIds = new Set(newArr.map(i => String(i.id)));
     for (const item of oldArr) {
       if (!newIds.has(String(item.id))) {
@@ -2280,9 +2418,9 @@ export function HomeContent() {
     const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
     const targetEventId = activeEventId;
 
-    // Prepare local fallback / record
-    const localId = attendeeData.id || `att_local_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-    const localBadgeCode = attendeeData.badgeCode || attendeeData.badge_code || `EZ-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    // Prepare local fallback / record with guaranteed valid UUID
+    const localId = isValidUuid(attendeeData.id) ? attendeeData.id : generateUuid();
+    const localBadgeCode = attendeeData.badgeCode || attendeeData.badge_code || `EZ-${String(localId).slice(-4).toUpperCase()}`;
     const localRecord = {
       ...attendeeData,
       id: localId,
@@ -2313,7 +2451,14 @@ export function HomeContent() {
     }
 
     try {
-      const saved = await upsertAttendee(attendeeData, targetEventId);
+      const saved = await upsertAttendee({ ...attendeeData, id: localId }, targetEventId);
+      if (saved?._syncFailed) {
+        enqueueOfflineAction(targetEventId, {
+          type: "add_attendee",
+          attendeeId: localRecord.id,
+          payload: localRecord,
+        });
+      }
       setAttendees(prev => {
         const exists = prev.some(a => a.id === saved.id);
         const next = exists ? prev.map(a => a.id === saved.id ? saved : a) : [saved, ...prev];
@@ -4656,6 +4801,7 @@ export function HomeContent() {
             <GenericTableView 
               viewName={currentView}
               state={{
+                activeEventId,
                 eventDetails,
                 attendees,
                 pending,

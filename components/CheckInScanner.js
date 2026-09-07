@@ -22,6 +22,7 @@ import {
   Check,
   X
 } from "lucide-react";
+import { enqueueOfflineAction } from "../lib/offlineSync";
 
 /**
  * Synthesizes short, crisp Web Audio chimes without external audio assets.
@@ -201,6 +202,114 @@ export default function CheckInScanner({
         autoNextTimerRef.current = null;
       }
 
+      const processOfflineScan = () => {
+        try {
+          const raw = typeof window !== "undefined" ? localStorage.getItem(`eventzone_cache_attendees_${eventId}`) : null;
+          if (!raw) return false;
+          const list = JSON.parse(raw);
+          if (!Array.isArray(list) || list.length === 0) return false;
+
+          let targetId = code;
+          let targetCode = code;
+          let targetEmail = code;
+          if (code.startsWith("{") && code.endsWith("}")) {
+            try {
+              const p = JSON.parse(code);
+              if (p.attendeeId) targetId = String(p.attendeeId);
+              if (p.badgeCode) targetCode = String(p.badgeCode);
+              if (p.email) targetEmail = String(p.email);
+            } catch {}
+          }
+
+          const matched = list.find(a => 
+            String(a.id || '').toLowerCase() === targetId.toLowerCase() ||
+            String(a.id || '').toLowerCase() === targetCode.toLowerCase() ||
+            (a.badgeCode && String(a.badgeCode).toLowerCase() === targetCode.toLowerCase()) ||
+            (a.badge_code && String(a.badge_code).toLowerCase() === targetCode.toLowerCase()) ||
+            (a.email && a.email.toLowerCase() === targetEmail.toLowerCase()) ||
+            (a.name && a.name.toLowerCase() === code.toLowerCase())
+          );
+
+          if (!matched) return false;
+
+          const isAlreadyChecked = Boolean(matched.checkedIn || matched.checked_in || matched.status === 'checked_in' || matched.status === 'checked-in');
+          if (isAlreadyChecked) {
+            playAudioFeedback("already");
+            triggerHaptic("already");
+            setActiveResult({
+              status: "already_checked_in",
+              attendee: matched,
+              message: t("checkin.alreadyCheckedInMsg", "Already Checked In"),
+              checkedInAt: matched.checkedInAt || matched.checked_in_at || new Date().toISOString(),
+              checkedInBy: matched.checkedInBy || "Gate Staff",
+              rawScanned: code,
+            });
+            return true;
+          }
+
+          const now = new Date().toISOString();
+          const checkinStaff = staffName || staffEmail || "Gate Staff";
+          const updatedAttendee = {
+            ...matched,
+            checkedIn: true,
+            checked_in: true,
+            status: "checked_in",
+            checkedInAt: now,
+            checked_in_at: now,
+            checkedInBy: checkinStaff
+          };
+
+          const updatedList = list.map(a => a.id === matched.id ? updatedAttendee : a);
+          try {
+            localStorage.setItem(`eventzone_cache_attendees_${eventId}`, JSON.stringify(updatedList));
+          } catch {}
+
+          enqueueOfflineAction(eventId, {
+            type: "checkin",
+            attendeeId: matched.id,
+            payload: {
+              attendeeId: matched.id,
+              checkedIn: true,
+              checkedInBy: checkinStaff,
+              checkedInAt: now,
+            }
+          });
+
+          playAudioFeedback("success");
+          triggerHaptic("success");
+          setActiveResult({
+            status: "success",
+            attendee: updatedAttendee,
+            message: t("checkin.statusConfirmed", "Attendance Confirmed!"),
+            checkedInAt: now,
+            rawScanned: code,
+          });
+          if (onScanResult) onScanResult({ status: "success", attendee: updatedAttendee });
+          startAutoNextCountdown();
+          return true;
+        } catch (e) {
+          console.warn("processOfflineScan error:", e);
+          return false;
+        }
+      };
+
+      const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+      if (isOffline) {
+        const handledOffline = processOfflineScan();
+        if (!handledOffline) {
+          playAudioFeedback("invalid");
+          triggerHaptic("invalid");
+          setActiveResult({
+            status: "invalid",
+            attendee: null,
+            message: t("checkin.statusInvalid", "Invalid ticket pass for this event."),
+            rawScanned: code,
+          });
+        }
+        setIsProcessing(false);
+        return;
+      }
+
       try {
         const res = await fetch("/api/checkin/scan", {
           method: "POST",
@@ -248,14 +357,17 @@ export default function CheckInScanner({
           });
         }
       } catch (err) {
-        console.error("Scan processing error:", err);
-        playAudioFeedback("invalid");
-        setActiveResult({
-          status: "invalid",
-          attendee: null,
-          message: t("checkin.connectionError", "Network error during pass verification. Please try again."),
-          rawScanned: code,
-        });
+        console.error("Scan processing network error, trying offline verification:", err);
+        const handledOffline = processOfflineScan();
+        if (!handledOffline) {
+          playAudioFeedback("invalid");
+          setActiveResult({
+            status: "invalid",
+            attendee: null,
+            message: t("checkin.connectionError", "Network error during pass verification. Please try again."),
+            rawScanned: code,
+          });
+        }
       } finally {
         setIsProcessing(false);
       }

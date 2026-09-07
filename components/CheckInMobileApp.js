@@ -32,6 +32,7 @@ import {
   Globe,
 } from "lucide-react";
 import CheckInScanner from "./CheckInScanner";
+import { enqueueOfflineAction, processOfflineQueue } from "../lib/offlineSync";
 
 const SESSION_STORAGE_KEY = "ez_checkin_session";
 
@@ -224,9 +225,21 @@ export default function CheckInMobileApp({
       const data = await res.json();
       if (data.success && Array.isArray(data.attendees)) {
         setAttendees(data.attendees);
+        try {
+          localStorage.setItem(`eventzone_cache_attendees_${eventId}`, JSON.stringify(data.attendees));
+        } catch {}
       }
     } catch (err) {
-      console.warn("Load attendees error:", err);
+      console.warn("Load attendees error, loading from offline cache:", err);
+      try {
+        const cached = localStorage.getItem(`eventzone_cache_attendees_${eventId}`);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setAttendees(parsed);
+          }
+        }
+      } catch {}
     } finally {
       setListLoading(false);
     }
@@ -237,6 +250,18 @@ export default function CheckInMobileApp({
     if (session?.eventId) {
       loadAttendees(session.eventId);
     }
+  }, [session?.eventId, loadAttendees]);
+
+  // Auto-sync offline queue when internet restores
+  useEffect(() => {
+    if (!session?.eventId) return;
+    const handleOnline = () => {
+      processOfflineQueue(session.eventId).then(() => {
+        loadAttendees(session.eventId);
+      });
+    };
+    window.addEventListener("online", handleOnline);
+    return () => window.removeEventListener("online", handleOnline);
   }, [session?.eventId, loadAttendees]);
 
   // Toggle Check-In status manually
@@ -273,6 +298,40 @@ export default function CheckInMobileApp({
       }));
     }
 
+    const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+    if (isOffline) {
+      enqueueOfflineAction(session.eventId, {
+        type: "checkin",
+        attendeeId,
+        payload: {
+          attendeeId,
+          checkedIn: targetState,
+          checkedInBy: session.staffName || session.email || "Staff",
+          checkedInAt: targetState ? new Date().toISOString() : null,
+        }
+      });
+      try {
+        const raw = localStorage.getItem(`eventzone_cache_attendees_${session.eventId}`);
+        if (raw) {
+          const list = JSON.parse(raw);
+          if (Array.isArray(list)) {
+            const updated = list.map(a => a.id === attendeeId ? {
+              ...a,
+              checkedIn: targetState,
+              checked_in: targetState,
+              status: targetState ? "checked_in" : "registered",
+              checkedInAt: targetState ? new Date().toISOString() : null
+            } : a);
+            localStorage.setItem(`eventzone_cache_attendees_${session.eventId}`, JSON.stringify(updated));
+          }
+        }
+      } catch {}
+      showToast(targetState ? `${attendee.name || "Attendee"} checked in (Offline)!` : "Check-in undone (Offline)", "neutral");
+      setActionLoadingId(null);
+      setUndoAttendee(null);
+      return;
+    }
+
     try {
       const headers = { "Content-Type": "application/json" };
       if (session?.passcode) headers["x-checkin-passcode"] = session.passcode;
@@ -291,9 +350,17 @@ export default function CheckInMobileApp({
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        // Revert on error
-        loadAttendees(session.eventId);
-        showToast(data.error || "Failed to update check-in status.", "error");
+        enqueueOfflineAction(session.eventId, {
+          type: "checkin",
+          attendeeId,
+          payload: {
+            attendeeId,
+            checkedIn: targetState,
+            checkedInBy: session.staffName || session.email || "Staff",
+            checkedInAt: targetState ? new Date().toISOString() : null,
+          }
+        });
+        showToast(targetState ? `${attendee.name || "Attendee"} checked in (Offline queue)!` : "Check-in undone (Offline queue)", "neutral");
       } else {
         if (targetState) {
           showToast(`${attendee.name || "Attendee"} checked in!`);
@@ -302,9 +369,18 @@ export default function CheckInMobileApp({
         }
       }
     } catch (err) {
-      console.error("Toggle checkin error:", err);
-      loadAttendees(session.eventId);
-      showToast("Network error during check-in.", "error");
+      console.error("Toggle checkin error, fallback to offline queue:", err);
+      enqueueOfflineAction(session.eventId, {
+        type: "checkin",
+        attendeeId,
+        payload: {
+          attendeeId,
+          checkedIn: targetState,
+          checkedInBy: session.staffName || session.email || "Staff",
+          checkedInAt: targetState ? new Date().toISOString() : null,
+        }
+      });
+      showToast(targetState ? `${attendee.name || "Attendee"} checked in (Offline)!` : "Check-in undone (Offline)", "neutral");
     } finally {
       setActionLoadingId(null);
       setUndoAttendee(null);
