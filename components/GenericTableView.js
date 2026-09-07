@@ -27,7 +27,7 @@ function getLocalizedFieldLabel(label, t) {
 }
 
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { 
   Users, Ticket, Building2, 
@@ -36,15 +36,18 @@ import {
   Printer, QrCode, Layers, Archive, RotateCcw,
   Eye, Phone, Clock, CheckCircle2, XCircle, Sparkles, Filter, Info, ShieldCheck, ArrowUpRight,
   Maximize2, User, Download, Camera, Loader2, MoreVertical, MoreHorizontal,
-  Store, Globe, ExternalLink, DollarSign, LayoutGrid, List, Copy, Smartphone
+  Store, Globe, ExternalLink, DollarSign, LayoutGrid, List, Copy, Smartphone,
+  FileSpreadsheet, ChevronDown
 } from "lucide-react";
 import QRCode from "qrcode";
 import { useLanguage } from "../lib/i18n";
-import { logCommunication, fetchCommunications } from "../lib/db";
+import { logCommunication, fetchCommunications, bulkUpsertAttendees } from "../lib/db";
 import { motion, AnimatePresence } from "framer-motion";
 import A4BadgeSheet, { printA4BadgeDocument, printBulkA4BadgeDocuments } from "./A4BadgeSheet";
 import SearchableSelect from "./SearchableSelect";
 import AttendeeEmailDrawer from "./AttendeeEmailDrawer";
+import EasyUploadModal from "./EasyUploadModal";
+import { exportAttendeesToExcel } from "../lib/attendeesExport";
 import TablePagination from "./TablePagination";
 import { uploadMedia } from "../lib/storage";
 import OpportunitiesView from "./OpportunitiesView";
@@ -1063,6 +1066,20 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
   const [selectedBadgeAttendee, setSelectedBadgeAttendee] = useState(null);
   const [emailAttendees, setEmailAttendees] = useState(null);
   const [activeActionsMenu, setActiveActionsMenu] = useState(null);
+  const [isEasyUploadOpen, setIsEasyUploadOpen] = useState(false);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const exportMenuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target)) {
+        setExportMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Helper to detect company sponsor/exhibitor role for an attendee
   const getAttendeeRoleInfo = (a) => {
@@ -1495,6 +1512,78 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
     });
   };
 
+  // Bulk import attendees handler
+  const handleImportAttendees = async (newAttendees) => {
+    try {
+      const activeEventId = state.activeEventId || state.eventDetails?.id;
+      const savedList = await bulkUpsertAttendees(newAttendees, activeEventId);
+      const updated = [...savedList, ...attendees];
+      onUpdateState("attendees", updated);
+    } catch (err) {
+      console.error("Failed to import attendees:", err);
+      throw err;
+    }
+  };
+
+  // Export as Excel (.xlsx)
+  const handleExportExcel = () => {
+    setExportMenuOpen(false);
+    try {
+      exportAttendeesToExcel(filtered, dynamicCols, state.eventDetails);
+    } catch (err) {
+      alert(err.message || "Failed to export attendees to Excel.");
+    }
+  };
+
+  // Export as Landscape PDF (.pdf)
+  const handleExportPdf = async () => {
+    setExportMenuOpen(false);
+    if (!filtered || filtered.length === 0) {
+      alert("No attendees to export.");
+      return;
+    }
+
+    setIsExportingPdf(true);
+    try {
+      const activeEventId = state.activeEventId || state.eventDetails?.id || "event";
+      const filterObj = ticketTypes.find(tt => tt.id === selectedTicketType);
+      const filterLabel = filterObj?.label || "All Attendees";
+
+      const res = await fetch(`/api/events/${activeEventId}/attendees/export-pdf`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          attendees: filtered,
+          eventDetails: state.eventDetails,
+          filterLabel,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to generate PDF export.");
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const eventTitleClean = (state.eventDetails?.title || "Event").replace(/[^a-zA-Z0-9_-]/g, "_");
+      const dateStr = new Date().toISOString().slice(0, 10);
+      a.download = `Eventzone_${eventTitleClean}_Roster_${dateStr}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }, 150);
+    } catch (err) {
+      console.error("PDF Export error:", err);
+      alert(err.message || "Failed to generate PDF roster.");
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6 w-full">
       <header className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 select-none">
@@ -1502,13 +1591,74 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
           <h2 className="text-2xl font-bold text-slate-900">{t("dash.attendees", "All Attendees")}</h2>
           <p className="text-sm text-slate-500">{t("table.attendeesSubtitle", "Manage list of registered participants, dynamic form data, and ticket tiers.")}</p>
         </div>
-        <button 
-          onClick={() => onOpenModal("attendee")}
-          className="bg-indigo-650 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 shadow-sm transition-all cursor-pointer self-start sm:self-auto"
-        >
-          <Plus size={16} />
-          <span>{t("table.addAttendee", "Add Attendee")}</span>
-        </button>
+
+        <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
+          {/* Export List Split Menu */}
+          <div className="relative" ref={exportMenuRef}>
+            <button
+              type="button"
+              onClick={() => setExportMenuOpen(prev => !prev)}
+              disabled={isExportingPdf}
+              className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 px-3.5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
+            >
+              {isExportingPdf ? (
+                <Loader2 size={14} className="animate-spin text-blue-600" />
+              ) : (
+                <Download size={14} className="text-slate-500" />
+              )}
+              <span>Export List</span>
+              <ChevronDown size={13} className="text-slate-400 ml-0.5" />
+            </button>
+
+            {exportMenuOpen && (
+              <div className="absolute right-0 mt-1.5 w-52 bg-white rounded-2xl shadow-xl border border-slate-100 py-1.5 z-40 animate-in fade-in zoom-in-95 duration-150">
+                <button
+                  type="button"
+                  onClick={handleExportExcel}
+                  className="w-full px-3.5 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 transition-colors cursor-pointer"
+                >
+                  <FileSpreadsheet size={15} className="text-emerald-600 shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="font-bold text-slate-800">Export as Excel</span>
+                    <span className="text-[10px] text-slate-400 font-normal">Standard .xlsx file</span>
+                  </div>
+                </button>
+                <div className="border-t border-slate-100 my-1" />
+                <button
+                  type="button"
+                  onClick={handleExportPdf}
+                  className="w-full px-3.5 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 transition-colors cursor-pointer"
+                >
+                  <FileText size={15} className="text-rose-600 shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="font-bold text-slate-800">Export as PDF</span>
+                    <span className="text-[10px] text-slate-400 font-normal">Landscape A4 report</span>
+                  </div>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Easy Upload Button */}
+          <button 
+            type="button"
+            onClick={() => setIsEasyUploadOpen(true)}
+            className="bg-white hover:bg-slate-50 text-blue-600 hover:text-blue-700 border border-blue-200/90 hover:border-blue-300 px-3.5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
+          >
+            <Upload size={14} />
+            <span>Easy Upload</span>
+          </button>
+
+          {/* Add Attendee Button */}
+          <button 
+            type="button"
+            onClick={() => onOpenModal("attendee")}
+            className="bg-indigo-650 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+          >
+            <Plus size={15} />
+            <span>{t("table.addAttendee", "Add Attendee")}</span>
+          </button>
+        </div>
       </header>
 
       {/* Clean Minimalist Ticket-Type & Archived Switcher Pills */}
@@ -2210,6 +2360,16 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
         </AnimatePresence>,
         document.body
       )}
+
+      {/* Easy Upload Bulk Import Modal */}
+      <EasyUploadModal
+        isOpen={isEasyUploadOpen}
+        onClose={() => setIsEasyUploadOpen(false)}
+        tickets={tickets}
+        forms={forms}
+        attendees={attendees}
+        onImportAttendees={handleImportAttendees}
+      />
     </div>
   );
 }
