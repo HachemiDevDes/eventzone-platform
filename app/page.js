@@ -1154,9 +1154,19 @@ export function HomeContent() {
         return;
       }
 
+      // ── SNAPSHOT local attendees BEFORE any sync/fetch so we can union-merge later ──
+      const preFetchLocalAttendees = safeLocalStorageGet(`eventzone_cache_attendees_${activeEventId}`, []);
+
       // Flush all offline queues across all events to Supabase first before fetching
+      let hadQueueItems = false;
       try {
+        const queueBefore = getOfflineQueue(activeEventId);
+        hadQueueItems = queueBefore.length > 0;
         await processAllOfflineQueues();
+        // If we just synced queue items, wait for Supabase to commit before fetching
+        if (hadQueueItems) {
+          await new Promise(r => setTimeout(r, 1500));
+        }
       } catch (qErr) {
         console.warn("Pre-load offline queue flush notice:", qErr);
       }
@@ -1262,34 +1272,38 @@ export function HomeContent() {
             });
           }
 
-          // Merge any locally added attendees from the offline queue that might not have been returned by Supabase yet
+          // ── UNION MERGE: never drop attendees known locally ──
+          // Start with server data, then add any local-only records from BOTH
+          // the pre-fetch snapshot and the offline queue
+          const mergeIds = new Set(processedAtts.map(a => a.id));
+          const mergeEmails = new Set(processedAtts.filter(a => a.email).map(a => a.email.toLowerCase()));
+
+          const addIfMissing = (att) => {
+            if (!att || !att.id) return;
+            if (mergeIds.has(att.id)) return;
+            if (att.email && mergeEmails.has(att.email.toLowerCase())) return;
+            processedAtts.push(att);
+            mergeIds.add(att.id);
+            if (att.email) mergeEmails.add(att.email.toLowerCase());
+          };
+
+          // Merge from offline queue (still pending items)
           const remainingQueue = getOfflineQueue(activeEventId);
           const pendingAdds = remainingQueue.filter(a => a.type === "add_attendee");
-          if (pendingAdds.length > 0) {
-            const serverIds = new Set(processedAtts.map(a => a.id));
-            const serverEmails = new Set(processedAtts.filter(a => a.email).map(a => a.email.toLowerCase()));
-            pendingAdds.forEach(act => {
-              const att = act.payload;
-              if (att && att.id && !serverIds.has(att.id) && (!att.email || !serverEmails.has(att.email.toLowerCase()))) {
-                processedAtts.unshift(att);
-                serverIds.add(att.id);
-                if (att.email) serverEmails.add(att.email.toLowerCase());
-              }
-            });
+          pendingAdds.forEach(act => addIfMissing(act.payload));
+
+          // Merge from pre-fetch local cache snapshot (this is THE critical merge
+          // that prevents offline-added-then-synced attendees from being lost
+          // when fetchAttendees returns stale data due to replication lag)
+          if (Array.isArray(preFetchLocalAttendees)) {
+            preFetchLocalAttendees.forEach(addIfMissing);
           }
 
-          // Also preserve any attendees currently in local storage cache (e.g. recently synced, added, or offline-created)
-          const cachedExisting = safeLocalStorageGet(`eventzone_cache_attendees_${activeEventId}`, []);
-          if (Array.isArray(cachedExisting) && cachedExisting.length > 0) {
-            const serverIds = new Set(processedAtts.map(a => a.id));
-            const serverEmails = new Set(processedAtts.filter(a => a.email).map(a => a.email.toLowerCase()));
-            cachedExisting.forEach(cachedAtt => {
-              if (cachedAtt && cachedAtt.id && !serverIds.has(cachedAtt.id) && (!cachedAtt.email || !serverEmails.has(cachedAtt.email.toLowerCase()))) {
-                processedAtts.unshift(cachedAtt);
-                serverIds.add(cachedAtt.id);
-                if (cachedAtt.email) serverEmails.add(cachedAtt.email.toLowerCase());
-              }
-            });
+          // Also merge from CURRENT localStorage cache (may have been updated by
+          // concurrent eventzone:attendee-synced events during this async function)
+          const freshCache = safeLocalStorageGet(`eventzone_cache_attendees_${activeEventId}`, []);
+          if (Array.isArray(freshCache)) {
+            freshCache.forEach(addIfMissing);
           }
 
           // Apply any pending offline checkin states
@@ -1496,8 +1510,19 @@ export function HomeContent() {
               seen.add(a.id);
               return true;
             });
-            setAttendees(deduped);
-            safeLocalStorageSet(`eventzone_cache_attendees_${activeEventId}`, deduped);
+            // Union merge: never drop locally-known attendees
+            setAttendees(prev => {
+              const mergeIds = new Set(deduped.map(a => a.id));
+              const mergeEmails = new Set(deduped.filter(a => a.email).map(a => a.email.toLowerCase()));
+              const localOnly = prev.filter(a => {
+                if (mergeIds.has(a.id)) return false;
+                if (a.email && mergeEmails.has(a.email.toLowerCase())) return false;
+                return true;
+              });
+              const merged = [...deduped, ...localOnly];
+              safeLocalStorageSet(`eventzone_cache_attendees_${activeEventId}`, merged);
+              return merged;
+            });
           }
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'pending_registrations', filter: `event_id=eq.${activeEventId}` }, async () => {
@@ -2259,7 +2284,17 @@ export function HomeContent() {
         safeLocalStorageSet(`eventzone_cache_sessions_${activeEventId}`, val);
         break;
       case "attendees":
-        syncArrayToDb(attendees, val, upsertAttendee, deleteAttendee);
+        // NEVER use syncArrayToDb for attendees — it destructively deletes
+        // items in oldArr not in newArr, which races with offline sync.
+        // Instead, only upsert changed/new items; explicit delete is handled separately.
+        if (typeof navigator !== "undefined" && navigator.onLine) {
+          for (const item of val) {
+            const oldItem = attendees.find(i => String(i.id) === String(item.id));
+            if (!oldItem || JSON.stringify(oldItem) !== JSON.stringify(item)) {
+              upsertAttendee(item, activeEventId).catch(e => console.error('Attendee upsert failed:', e));
+            }
+          }
+        }
         setAttendees(val);
         safeLocalStorageSet(`eventzone_cache_attendees_${activeEventId}`, val);
         break;
