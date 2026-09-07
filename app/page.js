@@ -104,6 +104,7 @@ import {
   cleanupLocalStorageQuota
 } from "../lib/supabase";
 import { isPlatformSuperAdminEmail } from "../lib/constants";
+import { enqueueOfflineAction } from "../lib/offlineSync";
 
 const INDUSTRIES = [
   "Technology, AI & Software",
@@ -2109,14 +2110,48 @@ export function HomeContent() {
   };
 
   const handleSaveAttendee = async (attendeeData) => {
+    const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+    const targetEventId = activeEventId;
+
+    // Prepare local fallback / record
+    const localId = attendeeData.id || `att_local_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const localBadgeCode = attendeeData.badgeCode || attendeeData.badge_code || `EZ-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    const localRecord = {
+      ...attendeeData,
+      id: localId,
+      badgeCode: localBadgeCode,
+      badge_code: localBadgeCode,
+      registeredDate: attendeeData.registeredDate || new Date().toISOString(),
+      registered_at: attendeeData.registered_at || new Date().toISOString(),
+      status: attendeeData.status || "registered",
+      checkedIn: Boolean(attendeeData.checkedIn),
+    };
+
+    if (isOffline) {
+      // Immediate offline queue & UI state update
+      enqueueOfflineAction(targetEventId, {
+        type: "add_attendee",
+        attendeeId: localRecord.id,
+        payload: localRecord,
+      });
+
+      setAttendees(prev => {
+        const exists = prev.some(a => a.id === localRecord.id);
+        const next = exists ? prev.map(a => a.id === localRecord.id ? localRecord : a) : [localRecord, ...prev];
+        safeLocalStorageSet(`eventzone_cache_attendees_${targetEventId}`, next);
+        return next;
+      });
+
+      return localRecord;
+    }
+
     try {
-      const saved = await upsertAttendee(attendeeData, activeEventId);
+      const saved = await upsertAttendee(attendeeData, targetEventId);
       setAttendees(prev => {
         const exists = prev.some(a => a.id === saved.id);
-        if (exists) {
-          return prev.map(a => a.id === saved.id ? saved : a);
-        }
-        return [saved, ...prev];
+        const next = exists ? prev.map(a => a.id === saved.id ? saved : a) : [saved, ...prev];
+        safeLocalStorageSet(`eventzone_cache_attendees_${targetEventId}`, next);
+        return next;
       });
 
       // Synchronize intake form response in formSubmissions state
@@ -2124,7 +2159,7 @@ export function HomeContent() {
         setFormSubmissions(prev => {
           const subObj = {
             id: saved.id,
-            eventId: activeEventId,
+            eventId: targetEventId,
             respondentName: saved.name,
             respondentEmail: saved.email,
             ticketTier: saved.ticketType || saved.ticket_type,
@@ -2140,8 +2175,21 @@ export function HomeContent() {
       }
       return saved;
     } catch (err) {
-      console.error("Failed to save attendee:", err);
-      throw err;
+      console.warn("Failed to save attendee online, fallback to offline queue:", err);
+      enqueueOfflineAction(targetEventId, {
+        type: "add_attendee",
+        attendeeId: localRecord.id,
+        payload: localRecord,
+      });
+
+      setAttendees(prev => {
+        const exists = prev.some(a => a.id === localRecord.id);
+        const next = exists ? prev.map(a => a.id === localRecord.id ? localRecord : a) : [localRecord, ...prev];
+        safeLocalStorageSet(`eventzone_cache_attendees_${targetEventId}`, next);
+        return next;
+      });
+
+      return localRecord;
     }
   };
 

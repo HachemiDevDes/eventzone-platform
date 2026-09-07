@@ -37,11 +37,12 @@ import {
   Eye, Phone, Clock, CheckCircle2, XCircle, Sparkles, Filter, Info, ShieldCheck, ArrowUpRight,
   Maximize2, User, Download, Camera, Loader2, MoreVertical, MoreHorizontal,
   Store, Globe, ExternalLink, DollarSign, LayoutGrid, List, Copy, Smartphone,
-  FileSpreadsheet, ChevronDown
+  FileSpreadsheet, ChevronDown, Wifi, WifiOff, RefreshCw
 } from "lucide-react";
 import QRCode from "qrcode";
 import { useLanguage } from "../lib/i18n";
 import { logCommunication, fetchCommunications, bulkUpsertAttendees } from "../lib/db";
+import { useOfflineSync } from "../lib/offlineSync";
 import { motion, AnimatePresence } from "framer-motion";
 import A4BadgeSheet, { printA4BadgeDocument, printBulkA4BadgeDocuments } from "./A4BadgeSheet";
 import SearchableSelect from "./SearchableSelect";
@@ -1059,6 +1060,17 @@ function SubmissionDetailsModal({ item, type = "attendee", forms = [], tickets =
 function AttendeesView({ state, onUpdateState, onOpenModal }) {
   const { t, lang, isRTL } = useLanguage();
   const { attendees = [], tickets = [], forms = [], organizations = [], sponsors = [], exhibitors = [] } = state;
+  const activeEventId = state.activeEventId || state.eventDetails?.id;
+  const {
+    isOnline,
+    syncState,
+    pendingCount,
+    pendingAttendeeIds,
+    syncNow,
+    queueCheckin,
+    queueBulkCheckin,
+  } = useOfflineSync(activeEventId);
+
   const [search, setSearch] = useState("");
   const [selectedTicketType, setSelectedTicketType] = useState("all");
   const [selectedSubmissionModal, setSelectedSubmissionModal] = useState(null);
@@ -1353,16 +1365,8 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
     });
     onUpdateState("attendees", updated);
 
-    try {
-      await toggleAttendeeCheckin({
-        eventId: state.activeEventId,
-        attendeeId: id,
-        checkedIn: nextState,
-        checkedInBy: "Organizer Console"
-      });
-    } catch (e) {
-      console.warn("handleToggleCheckin DB error:", e);
-    }
+    // Queue action for offline resilience and background auto-sync
+    queueCheckin(id, nextState, "Organizer Console");
   };
 
   const handleBulkCheckin = async (checkin = true) => {
@@ -1386,16 +1390,8 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
     });
     onUpdateState("attendees", updated);
 
-    for (const key of Array.from(selectedKeys)) {
-      try {
-        await toggleAttendeeCheckin({
-          eventId: state.activeEventId,
-          attendeeId: key,
-          checkedIn: checkin,
-          checkedInBy: "Organizer Console"
-        });
-      } catch (e) {}
-    }
+    // Queue bulk action for offline resilience and background auto-sync
+    queueBulkCheckin(Array.from(selectedKeys), checkin, "Organizer Console");
 
     setSelectedIds(new Set());
   };
@@ -1588,7 +1584,47 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
     <div className="flex flex-col gap-6 w-full">
       <header className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 select-none">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">{t("dash.attendees", "All Attendees")}</h2>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h2 className="text-2xl font-bold text-slate-900">{t("dash.attendees", "All Attendees")}</h2>
+            
+            {/* Connection & Offline Sync Status Indicator */}
+            <div className="inline-flex items-center">
+              {syncState === "syncing" ? (
+                <div 
+                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold shadow-2xs"
+                  title="Pushing offline changes to server..."
+                >
+                  <RefreshCw size={11} className="animate-spin text-blue-600" />
+                  <span>Syncing... ({pendingCount})</span>
+                </div>
+              ) : !isOnline || pendingCount > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => syncNow()}
+                  title={isOnline ? "Pending changes queued. Click to force sync now." : "Working offline. Changes are saved locally and will auto-sync when online. Click to retry sync."}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 text-xs font-semibold shadow-2xs transition-all cursor-pointer group"
+                >
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                  <WifiOff size={11} className="text-amber-600 shrink-0" />
+                  <span>
+                    {!isOnline
+                      ? `Offline (${pendingCount} pending)`
+                      : `Pending Sync (${pendingCount})`}
+                  </span>
+                  <RefreshCw size={10} className="text-amber-500 group-hover:rotate-180 transition-transform ml-0.5" />
+                </button>
+              ) : (
+                <div 
+                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold shadow-2xs"
+                  title="Connected to Eventzone real-time services"
+                >
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                  <Wifi size={11} className="text-emerald-600 shrink-0" />
+                  <span>Online</span>
+                </div>
+              )}
+            </div>
+          </div>
           <p className="text-sm text-slate-500">{t("table.attendeesSubtitle", "Manage list of registered participants, dynamic form data, and ticket tiers.")}</p>
         </div>
 
@@ -1661,8 +1697,8 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
         </div>
       </header>
 
-      {/* Clean Minimalist Ticket-Type & Archived Switcher Pills */}
-      <div className="flex items-center gap-1.5 p-1 bg-slate-100/80 rounded-2xl border border-slate-200/70 w-fit max-w-full overflow-x-auto select-none shadow-inner">
+      {/* Ticket-Type & Category Switcher Tabs */}
+      <div className="flex items-center gap-1 border-b border-slate-200 overflow-x-auto select-none bg-white">
         {ticketTypes.map(tt => {
           let count = 0;
           if (tt.id === "all") {
@@ -1678,18 +1714,21 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
             <button
               key={tt.id}
               onClick={() => setSelectedTicketType(tt.id)}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-150 cursor-pointer ${
+              className={`relative flex items-center gap-2 px-4 py-3 font-bold text-xs transition-all cursor-pointer !rounded-none whitespace-nowrap ${
                 isSelected
-                  ? "bg-white text-slate-900 shadow-sm font-bold border border-slate-200/80"
-                  : "text-slate-500 hover:text-slate-800 hover:bg-white/60 border border-transparent"
+                  ? "text-blue-600 font-black bg-blue-50/50"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
               }`}
             >
               <span>{getLocalizedTicketTierName(tt.label, t)}</span>
-              <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-bold transition-colors ${
-                isSelected ? "bg-slate-100 text-slate-700" : "text-slate-400 bg-transparent"
+              <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
+                isSelected ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"
               }`}>
-                {count}
+                <bdi dir="ltr">{count}</bdi>
               </span>
+              {isSelected && (
+                <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-blue-600" />
+              )}
             </button>
           );
         })}
@@ -1858,6 +1897,15 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                             <div className="flex flex-col min-w-0">
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 <span className="text-slate-850 font-bold leading-tight truncate">{a.name}</span>
+                                {pendingAttendeeIds.has(a.id) && (
+                                  <span 
+                                    className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-amber-50 text-amber-800 border border-amber-200 inline-flex items-center gap-1 shrink-0" 
+                                    title="Unsynced changes pending connection"
+                                  >
+                                    <Clock size={10} className="text-amber-500 animate-pulse" />
+                                    <span>Pending Sync</span>
+                                  </span>
+                                )}
                                 {sponsor && (
                                   <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase bg-amber-50 text-amber-800 border border-amber-200 inline-flex items-center" title={`${sponsor.name || 'Sponsor'} (${sponsor.tier || 'Official'})`}>
                                     <span>{sponsor.tier ? `${sponsor.tier.toUpperCase()} ${t("common.sponsor", "Sponsor")}` : t("common.sponsor", "Sponsor")}</span>
@@ -1898,15 +1946,26 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                         </td>
                       ))}
                       <td className="py-4 px-6 whitespace-nowrap">
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                          isArchived 
-                            ? 'bg-slate-100 text-slate-500 border border-slate-200' 
-                            : isCheckedIn 
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' 
-                              : 'bg-indigo-50 text-indigo-700 border border-indigo-100'
-                        }`}>
-                          {isArchived ? t("table.statusArchived", "ARCHIVED") : (isCheckedIn ? t("table.statusCheckedIn", "Checked In") : t("table.statusRegistered", "Registered"))}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                            isArchived 
+                              ? 'bg-slate-100 text-slate-500 border border-slate-200' 
+                              : isCheckedIn 
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' 
+                                : 'bg-indigo-50 text-indigo-700 border border-indigo-100'
+                          }`}>
+                            {isArchived ? t("table.statusArchived", "ARCHIVED") : (isCheckedIn ? t("table.statusCheckedIn", "Checked In") : t("table.statusRegistered", "Registered"))}
+                          </span>
+                          {pendingAttendeeIds.has(a.id) && (
+                            <span 
+                              className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md shrink-0" 
+                              title="Unsynced local changes pending connection"
+                            >
+                              <Clock size={10} className="text-amber-500 animate-pulse" />
+                              <span>Pending Sync</span>
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-4 px-6 text-slate-400 font-medium whitespace-nowrap">{a.registeredDate || "/"}</td>
                       <td
@@ -2584,8 +2643,8 @@ function PendingView({ state, onUpdateState }) {
         </div>
       </header>
 
-      {/* Clean Minimalist Ticket-Type Filter Tabs */}
-      <div className="flex items-center gap-1.5 p-1 bg-slate-100/80 rounded-2xl border border-slate-200/70 w-fit max-w-full overflow-x-auto select-none shadow-inner">
+      {/* Ticket-Type Filter Tabs */}
+      <div className="flex items-center gap-1 border-b border-slate-200 overflow-x-auto select-none bg-white">
         {ticketTypes.map(tt => {
           const count = tt.id === "all" 
             ? pending.length 
@@ -2596,18 +2655,21 @@ function PendingView({ state, onUpdateState }) {
             <button
               key={tt.id}
               onClick={() => setSelectedTicketType(tt.id)}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-150 cursor-pointer ${
+              className={`relative flex items-center gap-2 px-4 py-3 font-bold text-xs transition-all cursor-pointer !rounded-none whitespace-nowrap ${
                 isSelected
-                  ? "bg-white text-slate-900 shadow-sm font-bold border border-slate-200/80"
-                  : "text-slate-500 hover:text-slate-800 hover:bg-white/60 border border-transparent"
+                  ? "text-blue-600 font-black bg-blue-50/50"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
               }`}
             >
               <span>{tt.id === "all" ? t("tickets.allTickets", "All Tickets") : t("tickets." + tt.id.toLowerCase().replace(/[^a-z0-9]/g, "_"), tt.label)}</span>
-              <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-bold transition-colors ${
-                isSelected ? "bg-slate-100 text-slate-700" : "text-slate-400 bg-transparent"
+              <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
+                isSelected ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"
               }`}>
-                {count}
+                <bdi dir="ltr">{count}</bdi>
               </span>
+              {isSelected && (
+                <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-blue-600" />
+              )}
             </button>
           );
         })}
@@ -4896,6 +4958,8 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
 function CheckInView({ state, onUpdateState }) {
   const { t, lang, isRTL } = useLanguage();
   const { attendees = [], tickets = [] } = state;
+  const activeEventId = state.activeEventId || state.eventDetails?.id;
+  const { queueCheckin } = useOfflineSync(activeEventId);
   const [search, setSearch] = useState("");
   const [selectedBadgeAttendee, setSelectedBadgeAttendee] = useState(null);
   const [showScannerModal, setShowScannerModal] = useState(false);
@@ -4932,16 +4996,7 @@ function CheckInView({ state, onUpdateState }) {
     });
     onUpdateState("attendees", updated);
 
-    try {
-      await toggleAttendeeCheckin({
-        eventId: state.activeEventId,
-        attendeeId: id,
-        checkedIn: nextState,
-        checkedInBy: "Organizer Console"
-      });
-    } catch (e) {
-      console.warn("handleToggle check-in DB error:", e);
-    }
+    queueCheckin(id, nextState, "Organizer Console");
   };
 
   // Direct 1-Click Print Badge Handler for CheckInView
@@ -5033,14 +5088,7 @@ function CheckInView({ state, onUpdateState }) {
     );
     onUpdateState("attendees", updated);
 
-    try {
-      toggleAttendeeCheckin({
-        eventId: state.activeEventId,
-        attendeeId: matched.id,
-        checkedIn: true,
-        checkedInBy: "Organizer Scanner"
-      });
-    } catch (e) {}
+    queueCheckin(matched.id, true, "Organizer Scanner");
 
     setScanFeedback({
       type: "success",
