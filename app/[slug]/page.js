@@ -231,6 +231,36 @@ export default function DynamicEventLandingPage() {
     );
   }
 
+  const isOrganizerOrAdmin = currentUser && (
+    currentUser.role === "admin" ||
+    currentUser.role === "super_admin" ||
+    currentUser.id === eventDetails.organizer_id ||
+    currentUser.id === eventDetails.organizerId
+  );
+
+  if (eventDetails.status === "suspended" && !isOrganizerOrAdmin) {
+    return (
+      <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-16 h-16 rounded-3xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 mb-6 shadow-xl">
+          <AlertCircle size={32} />
+        </div>
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-2">
+          {t("suspended.title", "Event Suspended")}
+        </h1>
+        <p className="text-sm text-slate-400 max-w-md mb-8 leading-relaxed">
+          {t("suspended.desc", "This event has been temporarily suspended by the platform administration and is currently unavailable for public viewing or registration.")}
+        </p>
+        <button
+          onClick={() => router.push("/")}
+          className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-blue-600/30"
+        >
+          <Home size={14} />
+          <span>{t("notFound.backHome", "Browse All Events")}</span>
+        </button>
+      </div>
+    );
+  }
+
   if (viewParam === "attendee-portal") {
     return (
       <AttendeePortalView

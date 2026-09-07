@@ -201,6 +201,10 @@ export default function PlatformAdminView({
   //  HERO CURATION HANDLERS
   // ─────────────────────────────────────────────
   const handleAddToHero = async (event) => {
+    if (event.status !== "published") {
+      showToast("Only published events can be pinned to the Homepage Hero.", "error");
+      return;
+    }
     const nextOrder = curatedHeroEvents.length + 1;
 
     // Optimistic UI update
@@ -258,6 +262,19 @@ export default function PlatformAdminView({
     }
   };
 
+  const handleToggleHeroFeatured = async (event) => {
+    if (event.status !== "published") {
+      showToast("Only published events can be pinned to the Homepage Hero.", "error");
+      return;
+    }
+    const isFeatured = event.isHeroFeatured || event.is_hero_featured;
+    if (isFeatured) {
+      await handleRemoveFromHero(event);
+    } else {
+      await handleAddToHero(event);
+    }
+  };
+
   const handleMoveHeroEvent = async (event, direction) => {
     const currentIdx = curatedHeroEvents.findIndex(e => e.id === event.id);
     if (currentIdx === -1) return;
@@ -310,10 +327,20 @@ export default function PlatformAdminView({
   const handleUpdateEventStatus = async (event, nextStatus) => {
     if (!confirm(`Are you sure you want to mark "${event.title}" as ${nextStatus.toUpperCase()}?`)) return;
 
-    setEvents(prev => prev.map(e => e.id === event.id ? { ...e, status: nextStatus } : e));
+    // Optimistically update event status and unpin from hero if not published
+    setEvents(prev => prev.map(e => e.id === event.id ? {
+      ...e,
+      status: nextStatus,
+      isHeroFeatured: nextStatus === "published" ? e.isHeroFeatured : false,
+      is_hero_featured: nextStatus === "published" ? e.is_hero_featured : false,
+      heroOrder: nextStatus === "published" ? e.heroOrder : 99,
+      hero_order: nextStatus === "published" ? e.hero_order : 99
+    } : e));
+
     const ok = await updateEventStatusAdmin(event.id, nextStatus);
     if (ok) {
       showToast(`Event status changed to ${nextStatus}`);
+      onEventsUpdated?.();
     } else {
       showToast("Failed to update event status", "error");
       loadAdminData(false);
@@ -1284,9 +1311,9 @@ export default function PlatformAdminView({
                                   <div>
                                     <div className="font-bold text-slate-900 flex items-center gap-1.5">
                                       {ev.title}
-                                      {ev.isHeroFeatured && (
+                                      {ev.status === "published" && (ev.isHeroFeatured || ev.is_hero_featured) && (
                                         <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-100 text-amber-800 border border-amber-300">
-                                          HERO #{ev.heroOrder || 1}
+                                          HERO #{ev.heroOrder || ev.hero_order || 1}
                                         </span>
                                       )}
                                     </div>
@@ -1333,14 +1360,23 @@ export default function PlatformAdminView({
 
                                   <button
                                     onClick={() => handleToggleHeroFeatured(ev)}
-                                    className={`p-1.5 rounded-xl border text-xs transition-colors cursor-pointer shadow-2xs ${
-                                      ev.isHeroFeatured
-                                        ? "bg-amber-50 text-amber-700 border-amber-200"
-                                        : "bg-white text-slate-500 border-slate-200 hover:bg-slate-100"
+                                    disabled={ev.status !== "published"}
+                                    className={`p-1.5 rounded-xl border text-xs transition-colors shadow-2xs ${
+                                      ev.status !== "published"
+                                        ? "opacity-30 cursor-not-allowed bg-slate-50 text-slate-300 border-slate-200"
+                                        : (ev.isHeroFeatured || ev.is_hero_featured)
+                                        ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 cursor-pointer"
+                                        : "bg-white text-slate-500 border-slate-200 hover:bg-slate-100 cursor-pointer"
                                     }`}
-                                    title={ev.isHeroFeatured ? "Unpin from Hero" : "Pin to Hero"}
+                                    title={
+                                      ev.status !== "published"
+                                        ? "Only published events can be pinned to Hero"
+                                        : (ev.isHeroFeatured || ev.is_hero_featured)
+                                        ? "Unpin from Hero"
+                                        : "Pin to Hero"
+                                    }
                                   >
-                                    <Star className={`w-3.5 h-3.5 ${ev.isHeroFeatured ? "fill-amber-500" : ""}`} />
+                                    <Star className={`w-3.5 h-3.5 ${ev.status === "published" && (ev.isHeroFeatured || ev.is_hero_featured) ? "fill-amber-500 text-amber-500" : ""}`} />
                                   </button>
 
                                   {ev.status === "published" ? (

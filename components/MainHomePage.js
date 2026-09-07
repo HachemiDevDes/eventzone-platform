@@ -71,9 +71,9 @@ export default function MainHomePage({
   const [rsvpSuccess, setRsvpSuccess] = useState(null);
   const [qrCodeUrls, setQrCodeUrls] = useState({});
 
-  // Curated Hero Events: Prioritize admin-pinned events in exact heroOrder sequence
+  // Curated Hero Events: Prioritize admin-pinned events in exact heroOrder sequence (strictly published only)
   const heroEvents = useMemo(() => {
-    const published = (events || []).filter(e => e.status === "published" || !e.status);
+    const published = (events || []).filter(e => e.status === "published");
     const pinned = published
       .filter(e => e.isHeroFeatured === true || e.is_hero_featured === true || e.portalSettings?.is_hero_featured === true || e.portal_settings?.is_hero_featured === true)
       .sort((a, b) => {
@@ -260,6 +260,9 @@ export default function MainHomePage({
   };
 
   const filteredEvents = events.filter(ev => {
+    // Only published events are visible on public discovery
+    if (ev.status && ev.status !== "published") return false;
+
     const q = searchQuery.trim().toLowerCase();
     const matchesSearch = !q ||
       (ev.title || "").toLowerCase().includes(q) ||
