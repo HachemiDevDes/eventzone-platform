@@ -3890,10 +3890,10 @@ export default function FloorPlanModifier({
                   <button
                     onClick={handleShareClick}
                     className="flex items-center gap-1.5 px-3 py-2 bg-slate-50 border border-slate-200 hover:border-indigo-150 hover:text-indigo-650 rounded-xl font-semibold text-xs text-slate-655 transition-all duration-200 cursor-pointer"
-                    title="Copy shareable preview link"
+                    title={t("floor.copyShareableLink", "Copy shareable preview link")}
                   >
                     <Share2 size={15} />
-                    <span>Share</span>
+                    <span>{t("floor.share", "Share")}</span>
                   </button>
                   {isShareTooltipVisible && (
                     <div className="absolute top-full right-0 mt-1.5 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg z-50 whitespace-nowrap animate-fade-in font-sans">
@@ -3926,7 +3926,7 @@ export default function FloorPlanModifier({
                       ? "bg-indigo-650 border-indigo-650 text-white shadow-sm hover:bg-indigo-700" 
                       : "bg-white border-slate-200 hover:border-indigo-150 hover:text-indigo-650 text-slate-655"
                   }`}
-                  title="Preview Map Experience"
+                  title={t("floor.previewMapExperience", "Preview Map Experience")}
                 >
                   {isPreviewMode ? <EyeOff size={15} /> : <Eye size={15} />}
                   <span>{t("floor.preview", "Preview Map")}</span>
@@ -7752,13 +7752,13 @@ export default function FloorPlanModifier({
                 <div className="flex flex-col gap-3.5 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t("floor.blueprintBackground", "Blueprint Background")}</span>
                   <div className="flex items-center justify-between text-xs font-semibold text-slate-700 bg-white border border-slate-150 p-2.5 rounded-xl">
-                    <span className="truncate max-w-[150px]" title={blueprintName}>{blueprintName}</span>
+                    <span className="truncate max-w-[150px]" title={blueprintName}><bdi dir="ltr">{blueprintName}</bdi></span>
                     <button
                       type="button"
                       onClick={() => handleSelectId("blueprint")}
                       className="text-[10px] font-bold text-indigo-650 hover:text-indigo-855 cursor-pointer font-sans"
                     >
-                      Select / Move
+                      {t("floor.selectMove", "Select / Move")}
                     </button>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
@@ -7783,14 +7783,14 @@ export default function FloorPlanModifier({
                       className="w-full flex items-center justify-center gap-1.5 py-2 px-3 bg-rose-50 border border-rose-100 hover:bg-rose-500 hover:border-rose-500 text-rose-550 hover:text-white rounded-xl font-bold text-[10px] transition-all duration-200 cursor-pointer shadow-sm"
                     >
                       <Trash2 size={11} />
-                      <span>Delete</span>
+                      <span>{t("floor.deleteBlueprint", "Delete")}</span>
                     </button>
                   </div>
                   {/* Opacity slider directly available */}
                   <div className="flex flex-col gap-1.5 border-t border-slate-150 pt-3">
                     <div className="flex justify-between text-[9px] font-bold text-slate-400 uppercase tracking-wider">
-                      <span>Opacity</span>
-                      <span>{Math.round(blueprintOpacity * 100)}%</span>
+                      <span>{t("floor.opacity", "Opacity")}</span>
+                      <span><bdi dir="ltr">{Math.round(blueprintOpacity * 100)}%</bdi></span>
                     </div>
                     <input 
                       type="range" 
@@ -7837,7 +7837,7 @@ export default function FloorPlanModifier({
                     className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-white border border-slate-200 hover:border-indigo-150 hover:text-indigo-650 rounded-xl font-bold text-[10px] transition-all duration-200 cursor-pointer shadow-sm"
                   >
                     <Download size={13} />
-                    <span>Export</span>
+                    <span>{t("floor.export", "Export")}</span>
                   </button>
                   <button
                     onClick={() => setIsSendPlanModalOpen(true)}

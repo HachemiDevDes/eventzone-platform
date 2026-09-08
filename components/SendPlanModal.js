@@ -30,10 +30,10 @@ export default function SendPlanModal({ isOpen, onClose, exhibitors = [], planNa
   // Initialize data on modal open
   useEffect(() => {
     if (isOpen) {
-      setSubject(`${planName} - Exhibition Floor Plan & Booth Details`);
-      setMessage(
-        `Dear Partner,\n\nWe are pleased to share the exhibition floor plan for our upcoming event.\n\nYour assigned booth details and the official floor plan PDF layout are attached to this message.\n\nShould you have any questions or require modifications to your layout, please reply directly to this message.\n\nBest regards,\nEvent Operations Team`
-      );
+      const defaultSubj = t("sendPlan.defaultSubject", "{planName} - Exhibition Floor Plan & Booth Details").replace("{planName}", planName);
+      const defaultMsg = t("sendPlan.defaultBody", "Dear Partner,\n\nWe are pleased to share the exhibition floor plan for our upcoming event.\n\nYour assigned booth details and the official floor plan PDF layout are attached to this message.\n\nShould you have any questions or require modifications to your layout, please reply directly to this message.\n\nBest regards,\nEvent Operations Team");
+      setSubject(defaultSubj);
+      setMessage(defaultMsg);
 
       // Map existing exhibitor emails
       const initialEmails = {};
@@ -46,7 +46,7 @@ export default function SendPlanModal({ isOpen, onClose, exhibitors = [], planNa
       setSelectedExhibitorIds(exhibitors.map(ex => String(ex.id)));
       setSearchQuery("");
     }
-  }, [isOpen, planName, exhibitors]);
+  }, [isOpen, planName, exhibitors, t]);
 
   if (!isOpen) return null;
 
@@ -95,14 +95,14 @@ export default function SendPlanModal({ isOpen, onClose, exhibitors = [], planNa
     const targetExhibitors = exhibitors.filter(ex => targetIds.includes(String(ex.id)));
 
     if (targetExhibitors.length === 0) {
-      alert("Please select at least one exhibitor to send the floor plan to.");
+      alert(t("sendPlan.selectAtLeastOne", "Please select at least one exhibitor to send the floor plan to."));
       return;
     }
 
     // Check if any selected exhibitors are missing emails
     const missingEmails = targetExhibitors.filter(ex => !exhibitorEmails[ex.id]?.trim());
     if (missingEmails.length > 0) {
-      alert(`Please enter a contact email for: ${missingEmails.map(ex => ex.name).join(", ")}`);
+      alert(t("sendPlan.enterContactEmailFor", "Please enter a contact email for: {names}").replace("{names}", missingEmails.map(ex => ex.name).join(", ")));
       return;
     }
 
@@ -110,7 +110,7 @@ export default function SendPlanModal({ isOpen, onClose, exhibitors = [], planNa
 
     try {
       // 1. Save any updated/new emails in parallel
-      setSendingProgress("Updating exhibitor contact directory...");
+      setSendingProgress(t("sendPlan.updatingDirectory", "Updating exhibitor contact directory..."));
       const emailUpdates = targetExhibitors.map(ex => {
         const currentEmail = exhibitorEmails[ex.id]?.trim();
         if (currentEmail && currentEmail !== ex.email) {
@@ -121,14 +121,14 @@ export default function SendPlanModal({ isOpen, onClose, exhibitors = [], planNa
       await Promise.all(emailUpdates);
 
       // 2. Simulate compiling PDF layout
-      setSendingProgress("Generating high-resolution vector PDF floor plan layout...");
+      setSendingProgress(t("sendPlan.generatingPdf", "Generating high-resolution vector PDF floor plan layout..."));
       await new Promise(r => setTimeout(r, 1200));
 
       // 3. Send real emails via Hostinger SMTP
       for (let i = 0; i < targetExhibitors.length; i++) {
         const ex = targetExhibitors[i];
         const email = exhibitorEmails[ex.id];
-        setSendingProgress(`Sending booth layout & instructions to ${ex.name} (${email})...`);
+        setSendingProgress(t("sendPlan.sendingBoothLayout", "Sending booth layout & instructions to {name} ({email})...").replace("{name}", ex.name).replace("{email}", email));
         if (email && email.includes("@")) {
           try {
             await fetch("/api/email/send", {
@@ -152,7 +152,7 @@ export default function SendPlanModal({ isOpen, onClose, exhibitors = [], planNa
       }
 
       // 4. Log communication broadcast in Supabase
-      setSendingProgress("Logging email broadcast to event communications...");
+      setSendingProgress(t("sendPlan.loggingBroadcast", "Logging email broadcast to event communications..."));
       await logCommunication({
         subject,
         body: message,
@@ -161,11 +161,11 @@ export default function SendPlanModal({ isOpen, onClose, exhibitors = [], planNa
 
       // Done
       setLoading(false);
-      onSuccess(`Floor plan successfully sent as PDF to ${targetExhibitors.length} exhibitor(s)!`);
+      onSuccess(t("sendPlan.successSent", "Floor plan successfully sent as PDF to {count} exhibitor(s)!").replace("{count}", targetExhibitors.length));
       onClose();
     } catch (err) {
       console.error(err);
-      alert("Failed to send floor plan. Please verify network and try again.");
+      alert(t("sendPlan.failedToSend", "Failed to send floor plan. Please verify network and try again."));
       setLoading(false);
     }
   };
@@ -215,7 +215,7 @@ export default function SendPlanModal({ isOpen, onClose, exhibitors = [], planNa
             <div className="flex-1 flex flex-col items-center justify-center py-20 text-center space-y-4 select-none">
               <Loader2 size={36} className="animate-spin text-indigo-650" />
               <div className="space-y-1">
-                <h4 className="text-sm font-bold text-slate-700">Sending in progress...</h4>
+                <h4 className="text-sm font-bold text-slate-700">{t("sendPlan.sendingInProgress", "Sending in progress...")}</h4>
                 <p className="text-xs text-slate-455 font-semibold max-w-sm leading-normal">{sendingProgress}</p>
               </div>
             </div>
@@ -223,8 +223,8 @@ export default function SendPlanModal({ isOpen, onClose, exhibitors = [], planNa
             <div className="space-y-6">
               {/* 1. Recipients Selection */}
               <div className="space-y-3">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                  1. Recipients
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <bdi dir="ltr">1.</bdi> <span>{t("sendPlan.recipients", "Recipients")}</span>
                 </label>
                 <div className="flex gap-4">
                   <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer select-none">
@@ -236,7 +236,7 @@ export default function SendPlanModal({ isOpen, onClose, exhibitors = [], planNa
                       onChange={() => setRecipientMode("all")}
                       className="text-indigo-600 focus:ring-indigo-500"
                     />
-                    Send to All Exhibitors ({exhibitors.length})
+                    <span>{t("sendPlan.sendToAllExhibitors", "Send to All Exhibitors ({count})").replace("{count}", exhibitors.length)}</span>
                   </label>
                   <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer select-none">
                     <input 
@@ -247,7 +247,7 @@ export default function SendPlanModal({ isOpen, onClose, exhibitors = [], planNa
                       onChange={() => setRecipientMode("custom")}
                       className="text-indigo-600 focus:ring-indigo-500"
                     />
-                    Select Specific Exhibitors
+                    <span>{t("sendPlan.selectSpecificExhibitors", "Select Specific Exhibitors")}</span>
                   </label>
                 </div>
 
@@ -256,7 +256,7 @@ export default function SendPlanModal({ isOpen, onClose, exhibitors = [], planNa
                     <div className="relative">
                       <input 
                         type="text" 
-                        placeholder="Search exhibitors by name or booth..."
+                        placeholder={t("sendPlan.searchExhibitorsPlaceholder", "Search exhibitors by name or booth...")}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-650 bg-white"
@@ -281,16 +281,16 @@ export default function SendPlanModal({ isOpen, onClose, exhibitors = [], planNa
                                 )}
                               </button>
                             </th>
-                            <th className="px-4 py-2">Exhibitor</th>
-                            <th className="px-4 py-2 w-20">Booth</th>
-                            <th className="px-4 py-2">Contact Email</th>
+                            <th className="px-4 py-2">{t("sendPlan.thExhibitor", "Exhibitor")}</th>
+                            <th className="px-4 py-2 w-20">{t("sendPlan.thBooth", "Booth")}</th>
+                            <th className="px-4 py-2">{t("sendPlan.thContactEmail", "Contact Email")}</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                           {filteredExhibitors.length === 0 ? (
                             <tr>
                               <td colSpan={4} className="px-4 py-8 text-center text-slate-400 font-semibold italic">
-                                No exhibitors match your search query.
+                                {t("sendPlan.noExhibitorsMatch", "No exhibitors match your search query.")}
                               </td>
                             </tr>
                           ) : (
@@ -315,7 +315,7 @@ export default function SendPlanModal({ isOpen, onClose, exhibitors = [], planNa
                                     </button>
                                   </td>
                                   <td className="px-4 py-2.5 font-bold text-slate-700">{ex.name}</td>
-                                  <td className="px-4 py-2.5 font-semibold text-slate-500">{ex.booth || "Not Assigned"}</td>
+                                  <td className="px-4 py-2.5 font-semibold text-slate-500">{ex.booth || t("sendPlan.notAssigned", "Not Assigned")}</td>
                                   <td className="px-4 py-2.5">
                                     <div className="flex items-center gap-1.5 w-full">
                                       <input 
@@ -323,13 +323,13 @@ export default function SendPlanModal({ isOpen, onClose, exhibitors = [], planNa
                                         required={isSelected}
                                         value={emailVal}
                                         onChange={(e) => handleEmailChange(ex.id, e.target.value)}
-                                        placeholder="Enter contact email..."
+                                        placeholder={t("sendPlan.enterContactEmailPlaceholder", "Enter contact email...")}
                                         className={`px-2 py-1 border rounded-lg text-xs font-semibold focus:outline-none focus:border-indigo-600 w-full ${
                                           !hasEmail && isSelected ? "border-amber-400 bg-amber-50/10 placeholder-amber-600" : "border-slate-200"
                                         }`}
                                       />
                                       {!hasEmail && isSelected && (
-                                        <AlertTriangle size={14} className="text-amber-500 shrink-0" title="Email address required" />
+                                        <AlertTriangle size={14} className="text-amber-500 shrink-0" title={t("sendPlan.emailRequired", "Email address required")} />
                                       )}
                                     </div>
                                   </td>
@@ -347,12 +347,12 @@ export default function SendPlanModal({ isOpen, onClose, exhibitors = [], planNa
                   <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3 text-xs text-amber-850">
                     <AlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" />
                     <div className="space-y-2 flex-1">
-                      <p className="font-bold">Some exhibitors do not have emails set!</p>
-                      <p className="font-semibold text-amber-700">Please enter emails below to save them in the directory and proceed:</p>
+                      <p className="font-bold">{t("sendPlan.missingEmailsTitle", "Some exhibitors do not have emails set!")}</p>
+                      <p className="font-semibold text-amber-700">{t("sendPlan.missingEmailsDesc", "Please enter emails below to save them in the directory and proceed:")}</p>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-1.5">
                         {exhibitors.filter(ex => !exhibitorEmails[ex.id]?.trim()).map(ex => (
                           <div key={ex.id} className="flex flex-col gap-1">
-                            <span className="font-bold text-[10px] text-slate-500">{ex.name} ({ex.booth || "No Booth"})</span>
+                            <span className="font-bold text-[10px] text-slate-500">{ex.name} ({ex.booth || t("sendPlan.noBooth", "No Booth")})</span>
                             <input 
                               type="email" 
                               required
@@ -371,14 +371,14 @@ export default function SendPlanModal({ isOpen, onClose, exhibitors = [], planNa
 
               {/* 2. PDF Attachment Layout Settings */}
               <div className="space-y-3">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                  2. PDF Attachment Layout Settings
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <bdi dir="ltr">2.</bdi> <span>{t("sendPlan.pdfAttachmentSettings", "PDF Attachment Layout Settings")}</span>
                 </label>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 bg-slate-50/40 p-4 rounded-2xl border border-slate-150">
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col">
-                      <span className="text-[11px] font-bold text-slate-700">Show Dimensions</span>
-                      <span className="text-[9px] text-slate-450 font-semibold">Include booth labels</span>
+                      <span className="text-[11px] font-bold text-slate-700">{t("sendPlan.showDimensions", "Show Dimensions")}</span>
+                      <span className="text-[9px] text-slate-450 font-semibold">{t("sendPlan.showDimensionsDesc", "Include booth labels")}</span>
                     </div>
                     <button
                       type="button"
@@ -395,8 +395,8 @@ export default function SendPlanModal({ isOpen, onClose, exhibitors = [], planNa
 
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col">
-                      <span className="text-[11px] font-bold text-slate-700">Show Venue Grid</span>
-                      <span className="text-[9px] text-slate-450 font-semibold">Include background grid</span>
+                      <span className="text-[11px] font-bold text-slate-700">{t("sendPlan.showVenueGrid", "Show Venue Grid")}</span>
+                      <span className="text-[9px] text-slate-450 font-semibold">{t("sendPlan.showVenueGridDesc", "Include background grid")}</span>
                     </div>
                     <button
                       type="button"
@@ -413,8 +413,8 @@ export default function SendPlanModal({ isOpen, onClose, exhibitors = [], planNa
 
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col">
-                      <span className="text-[11px] font-bold text-slate-700">Hide Furniture</span>
-                      <span className="text-[9px] text-slate-450 font-semibold">Show booth outlines only</span>
+                      <span className="text-[11px] font-bold text-slate-700">{t("sendPlan.hideFurniture", "Hide Furniture")}</span>
+                      <span className="text-[9px] text-slate-450 font-semibold">{t("sendPlan.hideFurnitureDesc", "Show booth outlines only")}</span>
                     </div>
                     <button
                       type="button"
@@ -433,29 +433,29 @@ export default function SendPlanModal({ isOpen, onClose, exhibitors = [], planNa
 
               {/* 3. Email Content */}
               <div className="space-y-3.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                  3. Email Message
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <bdi dir="ltr">3.</bdi> <span>{t("sendPlan.emailMessage", "Email Message")}</span>
                 </label>
                 <div className="flex flex-col gap-3">
                   <div className="flex flex-col gap-1">
-                    <span className="text-[10px] font-bold text-slate-450 uppercase tracking-wider">Subject</span>
+                    <span className="text-[10px] font-bold text-slate-450 uppercase tracking-wider">{t("sendPlan.subjectLabel", "Subject")}</span>
                     <input 
                       type="text" 
                       required
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
-                      placeholder="Email Subject Line"
+                      placeholder={t("sendPlan.subjectPlaceholder", "Email Subject Line")}
                       className="px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-650 bg-white"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <span className="text-[10px] font-bold text-slate-450 uppercase tracking-wider">Message Body</span>
+                    <span className="text-[10px] font-bold text-slate-450 uppercase tracking-wider">{t("sendPlan.messageBodyLabel", "Message Body")}</span>
                     <textarea
                       required
                       rows={5}
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
-                      placeholder="Write your email body here..."
+                      placeholder={t("sendPlan.messageBodyPlaceholder", "Write your email body here...")}
                       className="px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-650 bg-white resize-none leading-relaxed"
                     />
                   </div>
@@ -479,7 +479,7 @@ export default function SendPlanModal({ isOpen, onClose, exhibitors = [], planNa
                 className="flex items-center gap-2 px-5 py-2.5 bg-indigo-650 hover:bg-indigo-750 text-white rounded-xl font-bold text-xs transition-all duration-200 shadow-md shadow-indigo-100 cursor-pointer"
               >
                 <Send size={14} />
-                <span>{t("floor.sendPlan", "Send PDF to Exhibitors")}</span>
+                <span>{t("sendPlan.sendPdfToExhibitors", "Send PDF to Exhibitors")}</span>
               </button>
             </footer>
           )}

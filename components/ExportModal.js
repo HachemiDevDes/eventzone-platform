@@ -602,10 +602,10 @@ export default function ExportModal({ isOpen, onClose, onExport, elements = [], 
             </div>
           </div>
 
-          {/* {t("export.contentFilters", "B. Content & Visibility Filters")} */}
+          {/* B. Content & Visibility Filters */}
           <div className={`space-y-3 transition-opacity duration-200 ${format.includes("_list_") ? "opacity-35 pointer-events-none" : ""}`}>
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-              B. Content & Visibility Filters
+              {t("export.contentFilters", "B. Content & Visibility Filters")}
             </label>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 bg-slate-50/40 p-4 rounded-2xl border border-slate-150">
               {/* Filter 1 */}

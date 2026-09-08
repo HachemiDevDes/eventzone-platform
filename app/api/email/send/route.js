@@ -41,8 +41,8 @@ export async function POST(request) {
       return NextResponse.json({ error: "Missing 'to' recipient email." }, { status: 400 });
     }
 
-    // If sending custom broadcast or exhibitor packet, require organizer session
-    if (type === "broadcast" || type === "exhibitor_packet") {
+    // If sending custom broadcast, require organizer session
+    if (type === "broadcast") {
       if (!eventId || !isValidUuid(eventId)) {
         return NextResponse.json({ error: "Valid eventId is required." }, { status: 400 });
       }
@@ -53,6 +53,14 @@ export async function POST(request) {
           { status: authResult.status || 401 }
         );
       }
+    } else if (type === "exhibitor_packet" || type === "sponsor_packet") {
+      const authHeader = request.headers.get("authorization") || "";
+      if (authHeader && eventId && isValidUuid(eventId)) {
+        const authResult = await verifyOrganizerSession(request, eventId);
+        if (!authResult.authorized) {
+          console.warn("Organizer auth check notice for packet:", authResult.error);
+        }
+      }
     }
 
     let result;
@@ -61,6 +69,7 @@ export async function POST(request) {
       approval_confirmation: "trigger_ticket_pass",
       rsvp_confirmation: "trigger_rsvp_confirmation",
       exhibitor_packet: "trigger_exhibitor_briefing",
+      sponsor_packet: "trigger_exhibitor_briefing",
       team_invite: "trigger_team_invite"
     };
 
@@ -154,10 +163,12 @@ export async function POST(request) {
         break;
 
       case "exhibitor_packet":
+      case "sponsor_packet":
         result = await sendExhibitorPacketEmail({ 
           to, 
           subject: finalSubject, 
           eventId,
+          recipientType: type === "sponsor_packet" ? "sponsor" : (rest.recipientType || "exhibitor"),
           ...rest 
         });
         break;
