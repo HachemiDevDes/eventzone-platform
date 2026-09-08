@@ -7747,184 +7747,7 @@ export default function FloorPlanModifier({
             </div>
           ) : (
             <div className="flex flex-col gap-5">
-              {/* 1. Utilities & Actions */}
-              <div className="flex flex-col gap-2 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t("floor.utilitiesActions", "Utilities & Actions")}</span>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => setIsExportModalOpen(true)}
-                    className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-white border border-slate-200 hover:border-indigo-150 hover:text-indigo-650 rounded-xl font-bold text-[10px] transition-all duration-200 cursor-pointer shadow-sm"
-                  >
-                    <Download size={13} />
-                    <span>Export</span>
-                  </button>
-                  <button
-                    onClick={() => setIsSendPlanModalOpen(true)}
-                    className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-white border border-slate-200 hover:border-indigo-150 hover:text-indigo-650 rounded-xl font-bold text-[10px] transition-all duration-200 cursor-pointer shadow-sm"
-                  >
-                    <Mail size={13} />
-                    <span>{t("floor.sendPdf", "Send PDF")}</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* 2. Global Typography */}
-              <div className="flex flex-col gap-1.5 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t("floor.globalTypography", "Global Typography")}</span>
-                <div className="relative">
-                  <SearchableSelect
-                    value={floorPlanFont}
-                    onChange={(newFont) => {
-                      if (!newFont) return;
-                      setFloorPlanFont(newFont);
-                      const updated = elements.map(el => ({ ...el, fontFamily: newFont }));
-                      updateElementsAndHistory(updated);
-                      if (onSaveFontFamily) {
-                        onSaveFontFamily(newFont);
-                      }
-                    }}
-                    options={GOOGLE_FONTS.map(f => ({
-                      value: f.value,
-                      label: f.label
-                    }))}
-                    isClearable={false}
-                    searchPlaceholder={t("floor.searchFonts", "Search Google Fonts...")}
-                    className="w-full"
-                    buttonClassName="!py-2.5 !px-3.5 !rounded-xl !text-xs !font-semibold border-slate-200"
-                  />
-                </div>
-              </div>
-
-              {/* 3. Grid & Snapping Options */}
-              <div className="flex flex-col gap-4 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t("floor.gridSnapping", "Grid & Snapping")}</span>
-                
-                <div className="flex flex-col gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setSnapToGrid(!snapToGrid)}
-                    className={`w-full flex items-center justify-between px-3.5 py-2.5 border rounded-xl font-semibold text-xs transition-all duration-200 cursor-pointer ${
-                      snapToGrid 
-                        ? "bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm" 
-                        : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-                    }`}
-                  >
-                    <span className="flex items-center gap-2"><Grid size={14} />{t("floor.gridSnap", "Grid Snap")}</span>
-                    <span className={`w-2 h-2 rounded-full ${snapToGrid ? "bg-indigo-500" : "bg-slate-300"}`} />
-                  </button>
-                  
-                  <button
-                    type="button"
-                    onClick={() => setShowGrid(!showGrid)}
-                    className={`w-full flex items-center justify-between px-3.5 py-2.5 border rounded-xl font-semibold text-xs transition-all duration-200 cursor-pointer ${
-                      showGrid 
-                        ? "bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm" 
-                        : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-                    }`}
-                  >
-                    <span className="flex items-center gap-2"><Layers size={14} />{t("floor.showGridLines", "Show Grid Lines")}</span>
-                    <span className={`w-2 h-2 rounded-full ${showGrid ? "bg-indigo-500" : "bg-slate-300"}`} />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowDimensions(!showDimensions)}
-                    className={`w-full flex items-center justify-between px-3.5 py-2.5 border rounded-xl font-semibold text-xs transition-all duration-200 cursor-pointer ${
-                      showDimensions 
-                        ? "bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm" 
-                        : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-                    }`}
-                  >
-                    <span className="flex items-center gap-2"><Maximize size={14} />{t("floor.showDimensions", "Show Dimensions")}</span>
-                    <span className={`w-2 h-2 rounded-full ${showDimensions ? "bg-indigo-500" : "bg-slate-300"}`} />
-                  </button>
-                </div>
-
-                <div className="flex flex-col gap-1.5 border-t border-slate-200/60 pt-3">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{t("floor.snapGridSizeMeters", "Snap Grid Size (meters)")}</label>
-                  <PropertyInput 
-                    type="number" 
-                    min={1}
-                    step={1}
-                    value={parseFloat((gridSize / 20).toFixed(2))}
-                    onChange={(val) => setGridSize(Math.max(20, Math.round(val * 20)))}
-                    className="px-3 py-2 border border-slate-200 rounded-xl text-slate-800 focus:outline-none text-xs font-semibold bg-white"
-                  />
-                </div>
-              </div>
-
-              {/* 4. Canvas Dimensions Settings */}
-              <div className="flex flex-col gap-4 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t("floor.canvasSize", "Canvas Size")}</span>
-                
-                {/* Dimensions in Meters */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{t("floor.widthMeters", "Width (meters)")}</label>
-                    <PropertyInput 
-                      type="number" 
-                      step="1"
-                      min={10}
-                      value={parseFloat((canvasWidth / 20).toFixed(1))}
-                      onChange={(val) => {
-                        const newWidth = Math.round(val * 20);
-                        setCanvasWidth(newWidth);
-                        commitHistoryState(elements, { ...getCurrentBlueprintState(), canvasWidth: newWidth });
-                      }}
-                      className="px-3 py-2 border border-slate-200 rounded-xl text-slate-800 focus:outline-none text-xs font-semibold bg-white"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{t("floor.heightMeters", "Height (meters)")}</label>
-                    <PropertyInput 
-                      type="number" 
-                      step="1"
-                      min={10}
-                      value={parseFloat((canvasHeight / 20).toFixed(1))}
-                      onChange={(val) => {
-                        const newHeight = Math.round(val * 20);
-                        setCanvasHeight(newHeight);
-                        commitHistoryState(elements, { ...getCurrentBlueprintState(), canvasHeight: newHeight });
-                      }}
-                      className="px-3 py-2 border border-slate-200 rounded-xl text-slate-800 focus:outline-none text-xs font-semibold bg-white"
-                    />
-                  </div>
-                </div>
-
-                {/* Dimensions in Pixels */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{t("floor.widthPx", "Width (px)")}</label>
-                    <PropertyInput 
-                      type="number" 
-                      step="100"
-                      min={200}
-                      value={canvasWidth}
-                      onChange={(val) => {
-                        setCanvasWidth(val);
-                        commitHistoryState(elements, { ...getCurrentBlueprintState(), canvasWidth: val });
-                      }}
-                      className="px-3 py-2 border border-slate-200 rounded-xl text-slate-800 focus:outline-none text-xs font-semibold bg-white"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{t("floor.heightPx", "Height (px)")}</label>
-                    <PropertyInput 
-                      type="number" 
-                      step="100"
-                      min={200}
-                      value={canvasHeight}
-                      onChange={(val) => {
-                        setCanvasHeight(val);
-                        commitHistoryState(elements, { ...getCurrentBlueprintState(), canvasHeight: val });
-                      }}
-                      className="px-3 py-2 border border-slate-200 rounded-xl text-slate-800 focus:outline-none text-xs font-semibold bg-white"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* 5. Venue Blueprint Background */}
+              {/* 1. Venue Blueprint Background */}
               {blueprintUrl ? (
                 <div className="flex flex-col gap-3.5 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t("floor.blueprintBackground", "Blueprint Background")}</span>
@@ -8004,6 +7827,183 @@ export default function FloorPlanModifier({
                   </button>
                 </div>
               )}
+
+              {/* 2. Utilities & Actions */}
+              <div className="flex flex-col gap-2 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t("floor.utilitiesActions", "Utilities & Actions")}</span>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setIsExportModalOpen(true)}
+                    className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-white border border-slate-200 hover:border-indigo-150 hover:text-indigo-650 rounded-xl font-bold text-[10px] transition-all duration-200 cursor-pointer shadow-sm"
+                  >
+                    <Download size={13} />
+                    <span>Export</span>
+                  </button>
+                  <button
+                    onClick={() => setIsSendPlanModalOpen(true)}
+                    className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-white border border-slate-200 hover:border-indigo-150 hover:text-indigo-650 rounded-xl font-bold text-[10px] transition-all duration-200 cursor-pointer shadow-sm"
+                  >
+                    <Mail size={13} />
+                    <span>{t("floor.sendPdf", "Send PDF")}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 3. Global Typography */}
+              <div className="flex flex-col gap-1.5 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t("floor.globalTypography", "Global Typography")}</span>
+                <div className="relative">
+                  <SearchableSelect
+                    value={floorPlanFont}
+                    onChange={(newFont) => {
+                      if (!newFont) return;
+                      setFloorPlanFont(newFont);
+                      const updated = elements.map(el => ({ ...el, fontFamily: newFont }));
+                      updateElementsAndHistory(updated);
+                      if (onSaveFontFamily) {
+                        onSaveFontFamily(newFont);
+                      }
+                    }}
+                    options={GOOGLE_FONTS.map(f => ({
+                      value: f.value,
+                      label: f.label
+                    }))}
+                    isClearable={false}
+                    searchPlaceholder={t("floor.searchFonts", "Search Google Fonts...")}
+                    className="w-full"
+                    buttonClassName="!py-2.5 !px-3.5 !rounded-xl !text-xs !font-semibold border-slate-200"
+                  />
+                </div>
+              </div>
+
+              {/* 4. Grid & Snapping Options */}
+              <div className="flex flex-col gap-4 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t("floor.gridSnapping", "Grid & Snapping")}</span>
+                
+                <div className="flex flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSnapToGrid(!snapToGrid)}
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 border rounded-xl font-semibold text-xs transition-all duration-200 cursor-pointer ${
+                      snapToGrid 
+                        ? "bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm" 
+                        : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2"><Grid size={14} />{t("floor.gridSnap", "Grid Snap")}</span>
+                    <span className={`w-2 h-2 rounded-full ${snapToGrid ? "bg-indigo-500" : "bg-slate-300"}`} />
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => setShowGrid(!showGrid)}
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 border rounded-xl font-semibold text-xs transition-all duration-200 cursor-pointer ${
+                      showGrid 
+                        ? "bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm" 
+                        : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2"><Layers size={14} />{t("floor.showGridLines", "Show Grid Lines")}</span>
+                    <span className={`w-2 h-2 rounded-full ${showGrid ? "bg-indigo-500" : "bg-slate-300"}`} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowDimensions(!showDimensions)}
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 border rounded-xl font-semibold text-xs transition-all duration-200 cursor-pointer ${
+                      showDimensions 
+                        ? "bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm" 
+                        : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2"><Maximize size={14} />{t("floor.showDimensions", "Show Dimensions")}</span>
+                    <span className={`w-2 h-2 rounded-full ${showDimensions ? "bg-indigo-500" : "bg-slate-300"}`} />
+                  </button>
+                </div>
+
+                <div className="flex flex-col gap-1.5 border-t border-slate-200/60 pt-3">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{t("floor.snapGridSizeMeters", "Snap Grid Size (meters)")}</label>
+                  <PropertyInput 
+                    type="number" 
+                    min={1}
+                    step={1}
+                    value={parseFloat((gridSize / 20).toFixed(2))}
+                    onChange={(val) => setGridSize(Math.max(20, Math.round(val * 20)))}
+                    className="px-3 py-2 border border-slate-200 rounded-xl text-slate-800 focus:outline-none text-xs font-semibold bg-white"
+                  />
+                </div>
+              </div>
+
+              {/* 5. Canvas Dimensions Settings */}
+              <div className="flex flex-col gap-4 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t("floor.canvasSize", "Canvas Size")}</span>
+                
+                {/* Dimensions in Meters */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{t("floor.widthMeters", "Width (meters)")}</label>
+                    <PropertyInput 
+                      type="number" 
+                      step="1"
+                      min={10}
+                      value={parseFloat((canvasWidth / 20).toFixed(1))}
+                      onChange={(val) => {
+                        const newWidth = Math.round(val * 20);
+                        setCanvasWidth(newWidth);
+                        commitHistoryState(elements, { ...getCurrentBlueprintState(), canvasWidth: newWidth });
+                      }}
+                      className="px-3 py-2 border border-slate-200 rounded-xl text-slate-800 focus:outline-none text-xs font-semibold bg-white"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{t("floor.heightMeters", "Height (meters)")}</label>
+                    <PropertyInput 
+                      type="number" 
+                      step="1"
+                      min={10}
+                      value={parseFloat((canvasHeight / 20).toFixed(1))}
+                      onChange={(val) => {
+                        const newHeight = Math.round(val * 20);
+                        setCanvasHeight(newHeight);
+                        commitHistoryState(elements, { ...getCurrentBlueprintState(), canvasHeight: newHeight });
+                      }}
+                      className="px-3 py-2 border border-slate-200 rounded-xl text-slate-800 focus:outline-none text-xs font-semibold bg-white"
+                    />
+                  </div>
+                </div>
+
+                {/* Dimensions in Pixels */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{t("floor.widthPx", "Width (px)")}</label>
+                    <PropertyInput 
+                      type="number" 
+                      step="100"
+                      min={200}
+                      value={canvasWidth}
+                      onChange={(val) => {
+                        setCanvasWidth(val);
+                        commitHistoryState(elements, { ...getCurrentBlueprintState(), canvasWidth: val });
+                      }}
+                      className="px-3 py-2 border border-slate-200 rounded-xl text-slate-800 focus:outline-none text-xs font-semibold bg-white"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{t("floor.heightPx", "Height (px)")}</label>
+                    <PropertyInput 
+                      type="number" 
+                      step="100"
+                      min={200}
+                      value={canvasHeight}
+                      onChange={(val) => {
+                        setCanvasHeight(val);
+                        commitHistoryState(elements, { ...getCurrentBlueprintState(), canvasHeight: val });
+                      }}
+                      className="px-3 py-2 border border-slate-200 rounded-xl text-slate-800 focus:outline-none text-xs font-semibold bg-white"
+                    />
+                  </div>
+                </div>
+              </div>
 
               {/* 6. Shortcuts Guide */}
               <div className="flex flex-col gap-2">
