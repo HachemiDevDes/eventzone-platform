@@ -106,6 +106,7 @@ export default function EventPublicLandingPage({
   sessions = [],
   sponsors = [],
   exhibitors = [],
+  organizations = [],
   attendees = [],
   tickets = [],
   influencers = [],
@@ -2079,16 +2080,77 @@ export default function EventPublicLandingPage({
           </div>
 
           <div className="space-y-8">
-            <div className="flex flex-wrap items-center justify-start gap-6">
-              {eventSponsors.map((sp, idx) => (
-                <div key={idx} className="bg-white border border-slate-200 rounded-2xl px-8 py-5 flex items-center gap-3 shadow-xs hover:shadow-md transition-all">
-                  <Building2 size={24} className="text-blue-600" />
-                  <div>
-                    <span className="text-sm font-extrabold text-slate-900 block">{sp.name}</span>
-                    <span className="text-[10px] uppercase font-bold text-slate-400">{sp.tier || t("common.partner", "Partner")}</span>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
+              {eventSponsors.map((sp, idx) => {
+                const org = organizations?.find(o => String(o.id) === String(sp.orgId || sp.org_id));
+                const logoUrl = sp.logo || sp.image || sp.image_url || sp.logo_url || sp.imageUrl || sp.logoUrl || org?.logo || org?.image || org?.image_url || "";
+                const tierKey = String(sp.tier || "").toLowerCase().trim();
+                const tierBadgeStyle = tierKey.includes("diamond")
+                  ? "bg-sky-50 text-sky-700 border border-sky-200/80"
+                  : tierKey.includes("platinum")
+                  ? "bg-indigo-50 text-indigo-700 border border-indigo-200/80"
+                  : tierKey.includes("gold")
+                  ? "bg-amber-50 text-amber-700 border border-amber-200/80"
+                  : tierKey.includes("silver")
+                  ? "bg-slate-100 text-slate-700 border border-slate-200"
+                  : tierKey.includes("bronze")
+                  ? "bg-orange-50 text-orange-700 border border-orange-200/80"
+                  : "bg-slate-100 text-slate-600 border border-slate-200";
+
+                return (
+                  <div 
+                    key={sp.id || idx} 
+                    className="group bg-white border border-slate-200/80 hover:border-blue-400/80 rounded-2xl sm:rounded-3xl p-5 sm:p-6 flex flex-col items-center justify-between text-center shadow-xs hover:shadow-xl hover:shadow-blue-600/5 transition-all duration-300 relative min-h-[190px]"
+                  >
+                    <div className="flex flex-col items-center w-full space-y-3">
+                      {/* Sponsor Logo Area */}
+                      <div className="w-full h-16 sm:h-20 flex items-center justify-center">
+                        {logoUrl ? (
+                          <img 
+                            src={logoUrl} 
+                            alt={sp.name} 
+                            className="max-h-14 sm:max-h-16 max-w-[85%] w-auto h-auto object-contain group-hover:scale-105 transition-transform duration-300"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              const fallback = e.currentTarget.parentElement?.querySelector('.sponsor-fallback');
+                              if (fallback) fallback.classList.remove('hidden');
+                            }}
+                          />
+                        ) : null}
+                        <div className={`sponsor-fallback w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 items-center justify-center font-black text-lg ${logoUrl ? 'hidden' : 'flex'}`}>
+                          <Building2 size={24} className="text-blue-600" />
+                        </div>
+                      </div>
+
+                      {/* Sponsor Name */}
+                      <div className="w-full px-1">
+                        <h4 className="text-sm sm:text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-2 tracking-tight">
+                          {sp.name}
+                        </h4>
+                      </div>
+                    </div>
+
+                    {/* Tier Badge & Optional Website */}
+                    <div className="pt-3 w-full flex flex-col items-center gap-1.5 border-t border-slate-100/80 mt-2">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${tierBadgeStyle}`}>
+                        {sp.tier || t("common.partner", "Partner")}
+                      </span>
+
+                      {sp.website && (
+                        <a
+                          href={sp.website.startsWith("http") ? sp.website : `https://${sp.website}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:text-blue-700 transition-colors mt-0.5"
+                        >
+                          <span>{t("common.visitWebsite", "Visit Website")}</span>
+                          <ExternalLink size={11} />
+                        </a>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </section>

@@ -13,6 +13,7 @@ import {
   fetchSessions, 
   fetchSponsors, 
   fetchExhibitors, 
+  fetchOrganizations,
   fetchAttendees, 
   fetchInfluencers, 
   fetchForms, 
@@ -41,6 +42,7 @@ export default function DynamicEventLandingPage() {
   const [sessions, setSessions] = useState([]);
   const [sponsors, setSponsors] = useState([]);
   const [exhibitors, setExhibitors] = useState([]);
+  const [organizations, setOrganizations] = useState([]);
   const [attendees, setAttendees] = useState([]);
   const [floorPlans, setFloorPlans] = useState([]);
   const [documents, setDocuments] = useState([]);
@@ -142,6 +144,7 @@ export default function DynamicEventLandingPage() {
         fetchSessions(eventId).then(res => isMounted && setSessions(res || [])).catch(() => {});
         fetchSponsors(eventId).then(res => isMounted && setSponsors(res || [])).catch(() => {});
         fetchExhibitors(eventId).then(res => isMounted && setExhibitors(res || [])).catch(() => {});
+        fetchOrganizations(eventId).then(res => isMounted && setOrganizations(res || [])).catch(() => {});
         fetchForms(eventId).then(res => isMounted && setForms(res || [])).catch(() => {});
         fetchRSVPSettings(eventId).then(res => isMounted && setRsvpSettings(res || {})).catch(() => {});
 
@@ -287,6 +290,7 @@ export default function DynamicEventLandingPage() {
       sessions={sessions}
       sponsors={sponsors}
       exhibitors={exhibitors}
+      organizations={organizations}
       attendees={attendees}
       tickets={tickets}
       influencers={influencers}

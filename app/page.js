@@ -3835,6 +3835,7 @@ export function HomeContent() {
             logo: ex.logo || org?.logo || '',
           };
         })}
+        organizations={organizations}
         attendees={attendees}
         tickets={tickets}
         influencers={influencers}
