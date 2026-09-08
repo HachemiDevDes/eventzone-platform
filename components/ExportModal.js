@@ -1,15 +1,22 @@
 "use client";
 
 import React, { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
-  X, FileText, Image as ImageIcon, Check, Loader2,
-  Printer
+  X, FileText, Image as ImageIcon, Check, Loader2
 } from "lucide-react";
 import { useLanguage } from "../lib/i18n";
 
-export default function ExportModal({ isOpen, onClose, onExport, elements = [], exhibitors = [], attendees = [] }) {
-  const { t } = useLanguage();
+export default function ExportModal({ 
+  isOpen, 
+  onClose, 
+  onExport, 
+  onSwitchTab, 
+  elements = [], 
+  exhibitors = [], 
+  attendees = [] 
+}) {
+  const { t, isRTL } = useLanguage();
   const [format, setFormat] = useState("pdf"); // 'pdf' | 'png' | 'booth_list_pdf' | 'booth_list_excel'
   const [loading, setLoading] = useState(false);
 
@@ -26,8 +33,6 @@ export default function ExportModal({ isOpen, onClose, onExport, elements = [], 
   const [orientation, setOrientation] = useState("landscape"); // 'landscape' | 'portrait'
   const [paperSize, setPaperSize] = useState("a4"); // 'a4' | 'a3' | 'letter'
   const [currentViewOnly, setCurrentViewOnly] = useState(false);
-
-  if (!isOpen) return null;
 
   const handleToggle = (key) => {
     setFilters(prev => ({ ...prev, [key]: !prev[key] }));
@@ -399,42 +404,55 @@ export default function ExportModal({ isOpen, onClose, onExport, elements = [], 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop with fade-in */}
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={onClose}
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
-      />
-
-      {/* Modal Card with scale up */}
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95, y: 10 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 10 }}
-        transition={{ type: "spring", duration: 0.4 }}
-        className="relative w-full max-w-xl bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden flex flex-col z-10 mx-4 max-h-[90vh]"
-      >
-        {/* Header */}
-        <header className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-indigo-50 text-indigo-650 rounded-xl">
-              <Printer size={18} />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-slate-800">{t("export.title", "Export Floor Plan")}</h3>
-              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">{t("export.subtitle", "Configure settings for download")}</p>
-            </div>
-          </div>
-          <button 
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[100] flex justify-end overflow-hidden">
+          {/* Backdrop with fade-in */}
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             onClick={onClose}
-            className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:text-rose-500 hover:border-rose-100 transition-colors cursor-pointer"
+            className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs"
+          />
+
+          {/* Right Tab / Slide-over Card */}
+          <motion.div 
+            initial={{ x: isRTL ? "-100%" : "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: isRTL ? "-100%" : "100%" }}
+            transition={{ type: "spring", damping: 28, stiffness: 280 }}
+            className="relative w-full max-w-xl bg-white border-l border-slate-200 shadow-2xl overflow-hidden flex flex-col z-10 h-full max-h-screen"
           >
-            <X size={16} />
-          </button>
-        </header>
+            {/* Header */}
+            <header className="flex items-center justify-between px-6 py-4 border-b border-slate-150 bg-white shrink-0">
+              {onSwitchTab ? (
+                <div className="flex items-center p-1 bg-slate-100/90 rounded-xl border border-slate-200/70">
+                  <button
+                    type="button"
+                    className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-white text-slate-900 shadow-xs cursor-default"
+                  >
+                    {t("export.title", "Export Floor Plan")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onSwitchTab("send")}
+                    className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
+                  >
+                    {t("sendPlan.modalHeaderTitle", "Send Floor Plan")}
+                  </button>
+                </div>
+              ) : (
+                <h3 className="text-base font-bold text-slate-800">{t("export.title", "Export Floor Plan")}</h3>
+              )}
+              <button 
+                type="button"
+                onClick={onClose}
+                className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:text-rose-500 hover:border-rose-100 transition-colors cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </header>
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
@@ -728,7 +746,7 @@ export default function ExportModal({ isOpen, onClose, onExport, elements = [], 
         </div>
 
         {/* Footer Actions */}
-        <footer className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50/50 shrink-0">
+        <footer className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50/50 shrink-0 mt-auto">
           <button
             type="button"
             onClick={onClose}
@@ -758,5 +776,7 @@ export default function ExportModal({ isOpen, onClose, onExport, elements = [], 
         </footer>
       </motion.div>
     </div>
+      )}
+    </AnimatePresence>
   );
 }

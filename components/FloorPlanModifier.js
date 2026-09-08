@@ -10,7 +10,7 @@ import {
   Printer, CircleDot, Monitor, Smartphone, Type, Image, Route,
   Search, Sparkles, Megaphone, HeartPulse, Heart, Tag, Plug, IdCard, Lock, Scan, Briefcase, Pencil, Users, Coffee,
   Plus, Minus, Pipette, Box, SeparatorHorizontal, ArrowLeft, ArrowUpRight, Shield, Fence, MapPin, Presentation, Tablet, Video, Wifi, Compass, GlassWater, LayoutTemplate,
-  Eye, EyeOff, Maximize, ArrowRight, Mail, Globe, Folder, Clock, CheckCircle2, Keyboard, Share2, GripVertical, Clipboard
+  Eye, EyeOff, Maximize, ArrowRight, Mail, Send, Globe, Folder, Clock, CheckCircle2, Keyboard, Share2, GripVertical, Clipboard
 } from "lucide-react";
 import { motion, AnimatePresence, Reorder } from "framer-motion";
 
@@ -3883,6 +3883,42 @@ export default function FloorPlanModifier({
                   >
                     <Smartphone size={13} />
                     <span>{t("floor.mobileApp", "Mobile App")}</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Export & Send Floor Plan Buttons */}
+              {!initialPreviewMode && (
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => {
+                      setIsSendPlanModalOpen(false);
+                      setIsExportModalOpen(true);
+                    }}
+                    className={`flex items-center gap-1.5 px-3 py-2 border rounded-xl font-semibold text-xs transition-all duration-200 cursor-pointer ${
+                      isExportModalOpen 
+                        ? "bg-indigo-50 border-indigo-200 text-indigo-650 shadow-xs" 
+                        : "bg-slate-50 border-slate-200 hover:border-indigo-150 hover:text-indigo-650 text-slate-655"
+                    }`}
+                    title={t("floor.export", "Export Floor Plan")}
+                  >
+                    <Download size={14} />
+                    <span>{t("floor.export", "Export")}</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsExportModalOpen(false);
+                      setIsSendPlanModalOpen(true);
+                    }}
+                    className={`flex items-center gap-1.5 px-3 py-2 border rounded-xl font-semibold text-xs transition-all duration-200 cursor-pointer ${
+                      isSendPlanModalOpen 
+                        ? "bg-indigo-50 border-indigo-200 text-indigo-650 shadow-xs" 
+                        : "bg-slate-50 border-slate-200 hover:border-indigo-150 hover:text-indigo-650 text-slate-655"
+                    }`}
+                    title={t("floor.sendPlan", "Send Floor Plan")}
+                  >
+                    <Send size={14} />
+                    <span>{t("floor.sendPlan", "Send")}</span>
                   </button>
                 </div>
               )}
@@ -8115,6 +8151,12 @@ export default function FloorPlanModifier({
       <ExportModal 
         isOpen={isExportModalOpen} 
         onClose={() => setIsExportModalOpen(false)} 
+        onSwitchTab={(tab) => {
+          if (tab === "send") {
+            setIsExportModalOpen(false);
+            setIsSendPlanModalOpen(true);
+          }
+        }}
         onExport={handleExportPlan} 
         elements={elements}
         exhibitors={exhibitors}
@@ -8124,9 +8166,16 @@ export default function FloorPlanModifier({
       <SendPlanModal
         isOpen={isSendPlanModalOpen}
         onClose={() => setIsSendPlanModalOpen(false)}
+        onSwitchTab={(tab) => {
+          if (tab === "export") {
+            setIsSendPlanModalOpen(false);
+            setIsExportModalOpen(true);
+          }
+        }}
         exhibitors={exhibitors}
         sponsors={sponsors}
         eventId={eventId}
+        floorPlanId={floorPlanId}
         eventName={eventName || planName}
         planName={planName}
         elements={elements}

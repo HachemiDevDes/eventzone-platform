@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   X, Mail, Send, Loader2, AlertTriangle, 
-  CheckSquare, Square, Search, Users, Award, Store
+  CheckSquare, Square, Search, Users, Award, Store,
+  FileText, Globe, Layers, ExternalLink
 } from "lucide-react";
 import { logCommunication, upsertExhibitor, upsertSponsor } from "../lib/db";
 import { useLanguage } from "../lib/i18n";
@@ -12,9 +13,11 @@ import { useLanguage } from "../lib/i18n";
 export default function SendPlanModal({ 
   isOpen, 
   onClose, 
+  onSwitchTab,
   exhibitors = [], 
   sponsors = [],
   eventId = "",
+  floorPlanId = "",
   eventName = "",
   planName = "Floor Plan", 
   elements = [], 
@@ -23,10 +26,12 @@ export default function SendPlanModal({
   const { t, isRTL } = useLanguage();
   const [recipientCategory, setRecipientCategory] = useState("all"); // 'all' | 'exhibitors' | 'sponsors'
   const [recipientMode, setRecipientMode] = useState("all"); // 'all' | 'custom'
+  const [deliveryFormat, setDeliveryFormat] = useState("pdf"); // 'pdf' | 'link' | 'both'
   const [selectedPartnerIds, setSelectedPartnerIds] = useState([]);
   const [partnerEmails, setPartnerEmails] = useState({});
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
+  const [hasCustomizedText, setHasCustomizedText] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sendingProgress, setSendingProgress] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -37,6 +42,18 @@ export default function SendPlanModal({
     showGrid: false,
     hideFurniture: false,
   });
+
+  // Shareable interactive live floor plan URL
+  const floorPlanUrl = useMemo(() => {
+    if (typeof window === "undefined") return "";
+    const origin = window.location.origin;
+    const pId = floorPlanId || "";
+    const eId = eventId || "";
+    const params = new URLSearchParams({ view: "floor-plan", preview: "true" });
+    if (pId) params.set("planId", pId);
+    if (eId) params.set("eventId", eId);
+    return `${origin}/?${params.toString()}`;
+  }, [floorPlanId, eventId]);
 
   // 1. Normalize and aggregate exhibitors and sponsors into unified partner records
   const allPartners = useMemo(() => {
@@ -79,14 +96,35 @@ export default function SendPlanModal({
     return list;
   }, [exhibitors, sponsors, t]);
 
+  // Helper to generate default subject and message based on delivery format
+  const getDefaultContent = (format) => {
+    const activeName = eventName || planName;
+    if (format === "link") {
+      return {
+        subject: t("sendPlan.linkSubject", "{planName} - Interactive Exhibition Floor Plan").replace("{planName}", activeName),
+        body: t("sendPlan.linkBody", "Dear Partner,\n\nWe are pleased to share the exhibition floor plan for our upcoming event.\n\nYou can explore your assigned space, venue stages, and neighboring booths directly through the interactive live map link below.\n\nShould you have any questions or require modifications to your layout, please reply directly to this message.\n\nBest regards,\nEvent Operations Team"),
+      };
+    }
+    if (format === "both") {
+      return {
+        subject: t("sendPlan.bothSubject", "{planName} - Exhibition Floor Plan & Booth Details").replace("{planName}", activeName),
+        body: t("sendPlan.bothBody", "Dear Partner,\n\nWe are pleased to share the exhibition floor plan and venue briefing for our upcoming event.\n\nYour assigned space details, printable floor plan PDF layout, and a link to the live interactive map are included below.\n\nShould you have any questions or require modifications to your layout, please reply directly to this message.\n\nBest regards,\nEvent Operations Team"),
+      };
+    }
+    // Default PDF
+    return {
+      subject: t("sendPlan.defaultSubject", "{planName} - Exhibition Floor Plan & Booth Details").replace("{planName}", activeName),
+      body: t("sendPlan.defaultBody", "Dear Partner,\n\nWe are pleased to share the exhibition floor plan for our upcoming event.\n\nYour assigned booth details and the official floor plan PDF layout are attached to this message.\n\nShould you have any questions or require modifications to your layout, please reply directly to this message.\n\nBest regards,\nEvent Operations Team"),
+    };
+  };
+
   // Initialize modal state on open
   useEffect(() => {
     if (isOpen) {
-      const activeName = eventName || planName;
-      const defaultSubj = t("sendPlan.defaultSubject", "{planName} - Exhibition Floor Plan & Partner Details").replace("{planName}", activeName);
-      const defaultMsg = t("sendPlan.defaultBody", "Dear Partner,\n\nWe are pleased to share the exhibition floor plan and venue packet for our upcoming event.\n\nYour assigned space/tier details and the official venue floor plan layout are included in this briefing.\n\nShould you have any questions or require modifications to your layout, please reply directly to this message.\n\nBest regards,\nEvent Operations Team");
-      setSubject(defaultSubj);
-      setMessage(defaultMsg);
+      const defaults = getDefaultContent(deliveryFormat);
+      setSubject(defaults.subject);
+      setMessage(defaults.body);
+      setHasCustomizedText(false);
 
       // Map initial emails
       const initialEmails = {};
@@ -101,9 +139,17 @@ export default function SendPlanModal({
       setRecipientCategory("all");
       setRecipientMode("all");
     }
-  }, [isOpen, planName, eventName, allPartners, t]);
+  }, [isOpen, planName, eventName, allPartners]);
 
-  if (!isOpen) return null;
+  // When delivery format changes, update default text if user hasn't typed custom text
+  const handleFormatChange = (newFormat) => {
+    setDeliveryFormat(newFormat);
+    if (!hasCustomizedText) {
+      const defaults = getDefaultContent(newFormat);
+      setSubject(defaults.subject);
+      setMessage(defaults.body);
+    }
+  };
 
   // 2. Filter partners based on active category
   const categoryPartners = allPartners.filter(p => {
@@ -217,9 +263,11 @@ export default function SendPlanModal({
       });
       await Promise.all(emailUpdates);
 
-      // 2. Preparing PDF floor plan attachment simulation
-      setSendingProgress(t("sendPlan.generatingPdf", "Generating high-resolution vector PDF floor plan layout..."));
-      await new Promise(r => setTimeout(r, 600));
+      // 2. If sending PDF, simulate compiling PDF layout
+      if (deliveryFormat === "pdf" || deliveryFormat === "both") {
+        setSendingProgress(t("sendPlan.generatingPdf", "Generating high-resolution vector PDF floor plan layout..."));
+        await new Promise(r => setTimeout(r, 600));
+      }
 
       // 3. Send real emails via /api/email/send
       let sentCount = 0;
@@ -230,7 +278,7 @@ export default function SendPlanModal({
         const email = (partnerEmails[p.id] || "").trim();
         
         setSendingProgress(
-          t("sendPlan.sendingPacketTo", "Sending packet to {name} ({email})...")
+          t("sendPlan.sendingTo", "Sending floor plan to {name} ({email})...")
             .replace("{name}", p.name)
             .replace("{email}", email)
         );
@@ -240,7 +288,7 @@ export default function SendPlanModal({
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              type: p.category === "sponsor" ? "sponsor_packet" : "exhibitor_packet",
+              type: "floor_plan",
               to: email,
               recipientName: p.name,
               exhibitorName: p.name,
@@ -250,6 +298,8 @@ export default function SendPlanModal({
               tier: p.tier || "",
               eventTitle: eventName || planName || "Eventzone Summit",
               eventId: eventId || undefined,
+              deliveryFormat: deliveryFormat, // 'pdf' | 'link' | 'both'
+              floorPlanUrl: floorPlanUrl,
               subject: subject,
               message: message,
             }),
@@ -311,48 +361,59 @@ export default function SendPlanModal({
   const totalCount = allPartners.length;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center">
-      {/* Backdrop */}
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={!loading ? onClose : null}
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
-      />
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[100] flex justify-end overflow-hidden">
+          {/* Backdrop */}
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={!loading ? onClose : null}
+            className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs"
+          />
 
-      {/* Modal Card */}
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95, y: 10 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 10 }}
-        transition={{ type: "spring", duration: 0.4 }}
-        className="relative w-full max-w-2xl bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden flex flex-col z-10 mx-4 max-h-[90vh]"
-      >
-        {/* Header */}
-        <header className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-indigo-50 text-indigo-650 rounded-xl">
-              <Mail size={18} />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-slate-800">
-                {t("export.sendPlanTitle", "Email Floor Plan & Venue Packet")}
-              </h3>
-              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                {t("export.sendPlanSubtitle", "Send PDF floor plans and instructions to exhibitors and sponsors")}
-              </p>
-            </div>
-          </div>
-          <button 
-            type="button"
-            onClick={onClose}
-            disabled={loading}
-            className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:text-rose-500 hover:border-rose-100 transition-colors cursor-pointer disabled:opacity-30"
+          {/* Slide-over Right Panel */}
+          <motion.div 
+            initial={{ x: isRTL ? "-100%" : "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: isRTL ? "-100%" : "100%" }}
+            transition={{ type: "spring", damping: 28, stiffness: 280 }}
+            className="relative w-full max-w-xl md:max-w-2xl bg-white border-l border-slate-200 shadow-2xl overflow-hidden flex flex-col z-10 h-full max-h-screen"
           >
-            <X size={16} />
-          </button>
-        </header>
+            {/* Header */}
+            <header className="flex items-center justify-between px-6 py-4 border-b border-slate-150 bg-white shrink-0">
+              {onSwitchTab ? (
+                <div className="flex items-center p-1 bg-slate-100/90 rounded-xl border border-slate-200/70">
+                  <button
+                    type="button"
+                    onClick={() => !loading && onSwitchTab("export")}
+                    disabled={loading}
+                    className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {t("export.title", "Export Floor Plan")}
+                  </button>
+                  <button
+                    type="button"
+                    className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-white text-slate-900 shadow-xs cursor-default"
+                  >
+                    {t("sendPlan.modalHeaderTitle", "Send Floor Plan")}
+                  </button>
+                </div>
+              ) : (
+                <h3 className="text-base font-bold text-slate-800">
+                  {t("sendPlan.modalHeaderTitle", "Send Floor Plan to Partners")}
+                </h3>
+              )}
+              <button 
+                type="button"
+                onClick={onClose}
+                disabled={loading}
+                className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:text-rose-500 hover:border-rose-100 transition-colors cursor-pointer disabled:opacity-30"
+              >
+                <X size={16} />
+              </button>
+            </header>
 
         {/* Form Body */}
         <form onSubmit={handleSend} className="flex-1 overflow-y-auto p-6 space-y-6 flex flex-col justify-between">
@@ -596,66 +657,173 @@ export default function SendPlanModal({
                 )}
               </div>
 
-              {/* 2. PDF Attachment Layout Settings */}
+              {/* 2. Delivery Format: Send as PDF OR Send as Link (or Both) */}
               <div className="space-y-3">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <bdi dir="ltr">2.</bdi> <span>{t("sendPlan.pdfAttachmentSettings", "PDF Attachment Layout Settings")}</span>
+                  <bdi dir="ltr">2.</bdi> <span>{t("sendPlan.deliveryFormatSection", "Delivery Format")}</span>
                 </label>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 bg-slate-50/40 p-4 rounded-2xl border border-slate-150">
-                  <div className="flex items-center justify-between">
-                    <div className="flex flex-col">
-                      <span className="text-[11px] font-bold text-slate-700">{t("sendPlan.showDimensions", "Show Dimensions")}</span>
-                      <span className="text-[9px] text-slate-450 font-semibold">{t("sendPlan.showDimensionsDesc", "Include booth labels")}</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleToggleSetting("showLabels")}
-                      className={`w-8 h-4.5 rounded-full p-0.5 transition-colors duration-200 focus:outline-none cursor-pointer ${
-                        pdfSettings.showLabels ? "bg-indigo-650" : "bg-slate-250"
-                      }`}
-                    >
-                      <div className={`w-3.5 h-3.5 rounded-full bg-white transition-transform duration-200 ${
-                        pdfSettings.showLabels ? "translate-x-3.5" : "translate-x-0"
-                      }`} />
-                    </button>
-                  </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex flex-col">
-                      <span className="text-[11px] font-bold text-slate-700">{t("sendPlan.showVenueGrid", "Show Venue Grid")}</span>
-                      <span className="text-[9px] text-slate-450 font-semibold">{t("sendPlan.showVenueGridDesc", "Include background grid")}</span>
+                {/* 3 Intuitive Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {/* Option 1: Send as PDF */}
+                  <button
+                    type="button"
+                    onClick={() => handleFormatChange("pdf")}
+                    className={`p-3.5 rounded-2xl border text-start transition-all cursor-pointer flex flex-col justify-between ${
+                      deliveryFormat === "pdf"
+                        ? "border-indigo-600 bg-indigo-50/40 shadow-xs ring-1 ring-indigo-600"
+                        : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className={`p-2 rounded-xl ${deliveryFormat === "pdf" ? "bg-indigo-650 text-white" : "bg-slate-100 text-slate-600"}`}>
+                        <FileText size={16} />
+                      </div>
+                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                        deliveryFormat === "pdf" ? "border-indigo-650 bg-indigo-650" : "border-slate-300 bg-white"
+                      }`}>
+                        {deliveryFormat === "pdf" && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                      </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleToggleSetting("showGrid")}
-                      className={`w-8 h-4.5 rounded-full p-0.5 transition-colors duration-200 focus:outline-none cursor-pointer ${
-                        pdfSettings.showGrid ? "bg-indigo-650" : "bg-slate-250"
-                      }`}
-                    >
-                      <div className={`w-3.5 h-3.5 rounded-full bg-white transition-transform duration-200 ${
-                        pdfSettings.showGrid ? "translate-x-3.5" : "translate-x-0"
-                      }`} />
-                    </button>
-                  </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-800">{t("sendPlan.formatPdfTitle", "Send as PDF")}</div>
+                      <div className="text-[10px] text-slate-450 font-semibold mt-0.5">
+                        {t("sendPlan.formatPdfDesc", "Attach printable high-resolution PDF layout")}
+                      </div>
+                    </div>
+                  </button>
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex flex-col">
-                      <span className="text-[11px] font-bold text-slate-700">{t("sendPlan.hideFurniture", "Hide Furniture")}</span>
-                      <span className="text-[9px] text-slate-450 font-semibold">{t("sendPlan.hideFurnitureDesc", "Show booth outlines only")}</span>
+                  {/* Option 2: Send as Link */}
+                  <button
+                    type="button"
+                    onClick={() => handleFormatChange("link")}
+                    className={`p-3.5 rounded-2xl border text-start transition-all cursor-pointer flex flex-col justify-between ${
+                      deliveryFormat === "link"
+                        ? "border-indigo-600 bg-indigo-50/40 shadow-xs ring-1 ring-indigo-600"
+                        : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className={`p-2 rounded-xl ${deliveryFormat === "link" ? "bg-indigo-650 text-white" : "bg-slate-100 text-slate-600"}`}>
+                        <Globe size={16} />
+                      </div>
+                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                        deliveryFormat === "link" ? "border-indigo-650 bg-indigo-650" : "border-slate-300 bg-white"
+                      }`}>
+                        {deliveryFormat === "link" && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                      </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleToggleSetting("hideFurniture")}
-                      className={`w-8 h-4.5 rounded-full p-0.5 transition-colors duration-200 focus:outline-none cursor-pointer ${
-                        pdfSettings.hideFurniture ? "bg-indigo-650" : "bg-slate-250"
-                      }`}
-                    >
-                      <div className={`w-3.5 h-3.5 rounded-full bg-white transition-transform duration-200 ${
-                        pdfSettings.hideFurniture ? "translate-x-3.5" : "translate-x-0"
-                      }`} />
-                    </button>
-                  </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-800">{t("sendPlan.formatLinkTitle", "Send as Link")}</div>
+                      <div className="text-[10px] text-slate-450 font-semibold mt-0.5">
+                        {t("sendPlan.formatLinkDesc", "Include direct live interactive map button")}
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Option 3: Both PDF & Link */}
+                  <button
+                    type="button"
+                    onClick={() => handleFormatChange("both")}
+                    className={`p-3.5 rounded-2xl border text-start transition-all cursor-pointer flex flex-col justify-between ${
+                      deliveryFormat === "both"
+                        ? "border-indigo-600 bg-indigo-50/40 shadow-xs ring-1 ring-indigo-600"
+                        : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className={`p-2 rounded-xl ${deliveryFormat === "both" ? "bg-indigo-650 text-white" : "bg-slate-100 text-slate-600"}`}>
+                        <Layers size={16} />
+                      </div>
+                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                        deliveryFormat === "both" ? "border-indigo-650 bg-indigo-650" : "border-slate-300 bg-white"
+                      }`}>
+                        {deliveryFormat === "both" && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-800">{t("sendPlan.formatBothTitle", "Both (PDF & Link)")}</div>
+                      <div className="text-[10px] text-slate-450 font-semibold mt-0.5">
+                        {t("sendPlan.formatBothDesc", "Attach PDF layout & include live map link")}
+                      </div>
+                    </div>
+                  </button>
                 </div>
+
+                {/* Sub-Panel: PDF Layout Settings (When PDF is enabled) */}
+                {(deliveryFormat === "pdf" || deliveryFormat === "both") && (
+                  <div className="space-y-2 pt-1">
+                    <div className="text-[10px] font-bold text-slate-450 uppercase tracking-wider">
+                      {t("sendPlan.pdfAttachmentSettings", "PDF Attachment Layout Settings")}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 bg-slate-50/60 p-4 rounded-2xl border border-slate-200/60">
+                      <div className="flex items-center justify-between">
+                        <div className="flex flex-col">
+                          <span className="text-[11px] font-bold text-slate-700">{t("sendPlan.showDimensions", "Show Dimensions")}</span>
+                          <span className="text-[9px] text-slate-450 font-semibold">{t("sendPlan.showDimensionsDesc", "Include booth labels")}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleSetting("showLabels")}
+                          className={`w-8 h-4.5 rounded-full p-0.5 transition-colors duration-200 focus:outline-none cursor-pointer ${
+                            pdfSettings.showLabels ? "bg-indigo-650" : "bg-slate-250"
+                          }`}
+                        >
+                          <div className={`w-3.5 h-3.5 rounded-full bg-white transition-transform duration-200 ${
+                            pdfSettings.showLabels ? "translate-x-3.5" : "translate-x-0"
+                          }`} />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div className="flex flex-col">
+                          <span className="text-[11px] font-bold text-slate-700">{t("sendPlan.showVenueGrid", "Show Venue Grid")}</span>
+                          <span className="text-[9px] text-slate-450 font-semibold">{t("sendPlan.showVenueGridDesc", "Include background grid")}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleSetting("showGrid")}
+                          className={`w-8 h-4.5 rounded-full p-0.5 transition-colors duration-200 focus:outline-none cursor-pointer ${
+                            pdfSettings.showGrid ? "bg-indigo-650" : "bg-slate-250"
+                          }`}
+                        >
+                          <div className={`w-3.5 h-3.5 rounded-full bg-white transition-transform duration-200 ${
+                            pdfSettings.showGrid ? "translate-x-3.5" : "translate-x-0"
+                          }`} />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div className="flex flex-col">
+                          <span className="text-[11px] font-bold text-slate-700">{t("sendPlan.hideFurniture", "Hide Furniture")}</span>
+                          <span className="text-[9px] text-slate-450 font-semibold">{t("sendPlan.hideFurnitureDesc", "Show booth outlines only")}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleSetting("hideFurniture")}
+                          className={`w-8 h-4.5 rounded-full p-0.5 transition-colors duration-200 focus:outline-none cursor-pointer ${
+                            pdfSettings.hideFurniture ? "bg-indigo-650" : "bg-slate-250"
+                          }`}
+                        >
+                          <div className={`w-3.5 h-3.5 rounded-full bg-white transition-transform duration-200 ${
+                            pdfSettings.hideFurniture ? "translate-x-3.5" : "translate-x-0"
+                          }`} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Sub-Panel: Live Map Preview Box (When Link is enabled) */}
+                {(deliveryFormat === "link" || deliveryFormat === "both") && floorPlanUrl && (
+                  <div className="flex items-center gap-2.5 px-3.5 py-2.5 bg-indigo-50/50 border border-indigo-150 rounded-xl text-xs text-indigo-900">
+                    <Globe size={15} className="text-indigo-650 shrink-0" />
+                    <div className="flex-1 truncate">
+                      <span className="font-bold text-[10.5px]">{t("sendPlan.interactiveLinkPreview", "Live Interactive Map Link")}: </span>
+                      <span className="text-[10px] text-slate-500 font-mono select-all">{floorPlanUrl}</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* 3. Email Content */}
@@ -670,7 +838,10 @@ export default function SendPlanModal({
                       type="text" 
                       required
                       value={subject}
-                      onChange={(e) => setSubject(e.target.value)}
+                      onChange={(e) => {
+                        setSubject(e.target.value);
+                        setHasCustomizedText(true);
+                      }}
                       placeholder={t("sendPlan.subjectPlaceholder", "Email Subject Line")}
                       className="px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-650 bg-white"
                     />
@@ -681,7 +852,10 @@ export default function SendPlanModal({
                       required
                       rows={5}
                       value={message}
-                      onChange={(e) => setMessage(e.target.value)}
+                      onChange={(e) => {
+                        setMessage(e.target.value);
+                        setHasCustomizedText(true);
+                      }}
                       placeholder={t("sendPlan.messageBodyPlaceholder", "Write your email body here...")}
                       className="px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-650 bg-white resize-none leading-relaxed"
                     />
@@ -694,9 +868,13 @@ export default function SendPlanModal({
           {/* Footer Actions */}
           {!loading && (
             <footer className="flex items-center justify-between pt-5 border-t border-slate-100 mt-6 bg-white shrink-0">
-              <div className="text-xs text-slate-400 font-semibold">
+              <div className="flex items-center gap-2 text-xs text-slate-500 font-semibold">
                 <span>
-                  {recipientMode === "all" ? categoryPartners.length : categoryPartners.filter(p => selectedPartnerIds.includes(p.id)).length} recipient(s) selected
+                  {recipientMode === "all" ? categoryPartners.length : categoryPartners.filter(p => selectedPartnerIds.includes(p.id)).length} {t("sendPlan.recipientsCount", "recipient(s)")}
+                </span>
+                <span>•</span>
+                <span className="text-indigo-650 font-bold uppercase text-[10px]">
+                  {deliveryFormat === "pdf" ? "PDF Only" : deliveryFormat === "link" ? "Live Link Only" : "PDF + Live Link"}
                 </span>
               </div>
 
@@ -713,7 +891,13 @@ export default function SendPlanModal({
                   className="flex items-center gap-2 px-5 py-2.5 bg-indigo-650 hover:bg-indigo-750 text-white rounded-xl font-bold text-xs transition-all duration-200 shadow-md shadow-indigo-100 cursor-pointer"
                 >
                   <Send size={14} />
-                  <span>{t("sendPlan.sendPacketAction", "Send Packet to Partners")}</span>
+                  <span>
+                    {deliveryFormat === "pdf" 
+                      ? t("sendPlan.actionSendPdf", "Send Floor Plan as PDF")
+                      : deliveryFormat === "link"
+                      ? t("sendPlan.actionSendLink", "Send Floor Plan as Link")
+                      : t("sendPlan.actionSendBoth", "Send Floor Plan (PDF & Link)")}
+                  </span>
                 </button>
               </div>
             </footer>
@@ -721,5 +905,7 @@ export default function SendPlanModal({
         </form>
       </motion.div>
     </div>
+      )}
+    </AnimatePresence>
   );
 }

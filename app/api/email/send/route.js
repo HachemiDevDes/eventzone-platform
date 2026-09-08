@@ -53,12 +53,12 @@ export async function POST(request) {
           { status: authResult.status || 401 }
         );
       }
-    } else if (type === "exhibitor_packet" || type === "sponsor_packet") {
+    } else if (type === "exhibitor_packet" || type === "sponsor_packet" || type === "floor_plan") {
       const authHeader = request.headers.get("authorization") || "";
       if (authHeader && eventId && isValidUuid(eventId)) {
         const authResult = await verifyOrganizerSession(request, eventId);
         if (!authResult.authorized) {
-          console.warn("Organizer auth check notice for packet:", authResult.error);
+          console.warn("Organizer auth check notice for floor plan:", authResult.error);
         }
       }
     }
@@ -70,6 +70,7 @@ export async function POST(request) {
       rsvp_confirmation: "trigger_rsvp_confirmation",
       exhibitor_packet: "trigger_exhibitor_briefing",
       sponsor_packet: "trigger_exhibitor_briefing",
+      floor_plan: "trigger_exhibitor_briefing",
       team_invite: "trigger_team_invite"
     };
 
@@ -162,6 +163,7 @@ export async function POST(request) {
         });
         break;
 
+      case "floor_plan":
       case "exhibitor_packet":
       case "sponsor_packet": {
         let eventTitle = rest.eventTitle || rest.eventName || "";
@@ -182,7 +184,7 @@ export async function POST(request) {
               venueAddress = venueAddress || ev.venue || ev.location || "";
             }
           } catch (evErr) {
-            console.warn("Could not query event details for packet email:", evErr);
+            console.warn("Could not query event details for floor plan email:", evErr);
           }
         }
 
@@ -194,6 +196,8 @@ export async function POST(request) {
           eventDate,
           venueAddress,
           recipientType: type === "sponsor_packet" ? "sponsor" : (rest.recipientType || "exhibitor"),
+          deliveryFormat: rest.deliveryFormat || "both",
+          floorPlanUrl: rest.floorPlanUrl || "",
           ...rest 
         });
         break;
