@@ -498,9 +498,18 @@ export default function EventPublicLandingPage({
       "July", "August", "September", "October", "November", "December"
     ];
 
+    const getMonthName = (d) => {
+      if (!d) return "";
+      try {
+        return d.toLocaleDateString(lang === "ar" ? "ar-DZ" : (lang === "fr" ? "fr-FR" : "en-US"), { month: "long" });
+      } catch (e) {
+        return monthNames[d.getMonth()] || "";
+      }
+    };
+
     if (!start) return startStr;
 
-    const startMonth = monthNames[start.getMonth()];
+    const startMonth = getMonthName(start);
     const startDay = start.getDate();
     const startYear = start.getFullYear();
 
@@ -508,7 +517,7 @@ export default function EventPublicLandingPage({
       return `${startMonth} ${startDay}, ${startYear}`;
     }
 
-    const endMonth = monthNames[end.getMonth()];
+    const endMonth = getMonthName(end);
     const endDay = end.getDate();
     const endYear = end.getFullYear();
 
@@ -937,9 +946,9 @@ export default function EventPublicLandingPage({
 
     // If on section 0, validate core credentials
     if (safeCheckoutIdx === 0) {
-      if (!rsvpName?.trim()) errors["rsvpName"] = "Full name is required.";
-      if (!rsvpEmail?.trim()) errors["rsvpEmail"] = "Email address is required.";
-      if (!rsvpPhone?.trim()) errors["rsvpPhone"] = "Phone number is required.";
+      if (!rsvpName?.trim()) errors["rsvpName"] = t("rsvp.errorNameRequired", "Full name is required.");
+      if (!rsvpEmail?.trim()) errors["rsvpEmail"] = t("rsvp.errorEmailRequired", "Email address is required.");
+      if (!rsvpPhone?.trim()) errors["rsvpPhone"] = t("rsvp.errorPhoneRequired", "Phone number is required.");
     }
 
     // Validate custom fields on current section
@@ -948,7 +957,7 @@ export default function EventPublicLandingPage({
         const val = customAnswers[f.id];
         const isEmpty = val === undefined || val === null || val === "" || (Array.isArray(val) && val.length === 0);
         if (isEmpty) {
-          errors[f.id] = "This question requires an answer.";
+          errors[f.id] = t("rsvp.errorFieldRequired", "This question requires an answer.");
         }
       }
     });
@@ -1014,7 +1023,7 @@ export default function EventPublicLandingPage({
 
             const checkoutData = await checkoutRes.json();
             if (!checkoutRes.ok || !checkoutData.success || !checkoutData.checkoutUrl) {
-              setRsvpError(checkoutData.error || "Unable to initiate payment with Chargily Pay.");
+              setRsvpError(checkoutData.error || t("reg.errorChargilyInitiate", "Unable to initiate payment with Chargily Pay."));
               setRsvpLoading(false);
               return;
             }
@@ -1026,7 +1035,7 @@ export default function EventPublicLandingPage({
             return;
           } catch (payErr) {
             console.error("Chargily payment initiation error:", payErr);
-            setRsvpError(payErr.message || "Failed to initialize payment gateway.");
+            setRsvpError(payErr.message || t("reg.errorPaymentGateway", "Failed to initialize payment gateway."));
             setRsvpLoading(false);
             return;
           }
@@ -1056,7 +1065,7 @@ export default function EventPublicLandingPage({
         });
 
         if (pass && (pass.error || pass.success === false)) {
-          setRsvpError(pass.error || "An attendee with this email address or phone number is already registered for this event.");
+          setRsvpError(pass.error || t("reg.errorAlreadyRegistered", "An attendee with this email address or phone number is already registered for this event."));
           return;
         }
 
@@ -1111,7 +1120,7 @@ export default function EventPublicLandingPage({
         }
       }
     } catch (err) {
-      setRsvpError(err?.message || "Registration conflict: This email address or phone number is already registered or pending review.");
+      setRsvpError(err?.message || t("reg.errorRegistrationConflict", "Registration conflict: This email address or phone number is already registered or pending review."));
     } finally {
       setRsvpLoading(false);
     }
@@ -1268,7 +1277,7 @@ export default function EventPublicLandingPage({
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-xl border-b border-slate-200 px-3.5 sm:px-6 py-2.5 sm:py-3.5 flex items-center justify-between shadow-xs relative">
         {/* Left: Brand Logo on its own */}
         <div className="flex items-center shrink-0">
-          <div onClick={onBackToHome} className="cursor-pointer select-none flex items-center group" title="Return to Explore Events">
+          <div onClick={onBackToHome} className="cursor-pointer select-none flex items-center group" title={t("event.returnToExplore", "Return to Explore Events")}>
             <img 
               src="https://i.imgur.com/jFDrQbM.png" 
               alt="eventzone" 
@@ -1294,7 +1303,7 @@ export default function EventPublicLandingPage({
             <button
               onClick={() => setLangMenuOpen(o => !o)}
               className="h-9 flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer shadow-xs shrink-0"
-              title="Change Language"
+              title={t("event.changeLanguage", "Change Language")}
             >
               <img src={curLang?.icon || "https://i.imgur.com/NXtMImD.png"} alt={lang} className="w-4 h-4 sm:w-5 sm:h-5 object-contain shrink-0" />
               <span className="uppercase tracking-wide font-extrabold text-[10px] sm:text-[11px]">{lang}</span>
@@ -1331,7 +1340,7 @@ export default function EventPublicLandingPage({
           </div>
 
           <button
-            onClick={() => openRegistration(eventTickets[0]?.name || "Standard Admission")}
+            onClick={() => openRegistration(eventTickets[0]?.name || t("tickets.tierGeneralAdmission", "Standard Admission"))}
             className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-600/20 transition-all cursor-pointer"
           >
             {t("event.getPass", "Get Tickets")}
@@ -1417,7 +1426,7 @@ export default function EventPublicLandingPage({
                       handlePrevMedia();
                     }}
                     className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-black/40 hover:bg-black/75 text-white/80 hover:text-white flex items-center justify-center backdrop-blur-md border border-white/15 opacity-60 hover:opacity-100 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer z-30 shadow-md"
-                    aria-label="Previous Slide"
+                    aria-label={t("event.prevSlide", "Previous Slide")}
                   >
                     <ChevronLeft size={18} strokeWidth={2} className="-translate-x-0.5" />
                   </button>
@@ -1429,7 +1438,7 @@ export default function EventPublicLandingPage({
                       handleNextMedia();
                     }}
                     className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-black/40 hover:bg-black/75 text-white/80 hover:text-white flex items-center justify-center backdrop-blur-md border border-white/15 opacity-60 hover:opacity-100 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer z-30 shadow-md"
-                    aria-label="Next Slide"
+                    aria-label={t("event.nextSlide", "Next Slide")}
                   >
                     <ChevronRight size={18} strokeWidth={2} className="translate-x-0.5" />
                   </button>
@@ -1470,7 +1479,7 @@ export default function EventPublicLandingPage({
                 {/* Dates & Horaires */}
                 <div className="space-y-3">
                   <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                    {lang === "fr" ? "Dates & Horaires" : t("event.datesTime", "Date & time")}
+                    {t("event.datesTime", "Date & time")}
                   </h3>
                   <div className="space-y-2.5 text-sm sm:text-base text-slate-700 font-medium">
                     <div className="flex items-center gap-2.5">
@@ -1498,7 +1507,7 @@ export default function EventPublicLandingPage({
                 {/* Localisation */}
                 <div className="space-y-3">
                   <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                    {lang === "fr" ? "Localisation" : t("event.location", "Location")}
+                    {t("event.location", "Location")}
                   </h3>
                   <div className="space-y-2.5 text-sm sm:text-base text-slate-700 font-medium">
                     <div className="flex items-start gap-2.5">
@@ -1519,12 +1528,12 @@ export default function EventPublicLandingPage({
                 {eventTickets.length > 0 && (
                   <div className="space-y-2">
                     {eventTickets.slice(0, 3).map((t, idx) => {
-                      const tName = t.name || t.tier || `Ticket ${idx + 1}`;
+                      const tName = t.name || t.tier || t("event.ticketNum", `Ticket ${idx + 1}`).replace("{idx}", idx + 1);
                       const isSelected = (selectedTicket?.name === tName || selectedTicket?.id === t.id || selectedTier === tName);
                       const isFree = !t.price || Number(t.price) === 0;
                       const priceText = isFree 
-                        ? (lang === "fr" ? "Gratuit" : (lang === "ar" ? "مجاني" : "Free"))
-                        : `${Number(t.price).toLocaleString()} DZD`;
+                        ? t("common.free", "Free")
+                        : <><bdi dir="ltr">{Number(t.price).toLocaleString()}</bdi> {t("common.dzd", "DZD")}</>;
 
                       return (
                         <button
@@ -1546,7 +1555,7 @@ export default function EventPublicLandingPage({
                               </h4>
                               {(t.isPopular || t.popular) && (
                                 <span className="px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[9px] font-bold uppercase tracking-wide">
-                                  Popular
+                                  {t("event.popularBadge", "Popular")}
                                 </span>
                               )}
                             </div>
@@ -1572,8 +1581,8 @@ export default function EventPublicLandingPage({
                           href="#tickets"
                           className="text-[11px] font-bold text-blue-600 hover:text-blue-700 hover:underline transition-colors inline-flex items-center gap-1"
                         >
-                          <span>View all {eventTickets.length} ticket options</span>
-                          <ChevronRight size={12} />
+                          <span>{t("event.viewAllTickets", "View all {count} ticket options").replace("{count}", eventTickets.length)}</span>
+                          <ChevronRight size={12} className={isRTL ? "rotate-180" : ""} />
                         </a>
                       </div>
                     )}
@@ -1583,7 +1592,7 @@ export default function EventPublicLandingPage({
                 {/* Primary Action Button ("Get Tickets") */}
                 <button
                   type="button"
-                  onClick={() => openRegistration(selectedTicket?.name || selectedTicket?.tier || eventTickets[0]?.name || "General Admission")}
+                  onClick={() => openRegistration(selectedTicket?.name || selectedTicket?.tier || eventTickets[0]?.name || t("tickets.tierGeneralAdmission", "General Admission"))}
                   className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-sm shadow-md shadow-blue-600/25 hover:shadow-lg hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer flex items-center justify-center text-center"
                 >
                   <span>
@@ -1607,20 +1616,20 @@ export default function EventPublicLandingPage({
       <section className="bg-white border-b border-slate-200 py-8">
         <div className="max-w-6xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
           <div className="space-y-1">
-            <span className="text-2xl sm:text-3xl font-extrabold text-slate-900">{eventDetails?.capacity || 0}</span>
-            <span className="text-xs text-slate-500 font-semibold block">Expected Delegates</span>
+            <span className="text-2xl sm:text-3xl font-extrabold text-slate-900"><bdi dir="ltr">{(eventDetails?.capacity || 0).toLocaleString()}</bdi></span>
+            <span className="text-xs text-slate-500 font-semibold block">{t("event.expectedDelegates", "Expected Delegates")}</span>
           </div>
           <div className="space-y-1">
-            <span className="text-2xl sm:text-3xl font-extrabold text-blue-600">{eventSpeakers.length}</span>
-            <span className="text-xs text-slate-500 font-semibold block">Keynote Speakers</span>
+            <span className="text-2xl sm:text-3xl font-extrabold text-blue-600"><bdi dir="ltr">{eventSpeakers.length.toLocaleString()}</bdi></span>
+            <span className="text-xs text-slate-500 font-semibold block">{t("event.keynoteSpeakers", "Keynote Speakers")}</span>
           </div>
           <div className="space-y-1">
-            <span className="text-2xl sm:text-3xl font-extrabold text-slate-900">{eventExhibitors.length}</span>
-            <span className="text-xs text-slate-500 font-semibold block">Exhibitor Booths</span>
+            <span className="text-2xl sm:text-3xl font-extrabold text-slate-900"><bdi dir="ltr">{eventExhibitors.length.toLocaleString()}</bdi></span>
+            <span className="text-xs text-slate-500 font-semibold block">{t("event.exhibitorBooths", "Exhibitor Booths")}</span>
           </div>
           <div className="space-y-1">
-            <span className="text-2xl sm:text-3xl font-extrabold text-blue-600">{eventSessions.length}</span>
-            <span className="text-xs text-slate-500 font-semibold block">Curated Sessions</span>
+            <span className="text-2xl sm:text-3xl font-extrabold text-blue-600"><bdi dir="ltr">{eventSessions.length.toLocaleString()}</bdi></span>
+            <span className="text-xs text-slate-500 font-semibold block">{t("event.curatedSessions", "Curated Sessions")}</span>
           </div>
         </div>
       </section>
@@ -1633,7 +1642,7 @@ export default function EventPublicLandingPage({
           <div className="lg:col-span-7 space-y-6 text-start rtl:text-right text-left">
             <div>
               <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                About &ldquo;{title}&rdquo;
+                {t("event.aboutEvent", 'About "{title}"').replace("{title}", title)}
               </h2>
             </div>
 
@@ -1658,7 +1667,7 @@ export default function EventPublicLandingPage({
               )
             ) : (
               <p className="text-slate-600 text-sm sm:text-base leading-relaxed font-normal">
-                This premier summit gathers international executives, technical pioneers, and regulatory leaders for in-depth keynote presentations, exhibition showcases, and high-level networking sessions.
+                {t("event.defaultDescription", "This premier summit gathers international executives, technical pioneers, and regulatory leaders for in-depth keynote presentations, exhibition showcases, and high-level networking sessions.")}
               </p>
             )}
 
@@ -1679,7 +1688,7 @@ export default function EventPublicLandingPage({
                 </div>
               )}
               <div className="min-w-0 flex-1">
-                <span className="text-[10px] font-extrabold text-blue-600 uppercase tracking-wider block">Presented By</span>
+                <span className="text-[10px] font-extrabold text-blue-600 uppercase tracking-wider block">{t("event.presentedBy", "Presented By")}</span>
                 <h4 className="text-sm font-bold text-slate-900 truncate">{organizerName}</h4>
                 {hostName && hostName !== organizerName && (
                   <span className="text-xs text-slate-400 font-medium block truncate">{hostName}</span>
@@ -1690,7 +1699,7 @@ export default function EventPublicLandingPage({
             <div className="space-y-2.5 text-xs text-slate-600 font-medium">
               <div className="flex items-center gap-2.5">
                 <ShieldCheck size={16} className="text-emerald-600 shrink-0" />
-                <span>Officially Registered Organizer</span>
+                <span>{t("event.officiallyRegistered", "Officially Registered Organizer")}</span>
               </div>
 
               {contactEmail ? (
@@ -1737,7 +1746,7 @@ export default function EventPublicLandingPage({
                 href={`mailto:${contactEmail}?subject=${encodeURIComponent(title)}`}
                 className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer text-center block shadow-xs"
               >
-                Contact Event Organizers
+                {t("event.contactOrganizers", "Contact Event Organizers")}
               </a>
             ) : (
               <button
@@ -1745,7 +1754,7 @@ export default function EventPublicLandingPage({
                 onClick={() => openRegistration(eventTickets[0]?.name || eventTickets[0]?.tier || "Standard Admission")}
                 className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-xs"
               >
-                Contact Event Organizers
+                {t("event.contactOrganizers", "Contact Event Organizers")}
               </button>
             )}
           </div>
@@ -1757,19 +1766,19 @@ export default function EventPublicLandingPage({
       {/* ==================================================================== */}
       <section id="speakers" className="py-16 bg-white border-y border-slate-200">
         <div className="max-w-6xl mx-auto px-6 sm:px-8 space-y-10">
-          <div className="text-start rtl:text-right text-left space-y-2">
+          <div className="text-start rtl:text-right text-left space-y-3">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-              Featured Speakers &amp; Keynotes
+              {t("event.featuredSpeakers", "Featured Speakers & Keynotes")}
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 font-normal">
-              Learn directly from leaders steering innovations and market strategies.
+              {t("event.featuredSpeakersSubtitle", "Learn directly from leaders steering innovations and market strategies.")}
             </p>
           </div>
 
           {eventSpeakers.length === 0 ? (
             <div className="text-center py-12 bg-slate-50 border border-slate-200/80 rounded-3xl text-slate-400 space-y-2 max-w-xl mx-auto">
               <Users size={32} className="mx-auto opacity-40 text-slate-400" />
-              <p className="text-xs font-semibold">Keynote speakers will be announced soon.</p>
+              <p className="text-xs font-semibold">{t("event.speakersSoon", "Keynote speakers will be announced soon.")}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -1806,14 +1815,14 @@ export default function EventPublicLandingPage({
       {/* ==================================================================== */}
       {/* 6. INTERACTIVE AGENDA & SCHEDULE SESSIONS                            */}
       {/* ==================================================================== */}
-      <section id="schedule" className="py-16 max-w-6xl mx-auto px-6 sm:px-8 w-full space-y-10">
+      <section id="schedule" className="py-20 max-w-6xl mx-auto px-6 sm:px-8 w-full space-y-12">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 text-start rtl:text-right text-left">
-          <div>
+          <div className="space-y-3">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-              Curated Agenda &amp; Sessions
+              {t("event.curatedAgenda", "Curated Agenda & Sessions")}
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 font-normal">
-              Explore keynote lectures, breakout technical panels, and networking tracks.
+              {t("event.curatedAgendaSubtitle", "Explore keynote lectures, breakout technical panels, and networking tracks.")}
             </p>
           </div>
 
@@ -1828,7 +1837,7 @@ export default function EventPublicLandingPage({
                     selectedDay === day ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
-                  {day === "All" ? "All Days" : (idx === 1 ? "Day 1" : "Day 2")}
+                  {day === "All" ? t("event.allDays", "All Days") : (idx === 1 ? t("event.day1", "Day 1") : (idx === 2 ? t("event.day2", "Day 2") : t("event.dayNum", `Day ${idx}`).replace("{num}", idx)))}
                 </button>
               ))}
             </div>
@@ -1840,7 +1849,7 @@ export default function EventPublicLandingPage({
           {eventSessions.length === 0 ? (
             <div className="text-center py-12 bg-white border border-slate-200/80 rounded-3xl text-slate-400 space-y-2 max-w-xl mx-auto">
               <Calendar size={32} className="mx-auto opacity-40 text-slate-400" />
-              <p className="text-xs font-semibold">Agenda schedule will be published soon by the organizers.</p>
+              <p className="text-xs font-semibold">{t("event.agendaSoon", "Agenda schedule will be published soon by the organizers.")}</p>
             </div>
           ) : (
             eventSessions
@@ -1881,7 +1890,7 @@ export default function EventPublicLandingPage({
                         {session.speakers && session.speakers.length > 0 && (
                           <div className="flex flex-col gap-1.5">
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                              Speakers
+                              {t("event.speakersTitle", "Speakers")}
                             </span>
                             <div className="flex flex-wrap items-center gap-2">
                               {session.speakers.map((sp, i) => {
@@ -1916,7 +1925,7 @@ export default function EventPublicLandingPage({
                         {session.moderators && session.moderators.length > 0 && (
                           <div className="flex flex-col gap-1.5">
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                              Moderators
+                              {t("event.moderatorsTitle", "Moderators")}
                             </span>
                             <div className="flex flex-wrap items-center gap-2">
                               {session.moderators.map((mod, i) => {
@@ -1965,7 +1974,7 @@ export default function EventPublicLandingPage({
                         className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-700 hover:text-blue-600 text-xs font-bold transition-all shadow-2xs cursor-pointer w-fit"
                       >
                         <Calendar size={14} className="text-blue-600 shrink-0" />
-                        <span>Add to Google Calendar</span>
+                        <span>{t("event.addToGoogleCalendar", "Add to Google Calendar")}</span>
                       </a>
                     </div>
                   </div>
@@ -1981,12 +1990,12 @@ export default function EventPublicLandingPage({
       {eventExhibitors.length > 0 && (
         <section id="exhibitors" className="py-16 bg-white border-b border-slate-200">
           <div className="max-w-6xl mx-auto px-6 sm:px-8 space-y-10">
-            <div className="text-start rtl:text-right text-left space-y-2">
+            <div className="text-start rtl:text-right text-left space-y-3">
               <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                Featured Exhibitors &amp; Booths
+                {t("event.featuredExhibitors", "Featured Exhibitors & Booths")}
               </h2>
               <p className="text-xs sm:text-sm text-slate-500 font-normal">
-                Discover industry vendors displaying breakthrough technology and product demonstrations.
+                {t("event.featuredExhibitorsSubtitle", "Discover industry vendors displaying breakthrough technology and product demonstrations.")}
               </p>
             </div>
 
@@ -2060,12 +2069,12 @@ export default function EventPublicLandingPage({
       {/* ==================================================================== */}
       {eventSponsors.length > 0 && (
         <section className="py-16 max-w-6xl mx-auto px-6 sm:px-8 w-full space-y-10">
-          <div className="text-start rtl:text-right text-left space-y-2">
+          <div className="text-start rtl:text-right text-left space-y-3">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-              Official Event Sponsors
+              {t("event.officialSponsors", "Official Event Sponsors")}
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 font-normal">
-              Special thanks to the premier global institutions making this event possible.
+              {t("event.officialSponsorsSubtitle", "Special thanks to the premier global institutions making this event possible.")}
             </p>
           </div>
 
@@ -2076,7 +2085,7 @@ export default function EventPublicLandingPage({
                   <Building2 size={24} className="text-blue-600" />
                   <div>
                     <span className="text-sm font-extrabold text-slate-900 block">{sp.name}</span>
-                    <span className="text-[10px] uppercase font-bold text-slate-400">{sp.tier || "Partner"}</span>
+                    <span className="text-[10px] uppercase font-bold text-slate-400">{sp.tier || t("common.partner", "Partner")}</span>
                   </div>
                 </div>
               ))}
@@ -2090,19 +2099,19 @@ export default function EventPublicLandingPage({
       {/* ==================================================================== */}
       <section id="tickets" className="py-16 bg-white border-t border-slate-200">
         <div className="max-w-6xl mx-auto px-6 sm:px-8 space-y-12">
-          <div className="text-start rtl:text-right text-left space-y-2">
+          <div className="text-start rtl:text-right text-left space-y-3">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-              Claim Your Summit Pass
+              {t("event.claimPassTitle", "Claim Your Summit Pass")}
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 font-normal">
-              Select your access tier and receive an instant digital QR badge.
+              {t("event.claimPassSubtitle", "Select your access tier and receive an instant digital QR badge.")}
             </p>
           </div>
 
           {eventTickets.length === 0 ? (
             <div className="text-center py-12 bg-slate-50 border border-slate-200 rounded-3xl text-slate-400 space-y-2 max-w-xl mx-auto">
               <Ticket size={32} className="mx-auto opacity-40 text-slate-400" />
-              <p className="text-xs font-semibold">Registration ticket tiers will open soon.</p>
+              <p className="text-xs font-semibold">{t("event.ticketsSoon", "Registration ticket tiers will open soon.")}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -2121,7 +2130,7 @@ export default function EventPublicLandingPage({
                     {isPop && (
                       <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                         <span className="px-3.5 py-1 rounded-full bg-amber-500 text-white font-extrabold text-[10px] uppercase shadow-sm flex items-center gap-1">
-                          ★ Most Popular
+                          ★ {t("event.mostPopular", "Most Popular")}
                         </span>
                       </div>
                     )}
@@ -2133,13 +2142,13 @@ export default function EventPublicLandingPage({
                       </div>
 
                       <div className="flex items-baseline gap-1.5">
-                        <span className="text-3xl font-black text-slate-900">{priceNum === 0 ? "Free" : `${priceNum.toLocaleString()} DZD`}</span>
-                        {priceNum > 0 && <span className="text-xs text-slate-400 font-semibold">/ attendee</span>}
+                        <span className="text-3xl font-black text-slate-900">{priceNum === 0 ? t("common.free", "Free") : <><bdi dir="ltr">{priceNum.toLocaleString()}</bdi> {t("common.dzd", "DZD")}</>}</span>
+                        {priceNum > 0 && <span className="text-xs text-slate-400 font-semibold">{t("event.perAttendee", "/ attendee")}</span>}
                       </div>
 
                       {ticket.features && ticket.features.length > 0 && (
                         <div className="space-y-2.5 pt-4 border-t border-slate-200/80">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">What&apos;s Included</span>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">{t("event.whatsIncluded", "What's Included")}</span>
                           {ticket.features.map((feat, fIdx) => (
                             <div key={fIdx} className="flex items-start gap-2 text-xs text-slate-700 font-medium">
                               <Check size={14} className="text-emerald-600 shrink-0 mt-0.5" />
@@ -2160,7 +2169,7 @@ export default function EventPublicLandingPage({
                         }`}
                       >
                         <Ticket size={15} />
-                        <span>Select &amp; Register</span>
+                        <span>{t("event.selectAndRegister", "Select & Register")}</span>
                       </button>
                     </div>
                   </div>
@@ -2207,24 +2216,24 @@ export default function EventPublicLandingPage({
                   type="button"
                   onClick={() => setMobileTicketsExpanded(false)}
                   className="w-full flex justify-center pt-0 pb-2 cursor-pointer"
-                  aria-label="Collapse drawer"
+                  aria-label={t("event.collapseDrawer", "Collapse drawer")}
                 >
                   <div className="w-10 h-1.5 bg-slate-300 rounded-full" />
                 </button>
                 <div className="w-full flex items-center justify-between pt-0.5">
                   <div className="text-start rtl:text-right text-left">
                     <h3 className="text-base font-extrabold text-slate-900 tracking-tight">
-                      {lang === "fr" ? "Sélectionner un billet" : (lang === "ar" ? "اختر نوع التذكرة" : "Select Your Ticket")}
+                      {t("event.selectYourTicket", "Select Your Ticket")}
                     </h3>
                     <p className="text-xs text-slate-500 font-medium">
-                      {lang === "fr" ? "Choisissez votre formule pour continuer" : (lang === "ar" ? "اختر الفئة المناسبة لإتمام الحجز" : "Choose your pass to continue booking")}
+                      {t("event.choosePassSubtitle", "Choose your pass to continue booking")}
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setMobileTicketsExpanded(false)}
                     className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-colors cursor-pointer shrink-0"
-                    aria-label="Close"
+                    aria-label={t("common.close", "Close")}
                   >
                     <X size={16} strokeWidth={2.5} />
                   </button>
@@ -2234,12 +2243,12 @@ export default function EventPublicLandingPage({
               {/* Ticket Tier Selector (Matches Image 1 style exactly) */}
               <div className="space-y-2.5 overflow-y-auto max-h-[50vh] pr-0.5">
                 {eventTickets.slice(0, 5).map((t, idx) => {
-                  const tName = t.name || t.tier || `Ticket ${idx + 1}`;
+                  const tName = t.name || t.tier || t("event.ticketNum", `Ticket ${idx + 1}`).replace("{idx}", idx + 1);
                   const isSelected = (selectedTicket?.name === tName || selectedTicket?.id === t.id || selectedTier === tName);
                   const isFree = !t.price || Number(t.price) === 0;
                   const priceText = isFree 
-                    ? (lang === "fr" ? "Gratuit" : (lang === "ar" ? "مجاني" : "Free"))
-                    : `${Number(t.price).toLocaleString()} DZD`;
+                    ? t("common.free", "Free")
+                    : <><bdi dir="ltr">{Number(t.price).toLocaleString()}</bdi> {t("common.dzd", "DZD")}</>;
 
                   return (
                     <button
@@ -2261,7 +2270,7 @@ export default function EventPublicLandingPage({
                           </h4>
                           {(t.isPopular || t.popular) && (
                             <span className="px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[9px] font-bold uppercase tracking-wide">
-                              Popular
+                              {t("event.popularBadge", "Popular")}
                             </span>
                           )}
                         </div>
@@ -2288,8 +2297,8 @@ export default function EventPublicLandingPage({
                       onClick={() => setMobileTicketsExpanded(false)}
                       className="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline transition-colors inline-flex items-center gap-1"
                     >
-                      <span>View all {eventTickets.length} ticket options</span>
-                      <ChevronRight size={13} />
+                      <span>{t("event.viewAllTickets", "View all {count} ticket options").replace("{count}", eventTickets.length)}</span>
+                      <ChevronRight size={13} className={isRTL ? "rotate-180" : ""} />
                     </a>
                   </div>
                 )}
@@ -2317,7 +2326,7 @@ export default function EventPublicLandingPage({
                 type="button"
                 onClick={() => setMobileTicketsExpanded(true)}
                 className="w-full flex justify-center pt-0 pb-1.5 cursor-pointer group"
-                aria-label="Expand tickets"
+                aria-label={t("event.expandTickets", "Expand tickets")}
               >
                 <div className="w-10 h-1 bg-slate-300 group-hover:bg-slate-400 rounded-full transition-colors" />
               </button>
@@ -2338,8 +2347,8 @@ export default function EventPublicLandingPage({
                         const activeT = selectedTicket || eventTickets[0];
                         const isFree = !activeT?.price || Number(activeT.price) === 0;
                         return isFree
-                          ? (lang === "fr" ? "Gratuit" : (lang === "ar" ? "مجاني" : "Free"))
-                          : `${Number(activeT.price).toLocaleString()} DZD`;
+                          ? t("common.free", "Free")
+                          : <><bdi dir="ltr">{Number(activeT.price).toLocaleString()}</bdi> {t("common.dzd", "DZD")}</>;
                       })()}
                     </span>
                   </div>
@@ -2372,7 +2381,7 @@ export default function EventPublicLandingPage({
               onClick={closeRegistration}
               className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer shadow-2xs"
             >
-              <ArrowLeft size={14} />
+              <ArrowLeft size={14} className={isRTL ? "rotate-180" : ""} />
               <span>{t("event.backToEvent", "Back to Event")}</span>
             </button>
 
@@ -2381,7 +2390,7 @@ export default function EventPublicLandingPage({
               <button
                 onClick={() => setLangMenuOpen(o => !o)}
                 className="h-9 flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer shadow-xs shrink-0"
-                title="Change Language"
+                title={t("event.changeLanguage", "Change Language")}
               >
                 <img src={curLang?.icon || "https://i.imgur.com/NXtMImD.png"} alt={lang} className="w-4 h-4 sm:w-5 sm:h-5 object-contain shrink-0" />
                 <span className="uppercase tracking-wide font-extrabold text-[10px] sm:text-[11px]">{lang}</span>
@@ -2434,48 +2443,48 @@ export default function EventPublicLandingPage({
                       {isPendingRegistration ? (
                         <div className="space-y-2">
                           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                            Registration Submitted for Approval
+                            {t("reg.submittedForApproval", "Registration Submitted for Approval")}
                           </h2>
                           <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                            Your registration for <strong>{selectedTier}</strong> has been received and is currently in the organizer review queue for <strong>{title}</strong>. You will be notified via email once the organizer accepts your application.
+                            {t("reg.reviewQueueNotice1", "Your registration for")} <strong>{selectedTier}</strong> {t("reg.reviewQueueNotice2", "has been received and is currently in the organizer review queue for")} <strong>{title}</strong>. {t("reg.reviewQueueNotice3", "You will be notified via email once the organizer accepts your application.")}
                           </p>
                         </div>
                       ) : (
                         <div className="space-y-2">
                           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-extrabold">
                             <CheckCircle2 size={15} />
-                            <span>Registration Confirmed</span>
+                            <span>{t("reg.registrationConfirmed", "Registration Confirmed")}</span>
                           </div>
                           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                            Your Official Pass is Ready!
+                            {t("reg.officialPassReady", "Your Official Pass is Ready!")}
                           </h2>
                           <p className="text-xs sm:text-sm text-slate-600">
-                            Your digital pass has been activated for <strong>{title}</strong>.
+                            {t("reg.passActivatedPrefix", "Your digital pass has been activated for")} <strong>{title}</strong>.
                           </p>
                         </div>
                       )}
 
                       <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2.5 text-xs">
                         <div className="flex justify-between py-1 border-b border-slate-200/60">
-                          <span className="text-slate-500 font-medium">Attendee Name</span>
+                          <span className="text-slate-500 font-medium">{t("reg.attendeeName", "Attendee Name")}</span>
                           <span className="font-bold text-slate-900">{rsvpName}</span>
                         </div>
                         <div className="flex justify-between py-1 border-b border-slate-200/60">
-                          <span className="text-slate-500 font-medium">Registered Email</span>
+                          <span className="text-slate-500 font-medium">{t("reg.registeredEmail", "Registered Email")}</span>
                           <span className="font-bold text-slate-900">{rsvpEmail}</span>
                         </div>
                         <div className="flex justify-between py-1 border-b border-slate-200/60">
-                          <span className="text-slate-500 font-medium">Pass Tier</span>
+                          <span className="text-slate-500 font-medium">{t("reg.passTier", "Pass Tier")}</span>
                           <span className="font-bold text-blue-600">{selectedTier}</span>
                         </div>
                         <div className="flex justify-between py-1 items-center">
                           <span className="text-slate-500 font-medium">
-                            {isPendingRegistration ? "Application Status" : "Digital Badge ID"}
+                            {isPendingRegistration ? t("reg.applicationStatus", "Application Status") : t("reg.digitalBadgeId", "Digital Badge ID")}
                           </span>
                           {isPendingRegistration ? (
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[11px] font-bold border border-amber-200">
                               <Clock size={12} />
-                              <span>Pending Organizer Review</span>
+                              <span>{t("reg.pendingReview", "Pending Organizer Review")}</span>
                             </span>
                           ) : (
                             <span className="font-mono font-bold text-emerald-700">{rsvpSuccess.badgeCode || "EZ-2026"}</span>
@@ -2519,7 +2528,7 @@ export default function EventPublicLandingPage({
                               className="py-3.5 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
                             >
                               <Printer size={15} />
-                              <span>Print / Save Badge PDF</span>
+                              <span>{t("reg.printSaveBadge", "Print / Save Badge PDF")}</span>
                             </button>
 
                             {qrCodeUrl && (
@@ -2529,7 +2538,7 @@ export default function EventPublicLandingPage({
                                 className="py-3.5 px-4 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs"
                               >
                                 <Download size={15} />
-                                <span>Download QR Code</span>
+                                <span>{t("reg.downloadQrCode", "Download QR Code")}</span>
                               </a>
                             )}
                           </div>
@@ -2571,7 +2580,7 @@ export default function EventPublicLandingPage({
                         <div className="bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl p-4 flex items-start gap-3 animate-in fade-in zoom-in-95 duration-200">
                           <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
                           <div className="flex flex-col gap-0.5 text-xs font-semibold leading-relaxed">
-                            <span className="font-extrabold text-rose-900 text-sm">Registration Conflict</span>
+                            <span className="font-extrabold text-rose-900 text-sm">{t("reg.registrationConflict", "Registration Conflict")}</span>
                             <span className="text-rose-700 font-medium">{rsvpError}</span>
                           </div>
                         </div>
@@ -2583,14 +2592,14 @@ export default function EventPublicLandingPage({
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 text-[10px] font-extrabold uppercase tracking-wide">
-                                Section {safeCheckoutIdx + 1} of {ticketFormSections.length}
+                                {t("reg.sectionOf", "Section {current} of {total}").replace("{current}", safeCheckoutIdx + 1).replace("{total}", ticketFormSections.length)}
                               </span>
                               <span className="text-xs font-bold text-slate-800 line-clamp-1">
-                                {currentCheckoutSec.title || `Step ${safeCheckoutIdx + 1}`}
+                                {currentCheckoutSec.title || t("reg.stepNum", `Step ${safeCheckoutIdx + 1}`).replace("{idx}", safeCheckoutIdx + 1)}
                               </span>
                             </div>
                             <span className="text-[11px] font-bold text-slate-400">
-                              {Math.round(((safeCheckoutIdx + 1) / ticketFormSections.length) * 100)}% Complete
+                              <bdi dir="ltr">{Math.round(((safeCheckoutIdx + 1) / ticketFormSections.length) * 100)}%</bdi> {t("reg.percentComplete", "Complete")}
                             </span>
                           </div>
 
@@ -2627,7 +2636,7 @@ export default function EventPublicLandingPage({
                                     setCheckoutSectionErrors(prev => ({ ...prev, rsvpName: undefined }));
                                   }
                                 }}
-                                placeholder="e.g. Sarah Jenkins"
+                                placeholder={t("reg.placeholderName", "e.g. Sarah Jenkins")}
                                 className={`w-full px-3.5 py-3 bg-slate-50 border focus:bg-white rounded-xl text-xs font-semibold text-slate-900 outline-none transition-all ${
                                   checkoutSectionErrors["rsvpName"] ? "border-rose-400 bg-rose-50/40" : "border-slate-200 focus:border-blue-600"
                                 }`}
@@ -2652,7 +2661,7 @@ export default function EventPublicLandingPage({
                                       setCheckoutSectionErrors(prev => ({ ...prev, rsvpEmail: undefined }));
                                     }
                                   }}
-                                  placeholder="e.g. alex@company.com"
+                                  placeholder={t("reg.placeholderEmail", "e.g. alex@company.com")}
                                   className={`w-full px-3.5 py-3 bg-slate-50 border focus:bg-white rounded-xl text-xs font-semibold text-slate-900 outline-none transition-all ${
                                     checkoutSectionErrors["rsvpEmail"] ? "border-rose-400 bg-rose-50/40" : "border-slate-200 focus:border-blue-600"
                                   }`}
@@ -3333,15 +3342,15 @@ export default function EventPublicLandingPage({
                 <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
                   <Check size={24} />
                 </div>
-                <h4 className="text-sm font-bold text-slate-900">Thank You for Your Feedback!</h4>
+                <h4 className="text-sm font-bold text-slate-900">{t("feedback.thankYouTitle", "Thank You for Your Feedback!")}</h4>
                 <p className="text-xs text-slate-500 max-w-xs">
-                  {activeFeedbackForm.settings?.successMessage || "Your response has been saved and helps us elevate future editions."}
+                  {activeFeedbackForm.settings?.successMessage || t("feedback.thankYouDesc", "Your response has been saved and helps us elevate future editions.")}
                 </p>
                 <button
                   onClick={() => setShowFeedbackModal(false)}
                   className="mt-3 px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold"
                 >
-                  Close Window
+                  {t("common.closeWindow", "Close Window")}
                 </button>
               </div>
             ) : (
@@ -3432,8 +3441,8 @@ export default function EventPublicLandingPage({
                           value={feedbackAnswers[field.id] || ""}
                           onChange={(val) => setFeedbackAnswers(prev => ({ ...prev, [field.id]: val }))}
                           options={field.options || []}
-                          placeholder="Select an option..."
-                          searchPlaceholder="Search choices..."
+                          placeholder={t("common.selectOption", "Select an option...")}
+                          searchPlaceholder={t("common.searchChoices", "Search choices...")}
                         />
                       )}
 
@@ -3480,7 +3489,7 @@ export default function EventPublicLandingPage({
                           rows={3}
                           value={feedbackAnswers[field.id] || ""}
                           onChange={(e) => setFeedbackAnswers(prev => ({ ...prev, [field.id]: e.target.value }))}
-                          placeholder={field.placeholder || "Share your candid thoughts..."}
+                          placeholder={field.placeholder || t("feedback.candidThoughtsPlaceholder", "Share your candid thoughts...")}
                           className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-xl text-xs font-medium text-slate-900 outline-none transition-all"
                         />
                       )}
@@ -3493,7 +3502,7 @@ export default function EventPublicLandingPage({
                   disabled={feedbackLoading}
                   className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-3"
                 >
-                  {feedbackLoading ? "Saving..." : (activeFeedbackForm.settings?.submitButtonText || "Submit Feedback")}
+                  {feedbackLoading ? t("common.saving", "Saving...") : (activeFeedbackForm.settings?.submitButtonText || t("feedback.submitFeedback", "Submit Feedback"))}
                 </button>
               </form>
             )}
