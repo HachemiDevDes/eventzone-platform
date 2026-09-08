@@ -6,7 +6,7 @@ import { ArrowUp, Check } from "lucide-react";
 import { useLanguage } from "../lib/i18n";
 
 export default function Footer({ onOpenEventsHub, onOpenVisitorPasses, cutoutBg = "text-slate-50" }) {
-  const { t } = useLanguage();
+  const { t, isRTL } = useLanguage();
   const [newsletterEmail, setNewsletterEmail] = useState("");
   const [newsletterStatus, setNewsletterStatus] = useState("idle"); // "idle" | "loading" | "success" | "error"
   const [newsletterMessage, setNewsletterMessage] = useState("");
@@ -36,7 +36,7 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses, cutoutBg 
         } catch {}
       } else {
         setNewsletterStatus("error");
-        setNewsletterMessage(data.error || "Failed to subscribe. Please try again.");
+        setNewsletterMessage(data.error || t("footer.subscribeError", "Failed to subscribe. Please try again."));
       }
     } catch (err) {
       console.warn("Newsletter subscribe error:", err);
@@ -104,7 +104,7 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses, cutoutBg 
                 className="shrink-0 w-full sm:w-auto px-8 sm:px-10 py-3.5 text-white font-bold text-sm bg-[#0b5cdb] hover:bg-blue-600 transition-all shadow-lg shadow-blue-600/30 cursor-pointer active:scale-95 flex items-center justify-center"
                 style={{ borderRadius: "9999px" }}
               >
-                {newsletterStatus === "loading" ? t("common.loading", "Subscribing...") : t("footer.subscribeBtn", "Subscribe")}
+                {newsletterStatus === "loading" ? t("footer.subscribing", "Subscribing...") : t("footer.subscribeBtn", "Subscribe")}
               </button>
             </form>
 
@@ -130,45 +130,45 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses, cutoutBg 
           {/* B. Middle 3-Column Info Strip (Contact, Address, Hours) */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-0 py-8 border-y border-white/10 text-start rtl:text-right text-left">
             {/* Column 1: Contact us */}
-            <div className="md:pr-8 md:border-r border-white/10 space-y-2.5">
+            <div className="md:pr-8 md:rtl:pr-0 md:rtl:pl-8 md:border-r md:rtl:border-r-0 md:rtl:border-l border-white/10 space-y-2.5">
               <p className="text-blue-400 font-bold text-xs sm:text-sm tracking-wide">
                 {t("footer.contactUs", "Contact us")}
               </p>
               <div className="space-y-1 text-xs sm:text-sm text-slate-300 font-medium">
                 <p className="flex items-center gap-2">
-                  <span className="text-white font-bold">E :</span>
+                  <span className="text-white font-bold">{t("footer.emailPrefix", "E :")}</span>
                   <a href="mailto:contact@eventzone.pro" className="hover:text-blue-400 transition-colors">
                     contact@eventzone.pro
                   </a>
                 </p>
                 <p className="flex items-center gap-2">
-                  <span className="text-white font-bold">P :</span>
+                  <span className="text-white font-bold">{t("footer.phonePrefix", "P :")}</span>
                   <a href="tel:+213781457511" className="hover:text-blue-400 transition-colors">
-                    +213(0) 781 45 75 11
+                    <bdi dir="ltr">+213(0) 781 45 75 11</bdi>
                   </a>
                 </p>
               </div>
             </div>
 
             {/* Column 2: Address */}
-            <div className="md:px-8 md:border-r border-white/10 space-y-2.5">
+            <div className="md:px-8 md:border-r md:rtl:border-r-0 md:rtl:border-l border-white/10 space-y-2.5">
               <p className="text-blue-400 font-bold text-xs sm:text-sm tracking-wide">
                 {t("footer.addressTitle", "Headquarters address:")}
               </p>
               <div className="space-y-1 text-xs sm:text-sm text-slate-300 font-medium leading-relaxed">
-                <p>Eventzone Global HQ, Cyberparc Sidi Abdellah</p>
-                <p>Rahmania, Algiers 16093, Algeria</p>
+                <p>{t("footer.addressLine1", "Eventzone Global HQ, Cyberparc Sidi Abdellah")}</p>
+                <p>{t("footer.addressLine2", "Rahmania, Algiers 16093, Algeria")}</p>
               </div>
             </div>
 
             {/* Column 3: Hours / Availability */}
-            <div className="md:pl-8 space-y-2.5">
+            <div className="md:pl-8 md:rtl:pl-0 md:rtl:pr-8 space-y-2.5">
               <p className="text-blue-400 font-bold text-xs sm:text-sm tracking-wide">
                 {t("footer.supportHoursTitle", "Platform Opening Times:")}
               </p>
               <div className="space-y-1 text-xs sm:text-sm text-slate-300 font-medium">
-                <p className="font-semibold text-white">Monday - Saturday</p>
-                <p className="text-slate-400">08:30am - 06:30pm (GMT+1)</p>
+                <p className="font-semibold text-white">{t("footer.workingDays", "Monday - Saturday")}</p>
+                <p className="text-slate-400"><bdi dir="ltr">{t("footer.workingHours", "08:30am - 06:30pm (GMT+1)")}</bdi></p>
               </div>
             </div>
           </div>
@@ -183,27 +183,27 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses, cutoutBg 
               <ul className="space-y-2 text-slate-400 font-medium">
                 <li>
                   <Link href="/#explore" className="hover:text-white transition-colors">
-                    Tech &amp; AI Summits
+                    {t("footer.catTechAi", "Tech & AI Summits")}
                   </Link>
                 </li>
                 <li>
                   <Link href="/#explore" className="hover:text-white transition-colors">
-                    International Conferences
+                    {t("footer.catConferences", "International Conferences")}
                   </Link>
                 </li>
                 <li>
                   <Link href="/#explore" className="hover:text-white transition-colors">
-                    Hybrid Expos &amp; Fairs
+                    {t("footer.catExpos", "Hybrid Expos & Fairs")}
                   </Link>
                 </li>
                 <li>
                   <Link href="/#explore" className="hover:text-white transition-colors">
-                    Clean Energy Forums
+                    {t("footer.catCleanEnergy", "Clean Energy Forums")}
                   </Link>
                 </li>
                 <li>
                   <Link href="/#explore" className="hover:text-white transition-colors">
-                    Healthcare &amp; Bio Congresses
+                    {t("footer.catHealthcare", "Healthcare & Bio Congresses")}
                   </Link>
                 </li>
               </ul>
@@ -332,7 +332,7 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses, cutoutBg 
               <div className="flex flex-wrap items-center gap-3 pt-1.5">
                 {/* 1. EDAHABIA */}
                 <div
-                  title="Carte EDAHABIA"
+                  title={t("footer.edahabiaCard", "Carte EDAHABIA")}
                   className="px-4 py-2 bg-[#0c1e4a] border border-[#1b3473]/80 hover:border-blue-500/80 rounded-xl flex items-center justify-center h-12 shadow-md transition-all hover:scale-105 select-none"
                 >
                   <img
@@ -344,7 +344,7 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses, cutoutBg 
 
                 {/* 2. CIB */}
                 <div
-                  title="Carte CIB"
+                  title={t("footer.cibCard", "Carte CIB")}
                   className="px-4 py-2 bg-[#0c1e4a] border border-[#1b3473]/80 hover:border-blue-500/80 rounded-xl flex items-center justify-center h-12 shadow-md transition-all hover:scale-105 select-none"
                 >
                   <img
