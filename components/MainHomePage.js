@@ -435,12 +435,13 @@ export default function MainHomePage({
               <div className="max-w-5xl w-full space-y-2.5 sm:space-y-6 text-start rtl:text-right text-left animate-fade-in">
 
                 {/* Title & Tagline */}
-                <h1 
-                  onClick={() => onViewLivePage(activeSlide.id)}
-                  className="text-2xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-tight cursor-pointer hover:text-blue-200 transition-colors line-clamp-2"
-                >
-                  {activeSlide.title}
-                </h1>
+                <Link href={`/${activeSlide.slug || activeSlide.id}`} className="block group/heroTitle">
+                  <h1 
+                    className="text-2xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-tight cursor-pointer group-hover/heroTitle:text-blue-200 transition-colors line-clamp-2"
+                  >
+                    {activeSlide.title}
+                  </h1>
+                </Link>
 
                 {(activeSlide.tagline || activeSlide.description) && (
                   <p className="text-slate-300 text-xs sm:text-base lg:text-lg font-normal leading-snug sm:leading-relaxed max-w-4xl line-clamp-2">
@@ -467,12 +468,12 @@ export default function MainHomePage({
 
                 {/* CTA */}
                 <div className="pt-4 sm:pt-2">
-                  <button
-                    onClick={() => onViewLivePage(activeSlide.id)}
-                    className="px-6 sm:px-8 py-2.5 sm:py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl sm:rounded-2xl font-bold text-xs sm:text-sm shadow-xl shadow-blue-600/40 transition-all cursor-pointer"
+                  <Link
+                    href={`/${activeSlide.slug || activeSlide.id}`}
+                    className="inline-flex items-center justify-center px-6 sm:px-8 py-2.5 sm:py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl sm:rounded-2xl font-bold text-xs sm:text-sm shadow-xl shadow-blue-600/40 transition-all cursor-pointer"
                   >
                     {t("hero.viewEvent", "View Event")}
-                  </button>
+                  </Link>
                 </div>
               </div>
             </div>
@@ -618,10 +619,10 @@ export default function MainHomePage({
                   >
                     <div>
                       {/* Cover Banner */}
-                      <div className="event-card-banner-rounded h-44 w-full relative overflow-hidden bg-slate-100">
+                      <Link href={`/${ev.slug || ev.id}`} className="block relative h-44 w-full overflow-hidden bg-slate-100 event-card-banner-rounded">
                         <img 
                           src={ev.banner || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80"} 
-                          alt={ev.title} 
+                          alt={ev.title ? `${ev.title} - Eventzone` : "Event Banner"} 
                           className="event-card-banner-rounded w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
                         />
                         {isRegistered && (
@@ -632,16 +633,17 @@ export default function MainHomePage({
                             </span>
                           </div>
                         )}
-                      </div>
+                      </Link>
 
                       {/* Card Content */}
                       <div className="p-6 space-y-3 text-start rtl:text-right text-left rtl:text-right">
-                        <h3 
-                          onClick={() => onViewLivePage(ev.id)}
-                          className="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1 leading-snug cursor-pointer"
-                        >
-                          {ev.title}
-                        </h3>
+                        <Link href={`/${ev.slug || ev.id}`} className="block group/title">
+                          <h3 
+                            className="text-base font-bold text-slate-900 group-hover/title:text-blue-600 transition-colors line-clamp-1 leading-snug cursor-pointer"
+                          >
+                            {ev.title}
+                          </h3>
+                        </Link>
                         <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed font-normal">
                           {truncateDescription(ev.tagline || ev.description || t("home.cardDefaultDesc", "Join leading delegates for keynotes, workshops, and exhibitions."), 40)}
                         </p>
@@ -663,12 +665,12 @@ export default function MainHomePage({
 
                     {/* Card Footer Action: Single View Event Button */}
                     <div className="p-6 pt-0">
-                      <button
-                        onClick={() => onViewLivePage(ev.id)}
+                      <Link
+                        href={`/${ev.slug || ev.id}`}
                         className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full text-xs font-bold flex items-center justify-center shadow-md shadow-blue-600/20 hover:shadow-lg hover:shadow-blue-600/30 transition-all cursor-pointer"
                       >
                         {t("home.viewEventBtn", "View Event")}
-                      </button>
+                      </Link>
                     </div>
                   </div>
                 );
