@@ -147,25 +147,19 @@ export function resolveActiveEventId() {
     const searchParams = new URLSearchParams(window.location.search);
     const urlId = searchParams.get("eventId") || searchParams.get("event");
     if (urlId) {
-      safeLocalStorageSet("eventzone_active_event_id", urlId);
-      setActiveEventId(urlId);
       return urlId;
     }
 
     const savedActive = safeLocalStorageGet("eventzone_active_event_id", null);
     if (savedActive && typeof savedActive === "string" && savedActive.trim() !== "") {
-      setActiveEventId(savedActive);
       return savedActive;
     }
 
     const cachedUserEvents = safeLocalStorageGet("eventzone_cache_user_events", []);
     if (Array.isArray(cachedUserEvents) && cachedUserEvents.length > 0 && cachedUserEvents[0]?.id) {
-      safeLocalStorageSet("eventzone_active_event_id", cachedUserEvents[0].id);
-      setActiveEventId(cachedUserEvents[0].id);
       return cachedUserEvents[0].id;
     }
   } catch (e) {}
-  setActiveEventId(DEFAULT_EVENT_ID);
   return DEFAULT_EVENT_ID;
 }
 
@@ -224,6 +218,10 @@ export function HomeContent() {
     return [];
   });
   const [activeEventId, setActiveEventStateIdRaw] = useState(() => resolveActiveEventId());
+  // Ref that always tracks the latest activeEventId — immune to stale closures.
+  // Used by handleSaveAttendee and other callbacks that run asynchronously.
+  const activeEventIdRef = useRef(activeEventId);
+  useEffect(() => { activeEventIdRef.current = activeEventId; }, [activeEventId]);
 
   const setActiveEventStateId = useCallback((id) => {
     if (id) {
@@ -240,6 +238,8 @@ export function HomeContent() {
           }
         } catch (e) {}
       }
+      // Sync ref immediately so async callbacks always see the latest value
+      activeEventIdRef.current = id;
     }
     setActiveEventStateIdRaw(id);
   }, []);
@@ -987,7 +987,7 @@ export function HomeContent() {
 
   // Load User Events & Public Events
   useEffect(() => {
-    const loadEventsData = async () => {
+    const loadEventsData = async (isReconnect = false) => {
       if (typeof navigator !== "undefined" && !navigator.onLine) {
         // Fast path for offline mode: hydrate cached user events and active event
         const cachedUEvents = safeLocalStorageGet("eventzone_cache_user_events", []);
@@ -1024,7 +1024,8 @@ export function HomeContent() {
         if (vRegs) setVisitorRegistrations(vRegs);
 
         // Auto-select organizer's latest event if opening dashboard on demo default
-        if (typeof window !== "undefined" && uEvents && uEvents.length > 0) {
+        // ONLY on initial load — never on reconnection (which would race with offline queue sync)
+        if (!isReconnect && typeof window !== "undefined" && uEvents && uEvents.length > 0) {
           const urlParam = new URLSearchParams(window.location.search).get("eventId") || new URLSearchParams(window.location.search).get("event");
           if (!urlParam && activeEventId === DEFAULT_EVENT_ID) {
             const savedActive = safeLocalStorageGet("eventzone_active_event_id", null);
@@ -1047,12 +1048,13 @@ export function HomeContent() {
       }
     };
 
-    loadEventsData();
+    loadEventsData(false);
 
     if (typeof window !== "undefined") {
-      window.addEventListener("online", loadEventsData);
+      const handleOnlineEventsRefresh = () => loadEventsData(true);
+      window.addEventListener("online", handleOnlineEventsRefresh);
       return () => {
-        window.removeEventListener("online", loadEventsData);
+        window.removeEventListener("online", handleOnlineEventsRefresh);
       };
     }
   }, [currentUser]);
@@ -2533,8 +2535,13 @@ export function HomeContent() {
 
   const handleSaveAttendee = async (attendeeData) => {
     const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
-    const targetEventId = activeEventId || resolveActiveEventId() || DEFAULT_EVENT_ID;
-    safeLocalStorageSet("eventzone_active_event_id", targetEventId);
+    // Use the ref (always fresh) instead of the potentially-stale closure variable.
+    // Also check the URL as the ultimate source of truth for which event the user is viewing.
+    const urlEventId = typeof window !== "undefined"
+      ? (new URLSearchParams(window.location.search).get("eventId") || new URLSearchParams(window.location.search).get("event"))
+      : null;
+    const freshActiveId = urlEventId || activeEventIdRef.current || safeLocalStorageGet("eventzone_active_event_id", null);
+    const targetEventId = freshActiveId || DEFAULT_EVENT_ID;
 
     // Prepare local fallback / record with guaranteed valid UUID
     const localId = isValidUuid(attendeeData.id) ? attendeeData.id : generateUuid();
