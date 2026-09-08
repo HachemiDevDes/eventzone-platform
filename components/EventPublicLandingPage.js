@@ -2612,13 +2612,7 @@ export default function EventPublicLandingPage({
 
                           {/* Custom Questions for Section 1 (or all questions if single section) */}
                           {(!hasMultiSections ? activeTicketForm?.fields : ticketFormSections[0]?.fields) && (
-                            <div className="border-t border-slate-100 pt-4 space-y-3">
-                              {(!hasMultiSections && activeTicketForm?.fields?.length > 0) && (
-                                <div className="text-[11px] font-bold uppercase text-blue-600 tracking-wider">
-                                  {t("reg.additionalQuestions", "3. Additional Registration Questions")}
-                                </div>
-                              )}
-
+                            <div className="space-y-3">
                               {((!hasMultiSections ? activeTicketForm?.fields : ticketFormSections[0]?.fields) || [])
                                 .filter(f => !["f_core_name", "f_core_email", "f_core_phone"].includes(f.id) && f.type !== "section")
                                 .map(field => {
