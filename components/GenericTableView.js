@@ -1501,6 +1501,38 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
 
   // Direct 1-Click Print Badge Handler (Directly opens system print dialog with zero extra steps)
   const handleDirectPrintAttendeeBadge = (attendee) => {
+    if (!attendee) return;
+
+    // Automatically check in the attendee when organizer prints badge
+    const isCurrentlyChecked = Boolean(
+      attendee.status === "checked-in" ||
+      attendee.status === "checked_in" ||
+      attendee.checkedIn ||
+      attendee.checked_in
+    );
+
+    if (!isCurrentlyChecked && attendee.id) {
+      const now = new Date().toISOString();
+      const checkinTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      const updated = attendees.map(a => {
+        if (a.id === attendee.id) {
+          return {
+            ...a,
+            status: "checked_in",
+            checkedIn: true,
+            checked_in: true,
+            checkedInAt: now,
+            checkinTime
+          };
+        }
+        return a;
+      });
+      onUpdateState("attendees", updated);
+
+      queueCheckin(attendee.id, true, "Badge Print");
+    }
+
     const resolvedTier = getResolvedTicketName(attendee, tickets);
     const matchedTicket = tickets.find(t => (t.name || t.tier || "").trim().toLowerCase() === (resolvedTier || "").trim().toLowerCase()) || {};
     const eventDetails = state.eventDetails || {};
@@ -2061,6 +2093,35 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
         const eventId = eventDetails.id || state.activeEventId || "";
 
         const handlePrint = () => {
+          const isCurrentlyChecked = Boolean(
+            attendee.status === "checked-in" ||
+            attendee.status === "checked_in" ||
+            attendee.checkedIn ||
+            attendee.checked_in
+          );
+
+          if (!isCurrentlyChecked && attendee.id) {
+            const now = new Date().toISOString();
+            const checkinTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            const updated = attendees.map(a => {
+              if (a.id === attendee.id) {
+                return {
+                  ...a,
+                  status: "checked_in",
+                  checkedIn: true,
+                  checked_in: true,
+                  checkedInAt: now,
+                  checkinTime
+                };
+              }
+              return a;
+            });
+            onUpdateState("attendees", updated);
+
+            queueCheckin(attendee.id, true, "Badge Print");
+          }
+
           printA4BadgeDocument({
             templateUrl,
             attendeeId: attendee.id || badgeCode,
@@ -2299,7 +2360,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
             {(() => {
               const a = activeActionsMenu.attendee;
               const isArchived = a.status === 'archived' || a.isArchived;
-              const isCheckedIn = a.status === 'checked-in';
+              const isCheckedIn = Boolean(a.status === 'checked-in' || a.status === 'checked_in' || a.checkedIn || a.checked_in);
 
               return !isArchived ? (
                 <>
@@ -5025,6 +5086,38 @@ function CheckInView({ state, onUpdateState }) {
 
   // Direct 1-Click Print Badge Handler for CheckInView
   const handleDirectPrintAttendeeBadge = (attendee) => {
+    if (!attendee) return;
+
+    // Automatically count printing badge as a check-in for the attendee
+    const isCurrentlyChecked = Boolean(
+      attendee.status === "checked-in" ||
+      attendee.status === "checked_in" ||
+      attendee.checkedIn ||
+      attendee.checked_in
+    );
+
+    if (!isCurrentlyChecked && attendee.id) {
+      const now = new Date().toISOString();
+      const checkinTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      const updated = attendees.map(a => {
+        if (a.id === attendee.id) {
+          return {
+            ...a,
+            status: "checked_in",
+            checkedIn: true,
+            checked_in: true,
+            checkedInAt: now,
+            checkinTime
+          };
+        }
+        return a;
+      });
+      onUpdateState("attendees", updated);
+
+      queueCheckin(attendee.id, true, "Badge Print");
+    }
+
     const resolvedTier = getResolvedTicketName(attendee, tickets);
     const matchedTicket = tickets.find(t => (t.name || t.tier || "").trim().toLowerCase() === (resolvedTier || "").trim().toLowerCase()) || {};
     const eventDetails = state.eventDetails || {};
@@ -5293,7 +5386,7 @@ function CheckInView({ state, onUpdateState }) {
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("checkin.attendanceRate", "Attendance Rate")}</span>
             <div className="text-2xl font-extrabold text-slate-800 mt-2">
               <bdi dir="ltr">
-                {attendees.filter(a => a.status === "checked-in" || a.checked_in).length} <span className="text-sm font-semibold text-slate-400">/ {attendees.length}</span>
+                {attendees.filter(a => a.status === "checked-in" || a.status === "checked_in" || a.checkedIn || a.checked_in).length} <span className="text-sm font-semibold text-slate-400">/ {attendees.length}</span>
               </bdi>
             </div>
           </div>
@@ -5301,7 +5394,7 @@ function CheckInView({ state, onUpdateState }) {
             <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
               <div 
                 className="h-full bg-emerald-500 rounded-full" 
-                style={{ width: `${attendees.length > 0 ? (attendees.filter(a => a.status === "checked-in" || a.checked_in).length / attendees.length) * 100 : 0}%` }}
+                style={{ width: `${attendees.length > 0 ? (attendees.filter(a => a.status === "checked-in" || a.status === "checked_in" || a.checkedIn || a.checked_in).length / attendees.length) * 100 : 0}%` }}
               ></div>
             </div>
           </div>
@@ -5480,7 +5573,7 @@ function CheckInView({ state, onUpdateState }) {
             <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
               <span className="font-semibold">{t("checkin.attendeesCheckedIn", "Attendees checked in:")}</span>
               <span className="font-black text-slate-900">
-                <bdi dir="ltr">{attendees.filter(a => a.status === "checked-in" || a.checked_in).length} / {attendees.length}</bdi>
+                <bdi dir="ltr">{attendees.filter(a => a.status === "checked-in" || a.status === "checked_in" || a.checkedIn || a.checked_in).length} / {attendees.length}</bdi>
               </span>
             </div>
           </div>
@@ -5504,6 +5597,35 @@ function CheckInView({ state, onUpdateState }) {
         const eventId = eventDetails.id || state.activeEventId || "";
 
         const handlePrint = () => {
+          const isCurrentlyChecked = Boolean(
+            attendee.status === "checked-in" ||
+            attendee.status === "checked_in" ||
+            attendee.checkedIn ||
+            attendee.checked_in
+          );
+
+          if (!isCurrentlyChecked && attendee.id) {
+            const now = new Date().toISOString();
+            const checkinTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            const updated = attendees.map(a => {
+              if (a.id === attendee.id) {
+                return {
+                  ...a,
+                  status: "checked_in",
+                  checkedIn: true,
+                  checked_in: true,
+                  checkedInAt: now,
+                  checkinTime
+                };
+              }
+              return a;
+            });
+            onUpdateState("attendees", updated);
+
+            queueCheckin(attendee.id, true, "Badge Print");
+          }
+
           printA4BadgeDocument({
             templateUrl,
             attendeeId: attendee.id || badgeCode,

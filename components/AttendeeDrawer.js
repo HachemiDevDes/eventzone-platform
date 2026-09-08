@@ -529,6 +529,29 @@ export default function AttendeeDrawer({
     const templateUrl = matchedTicket.badgeUrl || eventDetails?.badgeUrl || '';
     const badgeSettings = matchedTicket.badgeSettings || eventDetails?.badgeSettings || {};
 
+    const isCurrentlyChecked = Boolean(
+      status === "checked-in" ||
+      status === "checked_in" ||
+      attendee?.checkedIn ||
+      attendee?.checked_in
+    );
+
+    if (!isCurrentlyChecked) {
+      setStatus("checked-in");
+      if (attendee?.id && onSaveAttendee) {
+        const nowIso = new Date().toISOString();
+        const checkinTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        onSaveAttendee({
+          ...attendee,
+          status: "checked-in",
+          checkedIn: true,
+          checked_in: true,
+          checkedInAt: nowIso,
+          checkinTime
+        }).catch(err => console.error("Error auto checking in on print in AttendeeDrawer:", err));
+      }
+    }
+
     printA4BadgeDocument({
       templateUrl,
       attendeeId: attendee?.id || badgeCode,
