@@ -152,6 +152,72 @@ export default async function Page({ params }) {
         "validFrom": event.startDate || new Date().toISOString()
       }
     };
+
+    var breadcrumbLd = {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": "https://eventzone.pro"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Events",
+          "item": "https://eventzone.pro#explore"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": event.title,
+          "item": canonicalUrl
+        }
+      ]
+    };
+
+    var faqLd = {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": `When does ${event.title} take place?`,
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": `${event.title} starts on ${event.startDate || "the announced start date"}${event.endDate && event.endDate !== event.startDate ? ` and runs through ${event.endDate}` : ""}.`
+          }
+        },
+        {
+          "@type": "Question",
+          "name": `Where is ${event.title} located?`,
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": event.type === "Virtual" 
+              ? `${event.title} is hosted virtually online with live streaming access.` 
+              : `${event.title} takes place at ${event.venueName || event.location || "Algiers, Algeria"}.`
+          }
+        },
+        {
+          "@type": "Question",
+          "name": `How do I get tickets or register for ${event.title}?`,
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": `You can register or secure tickets directly on the official Eventzone event page. Badges and QR passes are issued digitally.`
+          }
+        },
+        {
+          "@type": "Question",
+          "name": `What is the attendance mode for ${event.title}?`,
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": `The event is organized as a ${event.type || "In-Person"} event format.`
+          }
+        }
+      ]
+    };
   }
 
   return (
@@ -160,6 +226,18 @@ export default async function Page({ params }) {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      )}
+      {breadcrumbLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+        />
+      )}
+      {faqLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
         />
       )}
       <EventLandingClient slug={slug} initialEvent={event} />

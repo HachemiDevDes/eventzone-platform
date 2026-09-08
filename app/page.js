@@ -161,6 +161,58 @@ export default async function Page() {
     })
   } : null;
 
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": baseUrl
+      }
+    ]
+  };
+
+  const faqLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is Eventzone?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Eventzone is an all-in-one event discovery, interactive 2D floor planning, and event management platform for conferences, summits, and exhibitions."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How can I register for events or get tickets on Eventzone?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Browse featured events on Eventzone, choose your event, select your ticket tier or RSVP, and receive an instant digital QR badge pass."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do organizers create summits and design interactive floor plans?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Organizers can host events on Eventzone to publish dynamic agendas, design interactive 2D exhibition floor layouts, manage attendee badges, and scan QR passes in real time."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is Eventzone accessible on mobile devices?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes, Eventzone is fully responsive with digital badge passes, offline wallet storage, and real-time networking capabilities."
+        }
+      }
+    ]
+  };
+
   return (
     <>
       <script
@@ -170,6 +222,14 @@ export default async function Page() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
       />
       {itemListLd && (
         <script
