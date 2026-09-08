@@ -758,7 +758,7 @@ export function LandingPageSkeleton() {
 
         {/* Right: Language Selector & CTA */}
         <div className="flex items-center gap-2.5">
-          <Skeleton className="h-9 w-20 rounded-xl" />
+          <Skeleton className="h-9 w-20 rounded-full" />
           <Skeleton className="h-9 w-28 rounded-xl bg-blue-600/30" />
         </div>
       </header>
