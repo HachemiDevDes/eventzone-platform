@@ -27,6 +27,7 @@
   --animate-fade-in: fadeIn 0.2s ease-out forwards;
   --animate-scale-up: scaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   --animate-slide-in-right: slideInRight 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-slide-up: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 /* Event Discovery Card Corner Curvature */
@@ -51,6 +52,11 @@
 @keyframes slideInRight {
   from { transform: translateX(100%); }
   to { transform: translateX(0); }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0.85; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
 /* Custom Scrollbar Utilities */

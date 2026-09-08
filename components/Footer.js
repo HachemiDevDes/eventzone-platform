@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ArrowUp, Check } from "lucide-react";
 import { useLanguage } from "../lib/i18n";
 
-export default function Footer({ onOpenEventsHub, onOpenVisitorPasses }) {
+export default function Footer({ onOpenEventsHub, onOpenVisitorPasses, cutoutBg = "text-slate-50" }) {
   const { t } = useLanguage();
   const [newsletterEmail, setNewsletterEmail] = useState("");
   const [newsletterStatus, setNewsletterStatus] = useState("idle"); // "idle" | "loading" | "success" | "error"
@@ -58,13 +58,13 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses }) {
         {/* Midnight navy overlay for contrast and sleek dark look */}
         <div className="absolute inset-0 bg-[#081431]/85" />
 
-        {/* Top Arched Convex Dome Cutout (masks corners with page bg-slate-50 / #f8fafc) */}
+        {/* Top Arched Convex Dome Cutout (masks corners with page bg) */}
         <div className="absolute top-0 left-0 right-0 w-full overflow-hidden leading-none pointer-events-none select-none z-10 -mt-[1px]">
           <svg
             viewBox="0 0 1440 180"
             fill="none"
             preserveAspectRatio="none"
-            className="w-full h-20 sm:h-32 md:h-44 lg:h-52 text-slate-50 block"
+            className={`w-full h-20 sm:h-32 md:h-44 lg:h-52 ${cutoutBg} block`}
             aria-hidden="true"
           >
             <path
@@ -93,7 +93,7 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses }) {
                   setNewsletterEmail(e.target.value);
                   if (newsletterStatus !== "idle") setNewsletterStatus("idle");
                 }}
-                placeholder={t("footer.emailPlaceholder", "Enter your email address")}
+                placeholder={t("footer.emailPlaceholder", "Enter your business email")}
                 className="w-full sm:flex-1 bg-white text-slate-900 placeholder-slate-400 text-sm font-medium px-6 py-3.5 shadow-xl border border-white/20 transition-all focus:outline-none focus:ring-2 focus:ring-[#0b5cdb]"
                 style={{ borderRadius: "9999px" }}
                 required
@@ -182,29 +182,29 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses }) {
               </p>
               <ul className="space-y-2 text-slate-400 font-medium">
                 <li>
-                  <a href="#explore" className="hover:text-white transition-colors">
+                  <Link href="/#explore" className="hover:text-white transition-colors">
                     Tech &amp; AI Summits
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="#explore" className="hover:text-white transition-colors">
+                  <Link href="/#explore" className="hover:text-white transition-colors">
                     International Conferences
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="#explore" className="hover:text-white transition-colors">
+                  <Link href="/#explore" className="hover:text-white transition-colors">
                     Hybrid Expos &amp; Fairs
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="#explore" className="hover:text-white transition-colors">
+                  <Link href="/#explore" className="hover:text-white transition-colors">
                     Clean Energy Forums
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="#explore" className="hover:text-white transition-colors">
+                  <Link href="/#explore" className="hover:text-white transition-colors">
                     Healthcare &amp; Bio Congresses
-                  </a>
+                  </Link>
                 </li>
               </ul>
             </div>
@@ -218,7 +218,10 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses }) {
                 <li>
                   <button
                     type="button"
-                    onClick={() => onOpenEventsHub && onOpenEventsHub()}
+                    onClick={() => {
+                      if (onOpenEventsHub) onOpenEventsHub();
+                      else window.location.href = "/?view=events-hub";
+                    }}
                     className="hover:text-white transition-colors cursor-pointer text-start rtl:text-right text-left"
                   >
                     {t("eventsHub.title", "Organizer Event Center")}
@@ -227,20 +230,22 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses }) {
                 <li>
                   <button
                     type="button"
-                    onClick={() => onOpenEventsHub && onOpenEventsHub()}
+                    onClick={() => {
+                      if (onOpenEventsHub) onOpenEventsHub();
+                      else window.location.href = "/?view=events-hub";
+                    }}
                     className="hover:text-white transition-colors cursor-pointer text-start rtl:text-right text-left"
                   >
-                    {t("dash.floorPlans", "2D Floor Plan Builder")}
+                    {t("dash.floorPlans", "Floor Plans")}
                   </button>
                 </li>
                 <li>
-                  <button
-                    type="button"
-                    onClick={() => onOpenEventsHub && onOpenEventsHub()}
-                    className="hover:text-white transition-colors cursor-pointer text-start rtl:text-right text-left"
+                  <Link
+                    href="/checkin"
+                    className="hover:text-white transition-colors block text-start rtl:text-right text-left"
                   >
-                    {t("dash.checkIn", "Check-In Command")}
-                  </button>
+                    {t("dash.checkIn", "Check In")}
+                  </Link>
                 </li>
                 <li>
                   <Link href="/privacy" className="hover:text-white transition-colors">

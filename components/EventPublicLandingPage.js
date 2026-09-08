@@ -8,7 +8,7 @@ import {
   ExternalLink, Share2, Compass, ShieldCheck, 
   ChevronRight, ChevronLeft, Building2, Check, Download, Mail, X, Globe, Video,
   Star, MessageSquare, Printer, User, Briefcase, Phone, QrCode as QrIcon, FileText,
-  Tag, AlertCircle, RefreshCw, Smartphone, ChevronDown, Lock, Image as ImageIcon, Play
+  Tag, AlertCircle, RefreshCw, Smartphone, ChevronDown, ChevronUp, Lock, Image as ImageIcon, Play
 } from "lucide-react";
 import QRCode from "qrcode";
 import { useLanguage } from "../lib/i18n";
@@ -24,6 +24,7 @@ import { smoothScrollTo } from "../lib/smoothScroll";
 import { getYouTubeEmbedUrl } from "./EventDetailsView";
 import { recordInfluencerClick, fetchEventDetails, fetchTickets } from "../lib/db";
 import { LandingPageSkeleton } from "./SkeletonLoaders";
+import Footer from "./Footer";
 
 export default function EventPublicLandingPage({
   eventId,
@@ -185,6 +186,7 @@ export default function EventPublicLandingPage({
   const [rsvpSuccess, setRsvpSuccess] = useState(null);
   const [rsvpError, setRsvpError] = useState(null);
   const [qrCodeUrl, setQrCodeUrl] = useState(null);
+  const [mobileTicketsExpanded, setMobileTicketsExpanded] = useState(false);
 
   const [internalEventDetails, setInternalEventDetails] = useState(null);
   const [isInternalLoading, setIsInternalLoading] = useState(false);
@@ -1184,7 +1186,7 @@ export default function EventPublicLandingPage({
   }
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-blue-600 selection:text-white flex flex-col">
+    <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-blue-600 selection:text-white flex flex-col pb-24 lg:pb-0">
       {/* ==================================================================== */}
       {/* 1. STICKY TOP NAVBAR (LIGHT MODE)                                    */}
       {/* ==================================================================== */}
@@ -1436,7 +1438,7 @@ export default function EventPublicLandingPage({
             </div>
 
             {/* ── RIGHT COLUMN: COMPACT TICKET CARD (IMAGE 1 STYLE) ── */}
-            <div className="lg:col-span-5 xl:col-span-4 w-full">
+            <div className="hidden lg:block lg:col-span-5 xl:col-span-4 w-full">
               <div className="sticky top-20 bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-lg shadow-slate-100/70 space-y-3.5 text-start rtl:text-right text-left">
                 
                 {/* Ticket Tier Selector (Direct list of up to 3 tickets, no dropdown menu) */}
@@ -1556,8 +1558,7 @@ export default function EventPublicLandingPage({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
           <div className="lg:col-span-7 space-y-6 text-start rtl:text-right text-left">
             <div>
-              <span className="text-xs font-extrabold text-blue-600 uppercase tracking-wider">Event Overview</span>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1">
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
                 About &ldquo;{title}&rdquo;
               </h2>
             </div>
@@ -1587,23 +1588,6 @@ export default function EventPublicLandingPage({
               </p>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-1.5">
-                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                  <Users size={16} />
-                </div>
-                <h4 className="text-xs font-bold text-slate-900">Executive Networking</h4>
-                <p className="text-[11px] text-slate-500">Connect with founders, investors, and enterprise decision-makers.</p>
-              </div>
-
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-1.5">
-                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                  <Layers size={16} />
-                </div>
-                <h4 className="text-xs font-bold text-slate-900">Interactive Floor Plan</h4>
-                <p className="text-[11px] text-slate-500">Explore exhibitors, keynote stages, and VIP lounges in real-time 2D.</p>
-              </div>
-            </div>
           </div>
 
           {/* Organizer Card */}
@@ -1699,8 +1683,7 @@ export default function EventPublicLandingPage({
       {/* ==================================================================== */}
       <section id="speakers" className="py-16 bg-white border-y border-slate-200">
         <div className="max-w-6xl mx-auto px-6 sm:px-8 space-y-10">
-          <div className="text-center max-w-xl mx-auto space-y-2">
-            <span className="text-xs font-extrabold text-blue-600 uppercase tracking-wider">Speaker Lineup</span>
+          <div className="text-start rtl:text-right text-left space-y-2">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
               Featured Speakers &amp; Keynotes
             </h2>
@@ -1752,8 +1735,7 @@ export default function EventPublicLandingPage({
       <section id="schedule" className="py-16 max-w-6xl mx-auto px-6 sm:px-8 w-full space-y-10">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 text-start rtl:text-right text-left">
           <div>
-            <span className="text-xs font-extrabold text-blue-600 uppercase tracking-wider">Event Schedule</span>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
               Curated Agenda &amp; Sessions
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 font-normal">
@@ -1920,41 +1902,12 @@ export default function EventPublicLandingPage({
       </section>
 
       {/* ==================================================================== */}
-      {/* 7. INTERACTIVE 2D FLOOR PLAN BANNER SECTION                          */}
-      {/* ==================================================================== */}
-      <section id="floorplan" className="py-12 bg-blue-600 text-white relative overflow-hidden">
-        <div className="max-w-6xl mx-auto px-6 sm:px-8 relative z-10 flex flex-col md:flex-row items-center justify-between gap-8 text-start rtl:text-right text-left">
-          <div className="space-y-3 max-w-xl">
-            <span className="px-3 py-1 rounded-full bg-white/20 text-white text-[10px] font-extrabold uppercase tracking-wider backdrop-blur-md">
-              Venue Navigation
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-              Explore the Interactive 2D Floor Plan
-            </h2>
-            <p className="text-blue-100 text-xs sm:text-sm leading-relaxed font-normal">
-              Locate exhibitor booths, keynote main stages, food zones, and sponsor suites before arriving at the venue.
-            </p>
-          </div>
-
-          <button
-            onClick={() => onViewFloorPlan && onViewFloorPlan(eventId || eventDetails?.id)}
-            className="px-8 py-4 bg-white hover:bg-blue-50 text-blue-700 rounded-2xl font-extrabold text-xs sm:text-sm shadow-xl transition-all flex items-center gap-2.5 cursor-pointer shrink-0"
-          >
-            <Layers size={18} className="text-blue-600" />
-            <span>Launch 2D Floor Plan</span>
-            <ArrowRight size={16} />
-          </button>
-        </div>
-      </section>
-
-      {/* ==================================================================== */}
       {/* 8. EXHIBITORS SHOWCASE                                               */}
       {/* ==================================================================== */}
       {eventExhibitors.length > 0 && (
         <section id="exhibitors" className="py-16 bg-white border-b border-slate-200">
           <div className="max-w-6xl mx-auto px-6 sm:px-8 space-y-10">
-            <div className="text-center max-w-xl mx-auto space-y-2">
-              <span className="text-xs font-extrabold text-blue-600 uppercase tracking-wider">Industrial Partners</span>
+            <div className="text-start rtl:text-right text-left space-y-2">
               <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
                 Featured Exhibitors &amp; Booths
               </h2>
@@ -2006,8 +1959,7 @@ export default function EventPublicLandingPage({
       {/* ==================================================================== */}
       {eventSponsors.length > 0 && (
         <section className="py-16 max-w-6xl mx-auto px-6 sm:px-8 w-full space-y-10">
-          <div className="text-center max-w-xl mx-auto space-y-2">
-            <span className="text-xs font-extrabold text-blue-600 uppercase tracking-wider">Corporate Backers</span>
+          <div className="text-start rtl:text-right text-left space-y-2">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
               Official Event Sponsors
             </h2>
@@ -2017,7 +1969,7 @@ export default function EventPublicLandingPage({
           </div>
 
           <div className="space-y-8">
-            <div className="flex flex-wrap items-center justify-center gap-6">
+            <div className="flex flex-wrap items-center justify-start gap-6">
               {eventSponsors.map((sp, idx) => (
                 <div key={idx} className="bg-white border border-slate-200 rounded-2xl px-8 py-5 flex items-center gap-3 shadow-xs hover:shadow-md transition-all">
                   <Building2 size={24} className="text-blue-600" />
@@ -2037,8 +1989,7 @@ export default function EventPublicLandingPage({
       {/* ==================================================================== */}
       <section id="tickets" className="py-16 bg-white border-t border-slate-200">
         <div className="max-w-6xl mx-auto px-6 sm:px-8 space-y-12">
-          <div className="text-center max-w-xl mx-auto space-y-2">
-            <span className="text-xs font-extrabold text-blue-600 uppercase tracking-wider">Registration Passes</span>
+          <div className="text-start rtl:text-right text-left space-y-2">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
               Claim Your Summit Pass
             </h2>
@@ -2120,106 +2071,201 @@ export default function EventPublicLandingPage({
       </section>
 
       {/* ==================================================================== */}
-      {/* 11. MODERN PREMIUM FOOTER                                            */}
+      {/* 11. OFFICIAL EVENTZONE FOOTER                                        */}
       {/* ==================================================================== */}
-      <footer className="bg-slate-950 text-slate-400 pt-16 pb-12 border-t border-slate-800 mt-auto font-sans">
-        <div className="max-w-6xl mx-auto px-6 sm:px-8 space-y-12">
-          {/* Top Row: Brand & Quick Newsletter */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pb-12 border-b border-slate-800/80 items-start">
-            <div className="lg:col-span-6 space-y-4 text-start rtl:text-right text-left">
-              <div className="flex items-center gap-3">
-                <img src="https://i.imgur.com/jFDrQbM.png" alt="eventzone" style={{ height: '28px', width: 'auto', maxWidth: '160px', objectFit: 'contain' }} className="h-7 w-auto object-contain brightness-0 invert" />
-                <span className="px-2.5 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-[10px] font-extrabold uppercase tracking-wider">
-                  Official Event Portal
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 max-w-md leading-relaxed">
-                {eventDetails?.description || "Official registration, schedule, and delegate portal."}
-              </p>
-              <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
-                <ShieldCheck size={14} className="text-emerald-500" />
-                <span>Verified by Eventzone Decentralized Verification Infrastructure</span>
-              </div>
-            </div>
+      <Footer
+        onOpenEventsHub={onBackToHome}
+        onOpenVisitorPasses={onBackToHome}
+        cutoutBg="text-white"
+      />
 
-            {/* Quick Stats Banner on Footer */}
-            <div className="lg:col-span-6 bg-slate-900/80 rounded-2xl border border-slate-800 p-5 flex items-center justify-between gap-4">
-              <div>
-                <div className="text-xs font-bold text-white">Need Customized Delegation Passes?</div>
-                <div className="text-[11px] text-slate-400 mt-0.5">Corporate bundles and attendee passes with dedicated registration.</div>
+      {/* ==================================================================== */}
+      {/* MOBILE STICKY BOTTOM TICKET DRAWER & BACKDROP OVERLAY (MOBILE ONLY)  */}
+      {/* ==================================================================== */}
+      {!showRsvpModal && !showPublicRsvpModal && (
+        <>
+          {/* Dark Backdrop Overlay when Expanded */}
+          {mobileTicketsExpanded && (
+            <div
+              onClick={() => setMobileTicketsExpanded(false)}
+              className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 lg:hidden animate-fade-in transition-opacity cursor-pointer"
+              aria-hidden="true"
+            />
+          )}
+
+          {/* Expanded Drawer (Bottom Sheet) */}
+          {mobileTicketsExpanded ? (
+            <div
+              className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl border-t border-slate-200/90 shadow-2xl p-4 sm:p-5 pb-[calc(env(safe-area-inset-bottom,0px)+16px)] lg:hidden max-h-[85vh] flex flex-col space-y-4 animate-slide-up"
+              role="dialog"
+              aria-modal="true"
+            >
+              {/* Drag Handle & Header */}
+              <div className="flex flex-col items-center">
+                <button
+                  type="button"
+                  onClick={() => setMobileTicketsExpanded(false)}
+                  className="w-full flex justify-center pt-0 pb-2 cursor-pointer"
+                  aria-label="Collapse drawer"
+                >
+                  <div className="w-10 h-1.5 bg-slate-300 rounded-full" />
+                </button>
+                <div className="w-full flex items-center justify-between pt-0.5">
+                  <div className="text-start rtl:text-right text-left">
+                    <h3 className="text-base font-extrabold text-slate-900 tracking-tight">
+                      {lang === "fr" ? "Sélectionner un billet" : (lang === "ar" ? "اختر نوع التذكرة" : "Select Your Ticket")}
+                    </h3>
+                    <p className="text-xs text-slate-500 font-medium">
+                      {lang === "fr" ? "Choisissez votre formule pour continuer" : (lang === "ar" ? "اختر الفئة المناسبة لإتمام الحجز" : "Choose your pass to continue booking")}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setMobileTicketsExpanded(false)}
+                    className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                    aria-label="Close"
+                  >
+                    <X size={16} strokeWidth={2.5} />
+                  </button>
+                </div>
               </div>
+
+              {/* Ticket Tier Selector (Matches Image 1 style exactly) */}
+              <div className="space-y-2.5 overflow-y-auto max-h-[50vh] pr-0.5">
+                {eventTickets.slice(0, 5).map((t, idx) => {
+                  const tName = t.name || t.tier || `Ticket ${idx + 1}`;
+                  const isSelected = (selectedTicket?.name === tName || selectedTicket?.id === t.id || selectedTier === tName);
+                  const isFree = !t.price || Number(t.price) === 0;
+                  const priceText = isFree 
+                    ? (lang === "fr" ? "Gratuit" : (lang === "ar" ? "مجاني" : "Free"))
+                    : `${Number(t.price).toLocaleString()} DZD`;
+
+                  return (
+                    <button
+                      key={t.id || idx}
+                      type="button"
+                      onClick={() => {
+                        setSelectedTier(tName);
+                      }}
+                      className={`w-full border rounded-xl p-3.5 flex items-center justify-between text-start rtl:text-right text-left transition-all cursor-pointer ${
+                        isSelected 
+                          ? "border-blue-600 bg-blue-50/40 shadow-xs" 
+                          : "border-slate-200 hover:border-slate-300 bg-white"
+                      }`}
+                    >
+                      <div className="space-y-0.5 min-w-0 pr-3">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h4 className="text-sm font-bold text-slate-900 leading-tight">
+                            {tName}
+                          </h4>
+                          {(t.isPopular || t.popular) && (
+                            <span className="px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[9px] font-bold uppercase tracking-wide">
+                              Popular
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs font-semibold text-blue-600">
+                          {priceText}
+                        </p>
+                        {t.description && (
+                          <p className="text-[11px] text-slate-500 line-clamp-2 pt-0.5 font-normal">
+                            {t.description}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-colors ${
+                        isSelected 
+                          ? "bg-blue-600 text-white" 
+                          : "border border-slate-300"
+                      }`}>
+                        {isSelected && <Check size={11} strokeWidth={2.5} />}
+                      </div>
+                    </button>
+                  );
+                })}
+
+                {eventTickets.length > 5 && (
+                  <div className="pt-1 text-center">
+                    <a
+                      href="#tickets"
+                      onClick={() => setMobileTicketsExpanded(false)}
+                      className="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline transition-colors inline-flex items-center gap-1"
+                    >
+                      <span>View all {eventTickets.length} ticket options</span>
+                      <ChevronRight size={13} />
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              {/* Primary Action Button ("Get Tickets") */}
               <button
-                onClick={() => openRegistration(eventTickets[0]?.name || "General Admission")}
-                className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shrink-0 transition-colors cursor-pointer"
+                type="button"
+                onClick={() => {
+                  setMobileTicketsExpanded(false);
+                  openRegistration(selectedTicket?.name || selectedTier || eventTickets[0]?.name || "General Admission");
+                }}
+                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white rounded-xl font-bold text-sm shadow-md shadow-blue-600/25 transition-all cursor-pointer flex items-center justify-center text-center"
               >
-                Inquire
+                <span>
+                  {t("event.getPass", "Get Tickets")}
+                </span>
               </button>
             </div>
-          </div>
+          ) : (
+            /* Collapsed Bottom Bar */
+            <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-slate-200/90 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] px-4 pt-2 pb-[calc(env(safe-area-inset-bottom,0px)+10px)] lg:hidden">
+              {/* Drag Pill Handle */}
+              <button
+                type="button"
+                onClick={() => setMobileTicketsExpanded(true)}
+                className="w-full flex justify-center pt-0 pb-1.5 cursor-pointer group"
+                aria-label="Expand tickets"
+              >
+                <div className="w-10 h-1 bg-slate-300 group-hover:bg-slate-400 rounded-full transition-colors" />
+              </button>
 
-          {/* Bottom Grid: Navigation Links */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-xs text-start rtl:text-right text-left">
-            <div className="space-y-3">
-              <h4 className="text-xs font-extrabold text-white uppercase tracking-wider">Navigation</h4>
-              <ul className="space-y-2 text-slate-400">
-                <li><a href="#about" onClick={handleScrollTo("#about")} className="hover:text-white transition-colors cursor-pointer">About &amp; Overview</a></li>
-                <li><a href="#speakers" onClick={handleScrollTo("#speakers")} className="hover:text-white transition-colors cursor-pointer">Keynote Speakers</a></li>
-                <li><a href="#schedule" onClick={handleScrollTo("#schedule")} className="hover:text-white transition-colors cursor-pointer">Agenda &amp; Sessions</a></li>
-                <li><a href="#floorplan" onClick={handleScrollTo("#floorplan")} className="hover:text-white transition-colors cursor-pointer">Interactive Floor Plan</a></li>
-                <li><a href="#tickets" onClick={handleScrollTo("#tickets")} className="hover:text-white transition-colors cursor-pointer">Passes &amp; Pricing</a></li>
-              </ul>
+              <div className="flex items-center justify-between gap-3">
+                {/* Left: Selected Ticket Info + Tap to Expand */}
+                <div
+                  onClick={() => setMobileTicketsExpanded(true)}
+                  className="min-w-0 flex-1 cursor-pointer select-none text-start rtl:text-right text-left"
+                >
+                  <div className="flex items-center gap-1 text-[11px] font-bold text-blue-600">
+                    <span className="truncate">{selectedTicket?.name || selectedTier || eventTickets[0]?.name || "Standard Admission"}</span>
+                    <ChevronUp size={13} className="shrink-0 text-blue-600" />
+                  </div>
+                  <div className="flex items-baseline gap-1.5 mt-0.5">
+                    <span className="text-base font-extrabold text-slate-900 leading-tight">
+                      {(() => {
+                        const activeT = selectedTicket || eventTickets[0];
+                        const isFree = !activeT?.price || Number(activeT.price) === 0;
+                        return isFree
+                          ? (lang === "fr" ? "Gratuit" : (lang === "ar" ? "مجاني" : "Free"))
+                          : `${Number(activeT.price).toLocaleString()} DZD`;
+                      })()}
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-medium">
+                      {lang === "fr" ? "• Toucher pour changer" : (lang === "ar" ? "• انقر للتغيير" : "• Tap to change")}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Right: Action Button */}
+                <button
+                  type="button"
+                  onClick={() => setMobileTicketsExpanded(true)}
+                  className="shrink-0 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl font-bold text-xs sm:text-sm shadow-md shadow-blue-600/25 transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <span>{t("event.getPass", "Get Tickets")}</span>
+                  <ChevronUp size={14} className="shrink-0" />
+                </button>
+              </div>
             </div>
-
-            <div className="space-y-3">
-              <h4 className="text-xs font-extrabold text-white uppercase tracking-wider">Partners &amp; Expo</h4>
-              <ul className="space-y-2 text-slate-400">
-                <li><a href="#exhibitors" onClick={handleScrollTo("#exhibitors")} className="hover:text-white transition-colors cursor-pointer">Exhibitor Directory</a></li>
-                <li><a href="#exhibitors" onClick={handleScrollTo("#exhibitors")} className="hover:text-white transition-colors cursor-pointer">Booth Locations</a></li>
-                <li><a href="#sponsors" onClick={handleScrollTo("#sponsors")} className="hover:text-white transition-colors cursor-pointer">Diamond &amp; Gold Sponsors</a></li>
-                <li><button onClick={() => openRegistration(eventTickets[0]?.name || "General Admission")} className="hover:text-white transition-colors text-start rtl:text-right text-left cursor-pointer">Become a Sponsor</button></li>
-                <li><button onClick={() => openRegistration(eventTickets[0]?.name || "General Admission")} className="hover:text-white transition-colors text-start rtl:text-right text-left cursor-pointer">Exhibitor Inquiries</button></li>
-              </ul>
-            </div>
-
-            <div className="space-y-3">
-              <h4 className="text-xs font-extrabold text-white uppercase tracking-wider">Platform Features</h4>
-              <ul className="space-y-2 text-slate-400">
-                <li><button onClick={onBackToHome} className="hover:text-white transition-colors text-start rtl:text-right text-left cursor-pointer">Explore All Summits</button></li>
-                <li><span className="text-slate-500">2D Drag-and-Drop Floor Plan</span></li>
-                <li><span className="text-slate-500">Instant QR Badge Generation</span></li>
-                <li><span className="text-slate-500">Real-Time Attendee Analytics</span></li>
-                <li><span className="text-slate-500">Broadcast Live Streaming</span></li>
-              </ul>
-            </div>
-
-            <div className="space-y-3">
-              <h4 className="text-xs font-extrabold text-white uppercase tracking-wider">Support &amp; Trust</h4>
-              <ul className="space-y-2 text-slate-400">
-                <li><span className="text-slate-300">Host: {organization}</span></li>
-                <li><span className="text-slate-300">Contact: {contactEmail || "support@eventzone.io"}</span></li>
-                <li><span className="text-slate-500">Privacy &amp; Data Rights</span></li>
-                <li><span className="text-slate-500">Terms of Attendance</span></li>
-                <li><span className="text-slate-500">Delegate Support 24/7</span></li>
-              </ul>
-            </div>
-          </div>
-
-          {/* Bottom Row: Copyright, Legal & Back to Top */}
-          <div className="pt-8 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
-            <div className="flex flex-wrap items-center gap-4 text-slate-500">
-              <span>© 2026 {title}. Powered by <strong className="text-slate-400">Eventzone SaaS Platform</strong>.</span>
-            </div>
-
-            <button
-              onClick={() => smoothScrollTo(0, { duration: 900, easing: "easeInOutCubic" })}
-              className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 transition-all flex items-center gap-1.5 font-bold cursor-pointer"
-            >
-              <span>Back to Top</span>
-              <ArrowUp size={14} />
-            </button>
-          </div>
-        </div>
-      </footer>
+          )}
+        </>
+      )}
 
       {/* ==================================================================== */}
       {/* 12. FULL-PAGE REGISTRATION VIEW (WHITE BG, FORM LEFT, A6 BADGE RIGHT) */}

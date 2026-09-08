@@ -956,20 +956,27 @@ export function LandingPageSkeleton() {
         </div>
       </section>
 
-      {/* 9. Clean Footer */}
-      <footer className="bg-slate-950 text-white mt-12 py-12 px-6">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-6">
-          <div className="space-y-2">
-            <Skeleton className="h-6 w-32 rounded-lg bg-slate-800" />
-            <Skeleton className="h-3.5 w-64 rounded-md bg-slate-800" />
+      {/* 9. Arched Dome Footer Skeleton */}
+      <div className="relative z-10 w-full overflow-hidden mt-12">
+        <div className="w-full h-8 sm:h-12 bg-slate-50" />
+        <footer className="bg-[#081431] text-white py-16 px-6">
+          <div className="max-w-xl mx-auto text-center space-y-4 mb-12">
+            <Skeleton className="h-8 w-64 rounded-xl bg-slate-800 mx-auto" />
+            <Skeleton className="h-4 w-80 rounded-md bg-slate-800 mx-auto" />
+            <Skeleton className="h-12 w-full max-w-md rounded-full bg-slate-800 mx-auto" />
           </div>
-          <div className="flex items-center gap-3">
-            <Skeleton className="w-9 h-9 rounded-xl bg-slate-800" />
-            <Skeleton className="w-9 h-9 rounded-xl bg-slate-800" />
-            <Skeleton className="w-9 h-9 rounded-xl bg-slate-800" />
+          <div className="max-w-7xl mx-auto border-t border-white/10 pt-10 grid grid-cols-2 md:grid-cols-4 gap-8">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="space-y-3">
+                <Skeleton className="h-4 w-24 rounded-md bg-slate-800" />
+                <Skeleton className="h-3 w-32 rounded-md bg-slate-800" />
+                <Skeleton className="h-3 w-28 rounded-md bg-slate-800" />
+                <Skeleton className="h-3 w-20 rounded-md bg-slate-800" />
+              </div>
+            ))}
           </div>
-        </div>
-      </footer>
+        </footer>
+      </div>
     </div>
   );
 }

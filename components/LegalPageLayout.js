@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import React from "react";
 import Link from "next/link";
+import Footer from "./Footer";
 
 const LEGAL_NAV_ITEMS = [
   { label: "Privacy Policy", href: "/privacy" },
@@ -63,37 +64,8 @@ export default function LegalPageLayout({
         </article>
       </main>
 
-      {/* Minimalist Footer */}
-      <footer className="bg-white border-t border-slate-200 py-10 text-xs text-slate-500">
-        <div className="max-w-3xl mx-auto px-6 space-y-6">
-          {/* Legal Navigation Links */}
-          <nav className="flex flex-wrap items-center gap-x-6 gap-y-2">
-            {LEGAL_NAV_ITEMS.map((item) => {
-              const isActive = activeHref === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`transition-colors ${
-                    isActive
-                      ? "text-blue-600 font-bold"
-                      : "text-slate-600 hover:text-slate-900 font-medium"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
-
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-4 border-t border-slate-100 text-slate-400">
-            <span>© 2026 Eventzone. All rights reserved.</span>
-            <Link href="/" className="hover:text-slate-700 transition-colors">
-              eventzone.pro
-            </Link>
-          </div>
-        </div>
-      </footer>
+      {/* Standard Eventzone Platform Footer */}
+      <Footer cutoutBg="text-slate-50" />
     </div>
   );
 }

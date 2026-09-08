@@ -12,6 +12,7 @@ import QRCode from "qrcode";
 import { useLanguage } from "../lib/i18n";
 import UniversalTopBar from "./UniversalTopBar";
 import SearchableSelect from "./SearchableSelect";
+import Footer from "./Footer";
 
 export default function VisitorPortal({ 
   events = [], 
@@ -542,6 +543,13 @@ export default function VisitorPortal({
           </div>
         )}
       </main>
+ 
+      {/* Standard Eventzone Platform Footer */}
+      <Footer
+        onOpenEventsHub={() => onSwitchToOrganizer && onSwitchToOrganizer()}
+        onOpenVisitorPasses={() => setActiveTab("my-passes")}
+        cutoutBg="text-slate-100"
+      />
 
       {/* RSVP Modal */}
       {selectedEventToRsvp && (

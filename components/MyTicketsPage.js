@@ -12,6 +12,7 @@ import QRCode from "qrcode";
 import { useLanguage } from "../lib/i18n";
 import UniversalTopBar from "./UniversalTopBar";
 import A4BadgeSheet, { printA4BadgeDocument } from "./A4BadgeSheet";
+import Footer from "./Footer";
 
 export default function MyTicketsPage({
   registrations = [],
@@ -403,6 +404,13 @@ export default function MyTicketsPage({
           </div>
         )}
       </main>
+ 
+      {/* Standard Eventzone Platform Footer */}
+      <Footer 
+        onOpenEventsHub={onOpenEventsHub || onGoToHome} 
+        onOpenVisitorPasses={() => {}} 
+        cutoutBg="text-slate-50" 
+      />
 
       {/* ==================================================================== */}
       {/* 1. ENLARGED QR PASS MODAL                                            */}
