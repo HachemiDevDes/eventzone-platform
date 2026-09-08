@@ -1191,11 +1191,16 @@ export default function EventPublicLandingPage({
       {/* ==================================================================== */}
       {/* 1. STICKY TOP NAVBAR (LIGHT MODE)                                    */}
       {/* ==================================================================== */}
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-xl border-b border-slate-200 px-6 py-3.5 flex items-center justify-between shadow-xs relative">
+      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-xl border-b border-slate-200 px-3.5 sm:px-6 py-2.5 sm:py-3.5 flex items-center justify-between shadow-xs relative">
         {/* Left: Brand Logo on its own */}
-        <div className="flex items-center">
-          <div onClick={onBackToHome} className="cursor-pointer select-none flex items-center" title="Return to Explore Events">
-            <img src="https://i.imgur.com/jFDrQbM.png" alt="eventzone" style={{ height: '28px', width: 'auto', maxWidth: '160px' }} className="h-7 w-auto object-contain" />
+        <div className="flex items-center shrink-0">
+          <div onClick={onBackToHome} className="cursor-pointer select-none flex items-center group" title="Return to Explore Events">
+            <img 
+              src="https://i.imgur.com/jFDrQbM.png" 
+              alt="eventzone" 
+              style={{ height: '26px', width: 'auto' }}
+              className="h-6 sm:h-7 w-auto max-w-[115px] sm:max-w-[160px] object-contain transition-transform group-hover:scale-105 shrink-0" 
+            />
           </div>
         </div>
 
@@ -1204,7 +1209,6 @@ export default function EventPublicLandingPage({
           <a href="#about" onClick={handleScrollTo("#about")} className="hover:text-blue-600 transition-colors cursor-pointer">{t("event.about", "About")}</a>
           <a href="#speakers" onClick={handleScrollTo("#speakers")} className="hover:text-blue-600 transition-colors cursor-pointer">{t("event.speakers", "Speakers")}</a>
           <a href="#schedule" onClick={handleScrollTo("#schedule")} className="hover:text-blue-600 transition-colors cursor-pointer">{t("event.agenda", "Agenda")}</a>
-          <a href="#floorplan" onClick={handleScrollTo("#floorplan")} className="hover:text-blue-600 transition-colors cursor-pointer">{t("event.floorPlan", "Floor Plan")}</a>
           <a href="#exhibitors" onClick={handleScrollTo("#exhibitors")} className="hover:text-blue-600 transition-colors cursor-pointer">{t("event.exhibitors", "Exhibitors & Sponsors")}</a>
           <a href="#tickets" onClick={handleScrollTo("#tickets")} className="hover:text-blue-600 transition-colors cursor-pointer">{t("event.tickets", "Tickets")}</a>
         </nav>
@@ -1593,7 +1597,7 @@ export default function EventPublicLandingPage({
                 <img
                   src={organizerLogo}
                   alt={organizerName}
-                  className="w-12 h-12 rounded-2xl object-cover border border-slate-200 shadow-xs shrink-0"
+                  className="w-12 h-12 rounded-2xl object-contain shrink-0"
                 />
               ) : (
                 <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white font-extrabold text-lg flex items-center justify-center shadow-md shadow-blue-600/20 shrink-0">
@@ -1916,33 +1920,60 @@ export default function EventPublicLandingPage({
               {eventExhibitors.map((ex, idx) => (
                 <div 
                   key={ex.id || idx}
-                  className="bg-slate-50 border border-slate-200 rounded-3xl p-5 text-start rtl:text-right text-left flex flex-col justify-between space-y-4 hover:shadow-md hover:border-blue-300 transition-all"
+                  className="group bg-white border border-slate-200/80 hover:border-blue-400/80 rounded-3xl p-6 text-start rtl:text-right text-left flex flex-col justify-between space-y-4 hover:shadow-xl hover:shadow-blue-600/5 transition-all duration-300 relative"
                 >
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="w-12 h-12 rounded-xl bg-white border border-slate-200 overflow-hidden p-1 flex items-center justify-center">
-                        <img src={ex.logo || "https://images.unsplash.com/photo-1560179707-f14e90ef3623?auto=format&fit=crop&w=200&q=80"} alt={ex.name} className="w-full h-full object-contain" />
-                      </div>
-                      <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-[10px] font-extrabold uppercase">
-                        {ex.booth || ex.boothNumber || "Booth"}
-                      </span>
+                  <div className="space-y-4">
+                    <div className="flex items-start justify-between gap-3">
+                      {ex.logo ? (
+                        <div className="w-14 h-14 rounded-2xl overflow-hidden flex items-center justify-center shrink-0">
+                          <img 
+                            src={ex.logo} 
+                            alt={ex.name} 
+                            className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" 
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white font-black text-xl flex items-center justify-center shadow-sm shrink-0">
+                          {ex.name?.charAt(0)?.toUpperCase() || "E"}
+                        </div>
+                      )}
+
+                      {(ex.booth || ex.boothNumber) && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50/90 border border-blue-100 text-blue-700 text-[11px] font-extrabold uppercase tracking-wide shrink-0">
+                          <MapPin size={12} className="text-blue-600" />
+                          <span>{ex.booth || ex.boothNumber}</span>
+                        </span>
+                      )}
                     </div>
 
-                    <div>
-                      <h4 className="text-sm font-bold text-slate-900">{ex.name}</h4>
-                      <span className="text-[11px] text-blue-600 font-semibold block">{getLocalizedIndustry(ex.industry, t) || t("public.industryPartner", "Industry Partner")}</span>
+                    <div className="space-y-1.5 pt-1">
+                      <h4 className="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors tracking-tight line-clamp-1">
+                        {ex.name}
+                      </h4>
+                      <span className="inline-flex items-center text-[11px] font-bold text-blue-600 tracking-wide uppercase">
+                        {getLocalizedIndustry(ex.industry, t) || t("public.industryPartner", "Industry Partner")}
+                      </span>
                       {ex.description && (
-                        <p className="text-xs text-slate-500 line-clamp-2 mt-1.5 leading-relaxed">
+                        <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed pt-1">
                           {ex.description}
                         </p>
                       )}
                     </div>
                   </div>
 
-                  <div className="pt-2 border-t border-slate-200 flex items-center justify-between text-xs text-slate-400">
-                    <span>Exhibition Hall</span>
-                    <span className="text-blue-600 font-bold">View Booth →</span>
-                  </div>
+                  {ex.website && (
+                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                      <a
+                        href={ex.website.startsWith("http") ? ex.website : `https://${ex.website}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors"
+                      >
+                        <span>{t("common.visitWebsite", "Visit Website")}</span>
+                        <ExternalLink size={13} />
+                      </a>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -2163,11 +2194,6 @@ export default function EventPublicLandingPage({
                         <p className="text-xs font-semibold text-blue-600">
                           {priceText}
                         </p>
-                        {t.description && (
-                          <p className="text-[11px] text-slate-500 line-clamp-2 pt-0.5 font-normal">
-                            {t.description}
-                          </p>
-                        )}
                       </div>
 
                       <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-colors ${
@@ -2241,9 +2267,6 @@ export default function EventPublicLandingPage({
                           ? (lang === "fr" ? "Gratuit" : (lang === "ar" ? "مجاني" : "Free"))
                           : `${Number(activeT.price).toLocaleString()} DZD`;
                       })()}
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-medium">
-                      {lang === "fr" ? "• Toucher pour changer" : (lang === "ar" ? "• انقر للتغيير" : "• Tap to change")}
                     </span>
                   </div>
                 </div>
@@ -2457,13 +2480,10 @@ export default function EventPublicLandingPage({
               /* REGISTRATION IN PROGRESS: CLEAN FORM LEFT, A6 BADGE RIGHT    */
               /* ============================================================ */
               <div>
-                <div className="mb-6 space-y-1.5 text-start rtl:text-right text-left max-w-2xl mx-auto">
+                <div className="mb-6 text-start rtl:text-right text-left max-w-2xl mx-auto">
                   <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
                     {selectedTicket?.name || selectedTicket?.tier || selectedTier || eventTickets[0]?.name || eventTickets[0]?.tier || t("reg.title", "Event Registration")}
                   </h1>
-                  <p className="text-xs sm:text-sm text-slate-500 font-medium max-w-xl">
-                    {t("reg.subtitle", "Complete your registration details below to attend.")}
-                  </p>
                 </div>
 
                 <div className="max-w-2xl mx-auto w-full">
