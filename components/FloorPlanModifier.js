@@ -3454,15 +3454,15 @@ export default function FloorPlanModifier({
             <button
               key={el.id}
               onClick={() => handleItemClick(el)}
-              className={`w-full text-start rtl:text-right text-left px-3.5 py-3 border rounded-2xl flex items-center justify-between transition-all duration-200 cursor-pointer ${
+              className={`directory-item-card w-full text-start rtl:text-right text-left px-3.5 py-3 border rounded-2xl flex items-center justify-between transition-all duration-200 cursor-pointer ${
                 isSelected
-                  ? "bg-indigo-650 border-indigo-650 text-white shadow-md shadow-indigo-100"
-                  : "bg-white/65 hover:bg-white border-slate-200/50 text-slate-800 hover:border-slate-300 shadow-sm"
+                  ? "bg-indigo-650 border-indigo-650 text-white shadow-xs"
+                  : "bg-white hover:bg-slate-50/80 border-slate-200/70 text-slate-800 hover:border-slate-300 shadow-xs"
               }`}
             >
               <div className="flex flex-col gap-0.5 max-w-[80%]">
                 <span className="text-xs font-bold truncate">{getLocalizedElementLabel(el.label, el.type, t)}</span>
-                <span className={`text-[10px] font-medium truncate ${isSelected ? "text-indigo-200" : "text-slate-450"}`}>
+                <span className={`text-[10px] font-medium truncate ${isSelected ? "text-indigo-100" : "text-slate-450"}`}>
                   {subtitle}
                 </span>
               </div>
@@ -3481,7 +3481,7 @@ export default function FloorPlanModifier({
 
         {/* Render Banquet Tables folder/group */}
         {tableChairsMatched.length > 0 && (
-          <div className="flex flex-col border border-slate-200/50 rounded-2xl overflow-hidden bg-white/40 shadow-sm hover:border-slate-300/80 hover:bg-white transition-all duration-200">
+          <div className="directory-item-card flex flex-col border border-slate-200/70 rounded-2xl overflow-hidden bg-white shadow-xs hover:border-slate-300/80 transition-all duration-200">
             <button
               onClick={() => setIsTablesSectionExpanded(prev => !prev)}
               className="w-full text-start rtl:text-right text-left px-3.5 py-3.5 flex items-center justify-between cursor-pointer"
@@ -3517,10 +3517,10 @@ export default function FloorPlanModifier({
                     <div key={el.id} className="flex flex-col">
                       <button
                         onClick={() => handleItemClick(el)}
-                        className={`w-full text-start rtl:text-right text-left px-3 py-2.5 border rounded-xl flex items-center justify-between transition-all duration-150 cursor-pointer ${
+                        className={`directory-item-card w-full text-start rtl:text-right text-left px-3 py-2.5 border rounded-xl flex items-center justify-between transition-all duration-150 cursor-pointer ${
                           isSelected
-                            ? "bg-indigo-600 border-indigo-600 text-white shadow-md rounded-b-none"
-                            : "bg-white hover:bg-slate-50 border-slate-200 text-slate-700"
+                            ? "bg-indigo-600 border-indigo-600 text-white shadow-xs rounded-b-none"
+                            : "bg-white hover:bg-slate-50 border-slate-200 text-slate-700 shadow-xs"
                         }`}
                       >
                         <div className="flex flex-col gap-0.5 max-w-[80%]">

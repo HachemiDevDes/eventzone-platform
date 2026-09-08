@@ -19,8 +19,34 @@ const cairo = Cairo({
 });
 
 export const metadata = {
-  title: "Eventzone - All-in-One Event Management Solution",
-  description: "A premium event organizer platform to design floor layouts and manage schedules.",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://eventzone.pro"),
+  title: {
+    default: "Eventzone - All-in-One Event Management Solution",
+    template: "%s | Eventzone",
+  },
+  description: "A premium event organizer platform to design floor layouts, manage schedules, and register for conferences & expos.",
+  keywords: ["Eventzone", "events", "conferences", "summits", "expos", "tickets", "event management", "Algeria"],
+  openGraph: {
+    title: "Eventzone - All-in-One Event Management Solution",
+    description: "A premium event organizer platform to design floor layouts, manage schedules, and register for conferences & expos.",
+    url: "https://eventzone.pro",
+    siteName: "Eventzone",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Eventzone",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Eventzone - All-in-One Event Management Solution",
+    description: "A premium event organizer platform to design floor layouts, manage schedules, and register for conferences & expos.",
+  },
   icons: {
     icon: [
       { url: "/favicon.png", type: "image/png" },
