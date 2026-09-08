@@ -37,7 +37,7 @@ import {
   Eye, Phone, Clock, CheckCircle2, XCircle, Sparkles, Filter, Info, ShieldCheck, ArrowUpRight,
   Maximize2, User, Download, Camera, Loader2, MoreVertical, MoreHorizontal,
   Store, Globe, ExternalLink, DollarSign, LayoutGrid, List, Copy, Smartphone,
-  FileSpreadsheet, ChevronDown, Wifi, WifiOff, RefreshCw
+  FileSpreadsheet, ChevronDown, WifiOff, RefreshCw
 } from "lucide-react";
 import QRCode from "qrcode";
 import { useLanguage } from "../lib/i18n";
@@ -1613,42 +1613,35 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
             <h2 className="text-2xl font-bold text-slate-900">{t("dash.attendees", "All Attendees")}</h2>
             
             {/* Connection & Offline Sync Status Indicator */}
-            <div className="inline-flex items-center">
-              {syncState === "syncing" ? (
-                <div 
-                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold shadow-2xs"
-                  title="Pushing offline changes to server..."
-                >
-                  <RefreshCw size={11} className="animate-spin text-blue-600" />
-                  <span>Syncing... ({pendingCount})</span>
-                </div>
-              ) : !isOnline || pendingCount > 0 ? (
-                <button
-                  type="button"
-                  onClick={() => syncNow()}
-                  title={isOnline ? "Pending changes queued. Click to force sync now." : "Working offline. Changes are saved locally and will auto-sync when online. Click to retry sync."}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 text-xs font-semibold shadow-2xs transition-all cursor-pointer group"
-                >
-                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
-                  <WifiOff size={11} className="text-amber-600 shrink-0" />
-                  <span>
-                    {!isOnline
-                      ? `Offline (${pendingCount} pending)`
-                      : `Pending Sync (${pendingCount})`}
-                  </span>
-                  <RefreshCw size={10} className="text-amber-500 group-hover:rotate-180 transition-transform ml-0.5" />
-                </button>
-              ) : (
-                <div 
-                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold shadow-2xs"
-                  title="Connected to Eventzone real-time services"
-                >
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                  <Wifi size={11} className="text-emerald-600 shrink-0" />
-                  <span>Online</span>
-                </div>
-              )}
-            </div>
+            {(syncState === "syncing" || !isOnline || pendingCount > 0) && (
+              <div className="inline-flex items-center">
+                {syncState === "syncing" ? (
+                  <div 
+                    className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold shadow-2xs"
+                    title="Pushing offline changes to server..."
+                  >
+                    <RefreshCw size={11} className="animate-spin text-blue-600" />
+                    <span>Syncing... ({pendingCount})</span>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => syncNow()}
+                    title={isOnline ? "Pending changes queued. Click to force sync now." : "Working offline. Changes are saved locally and will auto-sync when online. Click to retry sync."}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 text-xs font-semibold shadow-2xs transition-all cursor-pointer group"
+                  >
+                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                    <WifiOff size={11} className="text-amber-600 shrink-0" />
+                    <span>
+                      {!isOnline
+                        ? `Offline (${pendingCount} pending)`
+                        : `Pending Sync (${pendingCount})`}
+                    </span>
+                    <RefreshCw size={10} className="text-amber-500 group-hover:rotate-180 transition-transform ml-0.5" />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
           <p className="text-sm text-slate-500">{t("table.attendeesSubtitle", "Manage list of registered participants, dynamic form data, and ticket tiers.")}</p>
         </div>
@@ -5154,42 +5147,35 @@ function CheckInView({ state, onUpdateState }) {
             <h2 className="text-2xl font-bold text-slate-900 tracking-tight">{t("checkin.title", "On-Site Check-In Command")}</h2>
             
             {/* Connection & Offline Sync Status Indicator */}
-            <div className="inline-flex items-center">
-              {syncState === "syncing" ? (
-                <div 
-                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold shadow-2xs"
-                  title="Pushing offline changes to server..."
-                >
-                  <RefreshCw size={11} className="animate-spin text-blue-600" />
-                  <span>Syncing... ({pendingCount})</span>
-                </div>
-              ) : !isOnline || pendingCount > 0 ? (
-                <button
-                  type="button"
-                  onClick={() => syncNow()}
-                  title={isOnline ? "Pending changes queued. Click to force sync now." : "Working offline. Changes are saved locally and will auto-sync when online. Click to retry sync."}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 text-xs font-semibold shadow-2xs transition-all cursor-pointer group"
-                >
-                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
-                  <WifiOff size={11} className="text-amber-600 shrink-0" />
-                  <span>
-                    {!isOnline
-                      ? `Offline (${pendingCount} pending)`
-                      : `Pending Sync (${pendingCount})`}
-                  </span>
-                  <RefreshCw size={10} className="text-amber-500 group-hover:rotate-180 transition-transform ml-0.5" />
-                </button>
-              ) : (
-                <div 
-                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold shadow-2xs"
-                  title="Connected to Eventzone real-time services"
-                >
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                  <Wifi size={11} className="text-emerald-600 shrink-0" />
-                  <span>Online</span>
-                </div>
-              )}
-            </div>
+            {(syncState === "syncing" || !isOnline || pendingCount > 0) && (
+              <div className="inline-flex items-center">
+                {syncState === "syncing" ? (
+                  <div 
+                    className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold shadow-2xs"
+                    title="Pushing offline changes to server..."
+                  >
+                    <RefreshCw size={11} className="animate-spin text-blue-600" />
+                    <span>Syncing... ({pendingCount})</span>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => syncNow()}
+                    title={isOnline ? "Pending changes queued. Click to force sync now." : "Working offline. Changes are saved locally and will auto-sync when online. Click to retry sync."}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 text-xs font-semibold shadow-2xs transition-all cursor-pointer group"
+                  >
+                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                    <WifiOff size={11} className="text-amber-600 shrink-0" />
+                    <span>
+                      {!isOnline
+                        ? `Offline (${pendingCount} pending)`
+                        : `Pending Sync (${pendingCount})`}
+                    </span>
+                    <RefreshCw size={10} className="text-amber-500 group-hover:rotate-180 transition-transform ml-0.5" />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
           <p className="text-xs sm:text-sm text-slate-500">{t("checkin.subtitle", "Scan attendee QR codes, verify badges, monitor live attendance flow and manage desk admissions.")}</p>
         </div>
