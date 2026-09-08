@@ -639,7 +639,7 @@ export default function EventPublicLandingPage({
   };
 
   // Find active selected ticket object
-  const selectedTicket = eventTickets.find(t => t.name === selectedTier || t.tier === selectedTier || t.id === selectedTier);
+  const selectedTicket = eventTickets.find(tk => tk.name === selectedTier || tk.tier === selectedTier || tk.id === selectedTier);
 
   // Find active ticket registration form manually bound to selected ticket tier
   const activeTicketForm = forms.find(f => 
@@ -1527,17 +1527,17 @@ export default function EventPublicLandingPage({
                 {/* Ticket Tier Selector (Direct list of up to 3 tickets, no dropdown menu) */}
                 {eventTickets.length > 0 && (
                   <div className="space-y-2">
-                    {eventTickets.slice(0, 3).map((t, idx) => {
-                      const tName = t.name || t.tier || t("event.ticketNum", `Ticket ${idx + 1}`).replace("{idx}", idx + 1);
-                      const isSelected = (selectedTicket?.name === tName || selectedTicket?.id === t.id || selectedTier === tName);
-                      const isFree = !t.price || Number(t.price) === 0;
+                    {eventTickets.slice(0, 3).map((ticketItem, idx) => {
+                      const tName = ticketItem.name || ticketItem.tier || t("event.ticketNum", `Ticket ${idx + 1}`).replace("{idx}", idx + 1);
+                      const isSelected = (selectedTicket?.name === tName || selectedTicket?.id === ticketItem.id || selectedTier === tName);
+                      const isFree = !ticketItem.price || Number(ticketItem.price) === 0;
                       const priceText = isFree 
                         ? t("common.free", "Free")
-                        : <><bdi dir="ltr">{Number(t.price).toLocaleString()}</bdi> {t("common.dzd", "DZD")}</>;
+                        : <><bdi dir="ltr">{Number(ticketItem.price).toLocaleString()}</bdi> {t("common.dzd", "DZD")}</>;
 
                       return (
                         <button
-                          key={t.id || idx}
+                          key={ticketItem.id || idx}
                           type="button"
                           onClick={() => {
                             setSelectedTier(tName);
@@ -1553,7 +1553,7 @@ export default function EventPublicLandingPage({
                               <h4 className={`text-sm font-bold leading-tight truncate ${isSelected ? "text-slate-900" : "text-slate-900"}`}>
                                 {tName}
                               </h4>
-                              {(t.isPopular || t.popular) && (
+                              {(ticketItem.isPopular || ticketItem.popular) && (
                                 <span className="px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[9px] font-bold uppercase tracking-wide">
                                   {t("event.popularBadge", "Popular")}
                                 </span>
@@ -2242,17 +2242,17 @@ export default function EventPublicLandingPage({
 
               {/* Ticket Tier Selector (Matches Image 1 style exactly) */}
               <div className="space-y-2.5 overflow-y-auto max-h-[50vh] pr-0.5">
-                {eventTickets.slice(0, 5).map((t, idx) => {
-                  const tName = t.name || t.tier || t("event.ticketNum", `Ticket ${idx + 1}`).replace("{idx}", idx + 1);
-                  const isSelected = (selectedTicket?.name === tName || selectedTicket?.id === t.id || selectedTier === tName);
-                  const isFree = !t.price || Number(t.price) === 0;
+                {eventTickets.slice(0, 5).map((ticketItem, idx) => {
+                  const tName = ticketItem.name || ticketItem.tier || t("event.ticketNum", `Ticket ${idx + 1}`).replace("{idx}", idx + 1);
+                  const isSelected = (selectedTicket?.name === tName || selectedTicket?.id === ticketItem.id || selectedTier === tName);
+                  const isFree = !ticketItem.price || Number(ticketItem.price) === 0;
                   const priceText = isFree 
                     ? t("common.free", "Free")
-                    : <><bdi dir="ltr">{Number(t.price).toLocaleString()}</bdi> {t("common.dzd", "DZD")}</>;
+                    : <><bdi dir="ltr">{Number(ticketItem.price).toLocaleString()}</bdi> {t("common.dzd", "DZD")}</>;
 
                   return (
                     <button
-                      key={t.id || idx}
+                      key={ticketItem.id || idx}
                       type="button"
                       onClick={() => {
                         setSelectedTier(tName);
@@ -2268,7 +2268,7 @@ export default function EventPublicLandingPage({
                           <h4 className="text-sm font-bold text-slate-900 leading-tight">
                             {tName}
                           </h4>
-                          {(t.isPopular || t.popular) && (
+                          {(ticketItem.isPopular || ticketItem.popular) && (
                             <span className="px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[9px] font-bold uppercase tracking-wide">
                               {t("event.popularBadge", "Popular")}
                             </span>
