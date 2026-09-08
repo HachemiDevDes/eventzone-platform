@@ -163,15 +163,41 @@ export async function POST(request) {
         break;
 
       case "exhibitor_packet":
-      case "sponsor_packet":
+      case "sponsor_packet": {
+        let eventTitle = rest.eventTitle || rest.eventName || "";
+        let eventDate = rest.eventDate || "";
+        let venueAddress = rest.venueAddress || rest.eventLocation || "";
+
+        if ((!eventTitle || !eventDate || !venueAddress) && eventId && isValidUuid(eventId)) {
+          try {
+            const supabase = getServiceSupabase();
+            const { data: ev } = await supabase
+              .from("events")
+              .select("name, title, date, start_date, end_date, location, venue")
+              .eq("id", eventId)
+              .maybeSingle();
+            if (ev) {
+              eventTitle = eventTitle || ev.title || ev.name || "";
+              eventDate = eventDate || ev.date || ev.start_date || "";
+              venueAddress = venueAddress || ev.venue || ev.location || "";
+            }
+          } catch (evErr) {
+            console.warn("Could not query event details for packet email:", evErr);
+          }
+        }
+
         result = await sendExhibitorPacketEmail({ 
           to, 
           subject: finalSubject, 
           eventId,
+          eventTitle,
+          eventDate,
+          venueAddress,
           recipientType: type === "sponsor_packet" ? "sponsor" : (rest.recipientType || "exhibitor"),
           ...rest 
         });
         break;
+      }
 
       case "certificate":
         result = await sendCertificateEmail({

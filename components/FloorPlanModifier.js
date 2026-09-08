@@ -479,6 +479,9 @@ function getLocalizedTag(tag, t) {
 export default function FloorPlanModifier({ 
   exhibitors, 
   attendees = [],
+  sponsors = [],
+  eventId = null,
+  eventName = "",
   initialLayout = [], 
   onSaveLayout,
   onSaveBlueprintState,
@@ -8122,6 +8125,9 @@ export default function FloorPlanModifier({
         isOpen={isSendPlanModalOpen}
         onClose={() => setIsSendPlanModalOpen(false)}
         exhibitors={exhibitors}
+        sponsors={sponsors}
+        eventId={eventId}
+        eventName={eventName || planName}
         planName={planName}
         elements={elements}
         onSuccess={(msg) => setToastMessage(msg)}

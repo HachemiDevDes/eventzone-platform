@@ -4707,6 +4707,32 @@ export function HomeContent() {
                 };
               })}
               attendees={attendees}
+              sponsors={sponsors.map(sp => {
+                const org = organizations.find(o => String(o.id) === String(sp.org_id || sp.orgId));
+                const contactEmail = sp.contactEmail || sp.email || org?.email || '';
+                const contactName = sp.contact || sp.contactPerson || org?.contact || '';
+                const matchingAtt = attendees.find(a => 
+                  !a.isArchived && a.status !== 'archived' && (
+                    (contactEmail && a.email && a.email.trim().toLowerCase() === contactEmail.trim().toLowerCase()) ||
+                    (contactName && a.name && a.name.trim().toLowerCase() === contactName.trim().toLowerCase())
+                  )
+                );
+                return {
+                  ...sp,
+                  logo: sp.logo || sp.image || org?.logo || '',
+                  image: sp.logo || sp.image || org?.logo || '',
+                  website: sp.website || org?.website || '',
+                  contact: contactName,
+                  contactPerson: contactName,
+                  contactEmail: contactEmail,
+                  email: contactEmail,
+                  contactPhone: sp.contactPhone || sp.phone || org?.phone || matchingAtt?.phone || '',
+                  contactPosition: sp.contactPosition || sp.jobTitle || org?.jobTitle || matchingAtt?.jobTitle || 'Representative',
+                  tier: sp.tier || 'Sponsor',
+                };
+              })}
+              eventId={activeEventId}
+              eventName={eventDetails?.name || eventDetails?.title || (activePlan && activePlan.name) || "Eventzone Summit"}
               initialLayout={activePlan.elements}
               initialBlueprintState={activePlan.blueprint}
               initialFloors={activePlan.floors || []}
