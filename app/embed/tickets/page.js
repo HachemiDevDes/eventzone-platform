@@ -8,6 +8,7 @@ import {
   User, Mail, Phone, Briefcase, ExternalLink, Calendar, MapPin
 } from "lucide-react";
 import QRCode from "qrcode";
+import { translations } from "@/lib/i18n";
 
 function EmbedTicketsContent() {
   const searchParams = useSearchParams();
@@ -18,6 +19,17 @@ function EmbedTicketsContent() {
   const hideHeader = searchParams.get("hideHeader") === "true";
   const compact = searchParams.get("compact") === "true";
   const lang = searchParams.get("lang") || "en";
+  const currentLang = ["ar", "fr", "en"].includes(lang) ? lang : "en";
+  const isRTL = currentLang === "ar";
+  const t = (key, fallback, vars = {}) => {
+    let val = translations[currentLang]?.[key] || translations["en"]?.[key] || fallback || key;
+    if (vars) {
+      Object.entries(vars).forEach(([k, v]) => {
+        val = val.replace(new RegExp(`\\{${k}\\}`, "g"), v);
+      });
+    }
+    return val;
+  };
 
   const [loading, setLoading] = useState(true);
   const [eventData, setEventData] = useState(null);
@@ -594,7 +606,7 @@ function EmbedTicketsContent() {
                   onClick={() => setStep("select_tier")}
                   className="px-4 py-3 rounded-2xl border border-slate-250 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                 >
-                  Back
+                  {t("common.back", "Back")}
                 </button>
               )}
 
@@ -607,19 +619,20 @@ function EmbedTicketsContent() {
                 {submitting ? (
                   <>
                     <RefreshCw size={15} className="animate-spin" />
-                    <span>Processing...</span>
+                    <span>{t("common.processing", "Processing...")}</span>
                   </>
                 ) : selectedTicket && Number(selectedTicket.price) > 0 ? (
-                  <span>Pay with EDAHABIA / CIB ({Number(selectedTicket.price).toLocaleString()} DZD)</span>
+                  <span>{t("reg.payWithEdahabia", "Pay with EDAHABIA / CIB")} (<bdi dir="ltr">{Number(selectedTicket.price).toLocaleString()} {t("common.dzd", "DZD")}</bdi>)</span>
                 ) : (
-                  <span>{selectedTicket?.requiresApproval ? "Submit Application" : "Confirm Registration"}</span>
+                  <span>{selectedTicket?.requiresApproval ? t("tickets.submitApplication", "Submit Application") : t("tickets.confirmRegistration", "Confirm Registration")}</span>
                 )}
               </button>
             </div>
             {selectedTicket && Number(selectedTicket.price) > 0 && (
               <div className="text-center pt-2">
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                  🔒 Secured by Chargily Pay (CIB &amp; EDAHABIA)
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider inline-flex items-center gap-1.5 justify-center">
+                  <ShieldCheck size={12} className="text-emerald-500 shrink-0" />
+                  <span><bdi dir="ltr">100%</bdi> {t("reg.securePaymentChargily", "Secure Payment via Chargily Pay (CIB & EDAHABIA)")}</span>
                 </span>
               </div>
             )}

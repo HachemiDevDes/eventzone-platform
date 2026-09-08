@@ -19,12 +19,86 @@ import SearchableSelect from "./SearchableSelect";
 import { getLocalizedIndustry } from "../lib/constants";
 import FormImageUploader from "./FormImageUploader";
 import FormFileUploader from "./FormFileUploader";
-import { getFormSections } from "../lib/formPresets";
+import { getFormSections, getLocalizedPresetOption } from "../lib/formPresets";
 import { smoothScrollTo } from "../lib/smoothScroll";
 import { getYouTubeEmbedUrl } from "./EventDetailsView";
 import { recordInfluencerClick, fetchEventDetails, fetchTickets } from "../lib/db";
 import { LandingPageSkeleton } from "./SkeletonLoaders";
 import Footer from "./Footer";
+
+function getLocalizedCheckoutFieldLabel(field, t) {
+  if (!field) return "";
+  const label = field.label || "";
+  const cleaned = label.trim().toLowerCase();
+  const fid = (field.id || "").toLowerCase();
+
+  if (fid === "preset_function" || cleaned === "job function / role" || cleaned === "job function" || cleaned.includes("job function") || (cleaned.includes("job") && cleaned.includes("role"))) {
+    return t ? t("forms.smartFieldFunctionLabel", "Job Function / Role") : "Job Function / Role";
+  }
+  if (fid === "preset_company" || cleaned === "company / organization" || cleaned === "company" || (cleaned.includes("company") && cleaned.includes("org"))) {
+    return t ? t("forms.smartFieldCompanyLabel", "Company / Organization") : "Company / Organization";
+  }
+  if (fid === "preset_picture" || cleaned === "badge picture" || cleaned === "badge photo" || (cleaned.includes("badge") && (cleaned.includes("pic") || cleaned.includes("photo")))) {
+    return t ? t("forms.smartFieldPictureLabel", "Badge Picture") : "Badge Picture";
+  }
+  if (fid === "preset_country" || cleaned === "country") {
+    return t ? t("forms.smartFieldCountryLabel", "Country") : "Country";
+  }
+  if (fid === "preset_city" || cleaned === "city") {
+    return t ? t("forms.smartFieldCityLabel", "City") : "City";
+  }
+  if (fid === "preset_gender" || cleaned === "gender") {
+    return t ? t("forms.smartFieldGenderLabel", "Gender") : "Gender";
+  }
+  if (fid === "preset_industry" || cleaned === "industry") {
+    return t ? t("forms.smartFieldIndustryLabel", "Industry") : "Industry";
+  }
+  if (fid === "preset_reason" || cleaned === "reason for attending") {
+    return t ? t("forms.smartFieldReasonLabel", "Reason for Attending") : "Reason for Attending";
+  }
+  if (fid === "preset_referral" || cleaned === "how did you hear about us?" || cleaned.includes("hear about")) {
+    return t ? t("forms.smartFieldReferralLabel", "How did you hear about us?") : "How did you hear about us?";
+  }
+  if (fid === "f_core_name" || cleaned === "full name") {
+    return t ? t("reg.fullName", "Full Name") : "Full Name";
+  }
+  if (fid === "f_core_email" || cleaned === "email address" || cleaned === "email") {
+    return t ? t("common.email", "Email Address") : "Email Address";
+  }
+  if (fid === "f_core_phone" || cleaned === "phone number" || cleaned === "phone") {
+    return t ? t("common.phone", "Phone Number") : "Phone Number";
+  }
+
+  return label;
+}
+
+function getLocalizedCheckoutFieldPlaceholder(field, t) {
+  if (!field) return "";
+  const ph = field.placeholder || "";
+  const cleaned = ph.trim().toLowerCase();
+  const fid = (field.id || "").toLowerCase();
+
+  if (fid === "preset_company" || cleaned.includes("acme corporation") || cleaned.includes("google, mit")) {
+    return t ? t("drawer.companyPlaceholder", "e.g. Acme Corporation, Google, MIT...") : "e.g. Acme Corporation, Google, MIT...";
+  }
+  if (fid === "preset_picture" || cleaned.includes("upload or take a photo") || cleaned.includes("attendee badge")) {
+    return t ? t("forms.smartFieldPicturePlaceholder", "Upload or take a photo for your attendee badge...") : "Upload or take a photo for your attendee badge...";
+  }
+  if (fid === "preset_country" || cleaned.includes("select your country")) {
+    return t ? t("common.selectCountry", "Select your country...") : "Select your country...";
+  }
+  if (fid === "preset_city" || cleaned.includes("select or enter your city")) {
+    return t ? t("common.selectCity", "Select or enter your city...") : "Select or enter your city...";
+  }
+  if (fid === "preset_function" || cleaned.includes("professional job function")) {
+    return t ? t("common.selectOption", "Select option...") : "Select option...";
+  }
+  if (cleaned === "enter details...") {
+    return t ? t("common.enterDetails", "Enter details...") : "Enter details...";
+  }
+
+  return ph;
+}
 
 export default function EventPublicLandingPage({
   eventId,
@@ -2622,7 +2696,7 @@ export default function EventPublicLandingPage({
                                       hasError ? "bg-rose-50/50 border border-rose-200" : ""
                                     }`}>
                                       <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                        {field.label} {field.required && <span className="text-rose-500">*</span>}
+                                        {getLocalizedCheckoutFieldLabel(field, t)} {field.required && <span className="text-rose-500">*</span>}
                                       </label>
 
                                       {(field.type === "phone" || field.id === "f_core_phone") && (
@@ -2634,7 +2708,7 @@ export default function EventPublicLandingPage({
                                               setCheckoutSectionErrors(prev => ({ ...prev, [field.id]: undefined }));
                                             }
                                           }}
-                                          placeholder={field.placeholder || ""}
+                                          placeholder={getLocalizedCheckoutFieldPlaceholder(field, t)}
                                           required={field.required}
                                         />
                                       )}
@@ -2648,7 +2722,7 @@ export default function EventPublicLandingPage({
                                               setCheckoutSectionErrors(prev => ({ ...prev, [field.id]: undefined }));
                                             }
                                           }}
-                                          placeholder={field.placeholder || "Select your country..."}
+                                          placeholder={getLocalizedCheckoutFieldPlaceholder(field, t) || t("common.selectCountry", "Select your country...")}
                                           required={field.required}
                                         />
                                       )}
@@ -2668,7 +2742,7 @@ export default function EventPublicLandingPage({
                                               setCheckoutSectionErrors(prev => ({ ...prev, [field.id]: undefined }));
                                             }
                                           }}
-                                          placeholder={field.placeholder || "Select or enter your city..."}
+                                          placeholder={getLocalizedCheckoutFieldPlaceholder(field, t) || t("common.selectCity", "Select or enter your city...")}
                                           required={field.required}
                                         />
                                       )}
@@ -2682,7 +2756,7 @@ export default function EventPublicLandingPage({
                                               setCheckoutSectionErrors(prev => ({ ...prev, [field.id]: undefined }));
                                             }
                                           }}
-                                          placeholder={field.placeholder || "Upload your photo from phone or computer"}
+                                          placeholder={getLocalizedCheckoutFieldPlaceholder(field, t) || t("forms.smartFieldPicturePlaceholder", "Upload or take a photo for your attendee badge...")}
                                           required={field.required}
                                         />
                                       )}
@@ -2697,7 +2771,7 @@ export default function EventPublicLandingPage({
                                               setCheckoutSectionErrors(prev => ({ ...prev, [field.id]: undefined }));
                                             }
                                           }}
-                                          placeholder={field.placeholder || ""}
+                                          placeholder={getLocalizedCheckoutFieldPlaceholder(field, t)}
                                           required={field.required}
                                         />
                                       )}
@@ -2713,7 +2787,7 @@ export default function EventPublicLandingPage({
                                               setCheckoutSectionErrors(prev => ({ ...prev, [field.id]: undefined }));
                                             }
                                           }}
-                                          placeholder={field.placeholder || "Enter details..."}
+                                          placeholder={getLocalizedCheckoutFieldPlaceholder(field, t) || t("common.enterDetails", "Enter details...")}
                                           className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-xl text-xs font-semibold text-slate-900 outline-none transition-all"
                                         />
                                       )}
@@ -2729,7 +2803,7 @@ export default function EventPublicLandingPage({
                                               setCheckoutSectionErrors(prev => ({ ...prev, [field.id]: undefined }));
                                             }
                                           }}
-                                          placeholder={field.placeholder || "Enter details..."}
+                                          placeholder={getLocalizedCheckoutFieldPlaceholder(field, t) || t("common.enterDetails", "Enter details...")}
                                           className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-xl text-xs font-medium text-slate-900 outline-none transition-all"
                                         />
                                       )}
@@ -2745,9 +2819,12 @@ export default function EventPublicLandingPage({
                                                 setCheckoutSectionErrors(prev => ({ ...prev, [field.id]: undefined }));
                                               }
                                             }}
-                                            options={field.options || []}
-                                            placeholder="Select option..."
-                                            searchPlaceholder="Search choices..."
+                                            options={(field.options || []).map(opt => ({
+                                              value: opt,
+                                              label: getLocalizedPresetOption(opt, t)
+                                            }))}
+                                            placeholder={t("common.selectOption", "Select option...")}
+                                            searchPlaceholder={t("common.searchChoices", "Search choices...")}
                                           />
                                           {isOtherValue(customAnswers[field.id]) && (
                                             <div className="animate-fade-in flex items-center gap-2 p-2 bg-blue-50/50 border border-blue-200 rounded-xl">
@@ -2756,7 +2833,7 @@ export default function EventPublicLandingPage({
                                                 required={field.required}
                                                 value={getOtherTextForField(field.id, customAnswers[field.id])}
                                                 onChange={(e) => handleOtherTextChange(field.id, e.target.value)}
-                                                placeholder="Please specify / Type what's other..."
+                                                placeholder={t("forms.specifyOther", "Please specify / Type what's other...")}
                                                 className="w-full px-3 py-2 bg-white border border-blue-300 focus:border-blue-600 rounded-lg text-xs font-semibold text-slate-900 outline-none shadow-2xs placeholder:text-slate-400"
                                                 autoFocus
                                               />
@@ -2784,16 +2861,16 @@ export default function EventPublicLandingPage({
                                                      onChange={() => handleRadioChoice(field.id, opt)}
                                                      className="text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
                                                    />
-                                                   <span>{opt}</span>
+                                                   <span>{getLocalizedPresetOption(opt, t)}</span>
                                                  </label>
                                                  {isOtherOpt && isChecked && (
-                                                   <div className="ml-5 animate-fade-in">
+                                                   <div className="ml-5 rtl:ml-0 rtl:mr-5 animate-fade-in">
                                                      <input
                                                        type="text"
                                                        required={field.required}
                                                        value={getOtherTextForField(field.id, customAnswers[field.id])}
                                                        onChange={(e) => handleOtherTextChange(field.id, e.target.value)}
-                                                       placeholder="Please specify / Type what's other..."
+                                                       placeholder={t("forms.specifyOther", "Please specify / Type what's other...")}
                                                        className="w-full px-3 py-1.5 bg-white border border-blue-300 focus:border-blue-600 rounded-lg text-xs font-semibold text-slate-900 outline-none shadow-2xs placeholder:text-slate-400"
                                                        autoFocus
                                                      />
@@ -2825,15 +2902,15 @@ export default function EventPublicLandingPage({
                                                      onChange={(e) => handleCheckboxChoice(field.id, opt, e.target.checked)}
                                                      className="text-blue-600 focus:ring-blue-500 rounded h-3.5 w-3.5"
                                                    />
-                                                   <span>{opt}</span>
+                                                   <span>{getLocalizedPresetOption(opt, t)}</span>
                                                  </label>
                                                  {isOtherOpt && isChecked && (
-                                                   <div className="ml-5 animate-fade-in">
+                                                   <div className="ml-5 rtl:ml-0 rtl:mr-5 animate-fade-in">
                                                      <input
                                                        type="text"
                                                        value={customOtherTexts[`${field.id}__other`] || (otherItem && isOtherValue(otherItem) && otherItem.startsWith("Other: ") ? otherItem.slice(7) : "")}
                                                        onChange={(e) => handleCheckboxOtherTextChange(field.id, opt, e.target.value)}
-                                                       placeholder="Please specify / Type what's other..."
+                                                       placeholder={t("forms.specifyOther", "Please specify / Type what's other...")}
                                                        className="w-full px-3 py-1.5 bg-white border border-blue-300 focus:border-blue-600 rounded-lg text-xs font-semibold text-slate-900 outline-none shadow-2xs placeholder:text-slate-400"
                                                        autoFocus
                                                      />
@@ -2858,7 +2935,7 @@ export default function EventPublicLandingPage({
                                             }}
                                             className="rounded text-blue-600 focus:ring-blue-500 h-4 w-4"
                                           />
-                                          <span>{field.helpText || "Yes, opt-in"}</span>
+                                          <span>{field.helpText || t("forms.yesOptIn", "Yes, opt-in")}</span>
                                         </label>
                                       )}
 
@@ -2879,7 +2956,7 @@ export default function EventPublicLandingPage({
                           {/* Section Title & Description Banner */}
                           <div className="bg-blue-50/70 border border-blue-100 rounded-2xl p-4">
                             <h3 className="text-sm font-bold text-blue-950">
-                              {currentCheckoutSec.title || `Section ${safeCheckoutIdx + 1}`}
+                              {currentCheckoutSec.title === "Additional Registration Questions" ? t("reg.additionalQuestions", "Additional Registration Questions") : (currentCheckoutSec.title || t("reg.sectionNum", `Section ${safeCheckoutIdx + 1}`, { num: safeCheckoutIdx + 1 }))}
                             </h3>
                             {currentCheckoutSec.description && (
                               <p className="text-xs text-blue-800/80 mt-1 font-medium">
@@ -2896,7 +2973,7 @@ export default function EventPublicLandingPage({
                                 hasError ? "bg-rose-50/50 border border-rose-200" : ""
                               }`}>
                                 <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                  {field.label} {field.required && <span className="text-rose-500">*</span>}
+                                  {getLocalizedCheckoutFieldLabel(field, t)} {field.required && <span className="text-rose-500">*</span>}
                                 </label>
 
                                 {(field.type === "phone" || field.id === "f_core_phone") && (
@@ -2908,7 +2985,7 @@ export default function EventPublicLandingPage({
                                         setCheckoutSectionErrors(prev => ({ ...prev, [field.id]: undefined }));
                                       }
                                     }}
-                                    placeholder={field.placeholder || ""}
+                                    placeholder={getLocalizedCheckoutFieldPlaceholder(field, t)}
                                     required={field.required}
                                   />
                                 )}
@@ -2922,7 +2999,7 @@ export default function EventPublicLandingPage({
                                         setCheckoutSectionErrors(prev => ({ ...prev, [field.id]: undefined }));
                                       }
                                     }}
-                                    placeholder={field.placeholder || "Select your country..."}
+                                    placeholder={getLocalizedCheckoutFieldPlaceholder(field, t) || t("common.selectCountry", "Select your country...")}
                                     required={field.required}
                                   />
                                 )}
@@ -2942,7 +3019,7 @@ export default function EventPublicLandingPage({
                                         setCheckoutSectionErrors(prev => ({ ...prev, [field.id]: undefined }));
                                       }
                                     }}
-                                    placeholder={field.placeholder || "Select or enter your city..."}
+                                    placeholder={getLocalizedCheckoutFieldPlaceholder(field, t) || t("common.selectCity", "Select or enter your city...")}
                                     required={field.required}
                                   />
                                 )}
@@ -2956,7 +3033,7 @@ export default function EventPublicLandingPage({
                                         setCheckoutSectionErrors(prev => ({ ...prev, [field.id]: undefined }));
                                       }
                                     }}
-                                    placeholder={field.placeholder || "Upload your photo from phone or computer"}
+                                    placeholder={getLocalizedCheckoutFieldPlaceholder(field, t) || t("forms.smartFieldPicturePlaceholder", "Upload or take a photo for your attendee badge...")}
                                     required={field.required}
                                   />
                                 )}
@@ -2971,7 +3048,7 @@ export default function EventPublicLandingPage({
                                         setCheckoutSectionErrors(prev => ({ ...prev, [field.id]: undefined }));
                                       }
                                     }}
-                                    placeholder={field.placeholder || ""}
+                                    placeholder={getLocalizedCheckoutFieldPlaceholder(field, t)}
                                     required={field.required}
                                   />
                                 )}
@@ -2987,7 +3064,7 @@ export default function EventPublicLandingPage({
                                         setCheckoutSectionErrors(prev => ({ ...prev, [field.id]: undefined }));
                                       }
                                     }}
-                                    placeholder={field.placeholder || "Enter details..."}
+                                    placeholder={getLocalizedCheckoutFieldPlaceholder(field, t) || t("common.enterDetails", "Enter details...")}
                                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-xl text-xs font-semibold text-slate-900 outline-none transition-all"
                                   />
                                 )}
@@ -3003,7 +3080,7 @@ export default function EventPublicLandingPage({
                                         setCheckoutSectionErrors(prev => ({ ...prev, [field.id]: undefined }));
                                       }
                                     }}
-                                    placeholder={field.placeholder || "Enter details..."}
+                                    placeholder={getLocalizedCheckoutFieldPlaceholder(field, t) || t("common.enterDetails", "Enter details...")}
                                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-xl text-xs font-medium text-slate-900 outline-none transition-all"
                                   />
                                 )}
@@ -3019,9 +3096,12 @@ export default function EventPublicLandingPage({
                                           setCheckoutSectionErrors(prev => ({ ...prev, [field.id]: undefined }));
                                         }
                                       }}
-                                      options={field.options || []}
-                                      placeholder="Select option..."
-                                      searchPlaceholder="Search choices..."
+                                      options={(field.options || []).map(opt => ({
+                                        value: opt,
+                                        label: getLocalizedPresetOption(opt, t)
+                                      }))}
+                                      placeholder={t("common.selectOption", "Select option...")}
+                                      searchPlaceholder={t("common.searchChoices", "Search choices...")}
                                     />
                                     {isOtherValue(customAnswers[field.id]) && (
                                       <div className="animate-fade-in flex items-center gap-2 p-2 bg-blue-50/50 border border-blue-200 rounded-xl">
@@ -3030,7 +3110,7 @@ export default function EventPublicLandingPage({
                                           required={field.required}
                                           value={getOtherTextForField(field.id, customAnswers[field.id])}
                                           onChange={(e) => handleOtherTextChange(field.id, e.target.value)}
-                                          placeholder="Please specify / Type what's other..."
+                                          placeholder={t("forms.specifyOther", "Please specify / Type what's other...")}
                                           className="w-full px-3 py-2 bg-white border border-blue-300 focus:border-blue-600 rounded-lg text-xs font-semibold text-slate-900 outline-none shadow-2xs placeholder:text-slate-400"
                                           autoFocus
                                         />
@@ -3058,16 +3138,16 @@ export default function EventPublicLandingPage({
                                               onChange={() => handleRadioChoice(field.id, opt)}
                                               className="text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
                                             />
-                                            <span>{opt}</span>
+                                            <span>{getLocalizedPresetOption(opt, t)}</span>
                                           </label>
                                           {isOtherOpt && isChecked && (
-                                            <div className="ml-5 animate-fade-in">
+                                            <div className="ml-5 rtl:ml-0 rtl:mr-5 animate-fade-in">
                                               <input
                                                 type="text"
                                                 required={field.required}
                                                 value={getOtherTextForField(field.id, customAnswers[field.id])}
                                                 onChange={(e) => handleOtherTextChange(field.id, e.target.value)}
-                                                placeholder="Please specify / Type what's other..."
+                                                placeholder={t("forms.specifyOther", "Please specify / Type what's other...")}
                                                 className="w-full px-3 py-1.5 bg-white border border-blue-300 focus:border-blue-600 rounded-lg text-xs font-semibold text-slate-900 outline-none shadow-2xs placeholder:text-slate-400"
                                                 autoFocus
                                               />
@@ -3099,15 +3179,15 @@ export default function EventPublicLandingPage({
                                               onChange={(e) => handleCheckboxChoice(field.id, opt, e.target.checked)}
                                               className="text-blue-600 focus:ring-blue-500 rounded h-3.5 w-3.5"
                                             />
-                                            <span>{opt}</span>
+                                            <span>{getLocalizedPresetOption(opt, t)}</span>
                                           </label>
                                           {isOtherOpt && isChecked && (
-                                            <div className="ml-5 animate-fade-in">
+                                            <div className="ml-5 rtl:ml-0 rtl:mr-5 animate-fade-in">
                                               <input
                                                 type="text"
                                                 value={customOtherTexts[`${field.id}__other`] || (otherItem && isOtherValue(otherItem) && otherItem.startsWith("Other: ") ? otherItem.slice(7) : "")}
                                                 onChange={(e) => handleCheckboxOtherTextChange(field.id, opt, e.target.value)}
-                                                placeholder="Please specify / Type what's other..."
+                                                placeholder={t("forms.specifyOther", "Please specify / Type what's other...")}
                                                 className="w-full px-3 py-1.5 bg-white border border-blue-300 focus:border-blue-600 rounded-lg text-xs font-semibold text-slate-900 outline-none shadow-2xs placeholder:text-slate-400"
                                                 autoFocus
                                               />
@@ -3132,7 +3212,7 @@ export default function EventPublicLandingPage({
                                       }}
                                       className="rounded text-blue-600 focus:ring-blue-500 h-4 w-4"
                                     />
-                                    <span>{field.helpText || "Yes, opt-in"}</span>
+                                    <span>{field.helpText || t("forms.yesOptIn", "Yes, opt-in")}</span>
                                   </label>
                                 )}
 
@@ -3149,7 +3229,7 @@ export default function EventPublicLandingPage({
                       {Object.keys(checkoutSectionErrors).length > 0 && (
                         <div className="p-3 bg-rose-50 border border-rose-200 rounded-2xl text-xs font-bold text-rose-700 flex items-center gap-2">
                           <AlertCircle size={15} className="shrink-0 text-rose-600" />
-                          <span>Please fill in all required questions marked in red before continuing.</span>
+                          <span>{t("reg.fillRequiredQuestions", "Please fill in all required questions marked in red before continuing.")}</span>
                         </div>
                       )}
 
@@ -3162,7 +3242,7 @@ export default function EventPublicLandingPage({
                               onClick={handleCheckoutPrev}
                               className="px-5 py-3.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-2xl font-bold text-xs shadow-2xs transition-all cursor-pointer"
                             >
-                              Back
+                              {t("common.back", "Back")}
                             </button>
                           )}
 
@@ -3172,8 +3252,8 @@ export default function EventPublicLandingPage({
                               onClick={handleCheckoutNext}
                               className="flex-1 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-extrabold text-xs sm:text-sm shadow-lg shadow-blue-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
                             >
-                              <span>Next</span>
-                              <ChevronRight size={16} />
+                              <span>{t("common.next", "Next")}</span>
+                              {isRTL ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
                             </button>
                           ) : isPaidTicket ? (
                             <button
@@ -3184,12 +3264,12 @@ export default function EventPublicLandingPage({
                               {rsvpLoading ? (
                                 <>
                                   <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                                  <span>Connecting to Chargily Pay...</span>
+                                  <span>{t("reg.connectingChargily", "Connecting to Chargily Pay...")}</span>
                                 </>
                               ) : (
                                 <>
                                   <ShieldCheck size={18} className="text-emerald-200" />
-                                  <span>Pay with EDAHABIA / CIB ({Math.round(effectiveTicketPrice).toLocaleString()} DZD)</span>
+                                  <span>{t("reg.payWithEdahabia", "Pay with EDAHABIA / CIB")} (<bdi dir="ltr">{Math.round(effectiveTicketPrice).toLocaleString()} {t("common.dzd", "DZD")}</bdi>)</span>
                                 </>
                               )}
                             </button>
@@ -3216,7 +3296,7 @@ export default function EventPublicLandingPage({
                       {isPaidTicket && isCheckoutLast && (
                         <div className="pt-2 flex items-center justify-center gap-2 text-[10px] text-slate-500 font-bold uppercase tracking-wider">
                           <ShieldCheck size={12} className="text-emerald-600" />
-                          <span>100% Secure Payment via Chargily Pay (CIB &amp; EDAHABIA)</span>
+                          <span><bdi dir="ltr">100%</bdi> {t("reg.securePaymentChargily", "Secure Payment via Chargily Pay (CIB & EDAHABIA)")}</span>
                         </div>
                       )}
                     </form>

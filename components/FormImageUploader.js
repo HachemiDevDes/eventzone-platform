@@ -138,11 +138,15 @@ export default function FormImageUploader({
             {isUploading ? <Loader2 size={20} className="animate-spin text-blue-600" /> : <Camera size={20} />}
           </div>
           <div className="text-xs font-bold text-slate-800">
-            {isUploading ? t("forms.uploadingToCloud", "Uploading to Cloud Storage...") : (placeholder || t("forms.uploadPhotoPlaceholder", "Upload your photo from phone or computer"))}
+            {isUploading
+              ? t("forms.uploadingToCloud", "Uploading to Cloud Storage...")
+              : (placeholder && (placeholder.toLowerCase().includes("badge") || placeholder.toLowerCase().includes("attendee"))
+                ? t("forms.smartFieldPicturePlaceholder", "Upload or take a photo for your attendee badge...")
+                : (placeholder || t("forms.uploadPhotoPlaceholder", "Upload your photo from phone or computer")))}
           </div>
           <div className="text-[11px] text-slate-400 mt-1 flex items-center justify-center gap-1.5">
             <Sparkles size={11} className="text-blue-500 shrink-0" />
-            <span><bdi dir="ltr">{t("forms.autoOptimizedWebp", "Auto-optimized WebP (Max 10MB)")}</bdi></span>
+            <span>{t("forms.autoOptimizedWebp", "Auto-optimized WebP (Max 10MB)")}</span>
           </div>
         </div>
       )}

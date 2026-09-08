@@ -386,7 +386,7 @@ const filterOptions = [
   { value: "logistics", label: "Logistics & Utilities", icon: AlertTriangle, iconColor: "text-amber-600" },
 ];
 
-function CustomFilterDropdown({ value, onChange, options, btnClassName = "px-3.5 py-2.5 rounded-2xl text-xs" }) {
+function CustomFilterDropdown({ value, onChange, options = filterOptions, btnClassName = "px-3.5 py-2.5 rounded-2xl text-xs" }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -400,8 +400,9 @@ function CustomFilterDropdown({ value, onChange, options, btnClassName = "px-3.5
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const selectedOption = options.find(opt => opt.value === value) || options[0];
-  const SelectedIcon = selectedOption.icon;
+  const safeOptions = Array.isArray(options) && options.length > 0 ? options : filterOptions;
+  const selectedOption = safeOptions.find(opt => opt.value === value) || safeOptions[0] || { label: "All", icon: Globe, iconColor: "text-indigo-500" };
+  const SelectedIcon = selectedOption?.icon;
 
   return (
     <div className="relative w-full" ref={dropdownRef}>
@@ -411,15 +412,15 @@ function CustomFilterDropdown({ value, onChange, options, btnClassName = "px-3.5
         className={`w-full bg-slate-100/50 hover:bg-slate-100 border border-slate-200/50 focus:border-indigo-400 focus:bg-white font-bold text-slate-700 outline-none shadow-sm transition-all cursor-pointer flex items-center justify-between ${btnClassName}`}
       >
         <span className="flex items-center gap-2">
-          {SelectedIcon && <SelectedIcon size={14} className={selectedOption.iconColor} />}
-          <span>{selectedOption.label}</span>
+          {SelectedIcon && <SelectedIcon size={14} className={selectedOption?.iconColor} />}
+          <span>{selectedOption?.label || "All"}</span>
         </span>
         <ChevronDown size={12} className={`transition-transform duration-150 text-slate-500 ${isOpen ? "rotate-180" : ""}`} />
       </button>
 
       {isOpen && (
         <div className="absolute top-full left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-2xl shadow-xl z-[99] py-1.5 max-h-60 overflow-y-auto">
-          {options.map((opt) => {
+          {safeOptions.map((opt) => {
             const Icon = opt.icon;
             const isSelected = opt.value === value;
             return (
@@ -495,6 +496,19 @@ export default function FloorPlanModifier({
   onSaveFloors
 }) {
   const { t, lang, isRTL } = useLanguage();
+
+  const localizedFilterOptions = useMemo(() => [
+    { value: "all", label: t("floor.filter_all", "Show All Locations"), icon: Globe, iconColor: "text-indigo-500" },
+    { value: "draft", label: t("floor.filter_draft", "Draft Booths"), icon: Folder, iconColor: "text-amber-500" },
+    { value: "available", label: t("floor.filter_available", "Available Booths"), icon: Circle, iconColor: "text-emerald-500" },
+    { value: "reserved", label: t("floor.filter_reserved", "Reserved Booths"), icon: Clock, iconColor: "text-orange-500" },
+    { value: "sold", label: t("floor.filter_sold", "Sold Booths"), icon: CheckCircle2, iconColor: "text-red-500" },
+    { value: "checked_in", label: t("floor.filter_checked_in", "Checked In Booths"), icon: Shield, iconColor: "text-emerald-600" },
+    { value: "empty", label: t("floor.filter_empty", "Empty Booths"), icon: Square, iconColor: "text-purple-400" },
+    { value: "equipped", label: t("floor.filter_equipped", "Equipped Booths"), icon: Briefcase, iconColor: "text-rose-500" },
+    { value: "tables", label: t("floor.filter_tables", "Banquet Seating Tables"), icon: Utensils, iconColor: "text-indigo-650" },
+    { value: "logistics", label: t("floor.filter_logistics", "Logistics & Utilities"), icon: AlertTriangle, iconColor: "text-amber-600" },
+  ], [t]);
   const initialFloorBlueprint = (initialFloors && initialFloors.length > 0 && initialFloors[0]?.blueprint)
     ? initialFloors[0].blueprint
     : (initialBlueprintState || {});
