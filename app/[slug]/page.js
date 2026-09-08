@@ -137,18 +137,12 @@ export default function DynamicEventLandingPage() {
           }
         }
 
-        // 2. Parallel non-blocking fetches for all event modules
+        // 2. Parallel non-blocking fetches for public landing page modules only
         fetchTickets(eventId).then(res => isMounted && setTickets(res || [])).catch(() => {});
         fetchSessions(eventId).then(res => isMounted && setSessions(res || [])).catch(() => {});
         fetchSponsors(eventId).then(res => isMounted && setSponsors(res || [])).catch(() => {});
         fetchExhibitors(eventId).then(res => isMounted && setExhibitors(res || [])).catch(() => {});
-        fetchAttendees(eventId).then(res => isMounted && setAttendees(res || [])).catch(() => {});
-        fetchFloorPlans(eventId).then(res => isMounted && setFloorPlans(res || [])).catch(() => {});
-        fetchDocuments(eventId).then(res => isMounted && setDocuments(res || [])).catch(() => {});
-        fetchInfluencers(eventId).then(res => isMounted && setInfluencers(res || [])).catch(() => {});
         fetchForms(eventId).then(res => isMounted && setForms(res || [])).catch(() => {});
-        fetchFormSubmissions(eventId).then(res => isMounted && setFormSubmissions(res || [])).catch(() => {});
-        fetchRSVPs(eventId).then(res => isMounted && setRsvps(res || [])).catch(() => {});
         fetchRSVPSettings(eventId).then(res => isMounted && setRsvpSettings(res || {})).catch(() => {});
 
       } catch (err) {

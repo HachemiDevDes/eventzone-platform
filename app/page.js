@@ -90,7 +90,7 @@ import {
   fetchDocuments, upsertDocument, deleteDocument, archiveDocument, togglePinDocument,
   uploadFileToBucket,
   fetchUserEvents, fetchPublicEvents, createEvent, deleteEvent, archiveEvent, unarchiveEvent,
-  fetchVisitorRegistrations, registerVisitorForEvent, upsertUserProfile,
+  fetchVisitorRegistrations, registerVisitorForEvent, upsertUserProfile, fetchUserProfile, fetchSiblingProfiles,
   isMatchingEmail, isMatchingPhoneNumber, cleanPhoneNumber,
   setActiveEventId, getActiveEventId, DEFAULT_EVENT_ID, SHOWCASE_EVENTS,
   subscribeToRealtimeSync, broadcastRealtimeChange,
@@ -391,6 +391,7 @@ export function HomeContent() {
     return true;
   });
   const isInitializedRef = useRef(false);
+  const lastEventsDataFetchRef = useRef(0);
 
   // Modal State
   const [activeModalType, setActiveModalType] = useState(null);
@@ -500,23 +501,14 @@ export function HomeContent() {
         const userId = session.user.id;
         const userMeta = session.user.user_metadata || {};
 
-        const { data: directProfile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .maybeSingle();
-
+        const directProfile = await fetchUserProfile(userId);
         let profile = directProfile;
 
-        // Check for sibling profiles sharing the same email
+        // Check for sibling profiles sharing the same email (cached for 120s)
         let siblingProfiles = [];
         if (session.user.email) {
           try {
-            const { data: siblings } = await supabase
-              .from('profiles')
-              .select('*')
-              .ilike('email', session.user.email.trim())
-              .order('created_at', { ascending: true });
+            const siblings = await fetchSiblingProfiles(session.user.email);
             if (Array.isArray(siblings) && siblings.length > 0) {
               siblingProfiles = siblings;
             }
@@ -531,11 +523,15 @@ export function HomeContent() {
         }
 
         // Automatically re-link any events previously created under sibling UUIDs to active session userId
+        // ONLY run once per session to prevent infinite PATCH loops and reduce database egress to near zero
         const siblingIds = siblingProfiles.filter(s => s.id !== userId).map(s => s.id);
-        if (siblingIds.length > 0) {
+        const linkKey = `eventzone_siblings_linked_${userId}`;
+        const alreadyLinked = typeof window !== 'undefined' && sessionStorage.getItem(linkKey);
+        if (siblingIds.length > 0 && !alreadyLinked) {
           try {
             await supabase.from('events').update({ organizer_id: userId }).in('organizer_id', siblingIds);
             await supabase.from('events').update({ owner_id: userId }).in('owner_id', siblingIds);
+            if (typeof window !== 'undefined') sessionStorage.setItem(linkKey, 'true');
           } catch (linkErr) {
             console.warn("Auto event re-link notice:", linkErr);
           }
@@ -646,36 +642,35 @@ export function HomeContent() {
           delete updatedSocials.role;
           delete updatedSocials.is_admin;
 
-          await supabase.from('profiles').update({
-            metadata: updatedMeta,
-            social_links: updatedSocials,
-            company_name: resolvedCompany,
-            job_title: resolvedJobTitle,
-            phone: resolvedPhone,
-            bio: resolvedBio,
-            location: resolvedLocation,
-            updated_at: new Date().toISOString()
-          }).eq('id', userId);
+          // Check if any fields actually changed to avoid triggering unnecessary Realtime loops and egress
+          const currMeta = directProfile?.metadata || {};
+          const currSocials = directProfile?.social_links || {};
+          const isMetaDiff = JSON.stringify(updatedMeta) !== JSON.stringify(currMeta);
+          const isSocialsDiff = JSON.stringify(updatedSocials) !== JSON.stringify(currSocials);
+          const isCompanyDiff = (resolvedCompany || '') !== (directProfile?.company_name || '');
+          const isJobTitleDiff = (resolvedJobTitle || '') !== (directProfile?.job_title || '');
+          const isPhoneDiff = (resolvedPhone || '') !== (directProfile?.phone || '');
+          const isBioDiff = (resolvedBio || '') !== (directProfile?.bio || '');
+          const isLocDiff = (resolvedLocation || '') !== (directProfile?.location || '');
+
+          if (isMetaDiff || isSocialsDiff || isCompanyDiff || isJobTitleDiff || isPhoneDiff || isBioDiff || isLocDiff) {
+            await supabase.from('profiles').update({
+              metadata: updatedMeta,
+              social_links: updatedSocials,
+              company_name: resolvedCompany,
+              job_title: resolvedJobTitle,
+              phone: resolvedPhone,
+              bio: resolvedBio,
+              location: resolvedLocation,
+              updated_at: new Date().toISOString()
+            }).eq('id', userId);
+          }
         } catch (syncBackErr) {
           console.warn("Profile sync backfill warning:", syncBackErr);
         }
 
-        // Prefetch total events count across all matching IDs/email
-        let calculatedEventsCount = 0;
-        try {
-          const allUserIds = [userId, ...siblingIds];
-          const orConditions = allUserIds.map(id => `organizer_id.eq.${id}`);
-          if (session.user.email) {
-            orConditions.push(`contact_email.ilike.${session.user.email.trim()}`);
-          }
-          const { count } = await supabase
-            .from('events')
-            .select('*', { count: 'exact', head: true })
-            .or(orConditions.join(','));
-          if (typeof count === 'number') calculatedEventsCount = count;
-        } catch (cErr) {
-          console.warn("Event count prefetch note:", cErr);
-        }
+        // Use local cached events count instead of making a redundant network HEAD count request
+        let calculatedEventsCount = userEvents?.length || 0;
 
         const syncedUser = {
           id: userId,
@@ -981,13 +976,19 @@ export function HomeContent() {
     return () => {
       isMounted = false;
       subscription?.unsubscribe();
-      profileChannel?.unsubscribe();
+      if (profileChannel) supabase.removeChannel(profileChannel);
     };
   }, []);
 
   // Load User Events & Public Events
   useEffect(() => {
     const loadEventsData = async (isReconnect = false) => {
+      const now = Date.now();
+      if (!isReconnect && (now - lastEventsDataFetchRef.current) < 15000) {
+        return;
+      }
+      lastEventsDataFetchRef.current = now;
+
       if (typeof navigator !== "undefined" && !navigator.onLine) {
         // Fast path for offline mode: hydrate cached user events and active event
         const cachedUEvents = safeLocalStorageGet("eventzone_cache_user_events", []);
@@ -1057,7 +1058,7 @@ export function HomeContent() {
         window.removeEventListener("online", handleOnlineEventsRefresh);
       };
     }
-  }, [currentUser]);
+  }, [currentUser?.id, currentUser?.email]);
 
 
   // Load single-event data whenever activeEventId changes
@@ -1162,7 +1163,6 @@ export function HomeContent() {
             setEventDetails(val);
             if (val) safeLocalStorageSet(`eventzone_cached_event_${activeEventId}`, val);
           }, "event");
-          fetchAndSet(fetchTickets(activeEventId), setTickets, "tickets");
           fetchAndSet(fetchInfluencers(activeEventId), setInfluencers, "influencers");
           fetchAndSet(fetchOpportunities(activeEventId), setOpportunities, "opportunities");
           fetchAndSet(fetchOrganizations(activeEventId), setOrganizations, "organizations");
@@ -1178,10 +1178,9 @@ export function HomeContent() {
         // 1. Parallel coordinated entity fetches to guarantee accurate & complete data
         triggerGranularFetches();
 
-        // 2. Parallel non-blocking fetches for rsvps, logistics & documents
+        // 2. Parallel non-blocking fetches for rsvps & logistics
         fetchAndSet(fetchRSVPs(activeEventId), setRsvps, "rsvps");
         fetchAndSet(fetchLogistics(activeEventId), setLogisticsData, "logisticsData");
-        fetchAndSet(fetchDocuments(activeEventId), setDocuments, "documents");
 
         // 3. Single coordinated parallel fetch for attendees, pending & submissions
         const [loadedTickets, loadedSubmissions, rawAttendees, rawPending] = await Promise.all([
@@ -1529,10 +1528,6 @@ export function HomeContent() {
             safeLocalStorageSet(`eventzone_cache_opportunities_${activeEventId}`, updatedOpps);
           }
         })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'documents', filter: `event_id=eq.${activeEventId}` }, async () => {
-          const updatedDocs = await fetchDocuments(activeEventId);
-          if (updatedDocs) setDocuments(updatedDocs);
-        })
         .subscribe();
     } catch (e) {
       console.warn("Supabase event channel error:", e);
@@ -1568,7 +1563,7 @@ export function HomeContent() {
 
     return () => {
       unsubscribeSync();
-      eventChannel?.unsubscribe();
+      if (eventChannel) supabase.removeChannel(eventChannel);
       if (typeof window !== "undefined") {
         window.removeEventListener("eventzone:attendee-synced", handleAttendeeSynced);
         window.removeEventListener("eventzone:checkin-synced", handleCheckinSynced);
