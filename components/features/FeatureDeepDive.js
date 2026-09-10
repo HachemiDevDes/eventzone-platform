@@ -889,7 +889,46 @@ function VisualGraphicCard({ item, idx, featureSlug }) {
     );
   }
 
-  // 10. Module 07: Contrôle d'Accès Multi-Portes & Sécurité
+  // 10. Module 07: Multi-Gate Check-in & Contrôle d'Accès
+  if (type === "gate-passcodes") {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+          <span className="text-xs font-bold text-slate-800">Portes de Check-In Actives</span>
+          <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+            3 Postes Connectés
+          </span>
+        </div>
+        <div className="space-y-2">
+          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
+            <div>
+              <span className="font-bold text-slate-900 block">Porte Principale</span>
+              <span className="text-[10px] font-mono text-slate-500">Passcode : EZGATE</span>
+            </div>
+            <span className="text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded">420 Scans</span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-blue-50/70 border border-blue-200 flex items-center justify-between text-xs">
+            <div>
+              <span className="font-bold text-blue-950 block">Porte VIP & Protocole</span>
+              <span className="text-[10px] font-mono text-blue-600 font-bold">Passcode : VIP771</span>
+            </div>
+            <span className="text-blue-700 font-bold bg-blue-100 px-2 py-0.5 rounded">85 Scans</span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
+            <div>
+              <span className="font-bold text-slate-900 block">Accès Presse & Médias</span>
+              <span className="text-[10px] font-mono text-slate-500">Passcode : EXP923</span>
+            </div>
+            <span className="text-slate-600 font-bold bg-slate-100 px-2 py-0.5 rounded">45 Scans</span>
+          </div>
+        </div>
+        <div className="text-center text-xs font-mono font-medium text-slate-500">
+          Terminal mobile : ci.eventzone.pro
+        </div>
+      </div>
+    );
+  }
+
   if (type === "zone-permissions") {
     return (
       <div className="space-y-3">

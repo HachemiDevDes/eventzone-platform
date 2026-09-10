@@ -12,9 +12,14 @@ import AnimatedMeshBackground from "../../../components/features/AnimatedMeshBac
 import Footer from "../../../components/Footer";
 
 export async function generateStaticParams() {
-  return ALL_FEATURES.map((feature) => ({
-    slug: feature.slug,
-  }));
+  const slugs = new Set();
+  ALL_FEATURES.forEach((feature) => {
+    if (feature.slug) slugs.add(feature.slug);
+    if (Array.isArray(feature.aliases)) {
+      feature.aliases.forEach((alias) => slugs.add(alias));
+    }
+  });
+  return Array.from(slugs).map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({ params }) {

@@ -18,6 +18,7 @@ const FEATURE_ICONS = {
   "crm-participants": Users,
   "logistique-vip": Plane,
   "emargement-express-qr": QrCode,
+  "multi-gate-check-in": Shield,
   "controle-acces-securite": Shield,
   "plan-2d-interactif": Map,
   "b2b-matchmaking-networking": Handshake,
