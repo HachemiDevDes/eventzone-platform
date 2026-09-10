@@ -657,6 +657,7 @@ export default function CheckInMobileApp({
             eventTitle={session.eventTitle}
             staffEmail={session.email}
             staffName={session.staffName}
+            passcode={session.passcode}
             checkedInCount={checkedInCount}
             totalCount={totalCount}
             onScanResult={handleScannerResult}

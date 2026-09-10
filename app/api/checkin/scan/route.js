@@ -15,7 +15,7 @@ export async function OPTIONS() {
 export async function POST(request) {
   try {
     const body = await request.json().catch(() => ({}));
-    const { eventId, payload, checkedInBy } = body || {};
+    const { eventId, payload, checkedInBy, passcode, staffEmail } = body || {};
 
     if (!payload || !eventId) {
       return NextResponse.json(
@@ -25,7 +25,7 @@ export async function POST(request) {
     }
 
     // MANDATORY AUTHENTICATION: Only authorized gate staff, organizer, or API key
-    const authResult = await verifyCheckinStaffOrOrganizer(request, eventId);
+    const authResult = await verifyCheckinStaffOrOrganizer(request, eventId, { passcode, staffEmail });
     if (!authResult.authorized) {
       return NextResponse.json(
         { status: "invalid", message: authResult.error || "Unauthorized: Valid event passcode or staff credentials required." },

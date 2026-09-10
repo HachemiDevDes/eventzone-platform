@@ -109,6 +109,7 @@ export default function CheckInScanner({
   eventTitle = "Event",
   staffEmail = "",
   staffName = "",
+  passcode = "",
   checkedInCount = 0,
   totalCount = 0,
   onScanResult,
@@ -212,9 +213,10 @@ export default function CheckInScanner({
           let targetId = code;
           let targetCode = code;
           let targetEmail = code;
-          if (code.startsWith("{") && code.endsWith("}")) {
+          const trimmedCode = String(code || "").trim();
+          if (trimmedCode.startsWith("{") && trimmedCode.endsWith("}")) {
             try {
-              const p = JSON.parse(code);
+              const p = JSON.parse(trimmedCode);
               if (p.attendeeId) targetId = String(p.attendeeId);
               if (p.badgeCode) targetCode = String(p.badgeCode);
               if (p.email) targetEmail = String(p.email);
@@ -222,11 +224,11 @@ export default function CheckInScanner({
           }
 
           const matched = list.find(a => 
-            String(a.id || '').toLowerCase() === targetId.toLowerCase() ||
-            String(a.id || '').toLowerCase() === targetCode.toLowerCase() ||
-            (a.badgeCode && String(a.badgeCode).toLowerCase() === targetCode.toLowerCase()) ||
-            (a.badge_code && String(a.badge_code).toLowerCase() === targetCode.toLowerCase()) ||
-            (a.email && a.email.toLowerCase() === targetEmail.toLowerCase()) ||
+            (targetId && String(a.id || '').toLowerCase() === targetId.toLowerCase()) ||
+            (targetCode && String(a.id || '').toLowerCase() === targetCode.toLowerCase()) ||
+            (targetCode && a.badgeCode && String(a.badgeCode).toLowerCase() === targetCode.toLowerCase()) ||
+            (targetCode && a.badge_code && String(a.badge_code).toLowerCase() === targetCode.toLowerCase()) ||
+            (targetEmail && a.email && a.email.toLowerCase() === targetEmail.toLowerCase()) ||
             (a.name && a.name.toLowerCase() === code.toLowerCase())
           );
 
@@ -310,14 +312,34 @@ export default function CheckInScanner({
         return;
       }
 
+      // Resolve credentials from props or session storage fallback
+      let effectivePasscode = passcode;
+      let effectiveEmail = staffEmail;
+      if (!effectivePasscode || !effectiveEmail) {
+        try {
+          const saved = typeof window !== "undefined" ? localStorage.getItem("ez_checkin_session") : null;
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (!effectivePasscode && parsed.passcode) effectivePasscode = parsed.passcode;
+            if (!effectiveEmail && parsed.email) effectiveEmail = parsed.email;
+          }
+        } catch {}
+      }
+
+      const headers = { "Content-Type": "application/json" };
+      if (effectivePasscode) headers["x-checkin-passcode"] = effectivePasscode;
+      if (effectiveEmail) headers["x-staff-email"] = effectiveEmail;
+
       try {
         const res = await fetch("/api/checkin/scan", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers,
           body: JSON.stringify({
             eventId,
             payload: code,
-            checkedInBy: staffName || staffEmail || "Gate Staff",
+            passcode: effectivePasscode,
+            staffEmail: effectiveEmail,
+            checkedInBy: staffName || effectiveEmail || "Gate Staff",
           }),
         });
 
@@ -347,14 +369,18 @@ export default function CheckInScanner({
             rawScanned: code,
           });
         } else {
-          playAudioFeedback("invalid");
-          triggerHaptic("invalid");
-          setActiveResult({
-            status: "invalid",
-            attendee: null,
-            message: data.message || t("checkin.statusInvalid", "Invalid ticket pass for this event."),
-            rawScanned: code,
-          });
+          // If server scan returned error or invalid, try offline cache fallback
+          const handledOffline = processOfflineScan();
+          if (!handledOffline) {
+            playAudioFeedback("invalid");
+            triggerHaptic("invalid");
+            setActiveResult({
+              status: "invalid",
+              attendee: null,
+              message: data.message || t("checkin.statusInvalid", "Invalid ticket pass for this event."),
+              rawScanned: code,
+            });
+          }
         }
       } catch (err) {
         console.error("Scan processing network error, trying offline verification:", err);
@@ -372,7 +398,7 @@ export default function CheckInScanner({
         setIsProcessing(false);
       }
     },
-    [eventId, isProcessing, onScanResult, staffEmail, staffName, startAutoNextCountdown, t]
+    [eventId, isProcessing, onScanResult, passcode, staffEmail, staffName, startAutoNextCountdown, t]
   );
 
   const scanVideoFrameRef = useRef(null);
