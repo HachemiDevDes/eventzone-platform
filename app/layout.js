@@ -87,15 +87,29 @@ export default function RootLayout({ children }) {
           dangerouslySetInnerHTML={{
             __html: `
               if (typeof window !== "undefined" && "serviceWorker" in navigator) {
-                window.addEventListener("load", function() {
-                  navigator.serviceWorker.register("/sw.js", { scope: "/" })
-                    .then(function(reg) {
-                      reg.update().catch(function() {});
-                    })
-                    .catch(function(err) {
-                      console.warn("Eventzone SW registration error:", err);
+                var isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+                if (isLocalhost) {
+                  navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    for (var reg of registrations) {
+                      reg.unregister();
+                    }
+                  });
+                  if ("caches" in window) {
+                    caches.keys().then(function(names) {
+                      names.forEach(function(name) { caches.delete(name); });
                     });
-                });
+                  }
+                } else {
+                  window.addEventListener("load", function() {
+                    navigator.serviceWorker.register("/sw.js", { scope: "/" })
+                      .then(function(reg) {
+                        reg.update().catch(function() {});
+                      })
+                      .catch(function(err) {
+                        console.warn("Eventzone SW registration error:", err);
+                      });
+                  });
+                }
               }
             `,
           }}

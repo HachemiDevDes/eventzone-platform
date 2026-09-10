@@ -1,5 +1,11 @@
 // Eventzone Offline Service Worker
-const CACHE_NAME = "eventzone-offline-v2";
+const CACHE_NAME = "eventzone-offline-v4";
+
+const isLocalhost = 
+  typeof self !== "undefined" && 
+  (self.location.hostname === "localhost" || 
+   self.location.hostname === "127.0.0.1" || 
+   self.location.hostname.endsWith(".local"));
 
 const CORE_ASSETS = [
   "/",
@@ -22,6 +28,16 @@ self.addEventListener("install", (event) => {
 
 // Activate: Clean up older cache versions and claim clients
 self.addEventListener("activate", (event) => {
+  if (isLocalhost) {
+    event.waitUntil(
+      caches.keys()
+        .then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
+        .then(() => self.registration.unregister())
+        .then(() => self.clients.claim())
+    );
+    return;
+  }
+
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
@@ -38,6 +54,9 @@ self.addEventListener("activate", (event) => {
 
 // Fetch: Strategy for navigation, static assets, and API requests
 self.addEventListener("fetch", (event) => {
+  if (isLocalhost) {
+    return; // Pass through to network directly without caching on localhost
+  }
   const request = event.request;
   const url = new URL(request.url);
 
