@@ -446,9 +446,9 @@ export default function CheckInMobileApp({
   // ─────────────────────────────────────────────
   if (!session) {
     return (
-      <div className="min-h-[100dvh] w-full bg-slate-950 text-slate-100 flex flex-col justify-between p-5 select-none font-sans relative overflow-hidden" dir={isRTL ? "rtl" : "ltr"}>
+      <div className="min-h-[100dvh] w-full bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-4 sm:p-6 select-none font-sans relative overflow-hidden" dir={isRTL ? "rtl" : "ltr"}>
         {/* Subtle Ambient Glow */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
 
         {/* Top Floating Language Switcher */}
         <div className={`absolute top-4 ${isRTL ? "left-4" : "right-4"} z-20`}>
@@ -461,109 +461,111 @@ export default function CheckInMobileApp({
           />
         </div>
 
-        {/* Top Branding */}
-        <div className="pt-8 sm:pt-12 pb-2 text-center relative z-10">
-          <div className="flex items-center justify-center mb-3">
-            <img
-              src="/eventzone-logo-white.png"
-              alt="Eventzone"
-              className="h-8 sm:h-9 w-auto object-contain select-none opacity-95"
-            />
-          </div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">Eventzone Check-In</h1>
-        </div>
-
-        {/* Login Form Card */}
-        <div className="w-full max-w-sm mx-auto bg-slate-900/80 border border-white/10 rounded-3xl p-6 sm:p-7 shadow-2xl shadow-black/60 backdrop-blur-xl relative z-10 my-auto">
-          <div className="mb-5">
-            <h2 className="text-base font-bold text-white tracking-tight text-start rtl:text-right text-left">
-              {t("checkin.portalTitle", "Gate Desk Check-In")}
-            </h2>
-          </div>
-
-          {authError && (
-            <div className="mb-4 p-3.5 rounded-2xl bg-red-500/15 border border-red-500/30 flex items-start gap-2.5 text-xs text-red-300 animate-in fade-in">
-              <AlertCircle size={16} className="shrink-0 text-red-400 mt-0.5" />
-              <span>{authError}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleLogin} className="space-y-4">
-            {/* Email Field */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5 text-start rtl:text-right text-left">
-                {t("checkin.staffEmail", "Staff Email Address")}
-              </label>
-              <input
-                type="email"
-                required
-                autoCapitalize="none"
-                autoCorrect="off"
-                placeholder={t("checkin.staffEmailPlaceholder", "your.email@example.com")}
-                value={authEmail}
-                onChange={(e) => setAuthEmail(e.target.value)}
-                className={`w-full px-4 py-3.5 bg-slate-950/70 border border-white/10 rounded-2xl text-sm font-medium text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all ${
-                  isRTL ? "text-right" : "text-left"
-                }`}
+        <div className="w-full max-w-sm mx-auto flex flex-col items-center relative z-10 my-auto py-6 sm:py-8">
+          {/* Top Branding Header */}
+          <div className="mb-6 text-center">
+            <div className="flex items-center justify-center mb-3.5">
+              <img
+                src="/eventzone-logo-white.png"
+                alt="Eventzone"
+                className="h-12 sm:h-14 w-auto object-contain select-none"
               />
             </div>
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">Eventzone Check-In</h1>
+          </div>
 
-            {/* Passcode Field */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5 text-start rtl:text-right text-left">
-                {t("checkin.eventPasscode", "Event Passcode")}
-              </label>
-              <div className="relative">
-                <input
-                  type={showPasscode ? "text" : "password"}
-                  required
-                  autoCapitalize="characters"
-                  autoCorrect="off"
-                  placeholder={t("checkin.eventPasscodePlaceholder", "Enter event passcode")}
-                  value={authPasscode}
-                  onChange={(e) => setAuthPasscode(e.target.value.toUpperCase())}
-                  className={`w-full ${
-                    isRTL ? "pl-11 pr-4 text-right" : "pr-11 pl-4 text-left"
-                  } py-3.5 bg-slate-950/70 border border-white/10 rounded-2xl text-sm ${
-                    authPasscode ? "font-mono font-bold tracking-wider uppercase" : "font-sans font-medium normal-case"
-                  } text-white placeholder:font-sans placeholder:normal-case placeholder:font-normal placeholder:tracking-normal placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPasscode(!showPasscode)}
-                  className={`absolute ${
-                    isRTL ? "left-3" : "right-3"
-                  } top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 p-1.5 transition-colors cursor-pointer`}
-                  title={showPasscode ? "Hide Passcode" : "Show Passcode"}
-                >
-                  {showPasscode ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
+          {/* Login Form Card */}
+          <div className="w-full bg-slate-900/80 border border-white/10 rounded-3xl p-6 sm:p-7 shadow-2xl shadow-black/60 backdrop-blur-xl">
+            <div className="mb-5">
+              <h2 className="text-base font-bold text-white tracking-tight text-start rtl:text-right text-left">
+                {t("checkin.portalTitle", "Gate Desk Check-In")}
+              </h2>
             </div>
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={authLoading}
-              className="w-full py-3.5 mt-2 bg-blue-600 hover:bg-blue-500 active:scale-[0.99] disabled:opacity-50 text-white rounded-2xl font-bold text-sm shadow-lg shadow-blue-600/25 transition-all flex items-center justify-center cursor-pointer tracking-wide"
-            >
-              {authLoading ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>{t("checkin.connecting", "Connecting...")}</span>
-                </div>
-              ) : (
-                <span>{t("checkin.letsScan", "Let's Scan")}</span>
-              )}
-            </button>
-          </form>
-        </div>
+            {authError && (
+              <div className="mb-4 p-3.5 rounded-2xl bg-red-500/15 border border-red-500/30 flex items-start gap-2.5 text-xs text-red-300 animate-in fade-in">
+                <AlertCircle size={16} className="shrink-0 text-red-400 mt-0.5" />
+                <span>{authError}</span>
+              </div>
+            )}
 
-        {/* Footer info */}
-        <div className="py-4 text-center relative z-10">
-          <p className="text-[11px] text-slate-500">
-            {t("checkin.poweredBy", "Powered by Eventzone • Secure On-Site Check-In")}
-          </p>
+            <form onSubmit={handleLogin} className="space-y-4">
+              {/* Email Field */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5 text-start rtl:text-right text-left">
+                  {t("checkin.staffEmail", "Staff Email Address")}
+                </label>
+                <input
+                  type="email"
+                  required
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  placeholder={t("checkin.staffEmailPlaceholder", "your.email@example.com")}
+                  value={authEmail}
+                  onChange={(e) => setAuthEmail(e.target.value)}
+                  className={`w-full px-4 py-3.5 bg-slate-950/70 border border-white/10 rounded-2xl text-sm font-medium text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all ${
+                    isRTL ? "text-right" : "text-left"
+                  }`}
+                />
+              </div>
+
+              {/* Passcode Field */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5 text-start rtl:text-right text-left">
+                  {t("checkin.eventPasscode", "Event Passcode")}
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPasscode ? "text" : "password"}
+                    required
+                    autoCapitalize="characters"
+                    autoCorrect="off"
+                    placeholder={t("checkin.eventPasscodePlaceholder", "Enter event passcode")}
+                    value={authPasscode}
+                    onChange={(e) => setAuthPasscode(e.target.value.toUpperCase())}
+                    className={`w-full ${
+                      isRTL ? "pl-11 pr-4 text-right" : "pr-11 pl-4 text-left"
+                    } py-3.5 bg-slate-950/70 border border-white/10 rounded-2xl text-sm ${
+                      authPasscode ? "font-mono font-bold tracking-wider uppercase" : "font-sans font-medium normal-case"
+                    } text-white placeholder:font-sans placeholder:normal-case placeholder:font-normal placeholder:tracking-normal placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasscode(!showPasscode)}
+                    className={`absolute ${
+                      isRTL ? "left-3" : "right-3"
+                    } top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 p-1.5 transition-colors cursor-pointer`}
+                    title={showPasscode ? "Hide Passcode" : "Show Passcode"}
+                  >
+                    {showPasscode ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={authLoading}
+                className="w-full py-3.5 mt-2 bg-blue-600 hover:bg-blue-500 active:scale-[0.99] disabled:opacity-50 text-white rounded-2xl font-bold text-sm shadow-lg shadow-blue-600/25 transition-all flex items-center justify-center cursor-pointer tracking-wide"
+              >
+                {authLoading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>{t("checkin.connecting", "Connecting...")}</span>
+                  </div>
+                ) : (
+                  <span>{t("checkin.letsScan", "Let's Scan")}</span>
+                )}
+              </button>
+            </form>
+          </div>
+
+          {/* Footer info */}
+          <div className="mt-6 text-center">
+            <p className="text-[11px] text-slate-500">
+              {t("checkin.poweredBy", "Powered by Eventzone • Secure On-Site Check-In")}
+            </p>
+          </div>
         </div>
       </div>
     );
