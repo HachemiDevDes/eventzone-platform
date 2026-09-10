@@ -29,13 +29,6 @@ export default function FeatureDeepDive({ feature }) {
               >
                 {/* Text Description Column */}
                 <div className="w-full lg:w-1/2 space-y-4">
-                  {item.subtitle && (
-                    <div className="text-xs font-extrabold text-blue-600 uppercase tracking-wider flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
-                      <span>{item.subtitle}</span>
-                    </div>
-                  )}
-
                   <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-snug">
                     {item.title}
                   </h3>
@@ -68,39 +61,44 @@ export default function FeatureDeepDive({ feature }) {
                     {idx === 0 && (
                       <div className="space-y-4">
                         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
                             <Search size={14} className="text-blue-600" /> Moteur Vectoriel Ultra-Fluide
                           </span>
-                          <span className="text-[11px] font-extrabold bg-blue-50 text-blue-600 px-2 py-0.5 rounded">
+                          <span className="text-[11px] font-extrabold bg-blue-50 text-blue-700 px-2.5 py-1 rounded-md border border-blue-200/60">
                             Zoom x400% sans perte
                           </span>
                         </div>
-                        <div className="h-44 sm:h-52 rounded-2xl bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 p-4 text-white flex flex-col justify-between relative overflow-hidden">
+                        <div className="h-44 sm:h-52 rounded-2xl bg-gradient-to-br from-slate-50 via-blue-50/40 to-slate-100/70 border border-slate-200/90 p-4 text-slate-900 flex flex-col justify-between relative overflow-hidden shadow-inner">
                           <div className="flex justify-between items-center text-xs">
-                            <span className="font-bold text-blue-400">Hall B - Espace Numérique</span>
-                            <span className="bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded text-[10px] font-bold">120 Stands Actifs</span>
+                            <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-blue-600" />
+                              Hall B • Espace Numérique
+                            </span>
+                            <span className="bg-emerald-100 text-emerald-800 border border-emerald-200/80 px-2 py-0.5 rounded text-[10px] font-bold">
+                              120 Stands Actifs
+                            </span>
                           </div>
-                          <div className="grid grid-cols-4 gap-2 my-auto">
-                            <div className="bg-white/10 hover:bg-white/20 p-2 rounded-lg text-center border border-white/10">
-                              <p className="text-[10px] font-bold">Stand B1</p>
-                              <p className="text-[8px] text-emerald-300">Libre</p>
+                          <div className="grid grid-cols-4 gap-2.5 my-auto">
+                            <div className="bg-white hover:bg-slate-50 p-2.5 rounded-xl text-center border border-emerald-200 shadow-xs transition-colors">
+                              <p className="text-[10px] sm:text-[11px] font-extrabold text-slate-800">Stand B1</p>
+                              <span className="inline-block mt-0.5 text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200/50">Libre</span>
                             </div>
-                            <div className="bg-blue-600/40 p-2 rounded-lg text-center border border-blue-400/30">
-                              <p className="text-[10px] font-bold">Stand B2</p>
-                              <p className="text-[8px] text-blue-300">Réservé</p>
+                            <div className="bg-blue-50/70 hover:bg-blue-50 p-2.5 rounded-xl text-center border border-blue-200 shadow-xs transition-colors">
+                              <p className="text-[10px] sm:text-[11px] font-extrabold text-slate-800">Stand B2</p>
+                              <span className="inline-block mt-0.5 text-[9px] font-bold text-blue-700 bg-blue-100/70 px-1.5 py-0.2 rounded border border-blue-200/50">Réservé</span>
                             </div>
-                            <div className="bg-amber-500/30 p-2 rounded-lg text-center border border-amber-400/30">
-                              <p className="text-[10px] font-bold">Stand B3</p>
-                              <p className="text-[8px] text-amber-300">Sponsor</p>
+                            <div className="bg-amber-50/70 hover:bg-amber-50 p-2.5 rounded-xl text-center border border-amber-200 shadow-xs transition-colors">
+                              <p className="text-[10px] sm:text-[11px] font-extrabold text-slate-800">Stand B3</p>
+                              <span className="inline-block mt-0.5 text-[9px] font-bold text-amber-800 bg-amber-100/70 px-1.5 py-0.2 rounded border border-amber-200/50">Sponsor</span>
                             </div>
-                            <div className="bg-white/10 hover:bg-white/20 p-2 rounded-lg text-center border border-white/10">
-                              <p className="text-[10px] font-bold">Stand B4</p>
-                              <p className="text-[8px] text-emerald-300">Libre</p>
+                            <div className="bg-white hover:bg-slate-50 p-2.5 rounded-xl text-center border border-emerald-200 shadow-xs transition-colors">
+                              <p className="text-[10px] sm:text-[11px] font-extrabold text-slate-800">Stand B4</p>
+                              <span className="inline-block mt-0.5 text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200/50">Libre</span>
                             </div>
                           </div>
-                          <div className="flex justify-between items-center text-[10px] text-slate-400 border-t border-white/10 pt-2">
+                          <div className="flex justify-between items-center text-[10px] text-slate-500 border-t border-slate-200/80 pt-2 font-medium">
                             <span>Recherche textuelle instantanée</span>
-                            <span className="text-white font-mono">60 FPS fluide</span>
+                            <span className="text-blue-700 font-mono font-bold bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200/50">60 FPS fluide</span>
                           </div>
                         </div>
                       </div>
@@ -109,10 +107,10 @@ export default function FeatureDeepDive({ feature }) {
                     {idx === 1 && (
                       <div className="space-y-4">
                         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
                             <Layers size={14} className="text-blue-600" /> Synchronisation Commerciale
                           </span>
-                          <span className="text-[11px] font-extrabold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded">
+                          <span className="text-[11px] font-extrabold bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-md border border-emerald-200/60">
                             Temps réel actif
                           </span>
                         </div>
@@ -154,10 +152,10 @@ export default function FeatureDeepDive({ feature }) {
                     {idx === 2 && (
                       <div className="space-y-4">
                         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
                             <Eye size={14} className="text-blue-600" /> Vitrine Exposant Connectée
                           </span>
-                          <span className="text-[11px] font-extrabold bg-blue-50 text-blue-600 px-2 py-0.5 rounded">
+                          <span className="text-[11px] font-extrabold bg-blue-50 text-blue-700 px-2.5 py-1 rounded-md border border-blue-200/60">
                             Portail B2B
                           </span>
                         </div>
@@ -186,20 +184,33 @@ export default function FeatureDeepDive({ feature }) {
                     {idx === 3 && (
                       <div className="space-y-4">
                         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
                             <Smartphone size={14} className="text-blue-600" /> Expérience Mobile Sans App
                           </span>
-                          <span className="text-[11px] font-extrabold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded">
+                          <span className="text-[11px] font-extrabold bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-md border border-emerald-200/60">
                             Scan QR Totem
                           </span>
                         </div>
-                        <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 text-white flex items-center justify-between">
+                        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-blue-50/70 via-slate-50 to-indigo-50/50 border border-blue-200/70 text-slate-900 flex items-center justify-between shadow-xs">
                           <div>
-                            <p className="text-xs font-extrabold">Orientation Instantanée</p>
-                            <p className="text-[11px] text-blue-100 mt-0.5">Scannez le totem d'entrée pour ouvrir le plan sur votre mobile</p>
+                            <p className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-blue-600" />
+                              Orientation Instantanée
+                            </p>
+                            <p className="text-[11px] text-slate-600 mt-1 font-medium">Scannez le totem d'entrée pour ouvrir le plan sur votre mobile</p>
                           </div>
-                          <Compass size={32} className="text-blue-200 shrink-0" />
+                          <div className="w-10 h-10 rounded-xl bg-blue-100/80 border border-blue-200 flex items-center justify-center shrink-0 shadow-xs">
+                            <Compass size={22} className="text-blue-600" />
+                          </div>
                         </div>
+                      </div>
+                    )}
+
+                    {idx > 3 && (
+                      <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200/80 text-center">
+                        <Sparkles size={28} className="text-blue-600 mx-auto mb-2" />
+                        <p className="text-sm font-bold text-slate-800">{item.title}</p>
+                        <p className="text-xs text-slate-500 mt-1">{item.description}</p>
                       </div>
                     )}
 
