@@ -7,13 +7,12 @@ import { getLocalizedAllFeatures, getFeaturesUI } from "../../lib/featuresData";
 import FeatureNavbar from "./FeatureNavbar";
 import AnimatedMeshBackground from "./AnimatedMeshBackground";
 import Footer from "../Footer";
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 export default function FeaturesIndexClient() {
   const { lang, isRTL } = useLanguage();
   const ui = getFeaturesUI(lang);
   const features = getLocalizedAllFeatures(lang);
-  const premierFeature = features.find(f => f.slug === "plan-2d-interactif") || features[0];
 
   return (
     <div className="min-h-screen flex flex-col relative bg-white/40 text-slate-900 font-sans selection:bg-blue-600 selection:text-white">
@@ -27,68 +26,15 @@ export default function FeaturesIndexClient() {
       />
 
       <main className="flex-1">
-        {/* Hero Header */}
-        <section className="py-16 sm:py-24 bg-transparent border-b border-slate-200/60">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center pt-4">
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-tight">
-              {ui.catalogTitle}
-            </h1>
-
-            <p className="mt-4 sm:mt-6 text-base sm:text-xl text-slate-600 font-medium max-w-3xl mx-auto leading-relaxed">
-              {ui.catalogDescription}
-            </p>
-
-            {/* Featured Hero Card (Premier Feature) */}
-            <div className="mt-12 max-w-5xl mx-auto text-start">
-              <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-[#081431] to-slate-900 text-white shadow-2xl border border-white/10 relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl pointer-events-none" />
-                
-                <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
-                  <div className="space-y-3 max-w-2xl">
-                    <span className="inline-block text-[11px] font-black uppercase tracking-widest text-amber-400 bg-amber-400/10 px-3 py-1 rounded-full border border-amber-400/30">
-                      {ui.flagshipBadge}
-                    </span>
-                    <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-                      {premierFeature.title}
-                    </h2>
-                    <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-medium">
-                      {premierFeature.tagline}
-                    </p>
-                    <div className="flex flex-wrap gap-4 text-xs font-semibold text-slate-300 pt-2">
-                      {ui.flagshipPoints.map((point, idx) => (
-                        <span key={idx} className="flex items-center gap-1.5">
-                          <CheckCircle2 size={14} className="text-emerald-400 shrink-0" />
-                          {point}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="shrink-0">
-                    <Link
-                      href={`/features/${premierFeature.slug}`}
-                      className="px-6 py-3.5 bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-extrabold rounded-xl shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center gap-2 group-hover:scale-105"
-                    >
-                      <span>{ui.flagshipCta}</span>
-                      <ArrowRight size={16} className="rtl:rotate-180" />
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </section>
-
         {/* Full Features Grid */}
-        <section className="py-16 sm:py-24 bg-transparent">
+        <section className="py-12 sm:py-20 bg-transparent">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             
-            <div className="text-center max-w-3xl mx-auto mb-16">
-              <h2 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
+            <div className="text-center max-w-3xl mx-auto mb-12 sm:mb-16 pt-2">
+              <h1 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight leading-tight">
                 {ui.gridHeading}
-              </h2>
-              <p className="mt-2 text-sm text-slate-600">
+              </h1>
+              <p className="mt-3 sm:mt-4 text-base sm:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
                 {ui.gridSubtitle}
               </p>
             </div>
