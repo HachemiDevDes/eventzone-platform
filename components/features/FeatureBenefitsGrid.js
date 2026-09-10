@@ -22,7 +22,7 @@ export default function FeatureBenefitsGrid({ feature }) {
   if (!feature.valuePillars || feature.valuePillars.length === 0) return null;
 
   return (
-    <section id="benefices" className="py-20 sm:py-32 bg-white relative">
+    <section id="benefices" className="py-20 sm:py-32 bg-transparent relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Section Header */}
@@ -40,7 +40,7 @@ export default function FeatureBenefitsGrid({ feature }) {
             return (
               <div
                 key={idx}
-                className="p-6 sm:p-7 rounded-2xl bg-slate-50 border border-slate-200/80 hover:border-blue-300 hover:bg-white transition-all duration-200 hover:shadow-xl group"
+                className="p-6 sm:p-7 rounded-2xl bg-white/80 backdrop-blur-md border border-slate-200/80 hover:border-blue-300 hover:bg-white transition-all duration-200 hover:shadow-xl group"
               >
                 <div className="w-12 h-12 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-600/20 group-hover:scale-110 transition-transform">
                   <IconComponent size={22} />

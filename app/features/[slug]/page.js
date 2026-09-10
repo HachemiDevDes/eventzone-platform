@@ -8,6 +8,7 @@ import FeatureDeepDive from "../../../components/features/FeatureDeepDive";
 import FeatureComparison from "../../../components/features/FeatureComparison";
 import FeatureFaq from "../../../components/features/FeatureFaq";
 import FeatureRelatedCarousel from "../../../components/features/FeatureRelatedCarousel";
+import AnimatedMeshBackground from "../../../components/features/AnimatedMeshBackground";
 import Footer from "../../../components/Footer";
 
 export async function generateMetadata({ params }) {
@@ -78,7 +79,10 @@ export default async function FeatureDetailPage({ params }) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-white text-slate-900 font-sans selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen flex flex-col relative bg-white/40 text-slate-900 font-sans selection:bg-blue-600 selection:text-white">
+      {/* Blurry Low-Opacity Animated Blue Mesh */}
+      <AnimatedMeshBackground />
+
       {/* Top Navigation Bar with Breadcrumbs & Action */}
       <FeatureNavbar 
         featureTitle={feature.title} 

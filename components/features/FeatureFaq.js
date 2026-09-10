@@ -9,7 +9,7 @@ export default function FeatureFaq({ feature }) {
   if (!feature.faq || feature.faq.length === 0) return null;
 
   return (
-    <section id="faq" className="py-20 sm:py-32 bg-slate-50 relative border-t border-slate-200/80">
+    <section id="faq" className="py-20 sm:py-32 bg-transparent relative border-t border-slate-200/60">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Section Header */}
@@ -27,7 +27,7 @@ export default function FeatureFaq({ feature }) {
             return (
               <div
                 key={idx}
-                className="rounded-2xl bg-white border border-slate-200/90 shadow-xs overflow-hidden transition-all"
+                className="rounded-2xl bg-white/85 backdrop-blur-md border border-slate-200/90 shadow-xs overflow-hidden transition-all"
               >
                 <button
                   type="button"

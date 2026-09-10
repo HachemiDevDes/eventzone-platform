@@ -7,7 +7,7 @@ export default function FeatureDeepDive({ feature }) {
   if (!feature.deepDiveFeatures || feature.deepDiveFeatures.length === 0) return null;
 
   return (
-    <section id="details" className="py-20 sm:py-32 lg:py-40 bg-slate-50 relative border-t border-slate-200/80">
+    <section id="details" className="py-20 sm:py-32 lg:py-40 bg-transparent relative border-t border-slate-200/60">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Section Header */}
@@ -40,7 +40,7 @@ export default function FeatureDeepDive({ feature }) {
 
                 {/* Graphic Visual Representation Column */}
                 <div className="w-full lg:w-1/2">
-                  <div className="p-6 sm:p-8 rounded-3xl bg-white border border-slate-200 shadow-xl hover:shadow-2xl transition-all relative overflow-hidden group">
+                  <div className="p-6 sm:p-8 rounded-3xl bg-white/90 backdrop-blur-md border border-slate-200/90 shadow-xl hover:shadow-2xl transition-all relative overflow-hidden group">
                     
                     {/* Visual Card Content based on type */}
                     {idx === 0 && (

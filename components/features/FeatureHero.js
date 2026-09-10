@@ -5,12 +5,7 @@ import { ArrowRight, CheckCircle2 } from "lucide-react";
 
 export default function FeatureHero({ feature }) {
   return (
-    <section id="apercu" className="relative pt-12 sm:pt-16 pb-12 sm:pb-16 overflow-hidden bg-gradient-to-b from-blue-50/50 via-white to-slate-50">
-      {/* Decorative ambient background glows */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-96 pointer-events-none overflow-hidden opacity-60">
-        <div className="absolute -top-32 left-1/4 w-96 h-96 bg-blue-400/20 rounded-full blur-3xl" />
-        <div className="absolute -top-20 right-1/4 w-96 h-96 bg-indigo-500/15 rounded-full blur-3xl" />
-      </div>
+    <section id="apercu" className="relative pt-12 sm:pt-16 pb-12 sm:pb-16 overflow-hidden bg-transparent">
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         

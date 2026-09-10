@@ -2,6 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { ALL_FEATURES } from "../../lib/featuresData";
 import FeatureNavbar from "../../components/features/FeatureNavbar";
+import AnimatedMeshBackground from "../../components/features/AnimatedMeshBackground";
 import Footer from "../../components/Footer";
 import { 
   ArrowRight, Sparkles, CheckCircle2, ShieldCheck, 
@@ -20,7 +21,10 @@ export default function FeaturesIndexPage() {
   const premierFeature = ALL_FEATURES.find(f => f.slug === "plan-2d-interactif") || ALL_FEATURES[0];
 
   return (
-    <div className="min-h-screen flex flex-col bg-white text-slate-900 font-sans selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen flex flex-col relative bg-white/40 text-slate-900 font-sans selection:bg-blue-600 selection:text-white">
+      {/* Blurry Low-Opacity Animated Blue Mesh */}
+      <AnimatedMeshBackground />
+
       {/* Top Bar */}
       <FeatureNavbar 
         featureTitle="Catalogue des Fonctionnalités" 
@@ -29,7 +33,7 @@ export default function FeaturesIndexPage() {
 
       <main className="flex-1">
         {/* Hero Header */}
-        <section className="py-16 sm:py-24 bg-gradient-to-b from-blue-50/60 via-white to-slate-50 border-b border-slate-200/80">
+        <section className="py-16 sm:py-24 bg-transparent border-b border-slate-200/60">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center pt-4">
             <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-tight">
               Toutes les Fonctionnalités Eventzone
@@ -85,7 +89,7 @@ export default function FeaturesIndexPage() {
         </section>
 
         {/* Full Features Grid */}
-        <section className="py-16 sm:py-24 bg-white">
+        <section className="py-16 sm:py-24 bg-transparent">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             
             <div className="text-center max-w-3xl mx-auto mb-16">
@@ -102,7 +106,7 @@ export default function FeaturesIndexPage() {
                 <Link
                   key={feat.slug}
                   href={`/features/${feat.slug}`}
-                  className="p-6 sm:p-8 rounded-3xl bg-slate-50 hover:bg-white border border-slate-200/90 hover:border-blue-300 transition-all duration-200 hover:shadow-xl group flex flex-col justify-between"
+                  className="p-6 sm:p-8 rounded-3xl bg-white/80 backdrop-blur-md hover:bg-white border border-slate-200/90 hover:border-blue-300 transition-all duration-200 hover:shadow-xl group flex flex-col justify-between"
                 >
                   <div>
                     <div className="flex items-center justify-between">

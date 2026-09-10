@@ -7,7 +7,7 @@ export default function FeatureComparison({ feature }) {
   if (!feature.comparison) return null;
 
   return (
-    <section id="comparatif" className="py-20 sm:py-32 bg-white relative">
+    <section id="comparatif" className="py-20 sm:py-32 bg-transparent relative border-t border-slate-200/60">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Section Header */}
@@ -21,7 +21,7 @@ export default function FeatureComparison({ feature }) {
         <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
           
           {/* Traditional Card */}
-          <div className="p-6 sm:p-7 rounded-2xl bg-rose-50/40 border border-rose-200/80 shadow-xs">
+          <div className="p-6 sm:p-7 rounded-2xl bg-rose-50/70 backdrop-blur-sm border border-rose-200/80 shadow-xs">
             <div className="flex items-center justify-between pb-3 border-b border-rose-200/60">
               <h3 className="text-base font-black text-rose-950">
                 Méthodes Traditionnelles
@@ -44,7 +44,7 @@ export default function FeatureComparison({ feature }) {
           </div>
 
           {/* Eventzone Solution Card */}
-          <div className="p-6 sm:p-7 rounded-2xl bg-blue-50/50 border-2 border-blue-600 shadow-md">
+          <div className="p-6 sm:p-7 rounded-2xl bg-blue-50/70 backdrop-blur-sm border-2 border-blue-600 shadow-md">
             <div className="flex items-center justify-between pb-3 border-b border-blue-200/60">
               <h3 className="text-base font-black text-blue-950">
                 Plateforme Eventzone

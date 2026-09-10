@@ -9,7 +9,7 @@ export default function FeatureRelatedCarousel({ currentSlug }) {
   const otherFeatures = ALL_FEATURES.filter(f => f.slug !== currentSlug);
 
   return (
-    <section className="py-20 sm:py-28 bg-white border-t border-slate-200/80">
+    <section className="py-20 sm:py-28 bg-transparent border-t border-slate-200/60">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
           <div>
@@ -31,7 +31,7 @@ export default function FeatureRelatedCarousel({ currentSlug }) {
             <Link
               key={item.slug}
               href={`/features/${item.slug}`}
-              className="p-6 rounded-2xl bg-slate-50 hover:bg-white border border-slate-200/90 hover:border-blue-300 transition-all duration-200 hover:shadow-xl group flex flex-col justify-between"
+              className="p-6 rounded-2xl bg-white/80 backdrop-blur-md hover:bg-white border border-slate-200/90 hover:border-blue-300 transition-all duration-200 hover:shadow-xl group flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between">
