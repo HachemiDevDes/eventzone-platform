@@ -697,6 +697,376 @@ function VisualGraphicCard({ item, idx, featureSlug }) {
     );
   }
 
+  // 8. Module 01: Site Web & Landing Page Événementielle
+  if (type === "landing-builder") {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-800">Éditeur No-Code</span>
+            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">En direct</span>
+          </div>
+          <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-500">
+            <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-600 font-bold">Desktop</span>
+            <span className="px-2 py-0.5 rounded hover:bg-slate-100">Mobile</span>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
+            <span className="font-semibold text-slate-800">1. Hero & Compte à Rebours</span>
+            <span className="text-emerald-600 font-bold">Actif</span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
+            <span className="font-semibold text-slate-800">2. Programme & Intervenants</span>
+            <span className="text-emerald-600 font-bold">Actif</span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-blue-50/60 border border-blue-200 flex items-center justify-between text-xs">
+            <span className="font-bold text-blue-900">3. Billetterie & Inscriptions</span>
+            <span className="text-blue-600 font-bold">Connecté</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (type === "custom-domain") {
+    return (
+      <div className="space-y-5">
+        <div className="space-y-1.5">
+          <span className="text-xs font-bold text-slate-500">Adresse Web Officielle</span>
+          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+            <span className="text-xs font-mono font-bold text-slate-900 truncate">https://summit2026.eventzone.pro</span>
+            <span className="text-emerald-600 text-xs font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">SSL 256-bit</span>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3 text-center">
+          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+            <span className="text-2xl font-black text-slate-900 block">100%</span>
+            <span className="text-[11px] text-slate-500 font-medium">Propagation DNS</span>
+          </div>
+          <div className="p-3 rounded-xl bg-emerald-50/60 border border-emerald-200">
+            <span className="text-2xl font-black text-emerald-700 block">99.9%</span>
+            <span className="text-[11px] text-emerald-700 font-medium">Disponibilité CDN</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (type === "mobile-preview") {
+    return (
+      <div className="space-y-6">
+        <div>
+          <div className="flex items-baseline justify-between mb-2">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Score Performance Mobile</span>
+            <span className="text-3xl font-black text-emerald-600">99 / 100</span>
+          </div>
+          <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+            <div className="h-full bg-emerald-500 rounded-full" style={{ width: "99%" }} />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3 text-center">
+          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+            <span className="text-2xl font-black text-slate-900 block">0.8s</span>
+            <span className="text-[11px] text-slate-500 font-medium">Temps de rendu</span>
+          </div>
+          <div className="p-3 rounded-xl bg-blue-50/60 border border-blue-200">
+            <span className="text-2xl font-black text-blue-700 block">0.00</span>
+            <span className="text-[11px] text-blue-700 font-medium">Décalage CLS</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (type === "seo-social-card") {
+    return (
+      <div className="space-y-4">
+        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
+          <div className="h-20 w-full rounded-xl bg-gradient-to-r from-blue-600 to-indigo-700 flex items-center justify-center text-white font-black text-sm tracking-wide">
+            ALGERIA TECH SUMMIT 2026
+          </div>
+          <div className="space-y-0.5">
+            <span className="text-[10px] font-mono font-bold text-blue-600 block">eventzone.pro/summit</span>
+            <h4 className="text-xs font-black text-slate-900">Le Grand Rendez-vous Tech & Entrepreneuriat</h4>
+          </div>
+        </div>
+        <div className="flex items-center justify-between text-xs font-medium px-1">
+          <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded">✓ Balises OpenGraph Actives</span>
+          <span className="text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded">Google Indexé</span>
+        </div>
+      </div>
+    );
+  }
+
+  // 9. Module 02: Programme & Agenda Interactif
+  if (type === "agenda-tracks") {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 pb-2 border-b border-slate-100 text-xs font-bold">
+          <span className="px-3 py-1 rounded-lg bg-blue-600 text-white">Scène Principale</span>
+          <span className="px-3 py-1 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer">Salle Ateliers B</span>
+        </div>
+        <div className="space-y-2.5">
+          <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-200 space-y-1">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-mono font-bold text-blue-700">09:30 - 10:45</span>
+              <span className="font-extrabold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded text-[10px]">EN DIRECT</span>
+            </div>
+            <p className="text-xs font-black text-slate-900">Keynote : L'Avenir de l'IA Industrielle en Algérie</p>
+          </div>
+          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-mono font-bold text-slate-500">11:00 - 12:30</span>
+              <span className="font-semibold text-slate-500 text-[10px]">À suivre</span>
+            </div>
+            <p className="text-xs font-black text-slate-800">Table Ronde : Modernisation des Systèmes Bancaires</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (type === "speaker-card") {
+    return (
+      <div className="space-y-5">
+        <div className="flex items-center gap-3.5 p-3 rounded-2xl bg-slate-50 border border-slate-200">
+          <div className="w-12 h-12 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-sm shrink-0">
+            KB
+          </div>
+          <div>
+            <h4 className="text-sm font-black text-slate-900">Dr. Karim Belkacem</h4>
+            <span className="text-xs text-slate-500 font-medium block">Directeur de Recherche • CERIST</span>
+          </div>
+        </div>
+        <div className="p-3 rounded-xl bg-blue-50/60 border border-blue-200 flex items-center justify-between text-xs">
+          <span className="font-bold text-blue-900">Keynote : Cloud National & Souveraineté</span>
+          <span className="text-blue-700 font-bold bg-blue-100 px-2 py-0.5 rounded">14:00 • Hall A</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (type === "personal-schedule") {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+          <span className="text-xs font-bold text-slate-800">Mon Programme Sélectionné</span>
+          <span className="text-xs font-black text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full">3 Séances</span>
+        </div>
+        <div className="space-y-2">
+          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
+            <span className="font-semibold text-slate-800">✓ 10:00 • Cybersécurité & Audit</span>
+            <span className="text-blue-600 font-bold">Rappel 15 min</span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
+            <span className="font-semibold text-slate-800">✓ 14:30 • FinTech & Paiement Électronique</span>
+            <span className="text-blue-600 font-bold">Rappel 15 min</span>
+          </div>
+        </div>
+        <div className="text-center text-xs text-slate-500 font-medium">
+          Synchronisé avec l'application mobile
+        </div>
+      </div>
+    );
+  }
+
+  if (type === "calendar-sync") {
+    return (
+      <div className="space-y-4">
+        <div className="p-3.5 rounded-xl bg-blue-600 text-white text-center text-xs font-extrabold shadow-sm">
+          Ajouter toutes les sessions à mon agenda (.ics)
+        </div>
+        <div className="grid grid-cols-3 gap-2 text-center text-xs font-bold">
+          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700">Google</div>
+          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700">Apple iCal</div>
+          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700">Outlook</div>
+        </div>
+        <div className="text-center text-xs text-emerald-700 font-bold bg-emerald-50 py-1.5 rounded-xl border border-emerald-200">
+          ✓ Synchronisation automatique des modifications
+        </div>
+      </div>
+    );
+  }
+
+  // 10. Module 07: Contrôle d'Accès Multi-Portes & Sécurité
+  if (type === "zone-permissions") {
+    return (
+      <div className="space-y-3">
+        <div className="p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-200 flex items-center justify-between text-xs">
+          <span className="font-black text-emerald-900">Pass VIP • Salon d'Honneur</span>
+          <span className="text-emerald-700 font-black bg-emerald-100 px-2 py-0.5 rounded">AUTORISÉ</span>
+        </div>
+        <div className="p-2.5 rounded-xl bg-blue-50/70 border border-blue-200 flex items-center justify-between text-xs">
+          <span className="font-black text-blue-900">Pass Standard • Hall d'Exposition</span>
+          <span className="text-blue-700 font-black bg-blue-100 px-2 py-0.5 rounded">AUTORISÉ</span>
+        </div>
+        <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-between text-xs">
+          <span className="font-black text-rose-900">Pass Standard • Zone Régie & Coulisses</span>
+          <span className="text-rose-700 font-black bg-rose-100 px-2 py-0.5 rounded">REFUSÉ</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (type === "capacity-gauge") {
+    return (
+      <div className="space-y-6">
+        <div>
+          <div className="flex items-baseline justify-between mb-2">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Jauge Amphithéâtre</span>
+            <span className="text-3xl font-black text-amber-600">385 / 400</span>
+          </div>
+          <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+            <div className="h-full bg-amber-500 rounded-full transition-all duration-500" style={{ width: "96%" }} />
+          </div>
+        </div>
+        <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-center text-xs font-bold text-amber-800">
+          ⚠️ Alerte Seuil : 15 places restantes avant fermeture de porte
+        </div>
+      </div>
+    );
+  }
+
+  if (type === "gate-flow") {
+    return (
+      <div className="space-y-5">
+        <div className="grid grid-cols-3 gap-2.5 text-center">
+          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+            <span className="text-xl font-black text-slate-900 block">+420</span>
+            <span className="text-[10px] text-slate-500 font-bold">Porte Nord</span>
+          </div>
+          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+            <span className="text-xl font-black text-slate-900 block">+280</span>
+            <span className="text-[10px] text-slate-500 font-bold">Porte Sud</span>
+          </div>
+          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+            <span className="text-xl font-black text-rose-600 block">-110</span>
+            <span className="text-[10px] text-slate-500 font-bold">Sorties</span>
+          </div>
+        </div>
+        <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-200 flex items-center justify-between text-xs">
+          <span className="text-blue-900 font-bold">Total Présents sur Site</span>
+          <span className="text-blue-700 font-black text-sm">590 Personnes</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (type === "audit-logs") {
+    return (
+      <div className="space-y-2.5 text-xs">
+        <div className="p-2 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+          <span className="font-mono text-slate-500 font-bold">14:22:08</span>
+          <span className="font-bold text-slate-800">Badge #VIP-094</span>
+          <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded">Porte Nord ✓</span>
+        </div>
+        <div className="p-2 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+          <span className="font-mono text-slate-500 font-bold">14:21:55</span>
+          <span className="font-bold text-slate-800">Badge #STD-312</span>
+          <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded">Porte Sud ✓</span>
+        </div>
+        <div className="p-2 rounded-xl bg-rose-50/60 border border-rose-200 flex items-center justify-between">
+          <span className="font-mono text-slate-500 font-bold">14:21:40</span>
+          <span className="font-bold text-slate-800">Badge #EXP-088</span>
+          <span className="text-rose-700 font-bold bg-rose-100 px-2 py-0.5 rounded">Refusé (Zone VIP)</span>
+        </div>
+      </div>
+    );
+  }
+
+  // 11. Module 09: B2B Matchmaking, Networking & Prise de Rendez-vous
+  if (type === "matchmaking-algo") {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Suggestion Pertinente</span>
+          <span className="text-xs font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+            94% Correspondance
+          </span>
+        </div>
+        <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm shrink-0">
+              AM
+            </div>
+            <div>
+              <h4 className="text-xs font-black text-slate-900">Amina Meziane</h4>
+              <p className="text-[11px] text-slate-500">Directrice Achats • Groupe Sonelgaz</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">#Cloud</span>
+            <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">#Cybersécurité</span>
+            <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">#ERP</span>
+          </div>
+        </div>
+        <div className="w-full py-2 bg-blue-600 text-white text-xs font-bold rounded-xl text-center shadow-xs cursor-pointer hover:bg-blue-700 transition-colors">
+          Inviter à un rendez-vous 1-to-1
+        </div>
+      </div>
+    );
+  }
+
+  if (type === "meeting-scheduler") {
+    return (
+      <div className="space-y-4 text-center">
+        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+          <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+            ✓ Rendez-vous B2B Confirmé
+          </span>
+          <h4 className="text-sm font-black text-slate-900">14:30 - 15:00 (30 min)</h4>
+          <p className="text-xs font-bold text-blue-600 bg-blue-50 py-1 px-3 rounded-lg inline-block">
+            Lounge Networking • Table #12
+          </p>
+        </div>
+        <div className="flex items-center justify-between text-xs text-slate-600 font-medium px-2">
+          <span>Confirmation : <strong className="text-slate-900">2/2 participants</strong></span>
+          <span className="text-emerald-700 font-bold">Rappel SMS actif</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (type === "lead-retrieval") {
+    return (
+      <div className="space-y-4">
+        <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+          <div className="flex items-center justify-between">
+            <h4 className="text-xs font-black text-slate-900">Sofiane Larbi</h4>
+            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">Lead Chaud</span>
+          </div>
+          <p className="text-[11px] text-slate-500 font-medium">Directeur Général • InnovTech Algérie</p>
+          <div className="p-2 rounded-lg bg-white border border-slate-200 text-[11px] text-slate-700 font-medium">
+            Note : « Très intéressé par le déploiement de la solution Q4 »
+          </div>
+        </div>
+        <div className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-50/60 border border-emerald-200 text-xs">
+          <span className="text-emerald-800 font-bold">Contact Sauvegardé</span>
+          <span className="text-emerald-700 font-bold">Export Excel prêt</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (type === "networking-chat") {
+    return (
+      <div className="space-y-3">
+        <div className="space-y-2">
+          <div className="p-2.5 rounded-xl bg-slate-100 text-slate-800 text-xs font-medium max-w-[85%]">
+            Bonjour, nous serions ravis d'échanger sur votre stand concernant votre projet.
+          </div>
+          <div className="p-2.5 rounded-xl bg-blue-600 text-white text-xs font-medium max-w-[85%] ml-auto text-right">
+            Avec plaisir ! Rendez-vous à 15h sur la Table B2B #12.
+          </div>
+        </div>
+        <div className="text-center text-[10px] text-slate-400 font-medium pt-1">
+          🔒 Coordonnées protégées jusqu'à accord mutuel
+        </div>
+      </div>
+    );
+  }
+
   // Fallback
   return (
     <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200/80 text-center">

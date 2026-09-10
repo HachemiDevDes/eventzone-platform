@@ -6,17 +6,21 @@ import {
   ChevronDown, Menu, X, ArrowRight, 
   Map, Ticket, QrCode, Users, Shield, 
   Building2, Calendar, HelpCircle, FileText, Sparkles,
-  Plane, Link2, BarChart3
+  Plane, Link2, BarChart3, Globe, Handshake
 } from "lucide-react";
 import { useLanguage } from "../../lib/i18n";
 import { ALL_FEATURES } from "../../lib/featuresData";
 
 const FEATURE_ICONS = {
-  "plan-2d-interactif": Map,
+  "site-web-evenementiel": Globe,
+  "programme-agenda-interactif": Calendar,
   "billetterie-inscriptions": Ticket,
-  "emargement-express-qr": QrCode,
   "crm-participants": Users,
   "logistique-vip": Plane,
+  "emargement-express-qr": QrCode,
+  "controle-acces-securite": Shield,
+  "plan-2d-interactif": Map,
+  "b2b-matchmaking-networking": Handshake,
   "marketing-influence-affiliation": Link2,
   "dashboard-analytics-certificats": BarChart3,
 };

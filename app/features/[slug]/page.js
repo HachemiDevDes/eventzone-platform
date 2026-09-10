@@ -11,6 +11,12 @@ import FeatureRelatedCarousel from "../../../components/features/FeatureRelatedC
 import AnimatedMeshBackground from "../../../components/features/AnimatedMeshBackground";
 import Footer from "../../../components/Footer";
 
+export async function generateStaticParams() {
+  return ALL_FEATURES.map((feature) => ({
+    slug: feature.slug,
+  }));
+}
+
 export async function generateMetadata({ params }) {
   const resolvedParams = await params;
   const slug = resolvedParams?.slug;
