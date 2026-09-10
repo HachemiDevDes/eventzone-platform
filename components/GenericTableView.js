@@ -5273,17 +5273,6 @@ function CheckInView({ state, onUpdateState }) {
           </div>
           <p className="text-xs sm:text-sm text-slate-500">{t("checkin.subtitle", "Scan attendee QR codes, verify badges, monitor live attendance flow and manage desk admissions.")}</p>
         </div>
-
-        <button
-          onClick={() => {
-            setScanFeedback(null);
-            setShowScannerModal(true);
-          }}
-          className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-xs font-bold shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-102 shrink-0"
-        >
-          <Camera size={16} />
-          <span>{t("checkin.scanAttendeeQr", "Scan Attendee QR")}</span>
-        </button>
       </header>
 
       {/* Live Scan Notification Alert */}
