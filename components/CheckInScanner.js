@@ -832,14 +832,6 @@ export default function CheckInScanner({
                     </div>
                   )}
 
-                  {/* Badge Code */}
-                  <div className="flex items-center justify-between pt-1">
-                    <span className="font-semibold text-slate-400">{t("checkin.badgePass", "Badge Code:")}</span>
-                    <span className="font-mono font-bold text-emerald-400 text-xs">
-                      {activeResult.attendee.badgeCode || activeResult.attendee.badge_code || "EZ-PASS"}
-                    </span>
-                  </div>
-
                   {/* Timestamp */}
                   {activeResult.checkedInAt && (
                     <div className="flex items-center justify-between pt-1 text-[11px] text-slate-400 border-t border-white/5">

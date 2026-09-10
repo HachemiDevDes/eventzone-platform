@@ -790,10 +790,6 @@ export default function CheckInMobileApp({
                             </>
                           )}
                         </div>
-
-                        <div className="text-[10px] font-mono text-slate-500 mt-0.5">
-                          {attendee.badgeCode || attendee.badge_code || "EZ-PASS"}
-                        </div>
                       </button>
 
                       {/* Right: 1-Tap Check-In / Undo Button */}
@@ -914,13 +910,6 @@ export default function CheckInMobileApp({
                   </span>
                 </div>
               )}
-
-              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-white/5">
-                <span className="text-slate-400">{t("checkin.badgePass", "Badge Pass:")}</span>
-                <span className="font-mono font-bold text-indigo-400">
-                  {selectedAttendee.badgeCode || selectedAttendee.badge_code || "EZ-PASS"}
-                </span>
-              </div>
 
               <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-white/5">
                 <span className="text-slate-400">{t("checkin.status", "Status:")}</span>
