@@ -15,9 +15,15 @@ export default function FeatureHero({ feature }) {
             {feature.title}
           </h1>
 
-          <p className="mt-4 sm:mt-5 text-base sm:text-lg text-slate-600 font-medium leading-relaxed max-w-2xl mx-auto">
+          <p className="mt-4 sm:mt-5 text-base sm:text-lg text-blue-600 font-bold leading-relaxed max-w-2xl mx-auto">
             {feature.tagline}
           </p>
+
+          {feature.heroDescription && (
+            <p className="mt-3 text-sm sm:text-base text-slate-600 font-normal leading-relaxed max-w-2xl mx-auto">
+              {feature.heroDescription}
+            </p>
+          )}
 
           {/* CTAs */}
           <div className="mt-8 flex items-center justify-center">
@@ -30,6 +36,22 @@ export default function FeatureHero({ feature }) {
               <span>Demander une démo</span>
               <ArrowRight size={16} />
             </a>
+          </div>
+
+          {/* Trust points */}
+          <div className="mt-7 flex flex-wrap items-center justify-center gap-4 sm:gap-7 text-xs text-slate-600 font-medium">
+            <span className="flex items-center gap-1.5">
+              <CheckCircle2 size={14} className="text-emerald-600 shrink-0" />
+              100% interactif & responsive
+            </span>
+            <span className="flex items-center gap-1.5">
+              <CheckCircle2 size={14} className="text-emerald-600 shrink-0" />
+              Zéro application à installer
+            </span>
+            <span className="flex items-center gap-1.5">
+              <CheckCircle2 size={14} className="text-emerald-600 shrink-0" />
+              Mise à jour en direct
+            </span>
           </div>
         </div>
 

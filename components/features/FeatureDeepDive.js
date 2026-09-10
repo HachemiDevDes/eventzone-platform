@@ -28,14 +28,36 @@ export default function FeatureDeepDive({ feature }) {
                 className={`flex flex-col ${isEven ? "lg:flex-row" : "lg:flex-row-reverse"} items-center gap-10 sm:gap-16 lg:gap-24`}
               >
                 {/* Text Description Column */}
-                <div className="w-full lg:w-1/2 space-y-3">
-                  <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-snug">
+                <div className="w-full lg:w-1/2 space-y-4">
+                  {item.subtitle && (
+                    <div className="text-xs font-extrabold text-blue-600 uppercase tracking-wider flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                      <span>{item.subtitle}</span>
+                    </div>
+                  )}
+
+                  <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-snug">
                     {item.title}
                   </h3>
 
-                  <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-medium">
+                  <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-normal">
                     {item.description}
                   </p>
+
+                  {item.checklist && item.checklist.length > 0 && (
+                    <ul className="pt-2 space-y-2.5">
+                      {item.checklist.map((point, pIdx) => (
+                        <li key={pIdx} className="flex items-start gap-2.5">
+                          <div className="w-5 h-5 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 mt-0.5 border border-blue-200/60">
+                            <Check size={12} className="stroke-[2.5]" />
+                          </div>
+                          <span className="text-xs sm:text-sm font-semibold text-slate-700 leading-snug">
+                            {point}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
 
                 {/* Graphic Visual Representation Column */}
