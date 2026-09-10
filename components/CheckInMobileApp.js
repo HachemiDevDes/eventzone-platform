@@ -10,8 +10,6 @@ import {
   X,
   LogOut,
   Sparkles,
-  Lock,
-  Mail,
   RefreshCw,
   Clock,
   ShieldCheck,
@@ -448,7 +446,10 @@ export default function CheckInMobileApp({
   // ─────────────────────────────────────────────
   if (!session) {
     return (
-      <div className="min-h-[100dvh] w-full bg-slate-950 text-slate-100 flex flex-col justify-between p-5 select-none font-sans relative" dir={isRTL ? "rtl" : "ltr"}>
+      <div className="min-h-[100dvh] w-full bg-slate-950 text-slate-100 flex flex-col justify-between p-5 select-none font-sans relative overflow-hidden" dir={isRTL ? "rtl" : "ltr"}>
+        {/* Subtle Ambient Glow */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
+
         {/* Top Floating Language Switcher */}
         <div className={`absolute top-4 ${isRTL ? "left-4" : "right-4"} z-20`}>
           <CheckInLanguageToggle
@@ -461,29 +462,23 @@ export default function CheckInMobileApp({
         </div>
 
         {/* Top Branding */}
-        <div className="pt-8 pb-4 text-center">
-          <div className="flex items-center justify-center mb-4">
+        <div className="pt-8 sm:pt-12 pb-2 text-center relative z-10">
+          <div className="flex items-center justify-center mb-3">
             <img
               src="/eventzone-logo-white.png"
               alt="Eventzone"
-              className="h-10 sm:h-12 w-auto object-contain drop-shadow-sm select-none"
+              className="h-8 sm:h-9 w-auto object-contain select-none opacity-95"
             />
           </div>
-          <h1 className="text-2xl font-black tracking-tight text-white">Eventzone Check-In</h1>
-          <p className="text-xs text-slate-400 mt-1 font-medium">
-            ci.eventzone.pro &bull; Fast-Track Gate Portal
-          </p>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">Eventzone Check-In</h1>
         </div>
 
         {/* Login Form Card */}
-        <div className="w-full max-w-sm mx-auto bg-slate-900/90 border border-white/10 rounded-3xl p-6 sm:p-7 shadow-2xl backdrop-blur-xl">
-          <div className="mb-6 text-center sm:text-start rtl:text-right text-left">
-            <h2 className="text-lg font-black text-white tracking-tight">
+        <div className="w-full max-w-sm mx-auto bg-slate-900/80 border border-white/10 rounded-3xl p-6 sm:p-7 shadow-2xl shadow-black/60 backdrop-blur-xl relative z-10 my-auto">
+          <div className="mb-5">
+            <h2 className="text-base font-bold text-white tracking-tight text-start rtl:text-right text-left">
               {t("checkin.portalTitle", "Gate Desk Check-In")}
             </h2>
-            <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-              {t("checkin.portalSubtitle", "Enter your staff credentials and event passcode to start scanning tickets and checking in delegates.")}
-            </p>
           </div>
 
           {authError && (
@@ -499,22 +494,18 @@ export default function CheckInMobileApp({
               <label className="block text-xs font-semibold text-slate-300 mb-1.5 text-start rtl:text-right text-left">
                 {t("checkin.staffEmail", "Staff Email Address")}
               </label>
-              <div className="relative">
-                <Mail
-                  size={17}
-                  className={`absolute ${isRTL ? "right-3.5" : "left-3.5"} top-1/2 -translate-y-1/2 text-slate-400`}
-                />
-                <input
-                  type="email"
-                  required
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  placeholder={t("checkin.staffEmailPlaceholder", "your.email@example.com")}
-                  value={authEmail}
-                  onChange={(e) => setAuthEmail(e.target.value)}
-                  className={`w-full ${isRTL ? "pr-10 pl-4 text-right" : "pl-10 pr-4 text-left"} py-3.5 bg-slate-950 border border-white/10 rounded-2xl text-sm font-medium text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all`}
-                />
-              </div>
+              <input
+                type="email"
+                required
+                autoCapitalize="none"
+                autoCorrect="off"
+                placeholder={t("checkin.staffEmailPlaceholder", "your.email@example.com")}
+                value={authEmail}
+                onChange={(e) => setAuthEmail(e.target.value)}
+                className={`w-full px-4 py-3.5 bg-slate-950/70 border border-white/10 rounded-2xl text-sm font-medium text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all ${
+                  isRTL ? "text-right" : "text-left"
+                }`}
+              />
             </div>
 
             {/* Passcode Field */}
@@ -523,10 +514,6 @@ export default function CheckInMobileApp({
                 {t("checkin.eventPasscode", "Event Passcode")}
               </label>
               <div className="relative">
-                <Lock
-                  size={17}
-                  className={`absolute ${isRTL ? "right-3.5" : "left-3.5"} top-1/2 -translate-y-1/2 text-slate-400`}
-                />
                 <input
                   type={showPasscode ? "text" : "password"}
                   required
@@ -535,12 +522,17 @@ export default function CheckInMobileApp({
                   placeholder={t("checkin.eventPasscodePlaceholder", "Enter event passcode")}
                   value={authPasscode}
                   onChange={(e) => setAuthPasscode(e.target.value.toUpperCase())}
-                  className={`w-full ${isRTL ? "pr-10 pl-11 text-right" : "pl-10 pr-11 text-left"} py-3.5 bg-slate-950 border border-white/10 rounded-2xl text-sm font-mono font-bold tracking-widest text-white placeholder-slate-500 uppercase focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all`}
+                  className={`w-full ${
+                    isRTL ? "pl-11 pr-4 text-right" : "pr-11 pl-4 text-left"
+                  } py-3.5 bg-slate-950/70 border border-white/10 rounded-2xl text-sm font-mono font-bold tracking-wider text-white placeholder:font-sans placeholder:font-normal placeholder:tracking-normal placeholder-slate-500 uppercase focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPasscode(!showPasscode)}
-                  className={`absolute ${isRTL ? "left-3.5" : "right-3.5"} top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1 cursor-pointer`}
+                  className={`absolute ${
+                    isRTL ? "left-3" : "right-3"
+                  } top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 p-1.5 transition-colors cursor-pointer`}
+                  title={showPasscode ? "Hide Passcode" : "Show Passcode"}
                 >
                   {showPasscode ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -551,7 +543,7 @@ export default function CheckInMobileApp({
             <button
               type="submit"
               disabled={authLoading}
-              className="w-full py-4 mt-2 bg-blue-600 hover:bg-blue-500 active:scale-98 disabled:opacity-50 text-white rounded-2xl font-black text-sm shadow-xl shadow-blue-600/30 transition-all flex items-center justify-center cursor-pointer tracking-wide"
+              className="w-full py-3.5 mt-2 bg-blue-600 hover:bg-blue-500 active:scale-[0.99] disabled:opacity-50 text-white rounded-2xl font-bold text-sm shadow-lg shadow-blue-600/25 transition-all flex items-center justify-center cursor-pointer tracking-wide"
             >
               {authLoading ? (
                 <div className="flex items-center gap-2">
@@ -566,7 +558,7 @@ export default function CheckInMobileApp({
         </div>
 
         {/* Footer info */}
-        <div className="py-4 text-center">
+        <div className="py-4 text-center relative z-10">
           <p className="text-[11px] text-slate-500">
             {t("checkin.poweredBy", "Powered by Eventzone • Secure On-Site Check-In")}
           </p>
