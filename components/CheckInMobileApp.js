@@ -463,8 +463,8 @@ export default function CheckInMobileApp({
 
         <div className="w-full max-w-sm mx-auto flex flex-col items-center relative z-10 my-auto py-6 sm:py-8">
           {/* Top Branding Header */}
-          <div className="mb-6 text-center">
-            <div className="flex items-center justify-center mb-3.5">
+          <div className="mb-10 sm:mb-12 text-center">
+            <div className="flex items-center justify-center mb-4">
               <img
                 src="/eventzone-logo-white.png"
                 alt="Eventzone"
@@ -561,7 +561,7 @@ export default function CheckInMobileApp({
           </div>
 
           {/* Footer info */}
-          <div className="mt-6 text-center">
+          <div className="mt-8 sm:mt-10 text-center">
             <p className="text-[11px] text-slate-500">
               {t("checkin.poweredBy", "Powered by Eventzone • Secure On-Site Check-In")}
             </p>
