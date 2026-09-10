@@ -15,7 +15,7 @@ export async function OPTIONS() {
 export async function POST(request) {
   try {
     const body = await request.json().catch(() => ({}));
-    const { eventId, payload, checkedInBy, passcode, staffEmail } = body || {};
+    const { eventId, payload, checkedInBy, passcode, staffEmail, gateName, gateId, checkinGate } = body || {};
 
     if (!payload || !eventId) {
       return NextResponse.json(
@@ -33,10 +33,14 @@ export async function POST(request) {
       );
     }
 
+    const effectiveGate = checkinGate || gateName || authResult.gate?.name || "Principal Gate";
+
     const result = await performQrCheckin({
       eventId,
       rawPayload: payload,
       checkedInBy: checkedInBy || "Gate Staff",
+      gateName: effectiveGate,
+      checkinGate: effectiveGate,
     });
 
     return NextResponse.json(result, { status: 200, headers: CORS_HEADERS });

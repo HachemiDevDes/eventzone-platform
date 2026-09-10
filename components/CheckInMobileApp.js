@@ -28,6 +28,7 @@ import {
   Undo2,
   Info,
   Globe,
+  DoorOpen,
 } from "lucide-react";
 import CheckInScanner from "./CheckInScanner";
 import { enqueueOfflineAction, processOfflineQueue } from "../lib/offlineSync";
@@ -97,13 +98,15 @@ function CheckInLanguageToggle({ lang, setLang, languages, isRTL, isLight = fals
 
 export default function CheckInMobileApp({
   initialEventId = "",
+  initialPasscode = "",
+  initialGate = "",
 }) {
   const { t, lang, setLang, isRTL, languages } = useLanguage();
 
   // Session / Auth state
   const [session, setSession] = useState(null);
   const [authEmail, setAuthEmail] = useState("");
-  const [authPasscode, setAuthPasscode] = useState("");
+  const [authPasscode, setAuthPasscode] = useState(initialPasscode ? initialPasscode.toUpperCase() : "");
   const [showPasscode, setShowPasscode] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState("");
@@ -174,6 +177,8 @@ export default function CheckInMobileApp({
         ...data.session,
         event: data.event,
         staff: data.staff,
+        gateId: data.session?.gateId || data.gate?.id || "principal",
+        gateName: data.session?.gateName || data.gate?.name || "Principal Gate",
       };
 
       setSession(newSession);
@@ -267,6 +272,10 @@ export default function CheckInMobileApp({
     if (!attendee || !session?.eventId) return;
     const targetState = forceCheckin !== null ? forceCheckin : !attendee.checkedIn;
     const attendeeId = attendee.id;
+    const activeGate = session?.gateName || "Principal Gate";
+    const activeGateId = session?.gateId || "principal";
+    const staffLabel = session?.staffName || "Staff";
+    const formattedStaff = activeGate ? `${staffLabel} (${activeGate})` : staffLabel;
 
     setActionLoadingId(attendeeId);
 
@@ -278,9 +287,11 @@ export default function CheckInMobileApp({
             ...a,
             checkedIn: targetState,
             checked_in: targetState,
+            checkinGate: targetState ? activeGate : null,
+            checkin_gate: targetState ? activeGate : null,
             checkedInAt: targetState ? new Date().toISOString() : null,
             checked_in_at: targetState ? new Date().toISOString() : null,
-            checkedInBy: targetState ? (session.staffName || "Staff") : null,
+            checkedInBy: targetState ? formattedStaff : null,
           };
         }
         return a;
@@ -292,6 +303,8 @@ export default function CheckInMobileApp({
         ...prev,
         checkedIn: targetState,
         checked_in: targetState,
+        checkinGate: targetState ? activeGate : null,
+        checkin_gate: targetState ? activeGate : null,
         checkedInAt: targetState ? new Date().toISOString() : null,
       }));
     }
@@ -304,7 +317,10 @@ export default function CheckInMobileApp({
         payload: {
           attendeeId,
           checkedIn: targetState,
-          checkedInBy: session.staffName || session.email || "Staff",
+          checkedInBy: staffLabel,
+          gateName: activeGate,
+          gateId: activeGateId,
+          checkinGate: activeGate,
           checkedInAt: targetState ? new Date().toISOString() : null,
         }
       });
@@ -318,13 +334,15 @@ export default function CheckInMobileApp({
               checkedIn: targetState,
               checked_in: targetState,
               status: targetState ? "checked_in" : "registered",
+              checkinGate: targetState ? activeGate : null,
+              checkin_gate: targetState ? activeGate : null,
               checkedInAt: targetState ? new Date().toISOString() : null
             } : a);
             localStorage.setItem(`eventzone_cache_attendees_${session.eventId}`, JSON.stringify(updated));
           }
         }
       } catch {}
-      showToast(targetState ? `${attendee.name || "Attendee"} checked in (Offline)!` : "Check-in undone (Offline)", "neutral");
+      showToast(targetState ? `${attendee.name || "Attendee"} checked in at ${activeGate} (Offline)!` : "Check-in undone (Offline)", "neutral");
       setActionLoadingId(null);
       setUndoAttendee(null);
       return;
@@ -342,7 +360,10 @@ export default function CheckInMobileApp({
           eventId: session.eventId,
           attendeeId,
           checkedIn: targetState,
-          checkedInBy: session.staffName || session.email || "Staff",
+          checkedInBy: staffLabel,
+          gateName: activeGate,
+          gateId: activeGateId,
+          checkinGate: activeGate,
         }),
       });
 
@@ -354,14 +375,17 @@ export default function CheckInMobileApp({
           payload: {
             attendeeId,
             checkedIn: targetState,
-            checkedInBy: session.staffName || session.email || "Staff",
+            checkedInBy: staffLabel,
+            gateName: activeGate,
+            gateId: activeGateId,
+            checkinGate: activeGate,
             checkedInAt: targetState ? new Date().toISOString() : null,
           }
         });
-        showToast(targetState ? `${attendee.name || "Attendee"} checked in (Offline queue)!` : "Check-in undone (Offline queue)", "neutral");
+        showToast(targetState ? `${attendee.name || "Attendee"} checked in at ${activeGate} (Offline queue)!` : "Check-in undone (Offline queue)", "neutral");
       } else {
         if (targetState) {
-          showToast(`${attendee.name || "Attendee"} checked in!`);
+          showToast(`${attendee.name || "Attendee"} checked in at ${activeGate}!`);
         } else {
           showToast(`Check-in undone for ${attendee.name || "Attendee"}.`, "neutral");
         }
@@ -374,11 +398,14 @@ export default function CheckInMobileApp({
         payload: {
           attendeeId,
           checkedIn: targetState,
-          checkedInBy: session.staffName || session.email || "Staff",
+          checkedInBy: staffLabel,
+          gateName: activeGate,
+          gateId: activeGateId,
+          checkinGate: activeGate,
           checkedInAt: targetState ? new Date().toISOString() : null,
         }
       });
-      showToast(targetState ? `${attendee.name || "Attendee"} checked in (Offline)!` : "Check-in undone (Offline)", "neutral");
+      showToast(targetState ? `${attendee.name || "Attendee"} checked in at ${activeGate} (Offline)!` : "Check-in undone (Offline)", "neutral");
     } finally {
       setActionLoadingId(null);
       setUndoAttendee(null);
@@ -389,12 +416,13 @@ export default function CheckInMobileApp({
   const handleScannerResult = (result) => {
     if (result && result.attendee) {
       const scannedId = result.attendee.id;
+      const attGate = result.attendee.checkinGate || result.attendee.checkin_gate || session?.gateName || "Principal Gate";
       setAttendees((prev) => {
         const exists = prev.some((a) => a.id === scannedId);
         if (exists) {
-          return prev.map((a) => (a.id === scannedId ? { ...a, ...result.attendee, checkedIn: true, checked_in: true } : a));
+          return prev.map((a) => (a.id === scannedId ? { ...a, ...result.attendee, checkedIn: true, checked_in: true, checkinGate: attGate, checkin_gate: attGate } : a));
         }
-        return [{ ...result.attendee, checkedIn: true, checked_in: true }, ...prev];
+        return [{ ...result.attendee, checkedIn: true, checked_in: true, checkinGate: attGate, checkin_gate: attGate }, ...prev];
       });
     }
   };
@@ -605,8 +633,14 @@ export default function CheckInMobileApp({
             <div className="flex items-center gap-2 text-[11px] text-slate-400">
               <span className="truncate">{session.staffName || t("checkin.defaultStaff", "Staff")}</span>
               <span>&bull;</span>
-              <span className="font-mono text-emerald-400 font-bold">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-semibold text-[10px] border border-blue-400/30 shrink-0">
+                <DoorOpen size={10} className="stroke-[2.5]" />
+                <span className="truncate max-w-[110px]">{session.gateName || "Principal Gate"}</span>
+              </span>
+              <span>&bull;</span>
+              <span className="font-mono text-emerald-400 font-bold" title={`${t("checkin.totalCheckedIn", "Total")}: ${checkedInCount}/${totalCount} | ${t("checkin.gateCheckedIn", "This Gate")}: ${gateCheckedInCount}`}>
                 {checkedInCount}/{totalCount}
+                <span className="text-[10px] text-slate-400 font-normal ml-1">({gateCheckedInCount})</span>
               </span>
             </div>
           </div>
@@ -658,6 +692,8 @@ export default function CheckInMobileApp({
             staffEmail={session.email}
             staffName={session.staffName}
             passcode={session.passcode}
+            gateName={session.gateName || "Principal Gate"}
+            gateId={session.gateId || "principal"}
             checkedInCount={checkedInCount}
             totalCount={totalCount}
             onScanResult={handleScannerResult}
@@ -925,6 +961,16 @@ export default function CheckInMobileApp({
                     : t("checkin.statusRegistered", "Registered (Pending Arrival)")}
                 </span>
               </div>
+
+              {(selectedAttendee.checkinGate || selectedAttendee.checkin_gate) && (
+                <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-white/5">
+                  <span className="text-slate-400">{t("checkin.gate", "Entrance Gate:")}</span>
+                  <span className="font-bold text-blue-300 bg-blue-500/10 border border-blue-400/20 px-2.5 py-1 rounded-lg flex items-center gap-1.5 text-xs">
+                    <DoorOpen size={13} />
+                    <span>{selectedAttendee.checkinGate || selectedAttendee.checkin_gate}</span>
+                  </span>
+                </div>
+              )}
 
               {selectedAttendee.checkedInAt && (
                 <div className="flex items-center gap-2 text-xs text-slate-400 p-2">

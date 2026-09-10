@@ -111,6 +111,8 @@ export default function CheckInScanner({
   staffEmail = "",
   staffName = "",
   passcode = "",
+  gateName = "Principal Gate",
+  gateId = "principal",
   checkedInCount = 0,
   totalCount = 0,
   onScanResult,
@@ -308,6 +310,9 @@ export default function CheckInScanner({
             passcode: effectivePasscode,
             staffEmail: effectiveEmail,
             checkedInBy: staffName || effectiveEmail || "Gate Staff",
+            gateName: gateName || "Principal Gate",
+            gateId: gateId || "principal",
+            checkinGate: gateName || "Principal Gate",
           }),
         });
 
@@ -365,7 +370,7 @@ export default function CheckInScanner({
         setIsProcessing(false);
       }
     },
-    [eventId, isProcessing, onScanResult, passcode, staffEmail, staffName, t]
+    [eventId, isProcessing, onScanResult, passcode, staffEmail, staffName, gateName, gateId, t]
   );
 
   const scanVideoFrameRef = useRef(null);

@@ -34,8 +34,15 @@ export async function GET(request) {
     }
 
     const attendees = await fetchCheckinAttendees(eventId);
-    const checkedInCount = attendees.filter((a) => a.checkedIn || a.checked_in).length;
+    const checkedInAttendees = attendees.filter((a) => a.checkedIn || a.checked_in);
+    const checkedInCount = checkedInAttendees.length;
     const totalCount = attendees.length;
+
+    const gateBreakdown = {};
+    for (const a of checkedInAttendees) {
+      const gName = a.checkinGate || a.checkin_gate || (a.checkedInBy === "Badge Print" ? "Badge Print" : "Principal Gate");
+      gateBreakdown[gName] = (gateBreakdown[gName] || 0) + 1;
+    }
 
     return NextResponse.json(
       {
@@ -44,6 +51,7 @@ export async function GET(request) {
         checkedInCount,
         remainingCount: Math.max(0, totalCount - checkedInCount),
         percentage: totalCount > 0 ? Math.round((checkedInCount / totalCount) * 100) : 0,
+        gateBreakdown,
         attendees,
       },
       { status: 200, headers: CORS_HEADERS }

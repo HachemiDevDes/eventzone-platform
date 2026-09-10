@@ -46,6 +46,7 @@ export async function POST(request) {
           endDate: authResult.event.endDate,
         },
         staff: authResult.staff,
+        gate: authResult.gate,
         session: authResult.session,
       },
       { status: 200, headers: CORS_HEADERS }

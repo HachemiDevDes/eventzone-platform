@@ -15,7 +15,7 @@ export async function OPTIONS() {
 export async function POST(request) {
   try {
     const body = await request.json().catch(() => ({}));
-    const { eventId, attendeeId, checkedIn, checkedInBy, passcode, staffEmail } = body || {};
+    const { eventId, attendeeId, checkedIn, checkedInBy, passcode, staffEmail, gateName, gateId, checkinGate } = body || {};
 
     if (!attendeeId || !eventId) {
       return NextResponse.json(
@@ -33,11 +33,15 @@ export async function POST(request) {
       );
     }
 
+    const effectiveGate = checkinGate || gateName || authResult.gate?.name || "Principal Gate";
+
     const result = await toggleAttendeeCheckin({
       eventId,
       attendeeId,
       checkedIn: checkedIn !== false,
       checkedInBy: checkedInBy || "Gate Staff",
+      gateName: effectiveGate,
+      checkinGate: effectiveGate,
     });
 
     if (!result.success) {

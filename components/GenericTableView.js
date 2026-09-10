@@ -37,11 +37,11 @@ import {
   Eye, Phone, Clock, CheckCircle2, XCircle, Sparkles, Filter, Info, ShieldCheck, ArrowUpRight,
   Maximize2, User, Download, Camera, Loader2, MoreVertical, MoreHorizontal,
   Store, Globe, ExternalLink, DollarSign, LayoutGrid, List, Copy, Smartphone,
-  FileSpreadsheet, ChevronDown, WifiOff, RefreshCw
+  FileSpreadsheet, ChevronDown, WifiOff, RefreshCw, DoorOpen, Shuffle, KeyRound
 } from "lucide-react";
 import QRCode from "qrcode";
 import { useLanguage } from "../lib/i18n";
-import { logCommunication, fetchCommunications, bulkUpsertAttendees } from "../lib/db";
+import { logCommunication, fetchCommunications, bulkUpsertAttendees, updateEventCheckinGates } from "../lib/db";
 import { useOfflineSync } from "../lib/offlineSync";
 import { safeLocalStorageGet } from "../lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
@@ -5047,6 +5047,40 @@ function CheckInView({ state, onUpdateState }) {
     syncNow,
     queueCheckin,
   } = useOfflineSync(activeEventId);
+
+  const eventDetails = state.eventDetails || {};
+  const eventId = eventDetails.id || activeEventId || "";
+  const principalPasscode = eventDetails.checkinPasscode || eventDetails.checkin_passcode || (eventId ? String(eventId).slice(0, 6).toUpperCase() : "EZGATE");
+
+  const rawGates = useMemo(() => {
+    if (Array.isArray(eventDetails.checkinGates)) return eventDetails.checkinGates;
+    if (Array.isArray(eventDetails.checkin_gates)) return eventDetails.checkin_gates;
+    if (Array.isArray(eventDetails.portal_settings?.checkin_gates)) return eventDetails.portal_settings.checkin_gates;
+    return [];
+  }, [eventDetails]);
+
+  const allGates = useMemo(() => {
+    const principalGate = {
+      id: "principal",
+      name: "Principal Gate",
+      passcode: principalPasscode,
+      isPrincipal: true,
+    };
+    return [principalGate, ...rawGates];
+  }, [principalPasscode, rawGates]);
+
+  const [selectedGateId, setSelectedGateId] = useState("principal");
+  const [gateFilter, setGateFilter] = useState("all");
+  const [showGateModal, setShowGateModal] = useState(false);
+  const [editingGate, setEditingGate] = useState(null);
+  const [gateFormName, setGateFormName] = useState("");
+  const [gateFormPasscode, setGateFormPasscode] = useState("");
+  const [gateFormError, setGateFormError] = useState("");
+  const [isSavingGate, setIsSavingGate] = useState(false);
+  const [deletingGateId, setDeletingGateId] = useState(null);
+  const [copiedGateId, setCopiedGateId] = useState(null);
+  const [copiedLinkGateId, setCopiedLinkGateId] = useState(null);
+
   const [search, setSearch] = useState("");
   const [selectedBadgeAttendee, setSelectedBadgeAttendee] = useState(null);
   const [showScannerModal, setShowScannerModal] = useState(false);
@@ -5057,9 +5091,217 @@ function CheckInView({ state, onUpdateState }) {
   const [pageSize, setPageSize] = useState(10);
   const [copiedPasscode, setCopiedPasscode] = useState(false);
 
+  const activeGate = useMemo(() => {
+    return allGates.find(g => g.id === selectedGateId) || allGates[0];
+  }, [allGates, selectedGateId]);
+
+  const generateGatePasscode = useCallback(() => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    const existingPasscodes = new Set([
+      principalPasscode.toUpperCase(),
+      ...rawGates.map(g => (g.passcode || "").toUpperCase())
+    ]);
+    let code = "";
+    for (let attempts = 0; attempts < 200; attempts++) {
+      code = "";
+      for (let i = 0; i < 6; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      if (!existingPasscodes.has(code)) break;
+    }
+    return code;
+  }, [principalPasscode, rawGates]);
+
+  const gateStats = useMemo(() => {
+    const isAttendeeCheckedIn = (a) => Boolean(
+      a.status === "checked-in" || a.status === "checked_in" || a.checkedIn || a.checked_in
+    );
+
+    const checkedInAttendees = attendees.filter(isAttendeeCheckedIn);
+    const totalCheckedIn = checkedInAttendees.length;
+
+    const tallies = { principal: 0 };
+    rawGates.forEach(g => {
+      tallies[g.id] = 0;
+    });
+
+    checkedInAttendees.forEach(a => {
+      const gVal = (a.checkinGate || a.checkin_gate || "").trim().toLowerCase();
+      if (!gVal || gVal === "principal gate" || gVal === "principal") {
+        tallies["principal"] = (tallies["principal"] || 0) + 1;
+      } else {
+        const matched = rawGates.find(g => 
+          (g.name && g.name.trim().toLowerCase() === gVal) || g.id === gVal
+        );
+        if (matched) {
+          tallies[matched.id] = (tallies[matched.id] || 0) + 1;
+        } else {
+          tallies["principal"] = (tallies["principal"] || 0) + 1;
+        }
+      }
+    });
+
+    return {
+      tallies,
+      totalCheckedIn,
+      totalAttendees: attendees.length
+    };
+  }, [attendees, rawGates]);
+
+  const handleOpenAddGate = () => {
+    setEditingGate(null);
+    setGateFormName("");
+    setGateFormPasscode(generateGatePasscode());
+    setGateFormError("");
+    setShowGateModal(true);
+  };
+
+  const handleOpenEditGate = (gate) => {
+    if (gate.isPrincipal) return;
+    setEditingGate(gate);
+    setGateFormName(gate.name || "");
+    setGateFormPasscode(gate.passcode || "");
+    setGateFormError("");
+    setShowGateModal(true);
+  };
+
+  const handleSaveGate = async (e) => {
+    if (e) e.preventDefault();
+    const trimmedName = gateFormName.trim();
+    const cleanPasscode = gateFormPasscode.trim().toUpperCase();
+
+    if (!trimmedName) {
+      setGateFormError(t("checkin.errorGateNameRequired", "Please provide a gate name."));
+      return;
+    }
+
+    if (!/^[A-Z0-9]{6}$/.test(cleanPasscode)) {
+      setGateFormError(t("checkin.errorPasscodeFormat", "Passcode must be exactly 6 alphanumeric characters."));
+      return;
+    }
+
+    if (cleanPasscode === principalPasscode.toUpperCase()) {
+      setGateFormError(t("checkin.errorPasscodePrincipalConflict", "This passcode is already assigned to the Principal Gate."));
+      return;
+    }
+
+    const duplicate = rawGates.find(g => 
+      g.passcode?.toUpperCase() === cleanPasscode && (!editingGate || g.id !== editingGate.id)
+    );
+    if (duplicate) {
+      setGateFormError(t("checkin.errorPasscodeDuplicate", `Passcode is already used by gate "${duplicate.name}".`));
+      return;
+    }
+
+    const nameDuplicate = rawGates.find(g => 
+      g.name.trim().toLowerCase() === trimmedName.toLowerCase() && (!editingGate || g.id !== editingGate.id)
+    );
+    if (nameDuplicate || trimmedName.toLowerCase() === "principal gate") {
+      setGateFormError(t("checkin.errorGateNameDuplicate", "A gate with this name already exists."));
+      return;
+    }
+
+    setIsSavingGate(true);
+    setGateFormError("");
+
+    let updatedGates;
+    let savedGateId;
+    if (editingGate) {
+      savedGateId = editingGate.id;
+      updatedGates = rawGates.map(g => 
+        g.id === editingGate.id ? { ...g, name: trimmedName, passcode: cleanPasscode } : g
+      );
+    } else {
+      savedGateId = `gate_${Date.now()}`;
+      const newGate = {
+        id: savedGateId,
+        name: trimmedName,
+        passcode: cleanPasscode,
+        createdAt: new Date().toISOString()
+      };
+      updatedGates = [...rawGates, newGate];
+    }
+
+    try {
+      const res = await updateEventCheckinGates(eventId, updatedGates);
+      if (!res.success) {
+        setGateFormError(res.error || "Failed to save gate. Please try again.");
+        setIsSavingGate(false);
+        return;
+      }
+
+      const updatedEventDetails = {
+        ...eventDetails,
+        checkinGates: updatedGates,
+        checkin_gates: updatedGates,
+        portal_settings: {
+          ...(eventDetails.portal_settings || eventDetails.portalSettings || {}),
+          checkin_gates: updatedGates
+        }
+      };
+      onUpdateState("eventDetails", updatedEventDetails);
+      setSelectedGateId(savedGateId);
+      setShowGateModal(false);
+      setEditingGate(null);
+      setGateFormName("");
+      setGateFormPasscode("");
+    } catch (err) {
+      console.error("Save gate error:", err);
+      setGateFormError(err.message || "Failed to save gate.");
+    } finally {
+      setIsSavingGate(false);
+    }
+  };
+
+  const handleDeleteGate = async (gateId) => {
+    if (!gateId || gateId === "principal") return;
+    const updatedGates = rawGates.filter(g => g.id !== gateId);
+
+    try {
+      const res = await updateEventCheckinGates(eventId, updatedGates);
+      if (res.success) {
+        const updatedEventDetails = {
+          ...eventDetails,
+          checkinGates: updatedGates,
+          checkin_gates: updatedGates,
+          portal_settings: {
+            ...(eventDetails.portal_settings || eventDetails.portalSettings || {}),
+            checkin_gates: updatedGates
+          }
+        };
+        onUpdateState("eventDetails", updatedEventDetails);
+        if (selectedGateId === gateId) {
+          setSelectedGateId("principal");
+        }
+        if (gateFilter === gateId) {
+          setGateFilter("all");
+        }
+      }
+    } catch (e) {
+      console.error("Delete gate error:", e);
+    } finally {
+      setDeletingGateId(null);
+    }
+  };
+
+  const handleCopyGatePasscode = (gateId, passcode) => {
+    if (!passcode) return;
+    navigator.clipboard.writeText(passcode);
+    setCopiedGateId(gateId);
+    setTimeout(() => setCopiedGateId(null), 2000);
+  };
+
+  const handleCopyGateLink = (gate) => {
+    if (typeof window === "undefined") return;
+    const link = `${window.location.origin}/checkin?eventId=${eventId}&passcode=${gate.passcode}&gate=${encodeURIComponent(gate.name)}`;
+    navigator.clipboard.writeText(link);
+    setCopiedLinkGateId(gate.id);
+    setTimeout(() => setCopiedLinkGateId(null), 2000);
+  };
+
   useEffect(() => {
     setCurrentPage(1);
-  }, [search]);
+  }, [search, gateFilter]);
 
   const handleToggle = async (id) => {
     const target = attendees.find(a => a.id === id);
@@ -5068,6 +5310,7 @@ function CheckInView({ state, onUpdateState }) {
     const nextState = !isCurrentlyChecked;
     const checkinTime = nextState ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null;
     const now = nextState ? new Date().toISOString() : null;
+    const effectiveGate = nextState ? (activeGate?.name || "Principal Gate") : null;
 
     const updated = attendees.map(a => {
       if (a.id === id) {
@@ -5076,6 +5319,8 @@ function CheckInView({ state, onUpdateState }) {
           status: nextState ? "checked_in" : "registered",
           checkedIn: nextState,
           checked_in: nextState,
+          checkinGate: effectiveGate,
+          checkin_gate: effectiveGate,
           checkedInAt: now,
           checkinTime
         };
@@ -5084,7 +5329,7 @@ function CheckInView({ state, onUpdateState }) {
     });
     onUpdateState("attendees", updated);
 
-    queueCheckin(id, nextState, "Organizer Console");
+    queueCheckin(id, nextState, `Organizer Console (${activeGate?.name || "Principal Gate"})`);
   };
 
   // Direct 1-Click Print Badge Handler for CheckInView
@@ -5102,6 +5347,7 @@ function CheckInView({ state, onUpdateState }) {
     if (!isCurrentlyChecked && attendee.id) {
       const now = new Date().toISOString();
       const checkinTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const effectiveGate = activeGate?.name || "Principal Gate";
 
       const updated = attendees.map(a => {
         if (a.id === attendee.id) {
@@ -5110,6 +5356,8 @@ function CheckInView({ state, onUpdateState }) {
             status: "checked_in",
             checkedIn: true,
             checked_in: true,
+            checkinGate: effectiveGate,
+            checkin_gate: effectiveGate,
             checkedInAt: now,
             checkinTime
           };
@@ -5118,12 +5366,11 @@ function CheckInView({ state, onUpdateState }) {
       });
       onUpdateState("attendees", updated);
 
-      queueCheckin(attendee.id, true, "Badge Print");
+      queueCheckin(attendee.id, true, `Badge Print (${effectiveGate})`);
     }
 
     const resolvedTier = getResolvedTicketName(attendee, tickets);
     const matchedTicket = tickets.find(t => (t.name || t.tier || "").trim().toLowerCase() === (resolvedTier || "").trim().toLowerCase()) || {};
-    const eventDetails = state.eventDetails || {};
     const templateUrl = matchedTicket.badgeUrl || eventDetails.badgeUrl || "";
     const badgeSettings = matchedTicket.badgeSettings || eventDetails.badgeSettings || {};
     const attendeePhoto = getAttendeeDisplayImage(attendee);
@@ -5132,7 +5379,6 @@ function CheckInView({ state, onUpdateState }) {
     const { company: attendeeCompany, jobTitle: attendeeJobTitle } = extractTicketFormCredentials(attendee);
     const badgeCode = attendee.badgeCode || attendee.badge_code || `EZ-${String(attendee.id || '').slice(-4).toUpperCase() || 'PASS'}`;
     const eventTitle = eventDetails.title || "Conference Event";
-    const eventId = eventDetails.id || state.activeEventId || "";
 
     printA4BadgeDocument({
       templateUrl,
@@ -5196,26 +5442,36 @@ function CheckInView({ state, onUpdateState }) {
         type: "warning",
         title: "Already Checked In",
         attendee: matched,
-        message: `${matched.name} (${matched.ticketType || 'Standard'}) was already checked in at ${matched.checkinTime || 'earlier'}.`
+        message: `${matched.name} (${matched.ticketType || 'Standard'}) was already checked in at ${matched.checkinTime || 'earlier'} (${matched.checkinGate || matched.checkin_gate || 'Principal Gate'}).`
       });
       return;
     }
 
     const checkinTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const now = new Date().toISOString();
+    const effectiveGate = activeGate?.name || "Principal Gate";
     const updated = attendees.map(a => 
-      a.id === matched.id ? { ...a, status: "checked_in", checkedIn: true, checked_in: true, checkedInAt: now, checkinTime } : a
+      a.id === matched.id ? {
+        ...a,
+        status: "checked_in",
+        checkedIn: true,
+        checked_in: true,
+        checkinGate: effectiveGate,
+        checkin_gate: effectiveGate,
+        checkedInAt: now,
+        checkinTime
+      } : a
     );
     onUpdateState("attendees", updated);
 
-    queueCheckin(matched.id, true, "Organizer Scanner");
+    queueCheckin(matched.id, true, `Organizer Scanner (${effectiveGate})`);
 
     setScanFeedback({
       type: "success",
       title: "Check-in Successful!",
       attendee: matched,
       checkinTime,
-      message: `Verified entrance for ${matched.name} (${matched.ticketType || 'General Pass'}).`
+      message: `Verified entrance for ${matched.name} (${matched.ticketType || 'General Pass'}) at ${effectiveGate}.`
     });
 
     setScanInputCode("");
@@ -5223,12 +5479,35 @@ function CheckInView({ state, onUpdateState }) {
 
   const filtered = useMemo(() => {
     const searchLower = search.toLowerCase();
-    return attendees.filter(a =>
-      (a.name || "").toLowerCase().includes(searchLower) ||
-      (a.email || "").toLowerCase().includes(searchLower) ||
-      (a.badgeCode || a.badge_code || "").toLowerCase().includes(searchLower)
-    );
-  }, [attendees, search]);
+    return attendees.filter(a => {
+      const matchesSearch =
+        (a.name || "").toLowerCase().includes(searchLower) ||
+        (a.email || "").toLowerCase().includes(searchLower) ||
+        (a.badgeCode || a.badge_code || "").toLowerCase().includes(searchLower);
+
+      if (!matchesSearch) return false;
+
+      if (gateFilter !== "all") {
+        const isChecked = Boolean(a.status === "checked-in" || a.status === "checked_in" || a.checkedIn || a.checked_in);
+        if (gateFilter === "not_checked_in") {
+          return !isChecked;
+        }
+
+        if (!isChecked) return false;
+
+        const aGate = (a.checkinGate || a.checkin_gate || "").trim().toLowerCase();
+        if (gateFilter === "principal") {
+          return !aGate || aGate === "principal gate" || aGate === "principal";
+        } else {
+          const targetGate = rawGates.find(g => g.id === gateFilter);
+          const targetName = (targetGate?.name || "").trim().toLowerCase();
+          return aGate === targetName || aGate === gateFilter.toLowerCase();
+        }
+      }
+
+      return true;
+    });
+  }, [attendees, search, gateFilter, rawGates]);
 
   const paginated = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
@@ -5306,60 +5585,122 @@ function CheckInView({ state, onUpdateState }) {
 
       {/* Mobile Staff Check-In App Banner & Passcode Card */}
       {(() => {
-        const eventDetails = state.eventDetails || {};
-        const eventId = eventDetails.id || state.activeEventId || "";
-        const eventPasscode = eventDetails.checkinPasscode || eventDetails.checkin_passcode || (eventId ? String(eventId).slice(0, 6).toUpperCase() : "");
-        const checkinUrl = eventId ? `https://ci.eventzone.pro/checkin?eventId=${eventId}` : `https://ci.eventzone.pro`;
-        const localCheckinUrl = eventId ? `/checkin?eventId=${eventId}` : `/checkin`;
+        const localCheckinUrl = eventId
+          ? `/checkin?eventId=${eventId}&passcode=${activeGate.passcode}&gate=${encodeURIComponent(activeGate.name)}`
+          : `/checkin`;
 
         return (
           <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm relative overflow-hidden">
-            <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-              <div className="space-y-1.5 max-w-xl">
-                <h3 className="text-xl font-bold text-slate-900 tracking-tight">
-                  {t("checkin.mobileStaffApp", "Mobile Staff Check-In Web App")}
-                </h3>
+            <div className="relative z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-6">
+              <div className="space-y-2 max-w-2xl">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-xl font-bold text-slate-900 tracking-tight">
+                    {t("checkin.mobileStaffApp", "Mobile Staff Check-In Web App")}
+                  </h3>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-50 text-blue-700 border border-blue-200/70 uppercase tracking-wider">
+                    ci.eventzone.pro
+                  </span>
+                </div>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  Gate staff and volunteers can open <strong className="font-semibold text-slate-800">ci.eventzone.pro</strong> on their mobile phones, enter their email and the event passcode below to scan badges with their phone camera or check in delegates manually.
+                  {t("checkin.mobileStaffAppDesc", "Door staff and volunteers can open the web app on their phone with a gate passcode to scan QR badges with camera or check in delegates manually.")}
                 </p>
+
+                {/* Gate Selector Pills in Banner */}
+                <div className="flex items-center gap-2 pt-1 flex-wrap">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                    {t("checkin.activeGateSelector", "Active Gate:")}
+                  </span>
+                  <div className="inline-flex items-center gap-1.5 p-1 bg-slate-100/90 rounded-2xl border border-slate-200/80 flex-wrap">
+                    {allGates.map((g) => {
+                      const isSelected = selectedGateId === g.id;
+                      const gateTally = gateStats.tallies[g.id] || 0;
+                      return (
+                        <button
+                          key={g.id}
+                          type="button"
+                          onClick={() => setSelectedGateId(g.id)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                            isSelected
+                              ? "bg-white text-slate-900 shadow-xs border border-slate-200"
+                              : "text-slate-600 hover:text-slate-900 hover:bg-white/60"
+                          }`}
+                        >
+                          <DoorOpen size={13} className={isSelected ? "text-blue-600" : "text-slate-400"} />
+                          <span>{g.name}</span>
+                          <span
+                            className={`text-[10px] font-mono px-1.5 py-0.2 rounded-md ${
+                              isSelected
+                                ? "bg-blue-50 text-blue-700 font-extrabold"
+                                : "bg-slate-200 text-slate-600"
+                            }`}
+                          >
+                            {gateTally}
+                          </span>
+                        </button>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      onClick={handleOpenAddGate}
+                      className="px-2.5 py-1.5 rounded-xl text-xs font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-all cursor-pointer flex items-center gap-1"
+                      title={t("checkin.addNewGate", "Add Gate")}
+                    >
+                      <Plus size={13} className="stroke-[2.5]" />
+                      <span>{t("checkin.addGateBtnShort", "Add Gate")}</span>
+                    </button>
+                  </div>
+                </div>
               </div>
 
-              {/* Passcode & Quick Actions */}
+              {/* Passcode & Quick Actions for Active Gate */}
               <div className="flex flex-wrap items-center gap-3 shrink-0">
-                {/* Passcode Pill */}
-                <div className="h-10 bg-slate-50 border border-slate-200/90 rounded-full pl-4 pr-1.5 flex items-center gap-2.5 select-none shrink-0 shadow-sm">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    {t("checkin.eventPasscode", "Passcode")}
-                  </span>
+                {/* Gate Passcode Pill */}
+                <div className="h-10 bg-slate-50 border border-slate-200/90 rounded-full pl-4 pr-1.5 flex items-center gap-2.5 select-none shrink-0 shadow-xs">
+                  <div className="flex flex-col">
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none">
+                      {activeGate.name} {t("checkin.passcode", "Passcode")}
+                    </span>
+                  </div>
                   <span className="text-sm font-mono font-black tracking-widest text-slate-900 select-all">
-                    {eventPasscode || "—"}
+                    {activeGate.passcode || "—"}
                   </span>
                   <button
                     type="button"
-                    onClick={() => {
-                      if (!eventPasscode) return;
-                      navigator.clipboard.writeText(eventPasscode);
-                      setCopiedPasscode(true);
-                      setTimeout(() => setCopiedPasscode(false), 2000);
-                    }}
-                    title={copiedPasscode ? t("common.copied", "Copied!") : t("checkin.copyPasscode", "Copy Passcode")}
+                    onClick={() => handleCopyGatePasscode(activeGate.id, activeGate.passcode)}
+                    title={copiedGateId === activeGate.id ? t("common.copied", "Copied!") : t("checkin.copyPasscode", "Copy Passcode")}
                     className={`w-7 h-7 rounded-full transition-all cursor-pointer flex items-center justify-center ${
-                      copiedPasscode
+                      copiedGateId === activeGate.id
                         ? "bg-emerald-100 text-emerald-700"
                         : "text-slate-400 hover:text-blue-600 hover:bg-slate-200/70"
                     }`}
                   >
-                    {copiedPasscode ? <Check size={13} className="stroke-[2.5]" /> : <Copy size={13} />}
+                    {copiedGateId === activeGate.id ? <Check size={13} className="stroke-[2.5]" /> : <Copy size={13} />}
                   </button>
                 </div>
+
+                {/* Copy Direct Link */}
+                <button
+                  type="button"
+                  onClick={() => handleCopyGateLink(activeGate)}
+                  title={copiedLinkGateId === activeGate.id ? t("common.copied", "Copied Direct Link!") : t("checkin.copyDirectLink", "Copy Web App Link with Passcode")}
+                  className={`h-10 px-3.5 border rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-xs ${
+                    copiedLinkGateId === activeGate.id
+                      ? "bg-emerald-50 border-emerald-300 text-emerald-700"
+                      : "bg-white hover:bg-slate-50 border-slate-200 text-slate-700"
+                  }`}
+                >
+                  {copiedLinkGateId === activeGate.id ? <Check size={14} className="text-emerald-600" /> : <Smartphone size={14} className="text-slate-500" />}
+                  <span>{copiedLinkGateId === activeGate.id ? t("common.copied", "Copied!") : t("checkin.copyLink", "Copy Link")}</span>
+                </button>
 
                 {/* Open Mobile Portal */}
                 <a
                   href={localCheckinUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="h-10 px-5 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white rounded-full font-bold text-xs shadow-md shadow-blue-600/20 flex items-center justify-center cursor-pointer transition-all shrink-0"
+                  className="h-10 px-5 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white rounded-full font-bold text-xs shadow-md shadow-blue-600/20 flex items-center justify-center gap-1.5 cursor-pointer transition-all shrink-0"
                 >
+                  <ExternalLink size={13} />
                   <span>{t("checkin.openWebApp", "Open Check-In Web App")}</span>
                 </a>
               </div>
@@ -5367,6 +5708,179 @@ function CheckInView({ state, onUpdateState }) {
           </div>
         );
       })()}
+
+      {/* Check-In Gates & Admission Points Section */}
+      <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <DoorOpen size={18} />
+              </div>
+              <h3 className="text-base font-bold text-slate-900 tracking-tight">
+                {t("checkin.gatesSectionTitle", "Admission Gates & Traffic Breakdown")}
+              </h3>
+            </div>
+            <p className="text-xs text-slate-500">
+              {t("checkin.gatesSectionSubtitle", "Live attendee admissions per gate. Each gate has its own passcode for staff desk isolation.")}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleOpenAddGate}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-sm shadow-blue-600/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 self-start sm:self-auto shrink-0"
+          >
+            <Plus size={14} className="stroke-[2.5]" />
+            <span>{t("checkin.addGateBtn", "+ Add Admission Gate")}</span>
+          </button>
+        </div>
+
+        {/* Gates Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {allGates.map((gate) => {
+            const count = gateStats.tallies[gate.id] || 0;
+            const pct = gateStats.totalCheckedIn > 0 ? Math.round((count / gateStats.totalCheckedIn) * 100) : 0;
+            const isSelected = selectedGateId === gate.id;
+            const directUrl = eventId
+              ? `/checkin?eventId=${eventId}&passcode=${gate.passcode}&gate=${encodeURIComponent(gate.name)}`
+              : `/checkin`;
+
+            return (
+              <div
+                key={gate.id}
+                className={`rounded-2xl border p-4.5 flex flex-col justify-between gap-4 transition-all ${
+                  isSelected
+                    ? "bg-blue-50/30 border-blue-300 shadow-sm ring-1 ring-blue-400/30"
+                    : "bg-slate-50/60 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                }`}
+              >
+                {/* Gate Card Header */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div
+                        className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                          gate.isPrincipal
+                            ? "bg-emerald-500/10 text-emerald-600 border border-emerald-200"
+                            : "bg-blue-500/10 text-blue-600 border border-blue-200"
+                        }`}
+                      >
+                        <DoorOpen size={14} />
+                      </div>
+                      <h4 className="text-sm font-bold text-slate-900 truncate" title={gate.name}>
+                        {gate.name}
+                      </h4>
+                    </div>
+
+                    <span
+                      className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0 ${
+                        gate.isPrincipal
+                          ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                          : "bg-indigo-100 text-indigo-800 border border-indigo-200"
+                      }`}
+                    >
+                      {gate.isPrincipal ? t("checkin.principalBadge", "Principal") : t("checkin.customBadge", "Custom")}
+                    </span>
+                  </div>
+
+                  {/* Passcode Pill */}
+                  <div className="flex items-center justify-between px-3 py-1.5 bg-white rounded-xl border border-slate-200/80 shadow-2xs">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      {t("checkin.passcodeShort", "Passcode")}
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono font-black text-xs tracking-widest text-slate-800">
+                        {gate.passcode}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyGatePasscode(gate.id, gate.passcode)}
+                        title={copiedGateId === gate.id ? t("common.copied", "Copied!") : t("checkin.copyPasscode", "Copy")}
+                        className={`p-1 rounded-md transition-colors cursor-pointer ${
+                          copiedGateId === gate.id
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "text-slate-400 hover:text-blue-600 hover:bg-slate-100"
+                        }`}
+                      >
+                        {copiedGateId === gate.id ? <Check size={12} className="stroke-[2.5]" /> : <Copy size={12} />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Progress & Check-in Count */}
+                <div className="space-y-1.5">
+                  <div className="flex items-baseline justify-between text-xs">
+                    <span className="text-slate-500 font-medium">
+                      {t("checkin.gateCheckedIn", "Admitted:")}
+                    </span>
+                    <span className="font-extrabold text-slate-900">
+                      <bdi dir="ltr">{count}</bdi>
+                      <span className="text-[11px] font-normal text-slate-400 ml-1">
+                        ({pct}% {t("checkin.ofTotal", "of total")})
+                      </span>
+                    </span>
+                  </div>
+                  <div className="w-full h-1.5 bg-slate-200/70 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-300 ${
+                        gate.isPrincipal ? "bg-emerald-500" : "bg-blue-600"
+                      }`}
+                      style={{ width: `${gateStats.totalCheckedIn > 0 ? (count / gateStats.totalCheckedIn) * 100 : 0}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Gate Card Footer Actions */}
+                <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between gap-1 text-xs">
+                  <div className="flex items-center gap-1">
+                    <a
+                      href={directUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg font-bold text-[11px] flex items-center gap-1 transition-colors cursor-pointer"
+                      title={t("checkin.openGatePortal", "Open Portal for this Gate")}
+                    >
+                      <ExternalLink size={11} />
+                      <span>{t("checkin.open", "Open")}</span>
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyGateLink(gate)}
+                      title={copiedLinkGateId === gate.id ? t("common.copied", "Copied Link!") : t("checkin.copyDirectLink", "Copy Direct Portal Link")}
+                      className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-colors cursor-pointer"
+                    >
+                      {copiedLinkGateId === gate.id ? <Check size={13} className="text-emerald-600" /> : <Smartphone size={13} />}
+                    </button>
+                  </div>
+
+                  {!gate.isPrincipal && (
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditGate(gate)}
+                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-colors cursor-pointer"
+                        title={t("common.edit", "Edit Gate")}
+                      >
+                        <Pencil size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeletingGateId(gate.id)}
+                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                        title={t("common.delete", "Delete Gate")}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
@@ -5400,17 +5914,42 @@ function CheckInView({ state, onUpdateState }) {
       </div>
 
       <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden flex flex-col">
-        <div className="p-5 border-b border-slate-150 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="relative w-full max-w-sm">
-            <input 
-              type="text" 
-              placeholder={t("checkin.searchAttendeesPlaceholder", "Search attendees by name or email...")} 
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-4 pr-4 py-2 border border-slate-200 bg-white rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-650"
-            />
+        <div className="p-5 border-b border-slate-150 bg-slate-50 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full lg:max-w-2xl">
+            {/* Search Input */}
+            <div className="relative flex-1">
+              <input 
+                type="text" 
+                placeholder={t("checkin.searchAttendeesPlaceholder", "Search attendees by name or email...")} 
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-4 pr-4 py-2 border border-slate-200 bg-white rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600"
+              />
+            </div>
+
+            {/* Filter by Gate Dropdown */}
+            <div className="w-full sm:w-60 shrink-0">
+              <SearchableSelect
+                value={gateFilter}
+                onChange={(val) => setGateFilter(val || "all")}
+                options={[
+                  { value: "all", label: t("checkin.filterAllAttendees", "All Attendees & Gates") },
+                  { value: "principal", label: `${t("checkin.principalGate", "Principal Gate")} (${gateStats.tallies["principal"] || 0})` },
+                  ...rawGates.map(g => ({
+                    value: g.id,
+                    label: `${g.name} (${gateStats.tallies[g.id] || 0})`
+                  })),
+                  { value: "not_checked_in", label: `${t("checkin.filterNotCheckedIn", "Pending (Not Checked In)")} (${attendees.length - gateStats.totalCheckedIn})` }
+                ]}
+                placeholder={t("checkin.filterByGatePlaceholder", "Filter by Gate")}
+                isClearable={false}
+                showSearch={rawGates.length > 3}
+                buttonClassName="py-2 text-xs rounded-xl border-slate-200 bg-white"
+              />
+            </div>
           </div>
 
+          {/* Barcode input for scanner gun */}
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -5429,7 +5968,7 @@ function CheckInView({ state, onUpdateState }) {
             </div>
             <button
               type="submit"
-              className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold cursor-pointer transition-colors"
+              className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold cursor-pointer transition-colors shrink-0"
             >
               Check In
             </button>
@@ -5442,6 +5981,7 @@ function CheckInView({ state, onUpdateState }) {
               <tr className="bg-slate-50 border-b border-slate-150 text-[10px] text-slate-400 font-bold uppercase tracking-wider select-none">
                 <th className="py-4 px-6">{t("table.attendee", "Attendee")}</th>
                 <th className="py-4 px-6">{t("table.ticketTier", "Ticket Type")}</th>
+                <th className="py-4 px-6">{t("table.gate", "Entrance Gate")}</th>
                 <th className="py-4 px-6">{t("table.checkinStatus", "Check-in Status")}</th>
                 <th className="py-4 px-6">{t("table.checkinTime", "Check-in Time")}</th>
                 <th className="py-4 px-6 w-36">{t("common.action", "Action")}</th>
@@ -5450,17 +5990,28 @@ function CheckInView({ state, onUpdateState }) {
             <tbody className="divide-y divide-slate-100">
               {paginated.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="text-center text-slate-400 py-12">{t("checkin.noAttendeesYet", "No attendees registered yet.")}</td>
+                  <td colSpan="6" className="text-center text-slate-400 py-12">{t("checkin.noAttendeesYet", "No attendees registered yet.")}</td>
                 </tr>
               ) : (
                 paginated.map(a => {
                   const isCheckedIn = Boolean(a.status === "checked-in" || a.status === "checked_in" || a.checkedIn || a.checked_in);
+                  const attendeeGate = a.checkinGate || a.checkin_gate;
                   return (
                     <tr key={a.id} className="hover:bg-slate-50/50 transition-colors duration-150">
                       <td className="py-4 px-6 font-semibold flex items-center gap-3">
                         <span className="text-slate-850 font-bold">{a.name}</span>
                       </td>
                       <td className="py-4 px-6 font-bold text-slate-650">{a.ticketType || a.ticket_type || "Standard"}</td>
+                      <td className="py-4 px-6">
+                        {isCheckedIn ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-blue-500/10 text-blue-700 border border-blue-200/80">
+                            <DoorOpen size={11} className="text-blue-600 shrink-0" />
+                            <span className="truncate max-w-[130px]">{attendeeGate || "Principal Gate"}</span>
+                          </span>
+                        ) : (
+                          <span className="text-slate-300 font-mono text-xs">—</span>
+                        )}
+                      </td>
                       <td className="py-4 px-6">
                         <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${
                           isCheckedIn 
@@ -5687,6 +6238,168 @@ function CheckInView({ state, onUpdateState }) {
                 >
                   <Printer size={15} />
                   <span>{t("table.printBadgeA4", "Print Badge (A4)")}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ADD / EDIT GATE MODAL */}
+      {showGateModal && (
+        <div className="fixed inset-0 z-[220] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs animate-fade-in font-sans">
+          <div className="bg-white border border-slate-200 w-full max-w-md rounded-3xl shadow-2xl p-6 sm:p-7 space-y-5 animate-scale-up relative text-slate-900">
+            <button
+              type="button"
+              onClick={() => {
+                setShowGateModal(false);
+                setEditingGate(null);
+                setGateFormError("");
+              }}
+              className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 cursor-pointer font-bold"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <DoorOpen size={22} />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-slate-900">
+                  {editingGate
+                    ? t("checkin.editGateModalTitle", "Edit Admission Gate")
+                    : t("checkin.addGateModalTitle", "Add Admission Gate")}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  {t("checkin.gateModalSubtitle", "Configure entrance point name and unique access passcode.")}
+                </p>
+              </div>
+            </div>
+
+            {gateFormError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs font-semibold text-rose-700 flex items-center gap-2">
+                <XCircle size={15} className="shrink-0 text-rose-600" />
+                <span>{gateFormError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveGate} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
+                  <span>{t("checkin.gateNameLabel", "Gate / Entrance Name")} *</span>
+                  <span className="text-[10px] text-slate-400 font-normal">{t("checkin.gateNameHint", "e.g., VIP Entrance, Hall B")}</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  autoFocus
+                  placeholder={t("checkin.gateNamePlaceholder", "e.g., VIP Entrance, Hall B Desk, Speakers Point")}
+                  value={gateFormName}
+                  onChange={(e) => setGateFormName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-600 focus:bg-white"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
+                  <span>{t("checkin.gatePasscodeLabel", "Unique 6-Char Passcode")} *</span>
+                  <span className="text-[10px] text-slate-400 font-normal">{t("checkin.gatePasscodeHint", "Used by door staff to log in")}</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    required
+                    maxLength={6}
+                    placeholder="e.g., VIP802"
+                    value={gateFormPasscode}
+                    onChange={(e) => setGateFormPasscode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                    className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono font-black tracking-widest text-slate-900 placeholder-slate-400 uppercase focus:outline-none focus:border-blue-600 focus:bg-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setGateFormPasscode(generateGatePasscode())}
+                    title={t("checkin.generateRandomPasscode", "Generate Random Passcode")}
+                    className="px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                  >
+                    <Shuffle size={14} />
+                    <span>{t("checkin.randomize", "Randomize")}</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-blue-50/50 border border-blue-100 text-[11px] text-blue-900 space-y-1">
+                <p className="font-semibold">{t("checkin.gateHowItWorks", "How Gate Passcodes Work:")}</p>
+                <p className="text-slate-600 text-[11px] leading-relaxed">
+                  {t("checkin.gateHowItWorksDesc", "When gate staff sign in at ci.eventzone.pro using this passcode, attendee check-ins and QR scans are instantly tagged to this gate in real time.")}
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowGateModal(false);
+                    setEditingGate(null);
+                    setGateFormError("");
+                  }}
+                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                >
+                  {t("common.cancel", "Cancel")}
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingGate}
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-600/20 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {isSavingGate ? <RefreshCw size={14} className="animate-spin" /> : <Check size={15} />}
+                  <span>{editingGate ? t("common.saveChanges", "Save Changes") : t("checkin.createGateBtn", "Create Gate")}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE GATE CONFIRMATION MODAL */}
+      {deletingGateId && (() => {
+        const targetGate = rawGates.find(g => g.id === deletingGateId);
+        if (!targetGate) return null;
+        const gateCheckinCount = gateStats.tallies[deletingGateId] || 0;
+
+        return (
+          <div className="fixed inset-0 z-[220] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs animate-fade-in font-sans">
+            <div className="bg-white border border-slate-200 w-full max-w-sm rounded-3xl shadow-2xl p-6 text-center space-y-4 animate-scale-up relative text-slate-900">
+              <div className="w-12 h-12 mx-auto rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center">
+                <Trash2 size={24} />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-black text-slate-900">
+                  {t("checkin.deleteGateTitle", "Delete Admission Gate?")}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Are you sure you want to remove <strong className="text-slate-800">{targetGate.name}</strong>?
+                </p>
+                {gateCheckinCount > 0 && (
+                  <p className="text-[11px] text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-2 mt-2 font-medium">
+                    {gateCheckinCount} attendee(s) have checked in through this gate. Their check-in status will remain saved.
+                  </p>
+                )}
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setDeletingGateId(null)}
+                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold cursor-pointer"
+                >
+                  {t("common.cancel", "Cancel")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteGate(deletingGateId)}
+                  className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-md shadow-rose-600/20 cursor-pointer"
+                >
+                  {t("common.delete", "Delete Gate")}
                 </button>
               </div>
             </div>
