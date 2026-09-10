@@ -9,7 +9,7 @@ export default function FeatureFaq({ feature }) {
   if (!feature.faq || feature.faq.length === 0) return null;
 
   return (
-    <section id="faq" className="py-16 sm:py-24 bg-slate-50 relative border-t border-slate-200/80">
+    <section id="faq" className="py-20 sm:py-32 bg-slate-50 relative border-t border-slate-200/80">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Section Header */}

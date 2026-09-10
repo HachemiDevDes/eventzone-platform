@@ -22,7 +22,7 @@ export default function FeatureBenefitsGrid({ feature }) {
   if (!feature.valuePillars || feature.valuePillars.length === 0) return null;
 
   return (
-    <section id="benefices" className="py-16 sm:py-24 bg-white relative">
+    <section id="benefices" className="py-20 sm:py-32 bg-white relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Section Header */}
@@ -33,7 +33,7 @@ export default function FeatureBenefitsGrid({ feature }) {
         </div>
 
         {/* 3 Pillars Grid */}
-        <div className="mt-10 sm:mt-12 grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+        <div className="mt-12 sm:mt-16 grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
           {feature.valuePillars.map((pillar, idx) => {
             const IconComponent = ICON_MAP[pillar.icon] || Zap;
 

@@ -7,25 +7,25 @@ export default function FeatureDeepDive({ feature }) {
   if (!feature.deepDiveFeatures || feature.deepDiveFeatures.length === 0) return null;
 
   return (
-    <section id="details" className="py-16 sm:py-24 bg-slate-50 relative border-t border-slate-200/80">
+    <section id="details" className="py-20 sm:py-32 lg:py-40 bg-slate-50 relative border-t border-slate-200/80">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Section Header */}
-        <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16">
+        <div className="text-center max-w-2xl mx-auto mb-16 sm:mb-24 lg:mb-28">
           <h2 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
             Fonctionnalités Clés
           </h2>
         </div>
 
-        {/* Alternating Deep-Dive Rows */}
-        <div className="space-y-12 sm:space-y-16">
+        {/* Alternating Deep-Dive Rows with generous breathing room */}
+        <div className="space-y-24 sm:space-y-36 lg:space-y-44">
           {feature.deepDiveFeatures.map((item, idx) => {
             const isEven = idx % 2 === 0;
 
             return (
               <div 
                 key={idx}
-                className={`flex flex-col ${isEven ? "lg:flex-row" : "lg:flex-row-reverse"} items-center gap-8 lg:gap-12`}
+                className={`flex flex-col ${isEven ? "lg:flex-row" : "lg:flex-row-reverse"} items-center gap-10 sm:gap-16 lg:gap-24`}
               >
                 {/* Text Description Column */}
                 <div className="w-full lg:w-1/2 space-y-3">

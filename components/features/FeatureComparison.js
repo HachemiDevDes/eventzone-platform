@@ -7,11 +7,11 @@ export default function FeatureComparison({ feature }) {
   if (!feature.comparison) return null;
 
   return (
-    <section id="comparatif" className="py-16 sm:py-24 bg-white relative">
+    <section id="comparatif" className="py-20 sm:py-32 bg-white relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Section Header */}
-        <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-12">
+        <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16">
           <h2 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
             Pourquoi Choisir Eventzone ?
           </h2>
