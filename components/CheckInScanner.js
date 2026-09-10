@@ -20,7 +20,8 @@ import {
   Ticket,
   Clock,
   Check,
-  X
+  X,
+  User
 } from "lucide-react";
 import { enqueueOfflineAction } from "../lib/offlineSync";
 
@@ -124,7 +125,6 @@ export default function CheckInScanner({
   const isScanningRef = useRef(true);
   const lastScannedCodeRef = useRef("");
   const lastScanTimestampRef = useRef(0);
-  const autoNextTimerRef = useRef(null);
 
   const [cameraPermission, setCameraPermission] = useState("prompt"); // "prompt" | "granted" | "denied"
   const [errorMessage, setErrorMessage] = useState("");
@@ -133,7 +133,6 @@ export default function CheckInScanner({
   const [torchOn, setTorchOn] = useState(false);
   const [activeResult, setActiveResult] = useState(null); // { status: "success" | "already_checked_in" | "invalid", attendee, message, checkedInAt, rawScanned }
   const [isProcessing, setIsProcessing] = useState(false);
-  const [countdownPct, setCountdownPct] = useState(100);
 
   // Stop camera helper
   const stopCamera = useCallback(() => {
@@ -154,31 +153,6 @@ export default function CheckInScanner({
   // Forward ref for scan next
   const handleScanNextRef = useRef(null);
 
-  // Auto-dismiss countdown bar for successful check-ins (3.5s)
-  const startAutoNextCountdown = useCallback(() => {
-    setCountdownPct(100);
-    const duration = 3500;
-    const interval = 50;
-    const step = (interval / duration) * 100;
-
-    let remaining = 100;
-    if (autoNextTimerRef.current) {
-      clearInterval(autoNextTimerRef.current);
-    }
-    autoNextTimerRef.current = setInterval(() => {
-      remaining -= step;
-      if (remaining <= 0) {
-        clearInterval(autoNextTimerRef.current);
-        autoNextTimerRef.current = null;
-        if (handleScanNextRef.current) {
-          handleScanNextRef.current();
-        }
-      } else {
-        setCountdownPct(remaining);
-      }
-    }, interval);
-  }, []);
-
   // Handle scanned QR payload
   const handleScannedPayload = useCallback(
     async (rawCode) => {
@@ -196,12 +170,6 @@ export default function CheckInScanner({
       lastScanTimestampRef.current = now;
       isScanningRef.current = false;
       setIsProcessing(true);
-
-      // Clear any previous auto-timer
-      if (autoNextTimerRef.current) {
-        clearInterval(autoNextTimerRef.current);
-        autoNextTimerRef.current = null;
-      }
 
       const processOfflineScan = () => {
         try {
@@ -288,7 +256,6 @@ export default function CheckInScanner({
             rawScanned: code,
           });
           if (onScanResult) onScanResult({ status: "success", attendee: updatedAttendee });
-          startAutoNextCountdown();
           return true;
         } catch (e) {
           console.warn("processOfflineScan error:", e);
@@ -357,7 +324,6 @@ export default function CheckInScanner({
             rawScanned: code,
           });
           if (onScanResult) onScanResult(data);
-          startAutoNextCountdown();
         } else if (data.status === "already_checked_in") {
           playAudioFeedback("already");
           triggerHaptic("already");
@@ -399,7 +365,7 @@ export default function CheckInScanner({
         setIsProcessing(false);
       }
     },
-    [eventId, isProcessing, onScanResult, passcode, staffEmail, staffName, startAutoNextCountdown, t]
+    [eventId, isProcessing, onScanResult, passcode, staffEmail, staffName, t]
   );
 
   const scanVideoFrameRef = useRef(null);
@@ -447,10 +413,6 @@ export default function CheckInScanner({
 
   // Resume scanning for next attendee
   const handleScanNext = useCallback(() => {
-    if (autoNextTimerRef.current) {
-      clearInterval(autoNextTimerRef.current);
-      autoNextTimerRef.current = null;
-    }
     setActiveResult(null);
     lastScannedCodeRef.current = "";
     isScanningRef.current = true;
@@ -584,9 +546,6 @@ export default function CheckInScanner({
     startCamera();
     return () => {
       stopCamera();
-      if (autoNextTimerRef.current) {
-        clearInterval(autoNextTimerRef.current);
-      }
     };
   }, [facingMode]);
 
@@ -726,189 +685,255 @@ export default function CheckInScanner({
         {/* ─────────────────────────────────────────────────────────────
             FEEDBACK MODAL: SUCCESS / ALREADY / FAILED
            ───────────────────────────────────────────────────────────── */}
-        {activeResult && (
-          <div className="absolute inset-0 z-40 bg-slate-950/90 backdrop-blur-xl flex flex-col justify-end sm:justify-center p-4 sm:p-6 animate-in fade-in duration-150">
-            <div
-              className={`w-full max-w-md mx-auto rounded-3xl p-6 sm:p-7 shadow-2xl border transition-all animate-in slide-in-from-bottom-8 duration-200 ${
-                activeResult.status === "success"
-                  ? "bg-slate-900 border-emerald-500/50 shadow-[0_0_50px_rgba(16,185,129,0.25)]"
-                  : activeResult.status === "already_checked_in"
-                  ? "bg-slate-900 border-amber-500/50 shadow-[0_0_50px_rgba(245,158,11,0.25)]"
-                  : "bg-slate-900 border-red-500/50 shadow-[0_0_50px_rgba(239,68,68,0.25)]"
-              }`}
-            >
-              {/* Top Banner & Status Header */}
-              <div className="text-center space-y-3 mb-5">
-                {/* Big Animated Icon Halo */}
-                <div
-                  className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center shadow-2xl animate-bounce duration-700 ${
-                    activeResult.status === "success"
-                      ? "bg-emerald-500 text-white shadow-emerald-500/50 ring-8 ring-emerald-500/20"
-                      : activeResult.status === "already_checked_in"
-                      ? "bg-amber-500 text-white shadow-amber-500/50 ring-8 ring-amber-500/20"
-                      : "bg-red-500 text-white shadow-red-500/50 ring-8 ring-red-500/20"
-                  }`}
-                >
-                  {activeResult.status === "success" && <Check size={44} strokeWidth={3.5} />}
-                  {activeResult.status === "already_checked_in" && <AlertTriangle size={42} strokeWidth={2.5} />}
-                  {activeResult.status === "invalid" && <X size={44} strokeWidth={3.5} />}
+        {activeResult && (() => {
+          const attendee = activeResult.attendee;
+          const attendeeAvatar =
+            attendee?.image ||
+            attendee?.avatar ||
+            attendee?.photo ||
+            attendee?.avatar_url ||
+            attendee?.picture ||
+            activeResult.image ||
+            activeResult.avatar ||
+            "";
+
+          const attendeeName =
+            attendee?.name ||
+            attendee?.fullName ||
+            activeResult.name ||
+            activeResult.attendeeName ||
+            (activeResult.status === "invalid"
+              ? t("checkin.unrecognizedTicket", "Unrecognized Ticket")
+              : t("checkin.defaultAttendeeName", "Delegate"));
+
+          const nameParts = (attendeeName || "").trim().split(/\s+/).filter(Boolean);
+          const initials =
+            nameParts.length > 0
+              ? (nameParts[0][0] + (nameParts.length > 1 ? nameParts[nameParts.length - 1][0] : "")).toUpperCase()
+              : "";
+
+          return (
+            <div className="absolute inset-0 z-40 bg-slate-950/70 backdrop-blur-xl flex flex-col justify-end sm:justify-center p-4 sm:p-6 animate-in fade-in duration-150">
+              <div
+                className={`w-full max-w-md mx-auto rounded-3xl p-6 sm:p-7 shadow-2xl border transition-all animate-in slide-in-from-bottom-8 duration-200 backdrop-blur-2xl ${
+                  activeResult.status === "success"
+                    ? "bg-slate-900/85 border-emerald-500/40 shadow-[0_0_60px_rgba(16,185,129,0.25)]"
+                    : activeResult.status === "already_checked_in"
+                    ? "bg-slate-900/85 border-amber-500/40 shadow-[0_0_60px_rgba(245,158,11,0.25)]"
+                    : "bg-slate-900/85 border-red-500/40 shadow-[0_0_60px_rgba(239,68,68,0.25)]"
+                }`}
+              >
+                {/* Top Banner & Status Header */}
+                <div className="text-center space-y-3 mb-5">
+                  {/* Delegate Avatar / Status Icon */}
+                  <div className="flex justify-center">
+                    {activeResult.status === "invalid" ? (
+                      <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center bg-red-500 text-white shadow-2xl ring-8 ring-red-500/20">
+                        <X size={44} strokeWidth={3.5} />
+                      </div>
+                    ) : attendeeAvatar ? (
+                      <div className="relative w-24 h-24 sm:w-28 sm:h-28">
+                        <img
+                          src={attendeeAvatar}
+                          alt={attendeeName}
+                          className={`w-full h-full rounded-full object-cover shadow-2xl border-2 ${
+                            activeResult.status === "success"
+                              ? "border-emerald-400 ring-4 ring-emerald-500/30"
+                              : "border-amber-400 ring-4 ring-amber-500/30"
+                          }`}
+                        />
+                        <div
+                          className={`absolute -bottom-1 -right-1 p-1.5 rounded-full ring-4 ring-slate-900 shadow-lg flex items-center justify-center ${
+                            activeResult.status === "success"
+                              ? "bg-emerald-500 text-slate-950"
+                              : "bg-amber-500 text-slate-950"
+                          }`}
+                        >
+                          {activeResult.status === "success" ? (
+                            <Check size={16} strokeWidth={3.5} />
+                          ) : (
+                            <AlertTriangle size={16} strokeWidth={3} />
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="relative w-24 h-24 sm:w-28 sm:h-28">
+                        <div
+                          className={`w-full h-full rounded-full flex items-center justify-center font-black text-2xl sm:text-3xl shadow-2xl border-2 ${
+                            activeResult.status === "success"
+                              ? "bg-gradient-to-br from-blue-600 via-teal-600 to-emerald-500 text-white border-emerald-400/60 ring-4 ring-emerald-500/20"
+                              : "bg-amber-500 text-white border-amber-400/60 ring-4 ring-amber-500/20"
+                          }`}
+                        >
+                          {initials ? initials : <User size={40} className="text-white/90" />}
+                        </div>
+                        <div
+                          className={`absolute -bottom-1 -right-1 p-1.5 rounded-full ring-4 ring-slate-900 shadow-lg flex items-center justify-center ${
+                            activeResult.status === "success"
+                              ? "bg-emerald-500 text-slate-950"
+                              : "bg-amber-500 text-slate-950"
+                          }`}
+                        >
+                          {activeResult.status === "success" ? (
+                            <Check size={16} strokeWidth={3.5} />
+                          ) : (
+                            <AlertTriangle size={16} strokeWidth={3} />
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    {/* Status Chip only shown for non-success cases (duplicate scan or invalid ticket) */}
+                    {activeResult.status !== "success" && (
+                      <div
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider mb-2 ${
+                          activeResult.status === "already_checked_in"
+                            ? "bg-amber-500/20 text-amber-300 border border-amber-400/30"
+                            : "bg-red-500/20 text-red-300 border border-red-400/30"
+                        }`}
+                      >
+                        {activeResult.status === "already_checked_in" ? (
+                          <>
+                            <AlertTriangle size={12} />
+                            <span>{t("checkin.statusDuplicate", "Duplicate Badge Scan")}</span>
+                          </>
+                        ) : (
+                          <>
+                            <X size={12} />
+                            <span>{t("checkin.statusInvalid", "Invalid Pass / Scan Failed")}</span>
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                      {attendeeName}
+                    </h3>
+
+                    {activeResult.status === "invalid" && (
+                      <p className="text-xs text-red-300 mt-1.5 max-w-xs mx-auto leading-relaxed">
+                        {activeResult.message}
+                      </p>
+                    )}
+
+                    {activeResult.status === "already_checked_in" && (
+                      <p className="text-xs text-amber-300 mt-1 max-w-xs mx-auto">
+                        {activeResult.message || t("checkin.alreadyCheckedInMsg", "This attendee was already checked in earlier.")}
+                      </p>
+                    )}
+                  </div>
                 </div>
 
-                <div>
-                  <div
-                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider mb-1 ${
+                {/* Attendee Details Card */}
+                {attendee ? (
+                  <div className="bg-slate-950/70 backdrop-blur-md rounded-2xl p-4 border border-white/10 mb-5 space-y-2.5 text-xs text-slate-300 shadow-inner">
+                    {/* Ticket Tier */}
+                    <div className="flex items-center justify-between pb-2 border-b border-white/10">
+                      <span className="flex items-center gap-1.5 font-semibold text-slate-400">
+                        <Ticket size={14} className="text-blue-400" />
+                        {t("checkin.ticketTier", "Ticket Tier:")}
+                      </span>
+                      <span className="font-black text-white bg-blue-500/20 border border-blue-400/30 px-2.5 py-1 rounded-lg text-xs">
+                        {attendee.ticketType || attendee.ticket_type || t("checkin.defaultTicketType", "Standard Admission")}
+                      </span>
+                    </div>
+
+                    {/* Email */}
+                    {attendee.email && (
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-1.5 font-semibold text-slate-400">
+                          <Mail size={14} className="text-slate-400" />
+                          {t("checkin.email", "Email:")}
+                        </span>
+                        <span className="font-medium text-white truncate max-w-[190px]">
+                          {attendee.email}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Organization / Company */}
+                    {attendee.company && (
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-1.5 font-semibold text-slate-400">
+                          <Building size={14} className="text-slate-400" />
+                          {t("checkin.company", "Company:")}
+                        </span>
+                        <span className="font-bold text-white truncate max-w-[190px]">
+                          {attendee.company}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Timestamp */}
+                    {activeResult.checkedInAt && (
+                      <div className="flex items-center justify-between pt-1 text-[11px] text-slate-400 border-t border-white/5">
+                        <span className="flex items-center gap-1">
+                          <Clock size={12} /> {t("checkin.checkinTime", "Check-in Time:")}
+                        </span>
+                        <span className="font-mono text-slate-200">
+                          {new Date(activeResult.checkedInAt).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* Raw Scanned Payload Info on failure */
+                  activeResult.rawScanned && (
+                    <div className="bg-slate-950/70 backdrop-blur-md rounded-2xl p-3.5 border border-white/10 mb-5 text-center shadow-inner">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
+                        {t("checkin.scannedContent", "Scanned Content:")}
+                      </span>
+                      <p className="font-mono text-xs text-red-300 break-all bg-red-950/40 p-2 rounded-xl border border-red-900/40">
+                        {activeResult.rawScanned.slice(0, 90)}
+                        {activeResult.rawScanned.length > 90 ? "..." : ""}
+                      </p>
+                    </div>
+                  )
+                )}
+
+                {/* Action Buttons */}
+                <div className="space-y-2">
+                  <button
+                    onClick={handleScanNext}
+                    autoFocus
+                    className={`w-full py-4 rounded-2xl font-black text-sm shadow-xl transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer ${
                       activeResult.status === "success"
-                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30"
+                        ? "bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/30"
                         : activeResult.status === "already_checked_in"
-                        ? "bg-amber-500/20 text-amber-300 border border-amber-400/30"
-                        : "bg-red-500/20 text-red-300 border border-red-400/30"
+                        ? "bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-amber-500/30"
+                        : "bg-blue-600 hover:bg-blue-500 text-white shadow-blue-600/30"
                     }`}
                   >
-                    {activeResult.status === "success" && <Sparkles size={12} />}
-                    {activeResult.status === "success"
-                      ? t("checkin.statusConfirmed", "Check-In Confirmed")
-                      : activeResult.status === "already_checked_in"
-                      ? t("checkin.statusDuplicate", "Duplicate Badge Scan")
-                      : t("checkin.statusInvalid", "Invalid Pass / Scan Failed")}
-                  </div>
-
-                  <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                    {activeResult.status === "invalid"
-                      ? t("checkin.unrecognizedTicket", "Unrecognized Ticket")
-                      : activeResult.attendee?.name || t("checkin.defaultAttendeeName", "Delegate")}
-                  </h3>
-
-                  {activeResult.status === "invalid" && (
-                    <p className="text-xs text-red-300 mt-1.5 max-w-xs mx-auto leading-relaxed">
-                      {activeResult.message}
-                    </p>
-                  )}
-
-                  {activeResult.status === "already_checked_in" && (
-                    <p className="text-xs text-amber-300 mt-1 max-w-xs mx-auto">
-                      {activeResult.message || t("checkin.alreadyCheckedInMsg", "This attendee was already checked in earlier.")}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Attendee Details Card */}
-              {activeResult.attendee ? (
-                <div className="bg-slate-950/80 rounded-2xl p-4 border border-white/10 mb-5 space-y-2.5 text-xs text-slate-300 shadow-inner">
-                  {/* Ticket Tier */}
-                  <div className="flex items-center justify-between pb-2 border-b border-white/10">
-                    <span className="flex items-center gap-1.5 font-semibold text-slate-400">
-                      <Ticket size={14} className="text-blue-400" />
-                      {t("checkin.ticketTier", "Ticket Tier:")}
+                    <span>
+                      {activeResult.status === "invalid"
+                        ? t("checkin.btnTryAgain", "Try Scanning Again")
+                        : t("checkin.btnScanNext", "Scan Next Delegate")}
                     </span>
-                    <span className="font-black text-white bg-blue-500/20 border border-blue-400/30 px-2.5 py-1 rounded-lg text-xs">
-                      {activeResult.attendee.ticketType || activeResult.attendee.ticket_type || t("checkin.defaultTicketType", "Standard Admission")}
-                    </span>
-                  </div>
-
-                  {/* Email */}
-                  {activeResult.attendee.email && (
-                    <div className="flex items-center justify-between">
-                      <span className="flex items-center gap-1.5 font-semibold text-slate-400">
-                        <Mail size={14} className="text-slate-400" />
-                        {t("checkin.email", "Email:")}
-                      </span>
-                      <span className="font-medium text-white truncate max-w-[190px]">
-                        {activeResult.attendee.email}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Organization / Company */}
-                  {activeResult.attendee.company && (
-                    <div className="flex items-center justify-between">
-                      <span className="flex items-center gap-1.5 font-semibold text-slate-400">
-                        <Building size={14} className="text-slate-400" />
-                        {t("checkin.company", "Company:")}
-                      </span>
-                      <span className="font-bold text-white truncate max-w-[190px]">
-                        {activeResult.attendee.company}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Timestamp */}
-                  {activeResult.checkedInAt && (
-                    <div className="flex items-center justify-between pt-1 text-[11px] text-slate-400 border-t border-white/5">
-                      <span className="flex items-center gap-1">
-                        <Clock size={12} /> {t("checkin.checkinTime", "Check-in Time:")}
-                      </span>
-                      <span className="font-mono text-slate-200">
-                        {new Date(activeResult.checkedInAt).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          second: "2-digit",
-                        })}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                /* Raw Scanned Payload Info on failure */
-                activeResult.rawScanned && (
-                  <div className="bg-slate-950/80 rounded-2xl p-3.5 border border-white/10 mb-5 text-center shadow-inner">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
-                      {t("checkin.scannedContent", "Scanned Content:")}
-                    </span>
-                    <p className="font-mono text-xs text-red-300 break-all bg-red-950/40 p-2 rounded-xl border border-red-900/40">
-                      {activeResult.rawScanned.slice(0, 90)}
-                      {activeResult.rawScanned.length > 90 ? "..." : ""}
-                    </p>
-                  </div>
-                )
-              )}
-
-              {/* Auto-Next Countdown Bar for success */}
-              {activeResult.status === "success" && (
-                <div className="w-full h-1.5 bg-white/10 rounded-full mb-4 overflow-hidden">
-                  <div
-                    className="h-full bg-emerald-400 transition-all duration-75"
-                    style={{ width: `${countdownPct}%` }}
-                  />
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              <div className="space-y-2">
-                <button
-                  onClick={handleScanNext}
-                  autoFocus
-                  className={`w-full py-4 rounded-2xl font-black text-sm shadow-xl transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer ${
-                    activeResult.status === "success"
-                      ? "bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/30"
-                      : activeResult.status === "already_checked_in"
-                      ? "bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-amber-500/30"
-                      : "bg-blue-600 hover:bg-blue-500 text-white shadow-blue-600/30"
-                  }`}
-                >
-                  <span>
-                    {activeResult.status === "invalid"
-                      ? t("checkin.btnTryAgain", "Try Scanning Again")
-                      : t("checkin.btnScanNext", "Scan Next Delegate")}
-                  </span>
-                  <ArrowRight size={18} />
-                </button>
-
-                {activeResult.status === "invalid" && onSwitchToList && (
-                  <button
-                    onClick={() => {
-                      setActiveResult(null);
-                      onSwitchToList();
-                    }}
-                    className="w-full py-3 bg-white/5 hover:bg-white/10 text-slate-300 rounded-2xl font-bold text-xs transition-colors cursor-pointer"
-                  >
-                    {t("checkin.btnSearchManual", "Search Attendee Manually")}
+                    <ArrowRight size={18} />
                   </button>
-                )}
+
+                  {activeResult.status === "invalid" && onSwitchToList && (
+                    <button
+                      onClick={() => {
+                        setActiveResult(null);
+                        onSwitchToList();
+                      }}
+                      className="w-full py-3 bg-white/5 hover:bg-white/10 text-slate-300 rounded-2xl font-bold text-xs transition-colors cursor-pointer"
+                    >
+                      {t("checkin.btnSearchManual", "Search Attendee Manually")}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
     </div>
   );

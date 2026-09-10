@@ -13,10 +13,12 @@ import { useLanguage } from "../lib/i18n";
 import UniversalTopBar from "./UniversalTopBar";
 import A4BadgeSheet, { printA4BadgeDocument } from "./A4BadgeSheet";
 import Footer from "./Footer";
+import { fetchTickets } from "../lib/db";
 
 export default function MyTicketsPage({
   registrations = [],
   events = [],
+  tickets = [],
   currentUser,
   onGoToHome,
   onOpenAuth,
@@ -32,6 +34,24 @@ export default function MyTicketsPage({
   const [searchQuery, setSearchQuery] = useState("");
   const [filterTier, setFilterTier] = useState("all");
   const [copiedId, setCopiedId] = useState(null);
+
+  // Tickets cache indexed by eventId: { [eventId]: ticket[] }
+  const [eventTicketsMap, setEventTicketsMap] = useState({});
+
+  // Fetch tickets for all events present in registrations to resolve badge artwork
+  useEffect(() => {
+    const eventIds = [...new Set((registrations || []).map(r => r.eventId).filter(Boolean))];
+    eventIds.forEach(async (evId) => {
+      try {
+        const fetched = await fetchTickets(evId);
+        if (Array.isArray(fetched) && fetched.length > 0) {
+          setEventTicketsMap(prev => ({ ...prev, [evId]: fetched }));
+        }
+      } catch (err) {
+        console.warn("fetchTickets for pass error:", evId, err);
+      }
+    });
+  }, [registrations]);
 
   // QR Code data URLs: { [regId]: string }
   const [qrCodeUrls, setQrCodeUrls] = useState({});
@@ -479,9 +499,26 @@ export default function MyTicketsPage({
       {/* 2. OFFICIAL A4 4-FOLD PRINTABLE CONFERENCE BADGE MODAL               */}
       {/* ==================================================================== */}
       {selectedBadgePass && (() => {
-        const matchedEvent = events.find(e => e.id === selectedBadgePass.eventId) || {};
-        const badgeTemplateUrl = selectedBadgePass.templateUrl || selectedBadgePass.badgeUrl || matchedEvent.badgeUrl || "";
-        const badgeSettings = selectedBadgePass.badgeSettings || matchedEvent.badgeSettings || {};
+        const matchedEvent = (events || []).find(e => String(e.id) === String(selectedBadgePass.eventId)) || {};
+        const eventTickets = eventTicketsMap[selectedBadgePass.eventId] || (matchedEvent.tickets) || tickets || [];
+        const matchedTicket = eventTickets.find(t => 
+          (selectedBadgePass.ticketId && String(t.id) === String(selectedBadgePass.ticketId)) ||
+          (t.name || t.tier || "").trim().toLowerCase() === (selectedBadgePass.ticketType || selectedBadgePass.ticket_type || "").trim().toLowerCase()
+        ) || eventTickets[0] || null;
+
+        const badgeTemplateUrl = selectedBadgePass.templateUrl || 
+                                 selectedBadgePass.badgeUrl || 
+                                 selectedBadgePass.badge_url || 
+                                 matchedTicket?.badgeUrl || 
+                                 matchedTicket?.badge_url || 
+                                 matchedEvent.badgeUrl || 
+                                 matchedEvent.badge_url || "";
+
+        const badgeSettings = matchedTicket?.badgeSettings || 
+                              matchedTicket?.badge_settings || 
+                              selectedBadgePass.badgeSettings || 
+                              matchedEvent.badgeSettings || {};
+
         const answers = selectedBadgePass.answers || selectedBadgePass.customAnswers || selectedBadgePass.formAnswers || {};
         let attendeeCompany = selectedBadgePass.company || "";
         let attendeeJobTitle = selectedBadgePass.jobTitle || selectedBadgePass.job_title || "";
@@ -499,11 +536,11 @@ export default function MyTicketsPage({
           }
         }
 
-        const attendeeName = selectedBadgePass.attendeeName || selectedBadgePass.name || currentUser?.fullName || "Attendee";
-        const attendeePhoto = selectedBadgePass.attendeePhoto || selectedBadgePass.photo || selectedBadgePass.avatar || currentUser?.avatar || "";
-        const ticketType = selectedBadgePass.ticketType || "General Admission";
+        const attendeeName = selectedBadgePass.attendeeName || selectedBadgePass.name || selectedBadgePass.fullName || currentUser?.fullName || "Attendee";
+        const attendeePhoto = selectedBadgePass.attendeePhoto || selectedBadgePass.photo || selectedBadgePass.avatar || selectedBadgePass.image || currentUser?.avatar || "";
+        const ticketType = selectedBadgePass.ticketType || matchedTicket?.name || matchedTicket?.tier || "General Admission";
         const badgeCode = selectedBadgePass.badgeCode || "EZ-PASS";
-        const eventTitle = selectedBadgePass.eventTitle || "Conference Event";
+        const eventTitle = selectedBadgePass.eventTitle || matchedEvent.name || matchedEvent.title || "Conference Event";
         const qrUrl = qrCodeUrls[selectedBadgePass.id] || "";
 
         const handlePrint = () => {
@@ -535,7 +572,7 @@ export default function MyTicketsPage({
               </button>
 
               <div className="flex items-center justify-center gap-2">
-                <Printer size={20} className="text-indigo-650" />
+                <Printer size={20} className="text-blue-600" />
                 <h3 className="text-lg font-black text-slate-900">{t("tickets.officialA4Sheet", "Official A4 4-Fold Badge Sheet")}</h3>
               </div>
 
@@ -572,7 +609,7 @@ export default function MyTicketsPage({
                 </button>
                 <button
                   onClick={handlePrint}
-                  className="flex-1 py-2.5 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-650/20 transition-all cursor-pointer flex items-center justify-center gap-2"
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-600/20 transition-all cursor-pointer flex items-center justify-center gap-2"
                 >
                   <Printer size={15} />
                   <span>{t("tickets.printDocument", "Print Document")}</span>

@@ -3731,6 +3731,7 @@ export function HomeContent({ initialPublicEvents = [] }) {
       <MyTicketsPage
         registrations={visitorRegistrations}
         events={publicEvents}
+        tickets={tickets}
         currentUser={currentUser}
         onGoToHome={() => setCurrentView("home")}
         onOpenAuth={(mode) => {

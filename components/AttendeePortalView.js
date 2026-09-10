@@ -496,8 +496,14 @@ export default function AttendeePortalView({
   }, [activeBadgeCode, eventDetails, attendeeDisplayName, attendeeTicketType]);
 
   const handlePrintBadge = () => {
+    const matchedTicket = (tickets || []).find(t => 
+      (t.name || t.tier || "").trim().toLowerCase() === (attendeeTicketType || "").trim().toLowerCase()
+    ) || (tickets || [])[0] || {};
+    const badgeTemplateUrl = matchingAttendee?.templateUrl || matchingAttendee?.badgeUrl || matchedTicket?.badgeUrl || eventDetails.badgeUrl || "";
+    const badgeSettings = matchedTicket?.badgeSettings || eventDetails.badgeSettings || {};
+
     printA4BadgeDocument({
-      templateUrl: eventDetails.badgeUrl || "",
+      templateUrl: badgeTemplateUrl,
       attendeeName: attendeeDisplayName,
       attendeePhoto: currentUser?.avatar || matchingAttendee?.image || "",
       attendeeCompany: currentUser?.companyName || matchingAttendee?.company || "",
@@ -506,10 +512,10 @@ export default function AttendeePortalView({
       badgeCode: activeBadgeCode,
       eventTitle: eventDetails.title || "Summit",
       qrCodeUrl: badgeQrUrl,
-      showFoldGuide: true,
-      showPhoto: true,
-      showQr: true,
-      cardTheme: "white"
+      showFoldGuide: badgeSettings.showFoldGuide !== false,
+      showPhoto: badgeSettings.showPhoto !== false,
+      showQr: badgeSettings.showQr !== false,
+      cardTheme: badgeSettings.cardTheme || "white"
     });
   };
 

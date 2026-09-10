@@ -400,11 +400,33 @@ export async function printA4BadgeDocument({
         </div>
 
         <script>
-          window.onload = function() {
+          function triggerDocumentPrint() {
             setTimeout(function() {
+              window.focus();
               window.print();
-            }, 300);
-          };
+            }, 350);
+          }
+          const images = Array.from(document.images);
+          if (images.length === 0) {
+            window.onload = triggerDocumentPrint;
+          } else {
+            let loaded = 0;
+            const onImgReady = () => {
+              loaded++;
+              if (loaded >= images.length) {
+                triggerDocumentPrint();
+              }
+            };
+            images.forEach(function(img) {
+              if (img.complete) {
+                onImgReady();
+              } else {
+                img.addEventListener('load', onImgReady);
+                img.addEventListener('error', onImgReady);
+              }
+            });
+            setTimeout(triggerDocumentPrint, 3000);
+          }
         </script>
       </body>
     </html>
@@ -586,11 +608,33 @@ export async function printBulkA4BadgeDocuments(badgeList = []) {
       <body>
         ${sheetsHtml}
         <script>
-          window.onload = function() {
+          function triggerBulkPrint() {
             setTimeout(function() {
+              window.focus();
               window.print();
-            }, 400);
-          };
+            }, 450);
+          }
+          const images = Array.from(document.images);
+          if (images.length === 0) {
+            window.onload = triggerBulkPrint;
+          } else {
+            let loaded = 0;
+            const onImgReady = () => {
+              loaded++;
+              if (loaded >= images.length) {
+                triggerBulkPrint();
+              }
+            };
+            images.forEach(function(img) {
+              if (img.complete) {
+                onImgReady();
+              } else {
+                img.addEventListener('load', onImgReady);
+                img.addEventListener('error', onImgReady);
+              }
+            });
+            setTimeout(triggerBulkPrint, 4000);
+          }
         </script>
       </body>
     </html>
