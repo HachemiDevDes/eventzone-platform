@@ -234,8 +234,9 @@ export default function CheckInScanner({
 
           if (!matched) return false;
 
+          const isBadgePrintOnly = matched.checkedInBy === 'Badge Print' || matched.checked_in_by === 'Badge Print';
           const isAlreadyChecked = Boolean(matched.checkedIn || matched.checked_in || matched.status === 'checked_in' || matched.status === 'checked-in');
-          if (isAlreadyChecked) {
+          if (isAlreadyChecked && !isBadgePrintOnly) {
             playAudioFeedback("already");
             triggerHaptic("already");
             setActiveResult({
