@@ -13,57 +13,57 @@ export default function AnimatedMeshBackground() {
       aria-hidden="true"
       className="fixed inset-0 pointer-events-none -z-10 overflow-hidden"
     >
-      {/* Mesh Blob 1 - Top Right - Azure & Royal Blue */}
+      {/* Mesh Blob 1 - Top Right - Soft Sky Azure */}
       <div
-        className="absolute -top-[12%] -right-[8%] w-[550px] h-[550px] sm:w-[750px] sm:h-[750px] rounded-full animate-mesh-1"
+        className="absolute -top-[12%] -right-[8%] w-[600px] h-[600px] sm:w-[850px] sm:h-[850px] rounded-full animate-mesh-1"
         style={{
-          background: "radial-gradient(circle at 50% 50%, rgba(37, 99, 235, 0.52) 0%, rgba(56, 189, 248, 0.38) 45%, rgba(99, 102, 241, 0) 70%)",
-          filter: "blur(60px)",
-          WebkitFilter: "blur(60px)",
+          background: "radial-gradient(circle at 50% 50%, rgba(96, 165, 250, 0.24) 0%, rgba(186, 230, 253, 0.18) 45%, rgba(147, 197, 253, 0) 75%)",
+          filter: "blur(95px)",
+          WebkitFilter: "blur(95px)",
           willChange: "transform, border-radius",
         }}
       />
 
-      {/* Mesh Blob 2 - Mid Left - Deep Sky Blue & Electric Cobalt */}
+      {/* Mesh Blob 2 - Mid Left - Soft Mist Cyan & Powder Blue */}
       <div
-        className="absolute top-[22%] -left-[10%] w-[500px] h-[500px] sm:w-[700px] sm:h-[700px] rounded-full animate-mesh-2"
+        className="absolute top-[20%] -left-[10%] w-[550px] h-[550px] sm:w-[800px] sm:h-[800px] rounded-full animate-mesh-2"
         style={{
-          background: "radial-gradient(circle at 50% 50%, rgba(14, 165, 233, 0.50) 0%, rgba(37, 99, 235, 0.42) 45%, rgba(79, 70, 229, 0) 70%)",
-          filter: "blur(65px)",
-          WebkitFilter: "blur(65px)",
+          background: "radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.22) 0%, rgba(147, 197, 253, 0.18) 45%, rgba(199, 210, 254, 0) 75%)",
+          filter: "blur(100px)",
+          WebkitFilter: "blur(100px)",
           willChange: "transform, border-radius",
         }}
       />
 
-      {/* Mesh Blob 3 - Middle / Lower Right - Vibrant Blue & Cyan */}
+      {/* Mesh Blob 3 - Middle / Lower Right - Soft Periwinkle & Light Blue */}
       <div
-        className="absolute top-[48%] -right-[10%] w-[550px] h-[500px] sm:w-[750px] sm:h-[650px] rounded-full animate-mesh-3"
+        className="absolute top-[48%] -right-[10%] w-[600px] h-[550px] sm:w-[850px] sm:h-[750px] rounded-full animate-mesh-3"
         style={{
-          background: "radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.48) 0%, rgba(6, 182, 212, 0.38) 45%, rgba(99, 102, 241, 0) 70%)",
-          filter: "blur(65px)",
-          WebkitFilter: "blur(65px)",
+          background: "radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.18) 0%, rgba(147, 197, 253, 0.20) 45%, rgba(224, 231, 255, 0) 75%)",
+          filter: "blur(100px)",
+          WebkitFilter: "blur(100px)",
           willChange: "transform, border-radius",
         }}
       />
 
-      {/* Mesh Blob 4 - Bottom Center / Left - Cyan & Azure */}
+      {/* Mesh Blob 4 - Bottom Center / Left - Gentle Cyan & Azure */}
       <div
-        className="absolute -bottom-[8%] left-[10%] w-[550px] h-[550px] sm:w-[750px] sm:h-[700px] rounded-full animate-mesh-1"
+        className="absolute -bottom-[8%] left-[8%] w-[600px] h-[600px] sm:w-[850px] sm:h-[800px] rounded-full animate-mesh-1"
         style={{
-          background: "radial-gradient(circle at 50% 50%, rgba(6, 182, 212, 0.45) 0%, rgba(37, 99, 235, 0.40) 45%, rgba(99, 102, 241, 0) 70%)",
-          filter: "blur(60px)",
-          WebkitFilter: "blur(60px)",
+          background: "radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.20) 0%, rgba(147, 197, 253, 0.16) 45%, rgba(219, 234, 254, 0) 75%)",
+          filter: "blur(95px)",
+          WebkitFilter: "blur(95px)",
           willChange: "transform, border-radius",
         }}
       />
 
-      {/* Mesh Blob 5 - Center Ambient Pulsing Core */}
+      {/* Mesh Blob 5 - Center Soft Ambient Core */}
       <div
-        className="absolute top-[38%] left-[32%] w-[450px] h-[450px] sm:w-[600px] sm:h-[600px] rounded-full animate-mesh-4"
+        className="absolute top-[35%] left-[30%] w-[500px] h-[500px] sm:w-[700px] sm:h-[700px] rounded-full animate-mesh-4"
         style={{
-          background: "radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.38) 0%, rgba(37, 99, 235, 0.28) 45%, transparent 70%)",
-          filter: "blur(65px)",
-          WebkitFilter: "blur(65px)",
+          background: "radial-gradient(circle at 50% 50%, rgba(186, 230, 253, 0.20) 0%, rgba(147, 197, 253, 0.12) 45%, transparent 75%)",
+          filter: "blur(105px)",
+          WebkitFilter: "blur(105px)",
           willChange: "transform, opacity",
         }}
       />
