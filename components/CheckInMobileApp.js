@@ -524,7 +524,9 @@ export default function CheckInMobileApp({
                   onChange={(e) => setAuthPasscode(e.target.value.toUpperCase())}
                   className={`w-full ${
                     isRTL ? "pl-11 pr-4 text-right" : "pr-11 pl-4 text-left"
-                  } py-3.5 bg-slate-950/70 border border-white/10 rounded-2xl text-sm font-mono font-bold tracking-wider text-white placeholder:font-sans placeholder:font-normal placeholder:tracking-normal placeholder-slate-500 uppercase focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all`}
+                  } py-3.5 bg-slate-950/70 border border-white/10 rounded-2xl text-sm ${
+                    authPasscode ? "font-mono font-bold tracking-wider uppercase" : "font-sans font-medium normal-case"
+                  } text-white placeholder:font-sans placeholder:normal-case placeholder:font-normal placeholder:tracking-normal placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all`}
                 />
                 <button
                   type="button"
