@@ -5335,16 +5335,14 @@ function CheckInView({ state, onUpdateState }) {
 
               {/* Passcode & Quick Actions */}
               <div className="flex flex-wrap items-center gap-3 shrink-0">
-                {/* Passcode Box */}
-                <div className="bg-slate-50 border border-slate-200/90 rounded-2xl px-4 py-2.5 flex items-center gap-3 select-none">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                      {t("checkin.eventPasscode", "Event Passcode")}
-                    </span>
-                    <span className="text-lg font-mono font-black tracking-widest text-slate-900 select-all">
-                      {eventPasscode || "—"}
-                    </span>
-                  </div>
+                {/* Passcode Pill */}
+                <div className="h-10 bg-slate-50 border border-slate-200/90 rounded-full pl-4 pr-1.5 flex items-center gap-2.5 select-none shrink-0 shadow-sm">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    {t("checkin.eventPasscode", "Passcode")}
+                  </span>
+                  <span className="text-sm font-mono font-black tracking-widest text-slate-900 select-all">
+                    {eventPasscode || "—"}
+                  </span>
                   <button
                     type="button"
                     onClick={() => {
@@ -5354,13 +5352,13 @@ function CheckInView({ state, onUpdateState }) {
                       setTimeout(() => setCopiedPasscode(false), 2000);
                     }}
                     title={copiedPasscode ? t("common.copied", "Copied!") : t("checkin.copyPasscode", "Copy Passcode")}
-                    className={`p-2 rounded-xl transition-all cursor-pointer flex items-center justify-center ${
+                    className={`w-7 h-7 rounded-full transition-all cursor-pointer flex items-center justify-center ${
                       copiedPasscode
-                        ? "bg-emerald-50 text-emerald-600"
-                        : "text-slate-400 hover:text-blue-600 hover:bg-blue-50"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "text-slate-400 hover:text-blue-600 hover:bg-slate-200/70"
                     }`}
                   >
-                    {copiedPasscode ? <Check size={16} className="stroke-[2.5]" /> : <Copy size={16} />}
+                    {copiedPasscode ? <Check size={13} className="stroke-[2.5]" /> : <Copy size={13} />}
                   </button>
                 </div>
 
@@ -5369,9 +5367,8 @@ function CheckInView({ state, onUpdateState }) {
                   href={localCheckinUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-4 py-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white rounded-2xl font-bold text-xs shadow-md shadow-blue-600/20 flex items-center gap-2 cursor-pointer transition-all shrink-0"
+                  className="h-10 px-5 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white rounded-full font-bold text-xs shadow-md shadow-blue-600/20 flex items-center justify-center cursor-pointer transition-all shrink-0"
                 >
-                  <ExternalLink size={15} />
                   <span>{t("checkin.openWebApp", "Open Check-In Web App")}</span>
                 </a>
               </div>
