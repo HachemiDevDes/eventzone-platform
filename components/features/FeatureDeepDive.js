@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Check, Sparkles, Smartphone, Layers, Search, Eye, Share2, Compass, Shield } from "lucide-react";
+import { Check, Sparkles, Compass } from "lucide-react";
 
 export default function FeatureDeepDive({ feature }) {
   if (!feature.deepDiveFeatures || feature.deepDiveFeatures.length === 0) return null;
@@ -61,8 +61,8 @@ export default function FeatureDeepDive({ feature }) {
                     {idx === 0 && (
                       <div className="space-y-4">
                         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                          <span className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
-                            <Search size={14} className="text-blue-600" /> Moteur Vectoriel Ultra-Fluide
+                          <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                            Moteur Vectoriel Ultra-Fluide
                           </span>
                           <span className="text-[11px] font-extrabold bg-blue-50 text-blue-700 px-2.5 py-1 rounded-md border border-blue-200/60">
                             Zoom x400% sans perte
@@ -107,8 +107,8 @@ export default function FeatureDeepDive({ feature }) {
                     {idx === 1 && (
                       <div className="space-y-4">
                         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                          <span className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
-                            <Layers size={14} className="text-blue-600" /> Synchronisation Commerciale
+                          <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                            Synchronisation Commerciale
                           </span>
                           <span className="text-[11px] font-extrabold bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-md border border-emerald-200/60">
                             Temps réel actif
@@ -152,8 +152,8 @@ export default function FeatureDeepDive({ feature }) {
                     {idx === 2 && (
                       <div className="space-y-4">
                         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                          <span className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
-                            <Eye size={14} className="text-blue-600" /> Vitrine Exposant Connectée
+                          <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                            Vitrine Exposant Connectée
                           </span>
                           <span className="text-[11px] font-extrabold bg-blue-50 text-blue-700 px-2.5 py-1 rounded-md border border-blue-200/60">
                             Portail B2B
@@ -184,8 +184,8 @@ export default function FeatureDeepDive({ feature }) {
                     {idx === 3 && (
                       <div className="space-y-4">
                         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                          <span className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
-                            <Smartphone size={14} className="text-blue-600" /> Expérience Mobile Sans App
+                          <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                            Expérience Mobile Sans App
                           </span>
                           <span className="text-[11px] font-extrabold bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-md border border-emerald-200/60">
                             Scan QR Totem
