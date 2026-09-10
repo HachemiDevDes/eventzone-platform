@@ -54,7 +54,9 @@ export default function FeatureNavbar({ featureTitle, category }) {
           </a>
 
           <a
-            href="#contact"
+            href="https://wa.me/213781457511?text=Bonjour%20Eventzone%2C%20je%20souhaite%20une%20d%C3%A9mo%20personnalis%C3%A9e"
+            target="_blank"
+            rel="noopener noreferrer"
             className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-600/20 transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
           >
             <Calendar size={14} />

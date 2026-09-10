@@ -7,7 +7,6 @@ import FeatureBenefitsGrid from "../../../components/features/FeatureBenefitsGri
 import FeatureDeepDive from "../../../components/features/FeatureDeepDive";
 import FeatureComparison from "../../../components/features/FeatureComparison";
 import FeatureFaq from "../../../components/features/FeatureFaq";
-import FeatureCtaBanner from "../../../components/features/FeatureCtaBanner";
 import FeatureRelatedCarousel from "../../../components/features/FeatureRelatedCarousel";
 import Footer from "../../../components/Footer";
 
@@ -101,9 +100,6 @@ export default async function FeatureDetailPage({ params }) {
 
         {/* FAQ Accordion */}
         <FeatureFaq feature={feature} />
-
-        {/* Closing Deployment & Instant Devis Banner (PDF Page 5) */}
-        <FeatureCtaBanner featureTitle={feature.title} />
 
         {/* Related Feature Modules Exploration */}
         <FeatureRelatedCarousel currentSlug={feature.slug} />
