@@ -2,11 +2,16 @@
 
 import React, { useState } from "react";
 import { ChevronDown } from "lucide-react";
+import { useLanguage } from "../../lib/i18n";
+import { getLocalizedFeature, getFeaturesUI } from "../../lib/featuresData";
 
 export default function FeatureFaq({ feature }) {
   const [openIndex, setOpenIndex] = useState(0);
+  const { lang, isRTL } = useLanguage();
+  const localized = getLocalizedFeature(feature, lang) || feature;
+  const ui = getFeaturesUI(lang);
 
-  if (!feature.faq || feature.faq.length === 0) return null;
+  if (!localized.faq || localized.faq.length === 0) return null;
 
   return (
     <section id="faq" className="py-20 sm:py-32 bg-transparent relative border-t border-slate-200/60">
@@ -15,24 +20,24 @@ export default function FeatureFaq({ feature }) {
         {/* Section Header */}
         <div className="text-center max-w-2xl mx-auto mb-10">
           <h2 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
-            Questions Fréquentes
+            {ui.faqHeading}
           </h2>
         </div>
 
         {/* Accordion List */}
         <div className="space-y-3.5">
-          {feature.faq.map((item, idx) => {
+          {localized.faq.map((item, idx) => {
             const isOpen = openIndex === idx;
 
             return (
               <div
                 key={idx}
-                className="rounded-2xl bg-white/85 backdrop-blur-md border border-slate-200/90 shadow-xs overflow-hidden transition-all"
+                className="rounded-2xl bg-white/85 backdrop-blur-md border border-slate-200/90 shadow-xs overflow-hidden transition-all text-start"
               >
                 <button
                   type="button"
                   onClick={() => setOpenIndex(isOpen ? -1 : idx)}
-                  className="w-full p-5 sm:p-6 text-left flex items-center justify-between gap-4 cursor-pointer hover:bg-slate-50/70 transition-colors"
+                  className="w-full p-5 sm:p-6 text-start flex items-center justify-between gap-4 cursor-pointer hover:bg-slate-50/70 transition-colors"
                 >
                   <span className="text-sm sm:text-base font-bold text-slate-900 leading-snug">
                     {item.q}
@@ -46,7 +51,7 @@ export default function FeatureFaq({ feature }) {
                 </button>
 
                 {isOpen && (
-                  <div className="px-5 sm:px-6 pb-5 sm:pb-6 pt-1 text-xs sm:text-sm text-slate-600 font-medium leading-relaxed border-t border-slate-100 bg-slate-50/40">
+                  <div className="px-5 sm:px-6 pb-5 sm:pb-6 pt-1 text-xs sm:text-sm text-slate-600 font-medium leading-relaxed border-t border-slate-100 bg-slate-50/40 text-start">
                     {item.a}
                   </div>
                 )}

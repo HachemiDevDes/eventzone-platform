@@ -2,9 +2,15 @@
 
 import React from "react";
 import { Check, Sparkles } from "lucide-react";
+import { useLanguage } from "../../lib/i18n";
+import { getLocalizedFeature, getFeaturesUI } from "../../lib/featuresData";
 
 export default function FeatureDeepDive({ feature }) {
-  if (!feature.deepDiveFeatures || feature.deepDiveFeatures.length === 0) return null;
+  const { lang, isRTL } = useLanguage();
+  const localized = getLocalizedFeature(feature, lang) || feature;
+  const ui = getFeaturesUI(lang);
+
+  if (!localized.deepDiveFeatures || localized.deepDiveFeatures.length === 0) return null;
 
   return (
     <section id="details" className="py-20 sm:py-32 lg:py-40 bg-transparent relative border-t border-slate-200/60">
@@ -13,13 +19,13 @@ export default function FeatureDeepDive({ feature }) {
         {/* Section Header */}
         <div className="text-center max-w-2xl mx-auto mb-16 sm:mb-24 lg:mb-28">
           <h2 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
-            Fonctionnalités Clés
+            {ui.keyCapabilitiesHeading}
           </h2>
         </div>
 
         {/* Alternating Deep-Dive Rows with generous breathing room */}
         <div className="space-y-24 sm:space-y-36 lg:space-y-44">
-          {feature.deepDiveFeatures.map((item, idx) => {
+          {localized.deepDiveFeatures.map((item, idx) => {
             const isEven = idx % 2 === 0;
 
             return (
@@ -28,7 +34,7 @@ export default function FeatureDeepDive({ feature }) {
                 className={`flex flex-col ${isEven ? "lg:flex-row" : "lg:flex-row-reverse"} items-center gap-10 sm:gap-16 lg:gap-24`}
               >
                 {/* Text Description Column */}
-                <div className="w-full lg:w-1/2 space-y-4">
+                <div className="w-full lg:w-1/2 space-y-4 text-start">
                   <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-snug">
                     {item.title}
                   </h3>
@@ -57,7 +63,7 @@ export default function FeatureDeepDive({ feature }) {
                 <div className="w-full lg:w-1/2">
                   <div className="p-6 sm:p-8 rounded-3xl bg-white/95 backdrop-blur-md border border-slate-200/80 shadow-xl hover:shadow-2xl transition-all relative overflow-hidden group">
                     
-                    <VisualGraphicCard item={item} idx={idx} featureSlug={feature.slug} />
+                    <VisualGraphicCard item={item} idx={idx} featureSlug={localized.slug} lang={lang} />
 
                   </div>
                 </div>
@@ -71,7 +77,7 @@ export default function FeatureDeepDive({ feature }) {
   );
 }
 
-function VisualGraphicCard({ item, idx, featureSlug }) {
+function VisualGraphicCard({ item, idx, featureSlug, lang = "fr" }) {
   const type = item.visualType;
 
   // 1. Plan 2D Interactif
