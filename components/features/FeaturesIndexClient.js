@@ -98,41 +98,30 @@ export default function FeaturesIndexClient() {
                 <Link
                   key={feat.slug}
                   href={`/features/${feat.slug}`}
-                  className="p-6 sm:p-8 rounded-3xl bg-white/80 backdrop-blur-md hover:bg-white border border-slate-200/90 hover:border-blue-300 transition-all duration-200 hover:shadow-xl group flex flex-col justify-between text-start"
+                  className="p-6 sm:p-7 rounded-2xl bg-white/90 backdrop-blur-sm hover:bg-white border border-slate-200/70 hover:border-blue-400/50 shadow-sm hover:shadow-xl hover:shadow-blue-500/5 hover:-translate-y-1 transition-all duration-300 group flex flex-col justify-between text-start"
                 >
                   <div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-extrabold text-blue-600 uppercase tracking-wider bg-blue-50 px-2.5 py-0.5 rounded border border-blue-100">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wide bg-blue-50/80 px-2.5 py-0.5 rounded-full">
                         {ui.moduleWord} {feat.moduleNumber}
                       </span>
-                      <span className="text-[11px] font-bold text-slate-400">
+                      <span className="text-xs font-medium text-slate-400 truncate">
                         {feat.category}
                       </span>
                     </div>
 
-                    <h3 className="mt-5 text-lg font-extrabold text-slate-900 group-hover:text-blue-600 transition-colors leading-snug">
+                    <h3 className="mt-4 text-base sm:text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors leading-snug tracking-tight">
                       {feat.title}
                     </h3>
 
-                    <p className="mt-2.5 text-xs text-slate-600 leading-relaxed font-medium">
+                    <p className="mt-2.5 text-sm text-slate-500 leading-relaxed font-normal">
                       {feat.tagline}
                     </p>
-
-                    {feat.keyMetrics && feat.keyMetrics.length > 0 && (
-                      <div className="mt-5 pt-4 border-t border-slate-200/60 grid grid-cols-2 gap-2">
-                        {feat.keyMetrics.slice(0, 2).map((m, idx) => (
-                          <div key={idx}>
-                            <p className="text-sm font-black text-blue-600">{m.value}</p>
-                            <p className="text-[10px] font-bold text-slate-500 truncate">{m.label}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </div>
 
-                  <div className="mt-6 pt-4 border-t border-slate-200/60 flex items-center justify-between text-xs font-bold text-slate-700 group-hover:text-blue-600">
+                  <div className="mt-6 flex items-center justify-between text-xs font-semibold text-slate-600 group-hover:text-blue-600 transition-colors">
                     <span>{ui.exploreModuleCard}</span>
-                    <ArrowRight size={14} className="group-hover:translate-x-1 rtl:group-hover:-translate-x-1 rtl:rotate-180 transition-transform" />
+                    <ArrowRight size={14} className="text-slate-400 group-hover:text-blue-600 group-hover:translate-x-1 rtl:group-hover:-translate-x-1 rtl:rotate-180 transition-all" />
                   </div>
                 </Link>
               ))}
