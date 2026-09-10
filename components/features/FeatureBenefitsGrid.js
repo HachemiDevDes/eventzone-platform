@@ -26,43 +26,33 @@ export default function FeatureBenefitsGrid({ feature }) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto">
+        <div className="text-center max-w-2xl mx-auto">
           <h2 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
-            Votre Valeur Ajoutée & Bénéfices Concrets
+            Valeur Ajoutée & Bénéfices
           </h2>
-          <p className="mt-3 text-sm sm:text-base text-slate-600">
-            Adoptez une solution moderne qui simplifie votre organisation, sécurise votre événement et rentabilise chaque m² d'exposition.
-          </p>
         </div>
 
         {/* 3 Pillars Grid */}
-        <div className="mt-12 sm:mt-16 grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+        <div className="mt-10 sm:mt-12 grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
           {feature.valuePillars.map((pillar, idx) => {
             const IconComponent = ICON_MAP[pillar.icon] || Zap;
 
             return (
               <div
                 key={idx}
-                className="relative p-6 sm:p-8 rounded-2xl bg-slate-50 border border-slate-200/80 hover:border-blue-300 hover:bg-white transition-all duration-200 hover:shadow-xl group flex flex-col justify-between"
+                className="p-6 sm:p-7 rounded-2xl bg-slate-50 border border-slate-200/80 hover:border-blue-300 hover:bg-white transition-all duration-200 hover:shadow-xl group"
               >
-                <div>
-                  <div className="w-12 h-12 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-600/20 group-hover:scale-110 transition-transform">
-                    <IconComponent size={22} />
-                  </div>
-
-                  <h3 className="mt-6 text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">
-                    {pillar.title}
-                  </h3>
-
-                  <p className="mt-3 text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
-                    {pillar.description}
-                  </p>
+                <div className="w-12 h-12 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-600/20 group-hover:scale-110 transition-transform">
+                  <IconComponent size={22} />
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-slate-200/60 flex items-center gap-1.5 text-xs font-bold text-blue-600">
-                  <CheckCircle size={14} />
-                  <span>Avantage concurrentiel prouvé</span>
-                </div>
+                <h3 className="mt-5 text-lg font-extrabold text-slate-900 tracking-tight">
+                  {pillar.title}
+                </h3>
+
+                <p className="mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
+                  {pillar.description}
+                </p>
               </div>
             );
           })}

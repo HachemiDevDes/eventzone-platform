@@ -13,13 +13,10 @@ export default function FeatureFaq({ feature }) {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Section Header */}
-        <div className="text-center max-w-2xl mx-auto mb-12">
+        <div className="text-center max-w-2xl mx-auto mb-10">
           <h2 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
-            Tout Ce Que Vous Devez Savoir
+            Questions Fréquentes
           </h2>
-          <p className="mt-3 text-sm text-slate-600">
-            Des réponses claires à vos questions techniques, logistiques et commerciales.
-          </p>
         </div>
 
         {/* Accordion List */}

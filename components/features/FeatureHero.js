@@ -20,43 +20,22 @@ export default function FeatureHero({ feature }) {
             {feature.title}
           </h1>
 
-          <p className="mt-4 sm:mt-6 text-base sm:text-xl text-slate-600 font-medium leading-relaxed max-w-3xl mx-auto">
+          <p className="mt-4 sm:mt-5 text-base sm:text-lg text-slate-600 font-medium leading-relaxed max-w-2xl mx-auto">
             {feature.tagline}
           </p>
 
-          <p className="mt-3 text-xs sm:text-sm text-slate-500 max-w-2xl mx-auto">
-            {feature.heroDescription}
-          </p>
-
           {/* CTAs */}
-          <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-center justify-center gap-3.5">
+          <div className="mt-8 flex items-center justify-center">
             <a
               href="https://wa.me/213781457511?text=Bonjour%20Eventzone%2C%20je%20souhaite%20une%20d%C3%A9mo%20personnalis%C3%A9e"
               target="_blank"
               rel="noopener noreferrer"
               className="w-full sm:w-auto px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-sm rounded-xl shadow-lg shadow-blue-600/25 transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
             >
-              <span>Demander une démo personnalisée</span>
+              <span>Demander une démo</span>
               <ArrowRight size={16} />
             </a>
           </div>
-
-          {/* Trust points */}
-          <div className="mt-8 pt-6 border-t border-slate-200/60 flex flex-wrap items-center justify-center gap-4 sm:gap-8 text-xs text-slate-500 font-medium">
-            <span className="flex items-center gap-1.5">
-              <CheckCircle2 size={14} className="text-emerald-600 shrink-0" />
-              100% interactif & responsive
-            </span>
-            <span className="flex items-center gap-1.5">
-              <CheckCircle2 size={14} className="text-emerald-600 shrink-0" />
-              Aucune application à installer
-            </span>
-            <span className="flex items-center gap-1.5">
-              <CheckCircle2 size={14} className="text-emerald-600 shrink-0" />
-              Import CAD & plans d'architecte
-            </span>
-          </div>
-
         </div>
 
         {/* Floating Key Metrics Strip */}

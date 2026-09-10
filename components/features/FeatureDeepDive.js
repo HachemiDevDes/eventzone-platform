@@ -11,56 +11,31 @@ export default function FeatureDeepDive({ feature }) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto mb-16 sm:mb-20">
+        <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16">
           <h2 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
-            Tout Ce Dont Vous Avez Besoin Pour Réussir Votre Exposition
+            Fonctionnalités Clés
           </h2>
-          <p className="mt-3 text-sm sm:text-base text-slate-600">
-            Une technologie complète pensée pour les organisateurs de salons, les directeurs techniques et les équipes commerciales.
-          </p>
         </div>
 
         {/* Alternating Deep-Dive Rows */}
-        <div className="space-y-16 sm:space-y-24">
+        <div className="space-y-12 sm:space-y-16">
           {feature.deepDiveFeatures.map((item, idx) => {
             const isEven = idx % 2 === 0;
 
             return (
               <div 
                 key={idx}
-                className={`flex flex-col ${isEven ? "lg:flex-row" : "lg:flex-row-reverse"} items-center gap-10 lg:gap-14`}
+                className={`flex flex-col ${isEven ? "lg:flex-row" : "lg:flex-row-reverse"} items-center gap-8 lg:gap-12`}
               >
                 {/* Text Description Column */}
-                <div className="w-full lg:w-1/2 space-y-4">
-                  <div className="text-xs font-extrabold text-blue-600 uppercase tracking-wider">
-                    <span>0{idx + 1}</span>
-                    <span className="mx-2">•</span>
-                    <span>{item.subtitle}</span>
-                  </div>
-
-                  <h3 className="text-xl sm:text-3xl font-black text-slate-900 tracking-tight leading-snug">
+                <div className="w-full lg:w-1/2 space-y-3">
+                  <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-snug">
                     {item.title}
                   </h3>
 
                   <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-medium">
                     {item.description}
                   </p>
-
-                  {/* Checklist */}
-                  {item.checklist && item.checklist.length > 0 && (
-                    <div className="pt-2 space-y-2.5">
-                      {item.checklist.map((point, pIdx) => (
-                        <div key={pIdx} className="flex items-start gap-3">
-                          <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
-                            <Check size={12} className="stroke-[3]" />
-                          </div>
-                          <span className="text-xs sm:text-sm font-semibold text-slate-700">
-                            {point}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
 
                 {/* Graphic Visual Representation Column */}
