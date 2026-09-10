@@ -575,7 +575,7 @@ export default function CheckInMobileApp({
   //  2. MAIN CHECK-IN INTERFACE
   // ─────────────────────────────────────────────
   return (
-    <div className="relative min-h-[100dvh] max-h-[100dvh] w-full flex flex-col bg-slate-900 text-slate-100 overflow-hidden font-sans" dir={isRTL ? "rtl" : "ltr"}>
+    <div className="fixed inset-0 h-[100dvh] w-full flex flex-col bg-slate-900 text-slate-100 overflow-hidden font-sans select-none overscroll-none" dir={isRTL ? "rtl" : "ltr"}>
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed top-4 inset-x-4 z-50 flex justify-center pointer-events-none animate-in fade-in slide-in-from-top-4 duration-200">
@@ -595,7 +595,7 @@ export default function CheckInMobileApp({
       )}
 
       {/* Top Header */}
-      <header className="shrink-0 bg-slate-950 border-b border-white/10 px-4 pt-3 pb-2.5 z-30">
+      <header className="shrink-0 bg-slate-950 border-b border-white/10 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2.5 z-30">
         <div className="flex items-center justify-between gap-2">
           {/* Event Title & Subtitle */}
           <div className="min-w-0 flex-1">
@@ -667,7 +667,7 @@ export default function CheckInMobileApp({
 
         {/* VIEW 2: Attendee List */}
         {activeTab === "list" && (
-          <div className="h-full flex flex-col overflow-hidden bg-slate-900">
+          <div className="h-full min-h-0 flex flex-col overflow-hidden bg-slate-900">
             {/* Search and Segmented Filter Bar (NO CHIPS!) */}
             <div className="p-3 bg-slate-950/80 border-b border-white/5 space-y-2.5 shrink-0">
               {/* Search Bar */}
@@ -732,7 +732,10 @@ export default function CheckInMobileApp({
             </div>
 
             {/* Attendee Roster List */}
-            <div className="flex-1 overflow-y-auto divide-y divide-white/5 p-2 space-y-1.5">
+            <div
+              className="flex-1 min-h-0 overflow-y-auto overscroll-contain divide-y divide-white/5 p-2 space-y-1.5 touch-pan-y"
+              style={{ WebkitOverflowScrolling: "touch" }}
+            >
               {listLoading && attendees.length === 0 ? (
                 <div className="py-12 text-center text-slate-400 text-xs">
                   <div className="w-6 h-6 mx-auto border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-2" />
@@ -831,7 +834,7 @@ export default function CheckInMobileApp({
       </main>
 
       {/* Bottom Primary Navigation Tabs (Big touch targets) */}
-      <nav className="shrink-0 bg-slate-950 border-t border-white/10 px-4 py-2.5 z-30">
+      <nav className="shrink-0 bg-slate-950 border-t border-white/10 px-4 pt-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] z-30">
         <div className="grid grid-cols-2 gap-2">
           {/* Tab 1: Scanner */}
           <button

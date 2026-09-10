@@ -18,7 +18,7 @@ export default function CheckInPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-[100dvh] w-full bg-slate-950 flex items-center justify-center text-white">
+        <div className="fixed inset-0 h-[100dvh] w-full bg-slate-950 flex items-center justify-center text-white overflow-hidden">
           <div className="flex flex-col items-center gap-3">
             <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
             <span className="text-xs font-bold text-slate-400">Loading Check-In Desk...</span>
