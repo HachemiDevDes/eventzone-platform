@@ -132,6 +132,8 @@ export const INCIDENT_STATUSES = [
 // ─────────────────────────────────────────────
 
 export default function LogisticsView({
+  activeTab: controlledActiveTab,
+  onTabChange,
   logisticsData = {},
   isLoading = false,
   onSaveLogisticsItem,
@@ -325,8 +327,20 @@ export default function LogisticsView({
     setMounted(true);
   }, []);
 
-  // Active sub-tab state
-  const [activeTab, setActiveTab] = useState("inventory"); // "inventory" | "vendors" | "travel" | "runOfShow" | "checklists"
+  // Active sub-tab state (supports controlled activeTab from parent sidebar or internal state)
+  const [internalTab, setInternalTab] = useState(controlledActiveTab || "inventory");
+  const activeTab = controlledActiveTab !== undefined ? controlledActiveTab : internalTab;
+
+  useEffect(() => {
+    if (controlledActiveTab && controlledActiveTab !== internalTab) {
+      setInternalTab(controlledActiveTab);
+    }
+  }, [controlledActiveTab, internalTab]);
+
+  const handleTabChange = (newTab) => {
+    setInternalTab(newTab);
+    if (onTabChange) onTabChange(newTab);
+  };
 
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState("");
@@ -1026,7 +1040,7 @@ export default function LogisticsView({
       ───────────────────────────────────────────── */}
       <div className="flex items-center border-b border-slate-200 gap-1 overflow-x-auto">
         <button
-          onClick={() => { setActiveTab("inventory"); setCategoryFilter("all"); setStatusFilter("all"); }}
+          onClick={() => { handleTabChange("inventory"); setCategoryFilter("all"); setStatusFilter("all"); }}
           className={`relative flex items-center gap-2 px-4 py-3 font-bold text-xs transition-all cursor-pointer !rounded-none ${
             activeTab === "inventory"
               ? "text-blue-600 font-black bg-blue-50/50"
@@ -1044,7 +1058,7 @@ export default function LogisticsView({
         </button>
 
         <button
-          onClick={() => { setActiveTab("vendors"); setCategoryFilter("all"); setStatusFilter("all"); }}
+          onClick={() => { handleTabChange("vendors"); setCategoryFilter("all"); setStatusFilter("all"); }}
           className={`relative flex items-center gap-2 px-4 py-3 font-bold text-xs transition-all cursor-pointer !rounded-none ${
             activeTab === "vendors"
               ? "text-blue-600 font-black bg-blue-50/50"
@@ -1062,7 +1076,7 @@ export default function LogisticsView({
         </button>
 
         <button
-          onClick={() => { setActiveTab("travel"); setCategoryFilter("all"); setStatusFilter("all"); }}
+          onClick={() => { handleTabChange("travel"); setCategoryFilter("all"); setStatusFilter("all"); }}
           className={`relative flex items-center gap-2 px-4 py-3 font-bold text-xs transition-all cursor-pointer !rounded-none ${
             activeTab === "travel"
               ? "text-blue-600 font-black bg-blue-50/50"
@@ -1080,7 +1094,7 @@ export default function LogisticsView({
         </button>
 
         <button
-          onClick={() => { setActiveTab("runOfShow"); setCategoryFilter("all"); setStatusFilter("all"); }}
+          onClick={() => { handleTabChange("runOfShow"); setCategoryFilter("all"); setStatusFilter("all"); }}
           className={`relative flex items-center gap-2 px-4 py-3 font-bold text-xs transition-all cursor-pointer !rounded-none ${
             activeTab === "runOfShow"
               ? "text-blue-600 font-black bg-blue-50/50"
@@ -1098,7 +1112,7 @@ export default function LogisticsView({
         </button>
 
         <button
-          onClick={() => { setActiveTab("checklists"); setCategoryFilter("all"); setStatusFilter("all"); }}
+          onClick={() => { handleTabChange("checklists"); setCategoryFilter("all"); setStatusFilter("all"); }}
           className={`relative flex items-center gap-2 px-4 py-3 font-bold text-xs transition-all cursor-pointer !rounded-none ${
             activeTab === "checklists"
               ? "text-blue-600 font-black bg-blue-50/50"

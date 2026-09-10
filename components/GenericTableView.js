@@ -122,6 +122,8 @@ export default function GenericTableView({
 
       return (
         <LogisticsView
+          activeTab={state.logisticsTab}
+          onTabChange={state.setLogisticsTab}
           logisticsData={state.logisticsData || {}}
           onSaveLogisticsItem={state.onSaveLogisticsItem}
           onDeleteLogisticsItem={state.onDeleteLogisticsItem}

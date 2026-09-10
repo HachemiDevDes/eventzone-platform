@@ -9,7 +9,8 @@ import {
   ChevronDown, LayoutDashboard, Calendar, Clock,
   Users2, UserCheck, BarChart3, X, Globe, Map, Sparkles, Upload, Mail,
   Building2, Plus, ArrowLeft, ArrowRight, Layers, LogOut, Compass, ExternalLink, ChevronRight, Home as HomeIcon, User,
-  FileText, ClipboardList, QrCode, Store, Mic2, Check, TrendingUp, Share2, Boxes, Truck, Package, Files, Code2, Award, Eye
+  FileText, ClipboardList, QrCode, Store, Mic2, Check, TrendingUp, Share2, Boxes, Truck, Package, Files, Code2, Award, Eye,
+  Plane, ClipboardCheck
 } from "lucide-react";
 
 import MainHomePage from "../components/MainHomePage";
@@ -298,6 +299,17 @@ export function HomeContent({ initialPublicEvents = [] }) {
  
   const [participantsOpen, setParticipantsOpen] = useState(false);
   const [companiesOpen, setCompaniesOpen] = useState(false);
+  const [logisticsOpen, setLogisticsOpen] = useState(false);
+  const [logisticsTab, setLogisticsTab] = useState(() => {
+    if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search);
+      const tabParam = searchParams.get("tab");
+      if (tabParam && ["inventory", "vendors", "travel", "runOfShow", "checklists"].includes(tabParam)) {
+        return tabParam;
+      }
+    }
+    return "inventory";
+  });
   const [activeFloorPlanId, setActiveFloorPlanId] = useState(() => {
     if (typeof window !== "undefined") {
       const searchParams = new URLSearchParams(window.location.search);
@@ -430,6 +442,9 @@ export function HomeContent({ initialPublicEvents = [] }) {
     }
     if (["organizations", "sponsors", "exhibitors"].includes(currentView)) {
       setCompaniesOpen(true);
+    }
+    if (currentView === "logistics") {
+      setLogisticsOpen(true);
     }
   }, [currentView]);
 
@@ -4382,18 +4397,78 @@ export function HomeContent({ initialPublicEvents = [] }) {
               <span className={`text-[9px] font-extrabold py-0.5 px-2 rounded-full ${currentView === "rsvp" ? "bg-white/25 text-white" : "bg-slate-100 text-slate-500"}`}>{rsvps.length}</span>
             </button>
 
-            <button 
-              onClick={() => setCurrentView("logistics")}
-              className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "logistics" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
-            >
-              <div className="flex items-center gap-2">
-                <Boxes size={14} className={`shrink-0 ${currentView === "logistics" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
-                <span>{t("dash.logistics", "Logistics")}</span>
-              </div>
-              <span className={`text-[9px] font-extrabold py-0.5 px-2 rounded-full ${currentView === "logistics" ? "bg-white/25 text-white" : "bg-slate-100 text-slate-500"}`}>
-                {(logisticsData.inventory?.length || 0) + (logisticsData.vendors?.length || 0)}
-              </span>
-            </button>
+            {/* 3. Expandable Logistics Submenu */}
+            <div className="flex flex-col">
+              <button 
+                onClick={() => setLogisticsOpen(!logisticsOpen)}
+                className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "logistics" ? "text-blue-700 bg-blue-50/50 font-extrabold" : "text-slate-600 hover:bg-slate-50"}`}
+              >
+                <div className="flex items-center gap-2">
+                  <Boxes size={14} className={`shrink-0 ${currentView === "logistics" ? "text-blue-600" : "text-slate-400 group-hover:text-blue-600"}`} />
+                  <span>{t("dash.logistics", "Logistics")}</span>
+                </div>
+                <ChevronDown size={11} className={`text-slate-400 transition-transform ${logisticsOpen ? "rotate-180" : ""}`} />
+              </button>
+
+              {logisticsOpen && (
+                <div className="flex flex-col gap-0.5 pl-3 rtl:pr-3 rtl:pl-0 mt-1 border-l rtl:border-r rtl:border-l-0 border-slate-100 ml-4 rtl:mr-4 rtl:ml-0">
+                  <button 
+                    onClick={() => { setCurrentView("logistics"); setLogisticsTab("inventory"); }}
+                    className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "logistics" && logisticsTab === "inventory" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
+                  >
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <Package size={12} className="shrink-0" />
+                      <span className="truncate">{t("logistics.tabInventory", "Inventory & Equipment")}</span>
+                    </div>
+                    <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "logistics" && logisticsTab === "inventory" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{logisticsData.inventory?.length || 0}</span>
+                  </button>
+
+                  <button 
+                    onClick={() => { setCurrentView("logistics"); setLogisticsTab("vendors"); }}
+                    className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "logistics" && logisticsTab === "vendors" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
+                  >
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <Truck size={12} className="shrink-0" />
+                      <span className="truncate">{t("logistics.tabVendors", "Vendors & Deliveries")}</span>
+                    </div>
+                    <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "logistics" && logisticsTab === "vendors" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{logisticsData.vendors?.length || 0}</span>
+                  </button>
+
+                  <button 
+                    onClick={() => { setCurrentView("logistics"); setLogisticsTab("travel"); }}
+                    className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "logistics" && logisticsTab === "travel" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
+                  >
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <Plane size={12} className="shrink-0" />
+                      <span className="truncate">{t("logistics.tabTravel", "VIP Travel & Lodging")}</span>
+                    </div>
+                    <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "logistics" && logisticsTab === "travel" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{logisticsData.travel?.length || 0}</span>
+                  </button>
+
+                  <button 
+                    onClick={() => { setCurrentView("logistics"); setLogisticsTab("runOfShow"); }}
+                    className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "logistics" && logisticsTab === "runOfShow" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
+                  >
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <Clock size={12} className="shrink-0" />
+                      <span className="truncate">{t("logistics.tabRunOfShow", "Run of Show & Schedule")}</span>
+                    </div>
+                    <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "logistics" && logisticsTab === "runOfShow" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{logisticsData.runOfShow?.length || 0}</span>
+                  </button>
+
+                  <button 
+                    onClick={() => { setCurrentView("logistics"); setLogisticsTab("checklists"); }}
+                    className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "logistics" && logisticsTab === "checklists" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
+                  >
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <ClipboardCheck size={12} className="shrink-0" />
+                      <span className="truncate">{t("logistics.tabChecklists", "Checklists & Issues")}</span>
+                    </div>
+                    <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "logistics" && logisticsTab === "checklists" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{logisticsData.checklists?.length || 0}</span>
+                  </button>
+                </div>
+              )}
+            </div>
 
             {/* Standalone Influencers Tab */}
             <button 
@@ -4874,6 +4949,8 @@ export function HomeContent({ initialPublicEvents = [] }) {
 
           {currentView === "logistics" && (
             <LogisticsView
+              activeTab={logisticsTab}
+              onTabChange={setLogisticsTab}
               logisticsData={logisticsData}
               onSaveLogisticsItem={handleSaveLogisticsItem}
               onDeleteLogisticsItem={handleDeleteLogisticsItem}
