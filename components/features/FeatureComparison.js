@@ -27,7 +27,7 @@ export default function FeatureComparison({ feature }) {
                 Méthodes Traditionnelles
               </h3>
               <span className="text-xs font-extrabold text-rose-700 bg-rose-100 px-2.5 py-0.5 rounded-full">
-                Excel & PDF
+                {feature.comparison.traditionalBadge || "Excel & Papier"}
               </span>
             </div>
 
@@ -50,7 +50,7 @@ export default function FeatureComparison({ feature }) {
                 Plateforme Eventzone
               </h3>
               <span className="text-xs font-extrabold text-blue-700 bg-blue-100 px-2.5 py-0.5 rounded-full">
-                2D Temps Réel
+                {feature.comparison.eventzoneBadge || "Automatisé & Sécurisé"}
               </span>
             </div>
 

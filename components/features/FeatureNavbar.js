@@ -5,10 +5,21 @@ import Link from "next/link";
 import { 
   ChevronDown, Menu, X, ArrowRight, 
   Map, Ticket, QrCode, Users, Shield, 
-  Building2, Calendar, HelpCircle, FileText, Sparkles 
+  Building2, Calendar, HelpCircle, FileText, Sparkles,
+  Plane, Link2, BarChart3
 } from "lucide-react";
 import { useLanguage } from "../../lib/i18n";
 import { ALL_FEATURES } from "../../lib/featuresData";
+
+const FEATURE_ICONS = {
+  "plan-2d-interactif": Map,
+  "billetterie-inscriptions": Ticket,
+  "emargement-express-qr": QrCode,
+  "crm-participants": Users,
+  "logistique-vip": Plane,
+  "marketing-influence-affiliation": Link2,
+  "dashboard-analytics-certificats": BarChart3,
+};
 
 export default function FeatureNavbar({ featureTitle, category }) {
   const languageContext = useLanguage();
@@ -75,34 +86,35 @@ export default function FeatureNavbar({ featureTitle, category }) {
 
               {/* Product Flyout Menu */}
               {activeDropdown === "product" && (
-                <div className="absolute top-full left-0 mt-2 w-80 sm:w-96 rounded-2xl bg-white border border-slate-200/90 shadow-2xl p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="absolute top-full left-0 mt-2 w-84 sm:w-96 rounded-2xl bg-white border border-slate-200/90 shadow-2xl p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                   <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-3 py-1.5">
-                    {isFr ? "Modules & Fonctionnalités" : "Modules & Capabilities"}
+                    {isFr ? "Tous les Modules Eventzone" : "All Eventzone Modules"}
                   </div>
-                  <div className="space-y-1 mt-1">
-                    {ALL_FEATURES.slice(0, 4).map((f) => (
-                      <Link
-                        key={f.slug}
-                        href={`/features/${f.slug}`}
-                        onClick={() => setActiveDropdown(null)}
-                        className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-blue-50/60 transition-colors group/item"
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 group-hover/item:bg-blue-600 group-hover/item:text-white transition-colors mt-0.5">
-                          {f.slug === "plan-2d-interactif" && <Map size={16} />}
-                          {f.slug === "billetterie-inscriptions" && <Ticket size={16} />}
-                          {f.slug === "emargement-express-qr" && <QrCode size={16} />}
-                          {f.slug === "crm-participants" && <Users size={16} />}
-                        </div>
-                        <div>
-                          <p className="text-xs font-bold text-slate-900 group-hover/item:text-blue-600 transition-colors">
-                            {f.title}
-                          </p>
-                          <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
-                            {f.tagline}
-                          </p>
-                        </div>
-                      </Link>
-                    ))}
+                  <div className="space-y-1 mt-1 max-h-80 overflow-y-auto pr-1">
+                    {ALL_FEATURES.map((f) => {
+                      const IconComp = FEATURE_ICONS[f.slug] || Sparkles;
+
+                      return (
+                        <Link
+                          key={f.slug}
+                          href={`/features/${f.slug}`}
+                          onClick={() => setActiveDropdown(null)}
+                          className="flex items-start gap-3 p-2 rounded-xl hover:bg-blue-50/60 transition-colors group/item"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 group-hover/item:bg-blue-600 group-hover/item:text-white transition-colors mt-0.5">
+                            <IconComp size={15} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-slate-900 group-hover/item:text-blue-600 transition-colors truncate">
+                              {f.title}
+                            </p>
+                            <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                              {f.tagline}
+                            </p>
+                          </div>
+                        </Link>
+                      );
+                    })}
                   </div>
                   <div className="mt-2 pt-2 border-t border-slate-100 px-2">
                     <Link
@@ -110,7 +122,7 @@ export default function FeatureNavbar({ featureTitle, category }) {
                       onClick={() => setActiveDropdown(null)}
                       className="flex items-center justify-between p-2 rounded-lg text-xs font-bold text-blue-600 hover:bg-blue-50/70 transition-colors"
                     >
-                      <span>{isFr ? "Voir toutes les fonctionnalités" : "Explore all features"}</span>
+                      <span>{isFr ? "Voir le catalogue complet" : "Explore full catalog"}</span>
                       <ArrowRight size={14} />
                     </Link>
                   </div>
