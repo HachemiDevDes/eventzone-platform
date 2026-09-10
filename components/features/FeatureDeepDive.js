@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Check, Sparkles, Compass } from "lucide-react";
+import { Check, Sparkles, Compass, Search, Calendar, FileText, ArrowRight, ShieldCheck } from "lucide-react";
 
 export default function FeatureDeepDive({ feature }) {
   if (!feature.deepDiveFeatures || feature.deepDiveFeatures.length === 0) return null;
@@ -55,152 +55,224 @@ export default function FeatureDeepDive({ feature }) {
 
                 {/* Graphic Visual Representation Column */}
                 <div className="w-full lg:w-1/2">
-                  <div className="p-6 sm:p-8 rounded-3xl bg-white/90 backdrop-blur-md border border-slate-200/90 shadow-xl hover:shadow-2xl transition-all relative overflow-hidden group">
+                  <div className="p-6 sm:p-7 rounded-3xl bg-white/95 backdrop-blur-md border border-slate-200/80 shadow-xl hover:shadow-2xl transition-all relative overflow-hidden group">
                     
-                    {/* Visual Card Content based on type */}
+                    {/* Visual Card 1: Interactive Floor Plan Canvas */}
                     {idx === 0 && (
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                          <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">
-                            Moteur Vectoriel Ultra-Fluide
-                          </span>
-                          <span className="text-[11px] font-extrabold bg-blue-50 text-blue-700 px-2.5 py-1 rounded-md border border-blue-200/60">
-                            Zoom x400% sans perte
+                      <div className="space-y-3.5">
+                        {/* Mini Search & Filter Bar */}
+                        <div className="flex items-center justify-between gap-3 bg-slate-50 border border-slate-200/80 rounded-xl px-3.5 py-2">
+                          <div className="flex items-center gap-2 text-slate-400 text-xs flex-1">
+                            <Search size={14} className="text-slate-400 shrink-0" />
+                            <span className="text-slate-500 font-medium">Rechercher un stand, exposant...</span>
+                          </div>
+                          <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200/60 px-2 py-0.5 rounded-md shrink-0">
+                            Hall A & B
                           </span>
                         </div>
-                        <div className="h-44 sm:h-52 rounded-2xl bg-gradient-to-br from-slate-50 via-blue-50/40 to-slate-100/70 border border-slate-200/90 p-4 text-slate-900 flex flex-col justify-between relative overflow-hidden shadow-inner">
-                          <div className="flex justify-between items-center text-xs">
-                            <span className="font-bold text-slate-800 flex items-center gap-1.5">
-                              <span className="w-2 h-2 rounded-full bg-blue-600" />
-                              Hall B • Espace Numérique
-                            </span>
-                            <span className="bg-emerald-100 text-emerald-800 border border-emerald-200/80 px-2 py-0.5 rounded text-[10px] font-bold">
-                              120 Stands Actifs
+
+                        {/* Clean Booth Layout */}
+                        <div className="bg-slate-50/60 rounded-2xl border border-slate-200/70 p-3 space-y-2.5">
+                          <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 px-1">
+                            <span>Allée Centrale</span>
+                            <span className="text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded text-[10px] font-semibold">
+                              Disponibilité en direct
                             </span>
                           </div>
-                          <div className="grid grid-cols-4 gap-2.5 my-auto">
-                            <div className="bg-white hover:bg-slate-50 p-2.5 rounded-xl text-center border border-emerald-200 shadow-xs transition-colors">
-                              <p className="text-[10px] sm:text-[11px] font-extrabold text-slate-800">Stand B1</p>
-                              <span className="inline-block mt-0.5 text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200/50">Libre</span>
+
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                            {/* Booth 1 */}
+                            <div className="bg-white p-3 rounded-xl border border-slate-200/90 shadow-2xs hover:border-blue-400 transition-all cursor-pointer">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-xs font-black text-slate-900">A01</span>
+                                <span className="text-[9px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">Réservé</span>
+                              </div>
+                              <p className="text-xs font-bold text-slate-800 truncate">Sonatrach</p>
+                              <p className="text-[10px] text-slate-500 mt-0.5 font-medium">18 m² • Énergie</p>
                             </div>
-                            <div className="bg-blue-50/70 hover:bg-blue-50 p-2.5 rounded-xl text-center border border-blue-200 shadow-xs transition-colors">
-                              <p className="text-[10px] sm:text-[11px] font-extrabold text-slate-800">Stand B2</p>
-                              <span className="inline-block mt-0.5 text-[9px] font-bold text-blue-700 bg-blue-100/70 px-1.5 py-0.2 rounded border border-blue-200/50">Réservé</span>
+
+                            {/* Booth 2 - Available */}
+                            <div className="bg-emerald-50/40 p-3 rounded-xl border border-emerald-300 shadow-2xs hover:border-emerald-400 transition-all cursor-pointer ring-2 ring-emerald-500/10">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-xs font-black text-emerald-900">A02</span>
+                                <span className="text-[9px] font-extrabold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">Libre</span>
+                              </div>
+                              <p className="text-xs font-bold text-emerald-800 truncate">Stand Disponible</p>
+                              <p className="text-[10px] text-emerald-600 font-semibold mt-0.5">18 m² • Optionner ➔</p>
                             </div>
-                            <div className="bg-amber-50/70 hover:bg-amber-50 p-2.5 rounded-xl text-center border border-amber-200 shadow-xs transition-colors">
-                              <p className="text-[10px] sm:text-[11px] font-extrabold text-slate-800">Stand B3</p>
-                              <span className="inline-block mt-0.5 text-[9px] font-bold text-amber-800 bg-amber-100/70 px-1.5 py-0.2 rounded border border-amber-200/50">Sponsor</span>
+
+                            {/* Booth 3 */}
+                            <div className="bg-white p-3 rounded-xl border border-slate-200/90 shadow-2xs hover:border-blue-400 transition-all cursor-pointer">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-xs font-black text-slate-900">A03</span>
+                                <span className="text-[9px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">Réservé</span>
+                              </div>
+                              <p className="text-xs font-bold text-slate-800 truncate">Ooredoo</p>
+                              <p className="text-[10px] text-slate-500 mt-0.5 font-medium">18 m² • Télécom</p>
                             </div>
-                            <div className="bg-white hover:bg-slate-50 p-2.5 rounded-xl text-center border border-emerald-200 shadow-xs transition-colors">
-                              <p className="text-[10px] sm:text-[11px] font-extrabold text-slate-800">Stand B4</p>
-                              <span className="inline-block mt-0.5 text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200/50">Libre</span>
+
+                            {/* Booth 4 - VIP Sponsor */}
+                            <div className="bg-amber-50/50 p-3 rounded-xl border border-amber-300 shadow-2xs col-span-2 sm:col-span-3 hover:border-amber-400 transition-all cursor-pointer">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-black text-slate-900">B01 • Pavillon Central</span>
+                                    <span className="text-[9px] font-extrabold text-amber-800 bg-amber-100 px-2 py-0.5 rounded">Sponsor</span>
+                                  </div>
+                                  <p className="text-xs font-bold text-slate-800 mt-0.5">CPA Banque & FinTech Hub</p>
+                                </div>
+                                <span className="text-xs font-bold text-amber-900 bg-white/90 border border-amber-200 px-2.5 py-1 rounded-lg">
+                                  36 m²
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex justify-between items-center text-[10px] text-slate-500 border-t border-slate-200/80 pt-2 font-medium">
-                            <span>Recherche textuelle instantanée</span>
-                            <span className="text-blue-700 font-mono font-bold bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200/50">60 FPS fluide</span>
                           </div>
                         </div>
                       </div>
                     )}
 
+                    {/* Visual Card 2: Commercial Zoning & Real-Time Availability */}
                     {idx === 1 && (
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                          <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">
-                            Synchronisation Commerciale
-                          </span>
-                          <span className="text-[11px] font-extrabold bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-md border border-emerald-200/60">
-                            Temps réel actif
-                          </span>
+                      <div className="space-y-3.5">
+                        {/* Occupancy Progress Gauge */}
+                        <div className="bg-slate-50/90 border border-slate-200/80 rounded-xl p-3.5">
+                          <div className="flex items-center justify-between text-xs font-bold mb-2">
+                            <span className="text-slate-800">Taux d'occupation commercial</span>
+                            <span className="text-blue-700 font-extrabold">78% commercialisé</span>
+                          </div>
+                          <div className="h-2 w-full bg-slate-200/80 rounded-full overflow-hidden flex gap-0.5">
+                            <div className="h-full bg-blue-600 rounded-l-full" style={{ width: "60%" }} />
+                            <div className="h-full bg-amber-500" style={{ width: "18%" }} />
+                            <div className="h-full bg-emerald-500 rounded-r-full" style={{ width: "22%" }} />
+                          </div>
+                          <div className="flex items-center justify-between text-[10px] text-slate-500 font-semibold mt-2.5 pt-1.5 border-t border-slate-200/60">
+                            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-600" /> 48 Confirmés</span>
+                            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-500" /> 12 Sponsors</span>
+                            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500" /> 16 Disponibles</span>
+                          </div>
                         </div>
-                        <div className="space-y-2.5">
-                          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
+
+                        {/* Live Inventory Cards */}
+                        <div className="space-y-2">
+                          <div className="p-3 rounded-xl bg-white border border-slate-200/80 shadow-2xs flex items-center justify-between hover:border-emerald-300 transition-colors">
                             <div className="flex items-center gap-3">
-                              <span className="w-3 h-3 rounded-full bg-emerald-500" />
+                              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 font-black text-xs flex items-center justify-center border border-emerald-200">
+                                A14
+                              </div>
                               <div>
-                                <p className="text-xs font-bold text-slate-900">Stand A14 (24m²)</p>
-                                <p className="text-[10px] text-slate-500">Disponible • Allée Centrale</p>
+                                <p className="text-xs font-bold text-slate-900">Stand Standard • 24 m²</p>
+                                <p className="text-[10px] text-slate-500 font-medium">Allée Centrale • Traversant</p>
                               </div>
                             </div>
-                            <span className="text-xs font-extrabold text-emerald-600">Optionner</span>
+                            <span className="text-xs font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2.5 py-1 rounded-md">
+                              Optionner
+                            </span>
                           </div>
-                          <div className="p-3 rounded-xl bg-blue-50/60 border border-blue-200 flex items-center justify-between">
+
+                          <div className="p-3 rounded-xl bg-white border border-slate-200/80 shadow-2xs flex items-center justify-between hover:border-blue-300 transition-colors">
                             <div className="flex items-center gap-3">
-                              <span className="w-3 h-3 rounded-full bg-blue-600" />
+                              <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-700 font-black text-xs flex items-center justify-center border border-blue-200">
+                                A15
+                              </div>
                               <div>
-                                <p className="text-xs font-bold text-slate-900">Stand A15 (18m²)</p>
-                                <p className="text-[10px] text-slate-500">Réservé par Sonatrach</p>
+                                <p className="text-xs font-bold text-slate-900">Sonatrach Digital • 18 m²</p>
+                                <p className="text-[10px] text-slate-500 font-medium">Contrat validé</p>
                               </div>
                             </div>
-                            <span className="text-[10px] font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded">Confirmé</span>
-                          </div>
-                          <div className="p-3 rounded-xl bg-amber-50/60 border border-amber-200 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <span className="w-3 h-3 rounded-full bg-amber-500" />
-                              <div>
-                                <p className="text-xs font-bold text-slate-900">Stand VIP Plénière (36m²)</p>
-                                <p className="text-[10px] text-slate-500">Pack Partenaire Platine</p>
-                              </div>
-                            </div>
-                            <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded">Sponsor</span>
+                            <span className="text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200/80 px-2.5 py-1 rounded-md">
+                              Réservé
+                            </span>
                           </div>
                         </div>
                       </div>
                     )}
 
+                    {/* Visual Card 3: Exhibitor B2B Showcase Profile */}
                     {idx === 2 && (
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                          <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">
-                            Vitrine Exposant Connectée
+                      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
+                        {/* Banner */}
+                        <div className="h-14 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 px-4 flex items-end justify-between pb-2">
+                          <span className="text-[10px] font-bold text-white/95 bg-white/20 backdrop-blur-xs px-2 py-0.5 rounded">
+                            Hall Innovation • Stand B04
                           </span>
-                          <span className="text-[11px] font-extrabold bg-blue-50 text-blue-700 px-2.5 py-1 rounded-md border border-blue-200/60">
-                            Portail B2B
+                          <span className="text-[10px] font-bold text-emerald-200 bg-emerald-950/40 px-2 py-0.5 rounded">
+                            Exposant Vérifié
                           </span>
                         </div>
-                        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
-                          <div className="flex items-start gap-3">
-                            <div className="w-12 h-12 rounded-xl bg-blue-600 text-white font-black text-base flex items-center justify-center shadow-sm">
-                              EZ
-                            </div>
-                            <div className="flex-1">
-                              <h4 className="text-sm font-extrabold text-slate-900">Eventzone Tech Solutions</h4>
-                              <p className="text-xs text-slate-500">Stand B04 • Hall Innovation</p>
-                              <div className="flex gap-2 mt-2">
-                                <span className="text-[10px] font-semibold bg-white border border-slate-200 px-2 py-0.5 rounded text-slate-600">
-                                  📄 Plaquette PDF
-                                </span>
-                                <span className="text-[10px] font-semibold bg-white border border-slate-200 px-2 py-0.5 rounded text-slate-600">
-                                  📅 Prendre RDV
-                                </span>
+
+                        {/* Profile Details */}
+                        <div className="p-4 sm:p-5 pt-0">
+                          <div className="flex items-end gap-3 -mt-5 mb-3">
+                            <div className="w-12 h-12 rounded-xl bg-white p-0.5 shadow-md border border-slate-100 flex items-center justify-center">
+                              <div className="w-full h-full rounded-lg bg-blue-600 text-white flex items-center justify-center font-black text-xs">
+                                EZ
                               </div>
+                            </div>
+                            <div className="pb-0.5">
+                              <h4 className="text-sm font-black text-slate-900 leading-tight">Eventzone Tech Solutions</h4>
+                              <p className="text-[11px] text-slate-500 font-medium">Solutions Logicielles & Billetterie</p>
+                            </div>
+                          </div>
+
+                          <p className="text-xs text-slate-600 leading-relaxed font-normal">
+                            Plateforme tout-en-un de gestion d'événements : plans vectoriels 2D dynamiques, billetterie et contrôle d'accès.
+                          </p>
+
+                          <div className="mt-3.5 pt-3 border-t border-slate-100 grid grid-cols-2 gap-2.5">
+                            <div className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer text-center">
+                              <Calendar size={13} />
+                              <span>Prendre RDV</span>
+                            </div>
+                            <div className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer text-center">
+                              <FileText size={13} />
+                              <span>Plaquette PDF</span>
                             </div>
                           </div>
                         </div>
                       </div>
                     )}
 
+                    {/* Visual Card 4: Mobile Web Guidance */}
                     {idx === 3 && (
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                          <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">
-                            Expérience Mobile Sans App
-                          </span>
-                          <span className="text-[11px] font-extrabold bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-md border border-emerald-200/60">
-                            Scan QR Totem
-                          </span>
-                        </div>
-                        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-blue-50/70 via-slate-50 to-indigo-50/50 border border-blue-200/70 text-slate-900 flex items-center justify-between shadow-xs">
-                          <div>
-                            <p className="text-xs font-black text-slate-900 flex items-center gap-1.5">
-                              <span className="w-2 h-2 rounded-full bg-blue-600" />
-                              Orientation Instantanée
-                            </p>
-                            <p className="text-[11px] text-slate-600 mt-1 font-medium">Scannez le totem d'entrée pour ouvrir le plan sur votre mobile</p>
+                      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
+                        {/* Simulated Mobile Browser URL */}
+                        <div className="bg-slate-100 px-4 py-2 border-b border-slate-200/80 flex items-center gap-2">
+                          <div className="flex gap-1">
+                            <span className="w-2 h-2 rounded-full bg-slate-300" />
+                            <span className="w-2 h-2 rounded-full bg-slate-300" />
                           </div>
-                          <div className="w-10 h-10 rounded-xl bg-blue-100/80 border border-blue-200 flex items-center justify-center shrink-0 shadow-xs">
-                            <Compass size={22} className="text-blue-600" />
+                          <div className="flex-1 bg-white rounded-md py-1 px-2.5 text-[10px] text-slate-500 font-medium flex items-center justify-center gap-1 border border-slate-200">
+                            <span className="text-emerald-600 font-bold">🔒</span> eventzone.app/salon/hall-b
+                          </div>
+                        </div>
+
+                        {/* Navigation Interface */}
+                        <div className="p-4 sm:p-5 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Itinéraire Visiteur</span>
+                              <h4 className="text-sm font-black text-slate-900 mt-0.5">Vers Stand B04 • Eventzone</h4>
+                            </div>
+                            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 border border-blue-200/60 flex items-center justify-center shrink-0">
+                              <Compass size={20} />
+                            </div>
+                          </div>
+
+                          <div className="p-3 rounded-xl bg-blue-50/60 border border-blue-200/70 flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
+                              ➔
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-slate-900">Prendre l'Allée Centrale</p>
+                              <p className="text-[11px] text-slate-600 font-medium">Votre stand est à 35 mètres sur votre gauche</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between text-[10px] text-slate-500 font-semibold pt-1">
+                            <span className="flex items-center gap-1 text-emerald-700">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> 100% Web (Safari & Chrome)
+                            </span>
+                            <span className="text-slate-400">Zéro téléchargement</span>
                           </div>
                         </div>
                       </div>
