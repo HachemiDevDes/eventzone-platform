@@ -1,71 +1,346 @@
 "use client";
 
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { ChevronRight, Phone, Calendar } from "lucide-react";
+import { 
+  ChevronDown, Menu, X, ArrowRight, 
+  Map, Ticket, QrCode, Users, Shield, 
+  Building2, Calendar, HelpCircle, FileText, Sparkles 
+} from "lucide-react";
+import { useLanguage } from "../../lib/i18n";
+import { ALL_FEATURES } from "../../lib/featuresData";
 
 export default function FeatureNavbar({ featureTitle, category }) {
+  const languageContext = useLanguage();
+  const lang = languageContext?.lang || "en";
+  const isFr = lang === "fr";
+
+  const [activeDropdown, setActiveDropdown] = useState(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navRef = useRef(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (navRef.current && !navRef.current.contains(event.target)) {
+        setActiveDropdown(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const toggleDropdown = (menuName) => {
+    setActiveDropdown(activeDropdown === menuName ? null : menuName);
+  };
 
   return (
-    <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-slate-200/80 transition-all">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <div ref={navRef} className="sticky top-3 sm:top-4 z-50 px-3 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+      <header className="bg-white rounded-2xl border border-slate-200/90 shadow-[0_2px_14px_rgba(0,0,0,0.05)] px-4 sm:px-6 h-16 sm:h-[68px] flex items-center justify-between transition-all relative">
         
-        {/* Brand & Breadcrumbs */}
-        <div className="flex items-center gap-3 sm:gap-4">
+        {/* Left Side: Logo & Main Navigation Links */}
+        <div className="flex items-center gap-6 xl:gap-8">
+          {/* Logo */}
           <Link 
             href="/"
             className="flex items-center gap-2 group shrink-0"
-            title="Retour à l'accueil Eventzone"
+            title="Eventzone"
           >
             <img 
               src="https://i.imgur.com/jFDrQbM.png" 
               alt="eventzone" 
-              style={{ height: '26px', width: 'auto' }}
-              className="h-6 sm:h-7 w-auto object-contain transition-transform group-hover:scale-105" 
+              style={{ height: '28px', width: 'auto' }}
+              className="h-7 sm:h-8 w-auto object-contain transition-transform group-hover:scale-105" 
             />
           </Link>
 
-          <div className="hidden md:flex items-center gap-1.5 text-xs text-slate-400 font-medium pl-3 border-l border-slate-200">
-            <Link href="/" className="hover:text-slate-700 transition-colors">
-              Accueil
-            </Link>
-            <ChevronRight size={13} className="text-slate-300" />
-            <Link href="/features" className="hover:text-slate-700 transition-colors">
-              Fonctionnalités
-            </Link>
-            <ChevronRight size={13} className="text-slate-300" />
-            <span className="text-slate-900 font-bold truncate max-w-[220px]">
-              {featureTitle}
-            </span>
+          {/* Desktop Navigation Links (Calendly Style) */}
+          <nav className="hidden lg:flex items-center gap-6 xl:gap-8 text-[13px] xl:text-[14px] font-medium text-slate-700">
+            
+            {/* Product Dropdown */}
+            <div className="relative group">
+              <button
+                type="button"
+                onClick={() => toggleDropdown("product")}
+                className="flex items-center gap-1 hover:text-slate-900 transition-colors py-2 cursor-pointer focus:outline-hidden"
+              >
+                <span>{isFr ? "Produit" : "Product"}</span>
+                <ChevronDown 
+                  size={14} 
+                  className={`text-slate-400 transition-transform duration-200 ${
+                    activeDropdown === "product" ? "rotate-180 text-slate-900" : "group-hover:text-slate-600"
+                  }`} 
+                />
+              </button>
+
+              {/* Product Flyout Menu */}
+              {activeDropdown === "product" && (
+                <div className="absolute top-full left-0 mt-2 w-80 sm:w-96 rounded-2xl bg-white border border-slate-200/90 shadow-2xl p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-3 py-1.5">
+                    {isFr ? "Modules & Fonctionnalités" : "Modules & Capabilities"}
+                  </div>
+                  <div className="space-y-1 mt-1">
+                    {ALL_FEATURES.slice(0, 4).map((f) => (
+                      <Link
+                        key={f.slug}
+                        href={`/features/${f.slug}`}
+                        onClick={() => setActiveDropdown(null)}
+                        className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-blue-50/60 transition-colors group/item"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 group-hover/item:bg-blue-600 group-hover/item:text-white transition-colors mt-0.5">
+                          {f.slug === "plan-2d-interactif" && <Map size={16} />}
+                          {f.slug === "billetterie-inscriptions" && <Ticket size={16} />}
+                          {f.slug === "emargement-express-qr" && <QrCode size={16} />}
+                          {f.slug === "crm-participants" && <Users size={16} />}
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-slate-900 group-hover/item:text-blue-600 transition-colors">
+                            {f.title}
+                          </p>
+                          <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
+                            {f.tagline}
+                          </p>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                  <div className="mt-2 pt-2 border-t border-slate-100 px-2">
+                    <Link
+                      href="/features"
+                      onClick={() => setActiveDropdown(null)}
+                      className="flex items-center justify-between p-2 rounded-lg text-xs font-bold text-blue-600 hover:bg-blue-50/70 transition-colors"
+                    >
+                      <span>{isFr ? "Voir toutes les fonctionnalités" : "Explore all features"}</span>
+                      <ArrowRight size={14} />
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Solutions Dropdown */}
+            <div className="relative group">
+              <button
+                type="button"
+                onClick={() => toggleDropdown("solutions")}
+                className="flex items-center gap-1 hover:text-slate-900 transition-colors py-2 cursor-pointer focus:outline-hidden"
+              >
+                <span>Solutions</span>
+                <ChevronDown 
+                  size={14} 
+                  className={`text-slate-400 transition-transform duration-200 ${
+                    activeDropdown === "solutions" ? "rotate-180 text-slate-900" : "group-hover:text-slate-600"
+                  }`} 
+                />
+              </button>
+
+              {activeDropdown === "solutions" && (
+                <div className="absolute top-full left-0 mt-2 w-72 rounded-2xl bg-white border border-slate-200/90 shadow-2xl p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-3 py-1.5">
+                    {isFr ? "Cas d'usage" : "Use Cases"}
+                  </div>
+                  <div className="space-y-1 mt-1">
+                    <a
+                      href="#details"
+                      onClick={() => setActiveDropdown(null)}
+                      className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-slate-50 text-xs font-bold text-slate-800 transition-colors"
+                    >
+                      <Building2 size={16} className="text-blue-600" />
+                      <span>{isFr ? "Salons Professionnels & Foires" : "Trade Shows & Expos"}</span>
+                    </a>
+                    <a
+                      href="#details"
+                      onClick={() => setActiveDropdown(null)}
+                      className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-slate-50 text-xs font-bold text-slate-800 transition-colors"
+                    >
+                      <Calendar size={16} className="text-blue-600" />
+                      <span>{isFr ? "Congrès & Conférences" : "Conferences & Summits"}</span>
+                    </a>
+                    <a
+                      href="#details"
+                      onClick={() => setActiveDropdown(null)}
+                      className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-slate-50 text-xs font-bold text-slate-800 transition-colors"
+                    >
+                      <Sparkles size={16} className="text-blue-600" />
+                      <span>{isFr ? "Séminaires & Événements VIP" : "Corporate & VIP Events"}</span>
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Resources Dropdown */}
+            <div className="relative group">
+              <button
+                type="button"
+                onClick={() => toggleDropdown("resources")}
+                className="flex items-center gap-1 hover:text-slate-900 transition-colors py-2 cursor-pointer focus:outline-hidden"
+              >
+                <span>{isFr ? "Ressources" : "Resources"}</span>
+                <ChevronDown 
+                  size={14} 
+                  className={`text-slate-400 transition-transform duration-200 ${
+                    activeDropdown === "resources" ? "rotate-180 text-slate-900" : "group-hover:text-slate-600"
+                  }`} 
+                />
+              </button>
+
+              {activeDropdown === "resources" && (
+                <div className="absolute top-full left-0 mt-2 w-72 rounded-2xl bg-white border border-slate-200/90 shadow-2xl p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-3 py-1.5">
+                    {isFr ? "Guides & Documentation" : "Help & Documentation"}
+                  </div>
+                  <div className="space-y-1 mt-1">
+                    <a
+                      href="#faq"
+                      onClick={() => setActiveDropdown(null)}
+                      className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-slate-50 text-xs font-bold text-slate-800 transition-colors"
+                    >
+                      <HelpCircle size={16} className="text-blue-600" />
+                      <span>{isFr ? "Questions Fréquentes (FAQ)" : "Frequently Asked Questions"}</span>
+                    </a>
+                    <Link
+                      href="/compliance-gdpr"
+                      onClick={() => setActiveDropdown(null)}
+                      className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-slate-50 text-xs font-bold text-slate-800 transition-colors"
+                    >
+                      <Shield size={16} className="text-blue-600" />
+                      <span>{isFr ? "Sécurité & Conformité RGPD" : "Security & GDPR"}</span>
+                    </Link>
+                    <Link
+                      href="/features"
+                      onClick={() => setActiveDropdown(null)}
+                      className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-slate-50 text-xs font-bold text-slate-800 transition-colors"
+                    >
+                      <FileText size={16} className="text-blue-600" />
+                      <span>{isFr ? "Plaquette Commerciale" : "Product Overview"}</span>
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Pricing Direct Link */}
+            <a
+              href="https://wa.me/213781457511?text=Bonjour%20Eventzone%2C%20je%20souhaite%20recevoir%20votre%20grille%20tarifaire"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-slate-900 transition-colors py-2 cursor-pointer"
+            >
+              <span>{isFr ? "Tarifs" : "Pricing"}</span>
+            </a>
+          </nav>
+        </div>
+
+        {/* Right Side: Talk to sales, Log In & Get started for free */}
+        <div className="hidden lg:flex items-center gap-4 xl:gap-5">
+          {/* Talk to sales */}
+          <a
+            href="https://wa.me/213781457511?text=Bonjour%20Eventzone%2C%20je%20souhaite%20%C3%A9changer%20avec%20un%20conseiller%20commercial"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[13px] xl:text-[14px] font-medium text-slate-700 hover:text-slate-950 transition-colors"
+          >
+            {isFr ? "Contact commercial" : "Talk to sales"}
+          </a>
+
+          {/* Log In (Outlined White Button) */}
+          <Link
+            href="/checkin"
+            className="px-4 py-2 text-[13px] xl:text-[14px] font-semibold text-slate-800 bg-white border border-slate-300 rounded-lg hover:border-slate-400 hover:bg-slate-50 transition-colors"
+          >
+            {isFr ? "Connexion" : "Log In"}
+          </Link>
+
+          {/* Get started for free (Dark Navy Solid Button) */}
+          <a
+            href="https://wa.me/213781457511?text=Bonjour%20Eventzone%2C%20je%20souhaite%20d%C3%A9marrer%20ou%20demander%20une%20d%C3%A9mo"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-4 xl:px-5 py-2 text-[13px] xl:text-[14px] font-semibold text-white bg-[#0c1a30] hover:bg-[#162b4c] rounded-lg shadow-sm transition-all active:scale-95 cursor-pointer"
+          >
+            {isFr ? "Démarrer gratuitement" : "Get started for free"}
+          </a>
+        </div>
+
+        {/* Mobile Actions: Get started + Hamburger Toggle */}
+        <div className="flex lg:hidden items-center gap-2.5">
+          <a
+            href="https://wa.me/213781457511?text=Bonjour%20Eventzone%2C%20je%20souhaite%20une%20d%C3%A9mo"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3.5 py-1.5 text-xs font-semibold text-white bg-[#0c1a30] hover:bg-[#162b4c] rounded-lg shadow-sm transition-all"
+          >
+            {isFr ? "Démarrer" : "Get started"}
+          </a>
+
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+            aria-label="Toggle navigation menu"
+          >
+            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+        </div>
+
+        {/* Mobile Dropdown Drawer */}
+        {mobileMenuOpen && (
+          <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border border-slate-200 shadow-2xl p-4 z-50 flex flex-col gap-3 lg:hidden animate-in fade-in slide-in-from-top-2 duration-150">
+            <div className="space-y-1">
+              <Link
+                href="/features"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block px-3 py-2 rounded-lg text-sm font-bold text-slate-800 hover:bg-slate-50"
+              >
+                {isFr ? "Produit & Fonctionnalités" : "Product & Features"}
+              </Link>
+              <a
+                href="#details"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50"
+              >
+                Solutions
+              </a>
+              <a
+                href="#faq"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50"
+              >
+                {isFr ? "Ressources & FAQ" : "Resources & FAQ"}
+              </a>
+              <a
+                href="https://wa.me/213781457511?text=Bonjour%20Eventzone%2C%20je%20souhaite%20conna%C3%AEtre%20les%20tarifs"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50"
+              >
+                {isFr ? "Tarifs" : "Pricing"}
+              </a>
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
+              <a
+                href="https://wa.me/213781457511?text=Bonjour%20Eventzone%2C%20je%20souhaite%20un%20devis"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full text-center py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-lg border border-slate-200"
+              >
+                {isFr ? "Contact commercial" : "Talk to sales"}
+              </a>
+              <Link
+                href="/checkin"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full text-center py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 rounded-lg border border-slate-300"
+              >
+                {isFr ? "Connexion" : "Log In"}
+              </Link>
+            </div>
           </div>
-        </div>
+        )}
 
-
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2.5">
-          <a
-            href="https://wa.me/213781457511?text=Bonjour%20Eventzone%2C%20je%20souhaite%20une%20d%C3%A9mo%20du%20plan%20interactif"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl text-slate-700 bg-slate-100 hover:bg-slate-200 transition-all"
-          >
-            <Phone size={13} className="text-emerald-600" />
-            <span>+213 781 45 75 11</span>
-          </a>
-
-          <a
-            href="https://wa.me/213781457511?text=Bonjour%20Eventzone%2C%20je%20souhaite%20une%20d%C3%A9mo%20personnalis%C3%A9e"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-600/20 transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
-          >
-            <Calendar size={14} />
-            <span>Demander une démo</span>
-          </a>
-
-        </div>
-
-      </div>
-    </header>
+      </header>
+    </div>
   );
 }
