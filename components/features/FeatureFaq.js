@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { ChevronDown, HelpCircle } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 export default function FeatureFaq({ feature }) {
   const [openIndex, setOpenIndex] = useState(0);
@@ -34,8 +34,7 @@ export default function FeatureFaq({ feature }) {
                   onClick={() => setOpenIndex(isOpen ? -1 : idx)}
                   className="w-full p-5 sm:p-6 text-left flex items-center justify-between gap-4 cursor-pointer hover:bg-slate-50/70 transition-colors"
                 >
-                  <span className="text-sm sm:text-base font-bold text-slate-900 leading-snug flex items-center gap-2.5">
-                    <HelpCircle size={16} className="text-blue-600 shrink-0" />
+                  <span className="text-sm sm:text-base font-bold text-slate-900 leading-snug">
                     {item.q}
                   </span>
                   <ChevronDown
