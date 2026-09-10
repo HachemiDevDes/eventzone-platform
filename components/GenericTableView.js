@@ -5053,6 +5053,7 @@ function CheckInView({ state, onUpdateState }) {
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [copiedPasscode, setCopiedPasscode] = useState(false);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -5321,47 +5322,46 @@ function CheckInView({ state, onUpdateState }) {
         const localCheckinUrl = eventId ? `/checkin?eventId=${eventId}` : `/checkin`;
 
         return (
-          <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 border border-indigo-500/30 rounded-3xl p-6 shadow-xl text-white relative overflow-hidden">
-            {/* Background Glow */}
-            <div className="absolute top-0 right-0 -mt-8 -mr-8 w-48 h-48 bg-blue-500/15 rounded-full blur-3xl pointer-events-none" />
-
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm relative overflow-hidden">
             <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-              <div className="space-y-2 max-w-xl">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-bold">
-                  <Smartphone size={13} />
-                  <span>{t("checkin.mobilePortalBadge", "Mobile Gate Portal • ci.eventzone.pro")}</span>
-                </div>
-                <h3 className="text-xl font-black text-white tracking-tight">
+              <div className="space-y-1.5 max-w-xl">
+                <h3 className="text-xl font-bold text-slate-900 tracking-tight">
                   {t("checkin.mobileStaffApp", "Mobile Staff Check-In Web App")}
                 </h3>
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  Gate staff and volunteers can open <strong className="text-white">ci.eventzone.pro</strong> on their mobile phones, enter their email and the event passcode below to scan badges with their phone camera or check in delegates manually.
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Gate staff and volunteers can open <strong className="font-semibold text-slate-800">ci.eventzone.pro</strong> on their mobile phones, enter their email and the event passcode below to scan badges with their phone camera or check in delegates manually.
                 </p>
               </div>
 
               {/* Passcode & Quick Actions */}
               <div className="flex flex-wrap items-center gap-3 shrink-0">
                 {/* Passcode Box */}
-                <div className="bg-white/10 border border-white/15 px-4 py-3 rounded-2xl flex flex-col">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    {t("checkin.eventPasscode", "Event Passcode")}
-                  </span>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-lg font-mono font-black tracking-widest text-emerald-400">
-                      {eventPasscode}
+                <div className="bg-slate-50 border border-slate-200/90 rounded-2xl px-4 py-2.5 flex items-center gap-3 select-none">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      {t("checkin.eventPasscode", "Event Passcode")}
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        navigator.clipboard.writeText(eventPasscode);
-                        alert(t("checkin.copiedPasscodeAlert", 'Passcode "{code}" copied to clipboard! Share it with your check-in staff.').replace("{code}", eventPasscode));
-                      }}
-                      title={t("checkin.copyPasscode", "Copy Passcode")}
-                      className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-white/10 cursor-pointer transition-colors"
-                    >
-                      <Copy size={15} />
-                    </button>
+                    <span className="text-lg font-mono font-black tracking-widest text-slate-900 select-all">
+                      {eventPasscode || "—"}
+                    </span>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!eventPasscode) return;
+                      navigator.clipboard.writeText(eventPasscode);
+                      setCopiedPasscode(true);
+                      setTimeout(() => setCopiedPasscode(false), 2000);
+                    }}
+                    title={copiedPasscode ? t("common.copied", "Copied!") : t("checkin.copyPasscode", "Copy Passcode")}
+                    className={`p-2 rounded-xl transition-all cursor-pointer flex items-center justify-center ${
+                      copiedPasscode
+                        ? "bg-emerald-50 text-emerald-600"
+                        : "text-slate-400 hover:text-blue-600 hover:bg-blue-50"
+                    }`}
+                  >
+                    {copiedPasscode ? <Check size={16} className="stroke-[2.5]" /> : <Copy size={16} />}
+                  </button>
                 </div>
 
                 {/* Open Mobile Portal */}
@@ -5369,7 +5369,7 @@ function CheckInView({ state, onUpdateState }) {
                   href={localCheckinUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold text-xs shadow-lg shadow-blue-600/30 flex items-center gap-2 cursor-pointer transition-all hover:scale-102"
+                  className="px-4 py-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white rounded-2xl font-bold text-xs shadow-md shadow-blue-600/20 flex items-center gap-2 cursor-pointer transition-all shrink-0"
                 >
                   <ExternalLink size={15} />
                   <span>{t("checkin.openWebApp", "Open Check-In Web App")}</span>
