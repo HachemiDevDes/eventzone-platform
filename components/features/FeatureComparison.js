@@ -12,10 +12,7 @@ export default function FeatureComparison({ feature }) {
         
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-12 sm:mb-16">
-          <span className="text-xs font-extrabold uppercase tracking-widest text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200/60">
-            Comparatif de Performance
-          </span>
-          <h2 className="mt-4 text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
+          <h2 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
             Pourquoi Choisir Eventzone Face Aux Méthodes Traditionnelles ?
           </h2>
           <p className="mt-3 text-sm sm:text-base text-slate-600">

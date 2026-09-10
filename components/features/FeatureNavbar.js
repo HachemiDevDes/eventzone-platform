@@ -1,11 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Link from "next/link";
-import { ChevronRight, ArrowLeft, Phone, Calendar, Menu, X, Sparkles } from "lucide-react";
+import { ChevronRight, Phone, Calendar } from "lucide-react";
 
 export default function FeatureNavbar({ featureTitle, category }) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-slate-200/80 transition-all">
@@ -41,28 +40,6 @@ export default function FeatureNavbar({ featureTitle, category }) {
           </div>
         </div>
 
-        {/* Section Navigation Links */}
-        <nav className="hidden lg:flex items-center gap-6 text-xs font-bold text-slate-600">
-          <a href="#apercu" className="hover:text-blue-600 transition-colors">
-            Aperçu
-          </a>
-          <a href="#simulateur" className="hover:text-blue-600 transition-colors flex items-center gap-1">
-            <Sparkles size={13} className="text-blue-600" />
-            Démo Interactive
-          </a>
-          <a href="#benefices" className="hover:text-blue-600 transition-colors">
-            Valeur Ajoutée
-          </a>
-          <a href="#details" className="hover:text-blue-600 transition-colors">
-            Fonctionnalités
-          </a>
-          <a href="#comparatif" className="hover:text-blue-600 transition-colors">
-            Comparatif
-          </a>
-          <a href="#faq" className="hover:text-blue-600 transition-colors">
-            FAQ
-          </a>
-        </nav>
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2.5">
@@ -84,64 +61,9 @@ export default function FeatureNavbar({ featureTitle, category }) {
             <span>Demander une démo</span>
           </a>
 
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden p-2 text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-100 transition-colors"
-          >
-            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
         </div>
 
       </div>
-
-      {/* Mobile Dropdown Menu */}
-      {mobileMenuOpen && (
-        <div className="lg:hidden bg-white border-b border-slate-200 px-4 py-3 space-y-2 text-xs font-bold text-slate-700">
-          <a 
-            href="#apercu" 
-            onClick={() => setMobileMenuOpen(false)} 
-            className="block py-1.5 hover:text-blue-600"
-          >
-            Aperçu
-          </a>
-          <a 
-            href="#simulateur" 
-            onClick={() => setMobileMenuOpen(false)} 
-            className="block py-1.5 hover:text-blue-600 text-blue-600"
-          >
-            Démo Interactive
-          </a>
-          <a 
-            href="#benefices" 
-            onClick={() => setMobileMenuOpen(false)} 
-            className="block py-1.5 hover:text-blue-600"
-          >
-            Valeur Ajoutée
-          </a>
-          <a 
-            href="#details" 
-            onClick={() => setMobileMenuOpen(false)} 
-            className="block py-1.5 hover:text-blue-600"
-          >
-            Fonctionnalités Détaillées
-          </a>
-          <a 
-            href="#comparatif" 
-            onClick={() => setMobileMenuOpen(false)} 
-            className="block py-1.5 hover:text-blue-600"
-          >
-            Comparatif Traditionnel vs Eventzone
-          </a>
-          <a 
-            href="#faq" 
-            onClick={() => setMobileMenuOpen(false)} 
-            className="block py-1.5 hover:text-blue-600"
-          >
-            FAQ
-          </a>
-        </div>
-      )}
     </header>
   );
 }

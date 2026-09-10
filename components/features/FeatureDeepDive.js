@@ -12,10 +12,7 @@ export default function FeatureDeepDive({ feature }) {
         
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-16 sm:mb-20">
-          <span className="text-xs font-extrabold uppercase tracking-widest text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200/60">
-            Fonctionnalités Clés en Détail
-          </span>
-          <h2 className="mt-4 text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
+          <h2 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
             Tout Ce Dont Vous Avez Besoin Pour Réussir Votre Exposition
           </h2>
           <p className="mt-3 text-sm sm:text-base text-slate-600">
@@ -35,9 +32,9 @@ export default function FeatureDeepDive({ feature }) {
               >
                 {/* Text Description Column */}
                 <div className="w-full lg:w-1/2 space-y-4">
-                  <div className="inline-flex items-center gap-2 text-xs font-bold text-blue-600 uppercase tracking-wider bg-blue-50 px-3 py-1 rounded-md border border-blue-100">
-                    <span className="font-extrabold">0{idx + 1}</span>
-                    <span>•</span>
+                  <div className="text-xs font-extrabold text-blue-600 uppercase tracking-wider">
+                    <span>0{idx + 1}</span>
+                    <span className="mx-2">•</span>
                     <span>{item.subtitle}</span>
                   </div>
 

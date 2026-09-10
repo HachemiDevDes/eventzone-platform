@@ -27,10 +27,7 @@ export default function FeatureBenefitsGrid({ feature }) {
         
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto">
-          <span className="text-xs font-extrabold uppercase tracking-widest text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200/60">
-            Impact Direct & Rentabilité
-          </span>
-          <h2 className="mt-4 text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
+          <h2 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
             Votre Valeur Ajoutée & Bénéfices Concrets
           </h2>
           <p className="mt-3 text-sm sm:text-base text-slate-600">

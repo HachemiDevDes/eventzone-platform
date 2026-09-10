@@ -32,11 +32,6 @@ export default function FeatureCtaBanner({ featureTitle }) {
           
           {/* Left Column: Proposition Message & Contact Information from PDF Page 5 */}
           <div className="lg:col-span-6 space-y-6">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-bold border border-blue-400/30">
-              <Sparkles size={14} className="text-blue-400" />
-              Prochaines Étapes & Déploiement
-            </div>
-
             <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight">
               Préparez Votre Prochain Événement en Toute Sérénité.
             </h2>
@@ -97,10 +92,7 @@ export default function FeatureCtaBanner({ featureTitle }) {
           <div className="lg:col-span-6">
             <div className="bg-white text-slate-900 p-6 sm:p-8 rounded-3xl shadow-2xl border border-white/20">
               <div className="mb-6">
-                <span className="text-xs font-extrabold uppercase tracking-wider text-blue-600">
-                  Formulaire Devis Express
-                </span>
-                <h3 className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
+                <h3 className="text-xl sm:text-2xl font-black text-slate-900">
                   Demander une proposition chiffrée
                 </h3>
                 <p className="text-xs text-slate-500 mt-1">

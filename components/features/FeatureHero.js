@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { ArrowRight, Sparkles, CheckCircle2, ShieldCheck, Play, Zap } from "lucide-react";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
 
 export default function FeatureHero({ feature }) {
   return (
@@ -14,20 +14,8 @@ export default function FeatureHero({ feature }) {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         
-        {/* Top Eyebrow Tag */}
-        <div className="flex flex-wrap items-center justify-center gap-2 mb-6 text-center">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-200/80 text-blue-700 text-xs font-extrabold shadow-xs">
-            <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
-            <span>{feature.badge || `Module ${feature.moduleNumber} • ${feature.category}`}</span>
-          </div>
-          <span className="hidden sm:inline text-xs text-slate-400">•</span>
-          <span className="text-xs font-semibold text-slate-500 bg-white/80 px-2.5 py-1 rounded-md border border-slate-200 shadow-2xs">
-            Proposition Commerciale Eventzone
-          </span>
-        </div>
-
         {/* Hero Main Heading & Pitch */}
-        <div className="max-w-4xl mx-auto text-center">
+        <div className="max-w-4xl mx-auto text-center pt-2">
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-[1.12]">
             {feature.title}
           </h1>
@@ -48,14 +36,6 @@ export default function FeatureHero({ feature }) {
             >
               <span>Demander une démo personnalisée</span>
               <ArrowRight size={16} />
-            </a>
-
-            <a
-              href="#simulateur"
-              className="w-full sm:w-auto px-7 py-3.5 bg-white hover:bg-slate-50 text-slate-800 font-bold text-sm rounded-xl border border-slate-200 shadow-xs hover:border-slate-300 transition-all flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <Sparkles size={16} className="text-blue-600" />
-              <span>Tester le simulateur en direct</span>
             </a>
           </div>
 

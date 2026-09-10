@@ -13,10 +13,7 @@ export default function FeatureRelatedCarousel({ currentSlug }) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
           <div>
-            <span className="text-xs font-extrabold uppercase tracking-widest text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200/60">
-              Écosystème Global Eventzone
-            </span>
-            <h2 className="mt-3 text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
               Explorez Les Autres Modules de la Plateforme
             </h2>
           </div>
