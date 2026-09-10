@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { 
   Globe, ChevronDown, User, Ticket, 
   Building2, LogOut, Plus, Check, ShieldCheck 
@@ -134,6 +135,12 @@ export default function UniversalTopBar({
         >
           {t("nav.mobileApp", "Mobile App")}
         </a>
+        <Link 
+          href="/features"
+          className="text-xs font-bold text-slate-600 hover:text-blue-600 transition-colors cursor-pointer"
+        >
+          {t("nav.features", "Fonctionnalités")}
+        </Link>
         <button 
           onClick={handleForOrganizersClick}
           className="text-xs font-bold text-slate-600 hover:text-blue-600 transition-colors cursor-pointer bg-transparent border-0"

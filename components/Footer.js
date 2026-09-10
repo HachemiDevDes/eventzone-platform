@@ -248,6 +248,14 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses, cutoutBg 
                   </Link>
                 </li>
                 <li>
+                  <Link
+                    href="/features"
+                    className="hover:text-white transition-colors block text-start rtl:text-right text-left text-blue-400 font-bold"
+                  >
+                    {t("footer.featuresSuite", "Platform Features")}
+                  </Link>
+                </li>
+                <li>
                   <Link href="/privacy" className="hover:text-white transition-colors">
                     {t("footer.privacyPolicy", "Privacy Policy")}
                   </Link>
