@@ -493,7 +493,7 @@ export default function CheckInMobileApp({
               {/* Email Field */}
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5 text-start rtl:text-right text-left">
-                  {t("checkin.staffEmail", "Staff Email Address")}
+                  {t("checkin.staffEmail", "Email")}
                 </label>
                 <input
                   type="email"
@@ -512,7 +512,7 @@ export default function CheckInMobileApp({
               {/* Passcode Field */}
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5 text-start rtl:text-right text-left">
-                  {t("checkin.eventPasscode", "Event Passcode")}
+                  {t("checkin.eventPasscode", "Passcode")}
                 </label>
                 <div className="relative">
                   <input
@@ -520,7 +520,7 @@ export default function CheckInMobileApp({
                     required
                     autoCapitalize="characters"
                     autoCorrect="off"
-                    placeholder={t("checkin.eventPasscodePlaceholder", "Enter event passcode")}
+                    placeholder={t("checkin.eventPasscodePlaceholder", "Enter passcode")}
                     value={authPasscode}
                     onChange={(e) => setAuthPasscode(e.target.value.toUpperCase())}
                     className={`w-full ${
