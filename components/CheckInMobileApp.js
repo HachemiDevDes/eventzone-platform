@@ -500,7 +500,7 @@ export default function CheckInMobileApp({
                   required
                   autoCapitalize="none"
                   autoCorrect="off"
-                  placeholder={t("checkin.staffEmailPlaceholder", "your.email@example.com")}
+                  placeholder={t("checkin.staffEmailPlaceholder", "Enter email")}
                   value={authEmail}
                   onChange={(e) => setAuthEmail(e.target.value)}
                   className={`w-full px-4 py-3.5 bg-slate-950/70 border border-white/10 rounded-2xl text-sm font-medium text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all ${
