@@ -432,6 +432,20 @@ export default function CheckInMobileApp({
     return attendees.filter((a) => a.checkedIn || a.checked_in).length;
   }, [attendees]);
 
+  const gateCheckedInCount = useMemo(() => {
+    const activeGate = session?.gateName || "Principal Gate";
+    const isPrincipal = !session?.gateName || session.gateName.trim().toLowerCase() === "principal gate" || session.gateName.trim().toLowerCase() === "principal";
+    return attendees.filter((a) => {
+      const isChecked = Boolean(a.checkedIn || a.checked_in);
+      if (!isChecked) return false;
+      const gVal = (a.checkinGate || a.checkin_gate || "").trim().toLowerCase();
+      if (isPrincipal) {
+        return !gVal || gVal === "principal gate" || gVal === "principal";
+      }
+      return gVal === activeGate.trim().toLowerCase();
+    }).length;
+  }, [attendees, session?.gateName]);
+
   const totalCount = attendees.length;
   const remainingCount = Math.max(0, totalCount - checkedInCount);
   const checkedInPercentage = totalCount > 0 ? Math.round((checkedInCount / totalCount) * 100) : 0;
