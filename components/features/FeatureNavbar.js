@@ -66,7 +66,7 @@ export default function FeatureNavbar({ featureTitle, category }) {
 
   return (
     <div ref={navRef} className="sticky top-3 sm:top-4 z-50 px-3 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
-      <header className="bg-white rounded-2xl border border-slate-200/90 shadow-[0_2px_14px_rgba(0,0,0,0.05)] px-4 sm:px-6 h-16 sm:h-[68px] flex items-center justify-between transition-all relative">
+      <header className="bg-white rounded-3xl sm:rounded-[26px] border border-slate-200/80 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06),0_1px_3px_rgba(0,0,0,0.03)] px-4 sm:px-6 h-16 sm:h-[68px] flex items-center justify-between transition-all relative">
         
         {/* Left Side: Logo & Main Navigation Links */}
         <div className="flex items-center gap-6 xl:gap-8">
@@ -79,8 +79,8 @@ export default function FeatureNavbar({ featureTitle, category }) {
             <img 
               src="https://i.imgur.com/jFDrQbM.png" 
               alt="eventzone" 
-              style={{ height: '28px', width: 'auto' }}
-              className="h-7 sm:h-8 w-auto object-contain transition-transform group-hover:scale-105" 
+              style={{ height: '22px', width: 'auto' }}
+              className="h-5 sm:h-[22px] w-auto object-contain transition-transform group-hover:scale-105" 
             />
           </Link>
 
@@ -105,7 +105,7 @@ export default function FeatureNavbar({ featureTitle, category }) {
 
               {/* Product Flyout Menu */}
               {activeDropdown === "product" && (
-                <div className={`absolute top-full ${isRTL ? "right-0" : "left-0"} mt-2 w-84 sm:w-96 rounded-2xl bg-white border border-slate-200/90 shadow-2xl p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150`}>
+                <div className={`absolute top-full ${isRTL ? "right-0" : "left-0"} mt-2 w-84 sm:w-96 rounded-3xl bg-white border border-slate-200/90 shadow-2xl p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150`}>
                   <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-3 py-1.5 text-start">
                     {ui.allModules}
                   </div>
@@ -166,7 +166,7 @@ export default function FeatureNavbar({ featureTitle, category }) {
               </button>
 
               {activeDropdown === "solutions" && (
-                <div className={`absolute top-full ${isRTL ? "right-0" : "left-0"} mt-2 w-72 rounded-2xl bg-white border border-slate-200/90 shadow-2xl p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150`}>
+                <div className={`absolute top-full ${isRTL ? "right-0" : "left-0"} mt-2 w-72 rounded-3xl bg-white border border-slate-200/90 shadow-2xl p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150`}>
                   <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-3 py-1.5 text-start">
                     {ui.useCases}
                   </div>
@@ -217,7 +217,7 @@ export default function FeatureNavbar({ featureTitle, category }) {
               </button>
 
               {activeDropdown === "resources" && (
-                <div className={`absolute top-full ${isRTL ? "right-0" : "left-0"} mt-2 w-72 rounded-2xl bg-white border border-slate-200/90 shadow-2xl p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150`}>
+                <div className={`absolute top-full ${isRTL ? "right-0" : "left-0"} mt-2 w-72 rounded-3xl bg-white border border-slate-200/90 shadow-2xl p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150`}>
                   <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-3 py-1.5 text-start">
                     {ui.guidesAndDocs}
                   </div>
@@ -292,7 +292,7 @@ export default function FeatureNavbar({ featureTitle, category }) {
             </button>
 
             {langMenuOpen && (
-              <div className={`absolute top-full ${isRTL ? "left-0" : "right-0"} mt-2 w-36 bg-white border border-slate-200 rounded-2xl shadow-xl p-1 z-50 animate-in fade-in slide-in-from-top-2 duration-150 space-y-0.5`}>
+              <div className={`absolute top-full ${isRTL ? "left-0" : "right-0"} mt-2 w-36 bg-white border border-slate-200 rounded-3xl shadow-xl p-1.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150 space-y-0.5`}>
                 {languages.map(item => (
                   <button
                     key={item.code}
@@ -318,33 +318,13 @@ export default function FeatureNavbar({ featureTitle, category }) {
             )}
           </div>
 
-          {/* Talk to sales */}
-          <a
-            href="https://wa.me/213781457511?text=Bonjour%20Eventzone%2C%20je%20souhaite%20%C3%A9changer%20avec%20un%20conseiller%20commercial"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[13px] xl:text-[14px] font-medium text-slate-700 hover:text-slate-950 transition-colors"
-          >
-            {ui.talkToSales}
-          </a>
-
-          {/* Log In (Outlined White Button) */}
+          {/* Request a Quote Button */}
           <Link
-            href="/checkin"
-            className="px-3.5 py-2 text-[13px] xl:text-[14px] font-semibold text-slate-800 bg-white border border-slate-300 rounded-lg hover:border-slate-400 hover:bg-slate-50 transition-colors"
+            href="/request-quote"
+            className="px-5 py-2.5 text-[13px] xl:text-[14px] font-semibold text-white bg-[#0c1a30] hover:bg-[#162b4c] rounded-full shadow-xs hover:shadow-md transition-all active:scale-95 cursor-pointer inline-flex items-center gap-1.5 shrink-0"
           >
-            {ui.logIn}
+            <span>{ui.requestQuote || "Request a Quote"}</span>
           </Link>
-
-          {/* Get started for free (Dark Navy Solid Button) */}
-          <a
-            href="https://wa.me/213781457511?text=Bonjour%20Eventzone%2C%20je%20souhaite%20d%C3%A9marrer%20ou%20demander%20une%20d%C3%A9mo"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-4 xl:px-5 py-2 text-[13px] xl:text-[14px] font-semibold text-white bg-[#0c1a30] hover:bg-[#162b4c] rounded-lg shadow-sm transition-all active:scale-95 cursor-pointer"
-          >
-            {ui.getStarted}
-          </a>
         </div>
 
         {/* Mobile Actions: Language + Get started + Hamburger Toggle */}
@@ -388,14 +368,12 @@ export default function FeatureNavbar({ featureTitle, category }) {
             )}
           </div>
 
-          <a
-            href="https://wa.me/213781457511?text=Bonjour%20Eventzone%2C%20je%20souhaite%20une%20d%C3%A9mo"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-3 py-1.5 text-xs font-semibold text-white bg-[#0c1a30] hover:bg-[#162b4c] rounded-lg shadow-sm transition-all"
+          <Link
+            href="/request-quote"
+            className="px-3.5 py-1.5 text-xs font-semibold text-white bg-[#0c1a30] hover:bg-[#162b4c] rounded-full shadow-xs transition-all shrink-0"
           >
-            {ui.getStartedShort}
-          </a>
+            {ui.requestQuote || "Devis"}
+          </Link>
 
           <button
             type="button"
@@ -412,7 +390,7 @@ export default function FeatureNavbar({ featureTitle, category }) {
 
         {/* Mobile Dropdown Drawer */}
         {mobileMenuOpen && (
-          <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border border-slate-200 shadow-2xl p-4 z-50 flex flex-col gap-3 lg:hidden animate-in fade-in slide-in-from-top-2 duration-150 text-start">
+          <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-3xl border border-slate-200/90 shadow-2xl p-4 z-50 flex flex-col gap-3 lg:hidden animate-in fade-in slide-in-from-top-2 duration-150 text-start">
             <div className="space-y-1">
               <Link
                 href="/features"
@@ -474,20 +452,12 @@ export default function FeatureNavbar({ featureTitle, category }) {
             </div>
 
             <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
-              <a
-                href="https://wa.me/213781457511?text=Bonjour%20Eventzone%2C%20je%20souhaite%20un%20devis"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full text-center py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-lg border border-slate-200"
-              >
-                {ui.talkToSales}
-              </a>
               <Link
-                href="/checkin"
+                href="/request-quote"
                 onClick={() => setMobileMenuOpen(false)}
-                className="w-full text-center py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 rounded-lg border border-slate-300"
+                className="w-full text-center py-2.5 text-sm font-semibold text-white bg-[#0c1a30] hover:bg-[#162b4c] rounded-full shadow-xs transition-all"
               >
-                {ui.logIn}
+                {ui.requestQuote || "Request a Quote"}
               </Link>
             </div>
           </div>
