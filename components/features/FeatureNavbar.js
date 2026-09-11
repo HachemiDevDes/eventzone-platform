@@ -280,12 +280,7 @@ export default function FeatureNavbar({ featureTitle, category }) {
                 setLangMenuOpen(o => !o);
                 setActiveDropdown(null);
               }}
-              className="h-10 flex items-center gap-1.5 px-3 rounded-[10px] border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer shadow-xs shrink-0 squircle-smooth"
-              style={{
-                cornerSmoothing: 1,
-                WebkitCornerSmoothing: 1,
-                cornerShape: "squircle",
-              }}
+              className="h-9 sm:h-10 flex items-center gap-1.5 px-2.5 rounded-[10px] hover:bg-slate-100/80 text-slate-700 hover:text-slate-900 text-xs font-bold transition-all cursor-pointer shrink-0"
               title="Change Language"
             >
               <img 
@@ -294,12 +289,6 @@ export default function FeatureNavbar({ featureTitle, category }) {
                 className="w-4 h-4 object-contain shrink-0" 
               />
               <span className="uppercase tracking-wide font-black text-[11px]">{curLang?.short || lang}</span>
-              <ChevronDown 
-                size={12} 
-                className={`text-slate-400 transition-transform duration-200 ${
-                  langMenuOpen ? "rotate-180 text-blue-600" : ""
-                }`} 
-              />
             </button>
 
             {langMenuOpen && (
@@ -354,7 +343,7 @@ export default function FeatureNavbar({ featureTitle, category }) {
                 setLangMenuOpen(o => !o);
                 setMobileMenuOpen(false);
               }}
-              className="h-8 flex items-center gap-1 px-2 rounded-lg border border-slate-200 bg-white text-slate-700 text-xs font-bold"
+              className="h-8 flex items-center gap-1 px-1.5 rounded-lg hover:bg-slate-100/80 text-slate-700 text-xs font-bold transition-colors"
             >
               <img src={curLang?.icon} alt={lang} className="w-3.5 h-3.5 object-contain" />
               <span className="uppercase text-[10px] font-black">{curLang?.short || lang}</span>

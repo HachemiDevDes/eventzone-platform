@@ -15,7 +15,6 @@ import { useLanguage } from "../lib/i18n";
 import { COUNTRY_CITIES_MAP } from "../lib/formPresets";
 import SearchableSelect from "./SearchableSelect";
 import AnimatedMeshBackground from "./features/AnimatedMeshBackground";
-import Footer from "./Footer";
 
 const STEPS = [
   { id: 1, title: "Contact" },
@@ -1119,9 +1118,6 @@ export default function RequestQuoteClient() {
           </div>
         )}
       </main>
-
-      {/* ── Platform Footer ── */}
-      <Footer />
     </div>
   );
 }
