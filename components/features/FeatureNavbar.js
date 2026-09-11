@@ -79,14 +79,14 @@ export default function FeatureNavbar({ featureTitle, category }) {
           {/* Logo */}
           <Link 
             href="/"
-            className="flex items-center gap-2 group shrink-0"
+            className="flex items-center gap-2 shrink-0"
             title="Eventzone"
           >
             <img 
               src="https://i.imgur.com/jFDrQbM.png" 
               alt="eventzone" 
               style={{ height: '22px', width: 'auto' }}
-              className="h-5 sm:h-[22px] w-auto object-contain transition-transform group-hover:scale-105" 
+              className="h-5 sm:h-[22px] w-auto object-contain" 
             />
           </Link>
 

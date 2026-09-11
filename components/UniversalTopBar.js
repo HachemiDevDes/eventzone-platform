@@ -93,14 +93,14 @@ export default function UniversalTopBar({
       <div className="flex items-center shrink-0">
         <div 
           onClick={handleBrandClick}
-          className="flex items-center cursor-pointer select-none group"
+          className="flex items-center cursor-pointer select-none"
           title="Eventzone Home"
         >
           <img 
             src="https://i.imgur.com/jFDrQbM.png" 
             alt="eventzone" 
             style={{ height: '26px', width: 'auto' }}
-            className="h-6 sm:h-7 w-auto max-w-[115px] sm:max-w-[160px] object-contain transition-transform group-hover:scale-105 shrink-0" 
+            className="h-6 sm:h-7 w-auto max-w-[115px] sm:max-w-[160px] object-contain shrink-0" 
           />
         </div>
       </div>
@@ -140,6 +140,12 @@ export default function UniversalTopBar({
           className="text-xs font-bold text-slate-600 hover:text-blue-600 transition-colors cursor-pointer"
         >
           {t("nav.features", "Fonctionnalités")}
+        </Link>
+        <Link 
+          href="/request-quote"
+          className="text-xs font-bold text-slate-600 hover:text-blue-600 transition-colors cursor-pointer"
+        >
+          {t("nav.requestQuote", "Demander un devis")}
         </Link>
         <button 
           onClick={handleForOrganizersClick}
