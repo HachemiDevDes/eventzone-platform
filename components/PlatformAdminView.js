@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import {
-  ShieldCheck, ShieldAlert, Sparkles, Building2, Calendar, Users, Ticket, 
+  ShieldCheck, ShieldAlert, Sparkles, Building2, Calendar, Users, User, Ticket, 
   CreditCard, Search, Filter, Check, X, ChevronRight, ChevronLeft, ArrowUpRight, 
   ExternalLink, RefreshCw, Star, Download, Eye, AlertCircle, CheckCircle2, 
   Lock, Unlock, Edit3, Pin, ChevronDown, Sliders, BarChart3, TrendingUp,

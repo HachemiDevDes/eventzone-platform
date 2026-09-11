@@ -60,7 +60,30 @@ export const metadata = {
   },
 };
 
-export default async function Page() {
+export default async function Page(props) {
+  const searchParams = props?.searchParams ? await props.searchParams : {};
+  const viewParam = searchParams?.view;
+  const rsvpParam = searchParams?.rsvp;
+  let initialView = "home";
+
+  if (rsvpParam === "true" || viewParam === "public-rsvp" || (viewParam === "rsvp" && searchParams?.public === "true")) {
+    initialView = "event-landing";
+  } else if (viewParam) {
+    const validViews = [
+      "home", "auth", "profile", "my-tickets", "events-hub", "create-event", "event-landing", "register", "visitor-portal", "attendee-portal", "overview", "page-builder", "calendar", "event-details", 
+      "attendees", "pending", "organizations", "sponsors", 
+      "exhibitors", "speakers", "opportunities", "influencers", "tickets", "forms", "rsvp", "logistics", "documents", "check-in", 
+      "my-team", "developers", "analytics", "communications", "certificates", "floor-plan", "portal-settings", "admin"
+    ];
+    if (validViews.includes(viewParam)) {
+      initialView = viewParam;
+    }
+  } else if (searchParams?.ref || searchParams?.influencer || searchParams?.referral) {
+    initialView = "event-landing";
+  }
+
+  const initialAuthMode = searchParams?.mode === "signup" ? "signup" : "signin";
+
   let events = [];
   try {
     events = await fetchPublicEvents();
@@ -237,7 +260,11 @@ export default async function Page() {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListLd) }}
         />
       )}
-      <HomeClient initialPublicEvents={events} />
+      <HomeClient 
+        initialPublicEvents={events} 
+        initialView={initialView}
+        initialAuthMode={initialAuthMode}
+      />
     </>
   );
 }

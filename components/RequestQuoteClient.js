@@ -501,8 +501,8 @@ export default function RequestQuoteClient() {
             </div>
 
             {/* Minimal Stepper Header */}
-            <div className="max-w-xl mx-auto px-1 sm:px-0">
-              <div className="bg-white/95 backdrop-blur-sm border border-slate-200/80 rounded-full px-2.5 sm:px-6 py-1.5 sm:py-2.5 shadow-2xs flex items-center justify-between gap-1 sm:gap-2">
+            <div className="flex justify-center px-2 sm:px-0">
+              <div className="bg-white/95 backdrop-blur-sm border border-slate-200/80 rounded-full px-4 sm:px-7 py-1.5 sm:py-2 shadow-2xs inline-flex items-center gap-1 sm:gap-2 max-w-full">
                 {STEPS.map((s, idx) => {
                   const isCompleted = currentStep > s.id;
                   const isActive = currentStep === s.id;
@@ -514,7 +514,7 @@ export default function RequestQuoteClient() {
                         type="button"
                         onClick={() => handleStepClick(s.id)}
                         disabled={!isClickable}
-                        className={`flex items-center gap-1.5 sm:gap-2 py-1 px-1.5 sm:px-2 rounded-full transition-all select-none ${
+                        className={`flex items-center gap-1.5 sm:gap-2 py-1 px-1.5 sm:px-2 rounded-full transition-all select-none shrink-0 ${
                           isClickable
                             ? "cursor-pointer hover:bg-slate-50 text-slate-700"
                             : isActive
@@ -534,7 +534,7 @@ export default function RequestQuoteClient() {
                           {isCompleted ? <Check size={12} strokeWidth={3} /> : s.id}
                         </span>
                         <span
-                          className={`text-[11px] sm:text-xs transition-colors ${
+                          className={`text-[11px] sm:text-xs whitespace-nowrap transition-colors ${
                             isActive
                               ? "font-extrabold text-blue-600 inline"
                               : isCompleted
@@ -547,7 +547,7 @@ export default function RequestQuoteClient() {
                       </button>
 
                       {idx < STEPS.length - 1 && (
-                        <div className="flex-1 h-0.5 bg-slate-100 rounded-full mx-0.5 sm:mx-2 overflow-hidden min-w-[12px] sm:min-w-[24px]">
+                        <div className="w-3 sm:w-6 md:w-8 h-0.5 bg-slate-100 rounded-full shrink-0 overflow-hidden mx-0.5 sm:mx-1">
                           <div
                             className={`h-full bg-blue-600 transition-all duration-300 ${
                               currentStep > idx + 1 ? "w-full" : "w-0"

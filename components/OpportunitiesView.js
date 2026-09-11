@@ -7,7 +7,7 @@ import {
   Sparkles, Store, CheckCircle2, XCircle, ArrowRight, ArrowLeft, 
   MoreVertical, Calendar, Phone, Mail, FileText, ChevronRight,
   Layers, RotateCcw, Award, Trash2, Edit3, MessageSquare, 
-  PieChart, BarChart2, Check, Download, AlertCircle, Clock
+  PieChart, BarChart2, Check, Download, AlertCircle, Clock, Archive
 } from "lucide-react";
 import { useLanguage } from "../lib/i18n";
 import SearchableSelect from "./SearchableSelect";

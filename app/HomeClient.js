@@ -164,7 +164,7 @@ export function resolveActiveEventId() {
   return DEFAULT_EVENT_ID;
 }
 
-export function HomeContent({ initialPublicEvents = [] }) {
+export function HomeContent({ initialPublicEvents = [], initialView = "home", initialAuthMode = "signin" }) {
   const searchParamsHook = useSearchParams();
   const { t, lang, setLang, isRTL, dir, languages } = useLanguage();
   const [mounted, setMounted] = useState(false);
@@ -203,7 +203,7 @@ export function HomeContent({ initialPublicEvents = [] }) {
     return false;
   });
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authModalInitialMode, setAuthModalInitialMode] = useState("signin");
+  const [authModalInitialMode, setAuthModalInitialMode] = useState(initialAuthMode || "signin");
 
   // Multi-Event State
   const [publicEvents, setPublicEvents] = useState(() => {
@@ -270,8 +270,11 @@ export function HomeContent({ initialPublicEvents = [] }) {
   // Visitor Registrations
   const [visitorRegistrations, setVisitorRegistrations] = useState([]);
 
-  // Main UI routing view: initialized synchronously from URL query param to eliminate flash of home page
+  // Main UI routing view: initialized from initialView (passed from server URL or fallback to "home")
   const [currentView, setCurrentView] = useState(() => {
+    if (initialView && initialView !== "home") {
+      return initialView;
+    }
     if (typeof window !== "undefined") {
       const searchParams = new URLSearchParams(window.location.search);
       const viewParam = searchParams.get("view");
@@ -294,7 +297,7 @@ export function HomeContent({ initialPublicEvents = [] }) {
         return "event-landing";
       }
     }
-    return "home";
+    return initialView || "home";
   });
  
   const [participantsOpen, setParticipantsOpen] = useState(false);
@@ -3542,21 +3545,7 @@ export function HomeContent({ initialPublicEvents = [] }) {
 
 
 
-  // Prevent hydration mismatch between server-rendered HTML and client URL-selected view (allow home page to SSR for SEO)
-  if (!mounted && currentView !== "home") {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center font-sans">
-        <div className="flex flex-col items-center gap-3">
-          <img 
-            src="https://i.imgur.com/jFDrQbM.png" 
-            alt="eventzone" 
-            style={{ width: "130px", height: "32px", objectFit: "contain" }}
-            className="h-8 w-auto object-contain opacity-80 animate-pulse" 
-          />
-        </div>
-      </div>
-    );
-  }
+
 
   // Smooth auth resolution loader for protected routes (e.g. returning from Google OAuth)
   if (!authInitialized && !currentUser && currentView !== "home" && currentView !== "event-landing" && currentView !== "register" && currentView !== "auth") {
@@ -5179,7 +5168,7 @@ export function HomeContent({ initialPublicEvents = [] }) {
   );
 }
 
-export default function HomeClient({ initialPublicEvents = [] }) {
+export default function HomeClient({ initialPublicEvents = [], initialView = "home", initialAuthMode = "signin" }) {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-slate-50 flex items-center justify-center font-sans">
@@ -5191,7 +5180,11 @@ export default function HomeClient({ initialPublicEvents = [] }) {
         />
       </div>
     }>
-      <HomeContent initialPublicEvents={initialPublicEvents} />
+      <HomeContent 
+        initialPublicEvents={initialPublicEvents} 
+        initialView={initialView} 
+        initialAuthMode={initialAuthMode} 
+      />
     </Suspense>
   );
 }
