@@ -75,7 +75,7 @@ export default function FeatureNavbar({ featureTitle, category }) {
       >
         
         {/* Left Side: Logo & Main Navigation Links */}
-        <div className="flex items-center gap-6 xl:gap-8">
+        <div className="flex items-center gap-4 lg:gap-6 xl:gap-8 min-w-0">
           {/* Logo */}
           <Link 
             href="/"
@@ -85,7 +85,7 @@ export default function FeatureNavbar({ featureTitle, category }) {
             <img 
               src="https://i.imgur.com/jFDrQbM.png" 
               alt="eventzone" 
-              style={{ height: '22px', width: 'auto' }}
+              style={{ height: '22px', width: 'auto', maxWidth: '120px' }}
               className="h-5 sm:h-[22px] w-auto object-contain" 
             />
           </Link>
@@ -332,8 +332,8 @@ export default function FeatureNavbar({ featureTitle, category }) {
           </Link>
         </div>
 
-        {/* Mobile Actions: Language + Get started + Hamburger Toggle */}
-        <div className="flex lg:hidden items-center gap-2">
+        {/* Mobile Actions: Language + Quote + Hamburger Toggle */}
+        <div className="flex lg:hidden items-center gap-1.5 sm:gap-2 shrink-0">
           
           {/* Mobile Quick Language Toggle */}
           <div className="relative shrink-0">
@@ -343,14 +343,14 @@ export default function FeatureNavbar({ featureTitle, category }) {
                 setLangMenuOpen(o => !o);
                 setMobileMenuOpen(false);
               }}
-              className="h-8 flex items-center gap-1 px-1.5 rounded-lg hover:bg-slate-100/80 text-slate-700 text-xs font-bold transition-colors"
+              className="h-8 flex items-center gap-1 px-1.5 rounded-lg hover:bg-slate-100/80 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
             >
-              <img src={curLang?.icon} alt={lang} className="w-3.5 h-3.5 object-contain" />
+              <img src={curLang?.icon} alt={lang} className="w-3.5 h-3.5 object-contain shrink-0" />
               <span className="uppercase text-[10px] font-black">{curLang?.short || lang}</span>
             </button>
 
             {langMenuOpen && (
-              <div className={`absolute top-full ${isRTL ? "left-0" : "right-0"} mt-2 w-32 bg-white border border-slate-200 rounded-xl shadow-xl p-1 z-50 space-y-0.5`}>
+              <div className={`absolute top-full ${isRTL ? "left-0" : "right-0"} mt-2 w-32 bg-white border border-slate-200 rounded-xl shadow-xl p-1 z-50 space-y-0.5 animate-in fade-in slide-in-from-top-2 duration-150`}>
                 {languages.map(item => (
                   <button
                     key={item.code}
@@ -359,14 +359,15 @@ export default function FeatureNavbar({ featureTitle, category }) {
                       if (setLang) setLang(item.code);
                       setLangMenuOpen(false);
                     }}
-                    className={`w-full text-start px-2 py-1.5 rounded-lg text-xs flex items-center justify-between ${
-                      lang === item.code ? "bg-blue-50 text-blue-600 font-bold" : "text-slate-700"
+                    className={`w-full text-start px-2 py-1.5 rounded-lg text-xs flex items-center justify-between cursor-pointer ${
+                      lang === item.code ? "bg-blue-50 text-blue-600 font-bold" : "text-slate-700 hover:bg-slate-50"
                     }`}
                   >
                     <div className="flex items-center gap-1.5">
-                      <img src={item.icon} alt={item.code} className="w-3.5 h-3.5 object-contain" />
+                      <img src={item.icon} alt={item.code} className="w-3.5 h-3.5 object-contain shrink-0" />
                       <span>{item.label}</span>
                     </div>
+                    {lang === item.code && <Check size={12} className="text-blue-600 shrink-0" />}
                   </button>
                 ))}
               </div>
@@ -375,14 +376,15 @@ export default function FeatureNavbar({ featureTitle, category }) {
 
           <Link
             href="/request-quote"
-            className="px-3.5 py-2 text-xs font-semibold text-white bg-[#0c1a30] hover:bg-[#162b4c] rounded-[12px] shadow-sm transition-all shrink-0 squircle-button squircle-smooth"
+            className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-[11px] sm:text-xs font-bold text-white bg-[#0c1a30] hover:bg-[#162b4c] active:scale-95 rounded-xl shadow-xs transition-all shrink-0 squircle-button squircle-smooth"
             style={{
               cornerSmoothing: "1",
               WebkitCornerSmoothing: "1",
               cornerShape: "squircle",
             }}
           >
-            <span>{ui.requestQuote || "Devis"}</span>
+            <span className="hidden xs:inline sm:inline">{ui.requestQuote || "Request a Quote"}</span>
+            <span className="xs:hidden sm:hidden">{lang === "fr" ? "Devis" : lang === "ar" ? "طلب سعر" : "Quote"}</span>
           </Link>
 
           <button
@@ -391,7 +393,7 @@ export default function FeatureNavbar({ featureTitle, category }) {
               setMobileMenuOpen(!mobileMenuOpen);
               setLangMenuOpen(false);
             }}
-            className="p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+            className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
             aria-label="Toggle navigation menu"
           >
             {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
