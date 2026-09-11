@@ -64,9 +64,9 @@ export default function FeatureNavbar({ featureTitle, category }) {
     setActiveDropdown(activeDropdown === menuName ? null : menuName);
   };
   return (
-    <div ref={navRef} className="sticky top-3 sm:top-4 z-50 w-[95%] mx-auto">
+    <div ref={navRef} className="sticky top-2.5 sm:top-4 z-50 w-[95%] mx-auto">
       <header 
-        className="bg-white rounded-[18px] sm:rounded-[20px] border border-slate-200/90 shadow-[0_2px_16px_rgba(0,0,0,0.06)] pl-4 sm:pl-6 pr-2.5 sm:pr-3.5 rtl:pr-4 sm:rtl:pr-6 rtl:pl-2.5 sm:rtl:pl-3.5 h-16 sm:h-[70px] flex items-center justify-between transition-all relative w-full squircle-smooth"
+        className="bg-white rounded-[16px] sm:rounded-[20px] border border-slate-200/90 shadow-[0_2px_16px_rgba(0,0,0,0.06)] px-3.5 sm:pl-6 sm:pr-3.5 rtl:px-3.5 sm:rtl:pr-6 sm:rtl:pl-3.5 h-14 sm:h-[70px] flex items-center justify-between transition-all relative w-full squircle-smooth"
         style={{
           cornerSmoothing: "1",
           WebkitCornerSmoothing: "1",
@@ -356,10 +356,10 @@ export default function FeatureNavbar({ featureTitle, category }) {
                 setLangMenuOpen(o => !o);
                 setMobileMenuOpen(false);
               }}
-              className="h-8 flex items-center gap-1 px-1.5 rounded-lg hover:bg-slate-100/80 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
+              className="h-8.5 flex items-center gap-1.5 px-2 rounded-[10px] hover:bg-slate-100/80 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
             >
               <img src={curLang?.icon} alt={lang} className="w-3.5 h-3.5 object-contain shrink-0" />
-              <span className="uppercase text-[10px] font-black">{curLang?.short || lang}</span>
+              <span className="uppercase text-[11px] font-black tracking-wide">{curLang?.short || lang}</span>
             </button>
 
             {langMenuOpen && (
@@ -387,29 +387,25 @@ export default function FeatureNavbar({ featureTitle, category }) {
             )}
           </div>
 
+          {/* Mobile Quote Button */}
           <Link
             href="/request-quote"
-            className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-[11px] sm:text-xs font-bold text-white bg-[#0c1a30] hover:bg-[#162b4c] active:scale-95 rounded-xl shadow-xs transition-all shrink-0 squircle-button squircle-smooth"
-            style={{
-              cornerSmoothing: "1",
-              WebkitCornerSmoothing: "1",
-              cornerShape: "squircle",
-            }}
+            className="h-8.5 px-3 text-xs font-semibold text-white bg-[#0c1a30] hover:bg-[#162b4c] active:scale-95 rounded-[10px] shadow-2xs transition-all inline-flex items-center justify-center shrink-0 cursor-pointer"
           >
-            <span className="hidden xs:inline sm:inline">{ui.requestQuote || "Request a Quote"}</span>
-            <span className="xs:hidden sm:hidden">{lang === "fr" ? "Devis" : lang === "ar" ? "طلب سعر" : "Quote"}</span>
+            <span>{lang === "fr" ? "Devis" : lang === "ar" ? "طلب سعر" : "Quote"}</span>
           </Link>
 
+          {/* Mobile Menu Toggle Button */}
           <button
             type="button"
             onClick={() => {
               setMobileMenuOpen(!mobileMenuOpen);
               setLangMenuOpen(false);
             }}
-            className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
+            className="w-8.5 h-8.5 flex items-center justify-center rounded-[10px] text-slate-700 hover:text-slate-950 hover:bg-slate-100 active:bg-slate-200/70 transition-colors cursor-pointer shrink-0"
             aria-label="Toggle navigation menu"
           >
-            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            {mobileMenuOpen ? <X size={18} strokeWidth={2.2} /> : <Menu size={18} strokeWidth={2.2} />}
           </button>
         </div>
 
