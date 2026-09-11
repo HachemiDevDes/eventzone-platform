@@ -61,6 +61,23 @@
   }
 }
 
+/* Feature Module Cards & Cards with Max Corner Smoothing */
+.module-card-squircle,
+.squircle-card {
+  border-radius: 26px !important;
+  corner-smoothing: 1;
+  -webkit-corner-smoothing: 1;
+  corner-shape: squircle;
+}
+
+@supports (corner-shape: superellipse(4)) {
+  .module-card-squircle,
+  .squircle-card {
+    corner-shape: superellipse(4);
+  }
+}
+
+
 
 @keyframes fadeIn {
   from { opacity: 0; }

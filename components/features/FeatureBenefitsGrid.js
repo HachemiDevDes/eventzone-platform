@@ -50,9 +50,21 @@ export default function FeatureBenefitsGrid({ feature }) {
             return (
               <div
                 key={idx}
-                className="p-6 sm:p-7 rounded-2xl bg-white/80 backdrop-blur-md border border-slate-200/80 hover:border-blue-300 hover:bg-white transition-all duration-200 hover:shadow-xl group text-start"
+                className="p-6 sm:p-7 rounded-[24px] bg-white/80 backdrop-blur-md border border-slate-200/80 hover:border-blue-300 hover:bg-white transition-all duration-200 hover:shadow-xl group text-start squircle-card squircle-smooth"
+                style={{
+                  cornerSmoothing: 1,
+                  WebkitCornerSmoothing: 1,
+                  cornerShape: "squircle",
+                }}
               >
-                <div className="w-12 h-12 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-600/20 group-hover:scale-110 transition-transform">
+                <div 
+                  className="w-12 h-12 rounded-[14px] bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-600/20 group-hover:scale-110 transition-transform squircle-smooth"
+                  style={{
+                    cornerSmoothing: 1,
+                    WebkitCornerSmoothing: 1,
+                    cornerShape: "squircle",
+                  }}
+                >
                   <IconComponent size={22} />
                 </div>
 

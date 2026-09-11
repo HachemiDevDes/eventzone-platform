@@ -35,7 +35,12 @@ export default function FeatureRelatedCarousel({ currentSlug }) {
             <Link
               key={item.slug}
               href={`/features/${item.slug}`}
-              className="p-6 sm:p-7 rounded-2xl bg-white/90 backdrop-blur-sm hover:bg-white border border-slate-200/70 hover:border-blue-400/50 shadow-sm hover:shadow-xl hover:shadow-blue-500/5 hover:-translate-y-1 transition-all duration-300 group flex flex-col justify-between text-start"
+              className="p-6 sm:p-7 rounded-[26px] bg-white/90 backdrop-blur-sm hover:bg-white border border-slate-200/70 hover:border-blue-400/50 shadow-sm hover:shadow-xl hover:shadow-blue-500/5 hover:-translate-y-1 transition-all duration-300 group flex flex-col justify-between text-start module-card-squircle squircle-smooth"
+              style={{
+                cornerSmoothing: 1,
+                WebkitCornerSmoothing: 1,
+                cornerShape: "squircle",
+              }}
             >
               <div>
                 <div className="flex items-center justify-between gap-2">
