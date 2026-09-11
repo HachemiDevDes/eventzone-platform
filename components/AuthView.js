@@ -385,7 +385,7 @@ export default function AuthView({
   };
 
   return (
-    <div className="min-h-screen w-full relative bg-slate-50 text-slate-900 flex flex-col justify-center items-center p-4 sm:p-8 font-sans selection:bg-blue-600 selection:text-white overflow-x-hidden">
+    <div className="min-h-screen w-full relative bg-slate-50 text-slate-900 flex flex-col justify-start sm:justify-center items-center px-3 sm:px-8 py-3 sm:py-8 font-sans selection:bg-blue-600 selection:text-white overflow-x-hidden overflow-y-auto">
       {/* Soft Picture Illustration Background */}
       <div className="absolute inset-0 z-0 opacity-20 pointer-events-none">
         <img 
@@ -399,35 +399,34 @@ export default function AuthView({
       {/* Ambient Soft Blue Radial Glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-100/60 rounded-full blur-3xl pointer-events-none z-0" />
 
-      {/* Top Left Eventzone Logo */}
-      <div className="absolute top-6 left-6 sm:top-8 sm:left-8 z-20">
+      {/* Top Navigation Header (Above Card, Never Overlaps) */}
+      <header className="w-full max-w-md mx-auto flex items-center justify-between px-1 sm:px-2 py-2 sm:py-4 relative z-20 shrink-0 mb-1 sm:mb-3">
+        {/* Eventzone Logo */}
         <button
           type="button"
           onClick={handleReturnHome}
-          className="flex items-center gap-2 p-1 transition-opacity hover:opacity-80 cursor-pointer group bg-transparent border-0 outline-none"
+          className="flex items-center gap-2 p-1 transition-opacity hover:opacity-80 cursor-pointer group bg-transparent border-0 outline-none shrink-0"
           title="Return to Home"
         >
           <img 
             src="https://i.imgur.com/jFDrQbM.png" 
             alt="Eventzone" 
-            style={{ height: '28px', width: 'auto', maxWidth: '160px', objectFit: 'contain' }}
-            className="h-6 sm:h-7 w-auto object-contain transition-transform group-hover:scale-105" 
+            style={{ height: '24px', width: 'auto', maxWidth: '130px' }}
+            className="h-5 sm:h-7 w-auto object-contain transition-transform group-hover:scale-105" 
           />
         </button>
-      </div>
 
-      {/* Top Right Language Selector */}
-      <div className="absolute top-6 right-6 sm:top-8 sm:right-8 z-20">
-        <div className="relative">
+        {/* Language Selector */}
+        <div className="relative shrink-0">
           {(() => {
             const curLang = languages.find(l => l.code === lang) || languages[0];
             return (
               <button
                 onClick={() => setLangMenuOpen(o => !o)}
-                className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer shadow-xs"
+                className="flex items-center gap-1.5 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer shadow-xs"
                 title="Change Language"
               >
-                <img src={curLang?.icon || "https://i.imgur.com/NXtMImD.png"} alt={lang} className="w-5 h-5 object-contain shrink-0" />
+                <img src={curLang?.icon || "https://i.imgur.com/NXtMImD.png"} alt={lang} className="w-4 h-4 sm:w-4.5 sm:h-4.5 object-contain shrink-0" />
                 <span className="uppercase tracking-wide font-extrabold text-[11px]">{lang}</span>
                 <ChevronDown size={11} className={`text-slate-400 transition-transform ${langMenuOpen ? "rotate-180" : ""}`} />
               </button>
@@ -450,7 +449,7 @@ export default function AuthView({
                   }`}
                 >
                   <div className="flex items-center gap-2">
-                    <img src={item.icon} alt={item.code} className="w-5 h-5 object-contain shrink-0" />
+                    <img src={item.icon} alt={item.code} className="w-4 h-4 sm:w-5 sm:h-5 object-contain shrink-0" />
                     <span>{item.label}</span>
                   </div>
                   {lang === item.code && <Check size={12} className="text-blue-600 shrink-0" />}
@@ -459,10 +458,10 @@ export default function AuthView({
             </div>
           )}
         </div>
-      </div>
+      </header>
 
-      {/* Main Authentication Card (Light Mode & Clean, Centered Horizontally) */}
-      <div className="relative z-10 w-full max-w-[440px] bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-3xl p-7 sm:p-9 shadow-2xl shadow-slate-300/40 my-auto">
+      {/* Main Authentication Card */}
+      <div className="relative z-10 w-full max-w-[440px] bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-2xl sm:rounded-3xl p-4.5 sm:p-9 shadow-xl sm:shadow-2xl shadow-slate-300/40">
         {authMode === "check-email" ? (
           /* Email Verification Notice */
           <div className="text-center space-y-4 animate-fade-in">
@@ -501,7 +500,7 @@ export default function AuthView({
           </div>
         ) : authMode === "forgot-password" ? (
           /* Forgot Password View */
-          <div className="space-y-5 text-start animate-fade-in">
+          <div className="space-y-4 sm:space-y-5 text-start animate-fade-in">
             <div>
               <button 
                 onClick={() => { setAuthMode("signin"); setErrorMsg(""); setSuccessMsg(""); }} 
@@ -529,7 +528,7 @@ export default function AuthView({
               </div>
             )}
 
-            <form onSubmit={handleForgotPassword} className="space-y-4">
+            <form onSubmit={handleForgotPassword} className="space-y-3.5">
               <div>
                 <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                   Email Address
@@ -558,13 +557,13 @@ export default function AuthView({
           </div>
         ) : (
           /* Standard Sign In / Create Account */
-          <div className="space-y-5 text-start animate-fade-in">
+          <div className="space-y-4 sm:space-y-5 text-start animate-fade-in">
             {/* Clean Switcher Tabs */}
-            <div className="grid grid-cols-2 bg-slate-100 p-1 rounded-2xl">
+            <div className="grid grid-cols-2 bg-slate-100 p-1 rounded-xl sm:rounded-2xl">
               <button
                 type="button"
                 onClick={() => { setAuthMode("signin"); setErrorMsg(""); }}
-                className={`py-2 rounded-xl text-xs font-bold transition-all cursor-pointer text-center ${
+                className={`py-2 rounded-lg sm:rounded-xl text-xs font-bold transition-all cursor-pointer text-center ${
                   authMode === "signin" 
                     ? "bg-white text-slate-900 shadow-sm" 
                     : "text-slate-500 hover:text-slate-800"
@@ -576,7 +575,7 @@ export default function AuthView({
               <button
                 type="button"
                 onClick={() => { setAuthMode("signup"); setErrorMsg(""); }}
-                className={`py-2 rounded-xl text-xs font-bold transition-all cursor-pointer text-center ${
+                className={`py-2 rounded-lg sm:rounded-xl text-xs font-bold transition-all cursor-pointer text-center ${
                   authMode === "signup" 
                     ? "bg-white text-slate-900 shadow-sm" 
                     : "text-slate-500 hover:text-slate-800"
@@ -587,10 +586,10 @@ export default function AuthView({
             </div>
 
             <div>
-              <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
+              <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
                 {authMode === "signin" ? t("auth.welcomeBack", "Welcome back") : t("auth.createAccount", "Create your account")}
               </h2>
-              <p className="text-slate-500 text-xs mt-1">
+              <p className="text-slate-500 text-xs mt-0.5 sm:mt-1 leading-relaxed">
                 {authMode === "signin" 
                   ? t("auth.signInDesc", "Sign in to access your conferences, floor plans and tickets.")
                   : t("auth.signUpDesc", "Join the premier platform for summits, expos and digital badges.")}
@@ -609,7 +608,7 @@ export default function AuthView({
               type="button"
               onClick={handleGoogleSignIn}
               disabled={oauthLoading}
-              className="w-full py-2.5 px-4 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 flex items-center justify-center gap-2.5 transition-all cursor-pointer shadow-xs"
+              className="w-full py-2.5 px-4 bg-white hover:bg-slate-50 active:scale-[0.99] border border-slate-200 rounded-xl text-xs font-bold text-slate-700 flex items-center justify-center gap-2.5 transition-all cursor-pointer shadow-xs"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -620,7 +619,7 @@ export default function AuthView({
               <span>Continue with Google</span>
             </button>
 
-            <div className="relative text-center my-2">
+            <div className="relative text-center my-1.5 sm:my-2">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-slate-100" />
               </div>
@@ -629,7 +628,7 @@ export default function AuthView({
               </span>
             </div>
 
-            <form onSubmit={handleEmailAuth} className="space-y-3.5">
+            <form onSubmit={handleEmailAuth} className="space-y-3 sm:space-y-3.5">
               {authMode === "signup" && (
                 <>
                   {/* Role Selector */}
@@ -637,11 +636,11 @@ export default function AuthView({
                     <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
                       {t("auth.iAmOrganizer", "Account Type")}
                     </label>
-                    <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
+                    <div className="grid grid-cols-2 gap-1.5 sm:gap-2 bg-slate-100 p-1 rounded-xl">
                       <button
                         type="button"
                         onClick={() => setSelectedRole("organizer")}
-                        className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center cursor-pointer ${
+                        className={`py-1.5 sm:py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center cursor-pointer ${
                           selectedRole === "organizer"
                             ? "bg-white text-blue-600 shadow-xs"
                             : "text-slate-500 hover:text-slate-800"
@@ -652,7 +651,7 @@ export default function AuthView({
                       <button
                         type="button"
                         onClick={() => setSelectedRole("attendee")}
-                        className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center cursor-pointer ${
+                        className={`py-1.5 sm:py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center cursor-pointer ${
                           selectedRole === "attendee"
                             ? "bg-white text-emerald-600 shadow-xs"
                             : "text-slate-500 hover:text-slate-800"
@@ -676,7 +675,7 @@ export default function AuthView({
                         placeholder="e.g. Alex Morgan"
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
-                        className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-600 rounded-xl text-xs font-semibold text-slate-900 placeholder-slate-400 outline-none transition-all"
+                        className="w-full pl-9 pr-3.5 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-600 rounded-xl text-xs font-semibold text-slate-900 placeholder-slate-400 outline-none transition-all"
                       />
                     </div>
                   </div>
@@ -696,7 +695,7 @@ export default function AuthView({
                     placeholder="name@company.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-600 rounded-xl text-xs font-semibold text-slate-900 placeholder-slate-400 outline-none transition-all"
+                    className="w-full pl-9 pr-3.5 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-600 rounded-xl text-xs font-semibold text-slate-900 placeholder-slate-400 outline-none transition-all"
                   />
                 </div>
               </div>
@@ -725,7 +724,7 @@ export default function AuthView({
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-9 pr-10 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-600 rounded-xl text-xs font-semibold text-slate-900 placeholder-slate-400 outline-none transition-all"
+                    className="w-full pl-9 pr-10 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-600 rounded-xl text-xs font-semibold text-slate-900 placeholder-slate-400 outline-none transition-all"
                   />
                   <button
                     type="button"
@@ -751,7 +750,7 @@ export default function AuthView({
                       placeholder="••••••••"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-600 rounded-xl text-xs font-semibold text-slate-900 placeholder-slate-400 outline-none transition-all"
+                      className="w-full pl-9 pr-3.5 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-600 rounded-xl text-xs font-semibold text-slate-900 placeholder-slate-400 outline-none transition-all"
                     />
                   </div>
                 </div>
@@ -760,7 +759,7 @@ export default function AuthView({
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-md shadow-blue-600/20 transition-all cursor-pointer disabled:opacity-50 mt-1"
+                className="w-full py-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white rounded-xl font-bold text-xs sm:text-sm shadow-md shadow-blue-600/20 transition-all cursor-pointer disabled:opacity-50 mt-1"
               >
                 {loading 
                   ? t("common.loading", "Please wait...") 
@@ -772,7 +771,7 @@ export default function AuthView({
       </div>
 
       {/* Clean Bottom Footer */}
-      <div className="relative z-10 text-xs text-slate-400 flex items-center justify-center gap-4 mt-6">
+      <div className="relative z-10 text-[11px] sm:text-xs text-slate-400 flex items-center justify-center gap-3 sm:gap-4 mt-4 sm:mt-6 pb-8 sm:pb-4 shrink-0">
         <span>© 2026 Eventzone</span>
         <span>•</span>
         <span className="hover:text-slate-600 cursor-pointer">Privacy</span>

@@ -90,7 +90,7 @@ export default async function FeatureDetailPage({ params }) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col relative bg-transparent text-slate-900 font-sans selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden flex flex-col relative bg-transparent text-slate-900 font-sans selection:bg-blue-600 selection:text-white">
       {/* Blurry Animated Blue Mesh Background */}
       <AnimatedMeshBackground />
 

@@ -397,25 +397,25 @@ export default function RequestQuoteClient() {
       {/* Animated Mesh Backdrop */}
       <AnimatedMeshBackground />
 
-      {/* ── Top Header Navigation Bar ── */}
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-xl border-b border-slate-200/80 px-4 sm:px-8 py-2.5 sm:py-3 flex items-center justify-center shadow-2xs">
+      {/* ── Top Logo ── */}
+      <div className="pt-5 sm:pt-8 pb-1 flex items-center justify-center">
         <Link href="/" className="flex items-center cursor-pointer transition-opacity hover:opacity-85" title="Eventzone Home">
           <img
             src="https://i.imgur.com/jFDrQbM.png"
             alt="Eventzone"
-            style={{ height: "18px", width: "auto" }}
-            className="h-4.5 sm:h-5 w-auto object-contain"
+            style={{ height: "26px", width: "auto", maxWidth: "140px" }}
+            className="h-6 sm:h-7 w-auto object-contain"
           />
         </Link>
-      </header>
+      </div>
 
       {/* ── Main Content Container ── */}
-      <main className="flex-1 py-10 sm:py-16 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto w-full">
+      <main className="flex-1 pt-4 sm:pt-6 pb-12 sm:pb-16 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto w-full">
         {submittedQuote ? (
           /* ─────────────────────────────────────────────
               SUCCESS STATE CARD
           ───────────────────────────────────────────── */
-          <div className="bg-white/95 backdrop-blur-md border border-slate-200/60 rounded-[32px] p-8 sm:p-12 shadow-[0_14px_40px_-10px_rgba(15,23,42,0.04),0_2px_12px_-2px_rgba(15,23,42,0.015)] quote-section-card text-center animate-in fade-in zoom-in-95 duration-500 max-w-xl mx-auto">
+          <div className="bg-white/95 backdrop-blur-md border border-slate-200/60 rounded-2xl sm:rounded-[32px] p-6 sm:p-12 shadow-[0_14px_40px_-10px_rgba(15,23,42,0.04),0_2px_12px_-2px_rgba(15,23,42,0.015)] quote-section-card text-center animate-in fade-in zoom-in-95 duration-500 max-w-xl mx-auto">
             <div className="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto mb-5 shadow-xs">
               <CheckCircle2 className="w-7 h-7" />
             </div>
@@ -490,19 +490,19 @@ export default function RequestQuoteClient() {
           ───────────────────────────────────────────── */
           <div ref={formRef} className="space-y-6 sm:space-y-8">
             {/* Hero Heading */}
-            <div className="text-center max-w-3xl mx-auto">
-              <h1 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight leading-tight">
+            <div className="text-center max-w-3xl mx-auto px-2">
+              <h1 className="text-2xl sm:text-4xl md:text-5xl font-black text-slate-900 tracking-tight leading-tight">
                 Request a Custom Quote
               </h1>
 
-              <p className="mt-3.5 text-sm sm:text-base text-slate-600 max-w-2xl mx-auto leading-relaxed">
+              <p className="mt-2.5 sm:mt-3.5 text-xs sm:text-base text-slate-600 max-w-2xl mx-auto leading-relaxed">
                 Empower your conference, trade fair, or corporate summit with Algeria&apos;s leading event management platform. Tell us about your event needs and receive a tailored proposal within 24 hours.
               </p>
             </div>
 
             {/* Minimal Stepper Header */}
             <div className="max-w-xl mx-auto px-1 sm:px-0">
-              <div className="bg-white/95 backdrop-blur-sm border border-slate-200/80 rounded-full px-3.5 sm:px-6 py-2 sm:py-2.5 shadow-2xs flex items-center justify-between gap-1 sm:gap-2">
+              <div className="bg-white/95 backdrop-blur-sm border border-slate-200/80 rounded-full px-2.5 sm:px-6 py-1.5 sm:py-2.5 shadow-2xs flex items-center justify-between gap-1 sm:gap-2">
                 {STEPS.map((s, idx) => {
                   const isCompleted = currentStep > s.id;
                   const isActive = currentStep === s.id;
@@ -536,10 +536,10 @@ export default function RequestQuoteClient() {
                         <span
                           className={`text-[11px] sm:text-xs transition-colors ${
                             isActive
-                              ? "font-extrabold text-blue-600"
+                              ? "font-extrabold text-blue-600 inline"
                               : isCompleted
-                              ? "font-semibold text-slate-700"
-                              : "font-medium text-slate-400"
+                              ? "font-semibold text-slate-700 hidden sm:inline"
+                              : "font-medium text-slate-400 hidden sm:inline"
                           }`}
                         >
                           {s.title}
@@ -547,7 +547,7 @@ export default function RequestQuoteClient() {
                       </button>
 
                       {idx < STEPS.length - 1 && (
-                        <div className="flex-1 h-0.5 bg-slate-100 rounded-full mx-1 sm:mx-2 overflow-hidden">
+                        <div className="flex-1 h-0.5 bg-slate-100 rounded-full mx-0.5 sm:mx-2 overflow-hidden min-w-[12px] sm:min-w-[24px]">
                           <div
                             className={`h-full bg-blue-600 transition-all duration-300 ${
                               currentStep > idx + 1 ? "w-full" : "w-0"
@@ -574,7 +574,7 @@ export default function RequestQuoteClient() {
               
               {/* ── Step 1: Organizer & Contact Info ── */}
               {currentStep === 1 && (
-                <div className="bg-white/95 backdrop-blur-sm border border-slate-200/60 rounded-[32px] p-6 sm:p-9 shadow-[0_14px_40px_-10px_rgba(15,23,42,0.04),0_2px_12px_-2px_rgba(15,23,42,0.015)] quote-section-card animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="bg-white/95 backdrop-blur-sm border border-slate-200/60 rounded-2xl sm:rounded-[32px] p-4.5 sm:p-9 shadow-[0_14px_40px_-10px_rgba(15,23,42,0.04),0_2px_12px_-2px_rgba(15,23,42,0.015)] quote-section-card animate-in fade-in slide-in-from-bottom-2 duration-300">
                   <div className="border-b border-slate-100 pb-3 mb-6">
                     <h2 className="text-base font-bold text-slate-900">1. Contact &amp; Organization Details</h2>
                     <p className="text-xs text-slate-500">Who will be managing the quote and correspondence?</p>
@@ -672,11 +672,11 @@ export default function RequestQuoteClient() {
                   </div>
 
                   {/* Step 1 Actions */}
-                  <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-end">
+                  <div className="mt-6 sm:mt-8 pt-5 sm:pt-6 border-t border-slate-100 flex items-center justify-end">
                     <button
                       type="button"
                       onClick={handleNextStep}
-                      className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm transition-all shadow-md shadow-blue-600/25 flex items-center gap-2 cursor-pointer"
+                      className="w-full sm:w-auto px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm transition-all shadow-md shadow-blue-600/25 flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <span>Continue to Event Overview</span>
                       <ArrowRight size={16} />
@@ -687,7 +687,7 @@ export default function RequestQuoteClient() {
 
               {/* ── Step 2: Event Specifications ── */}
               {currentStep === 2 && (
-                <div className="bg-white/95 backdrop-blur-sm border border-slate-200/60 rounded-[32px] p-6 sm:p-9 shadow-[0_14px_40px_-10px_rgba(15,23,42,0.04),0_2px_12px_-2px_rgba(15,23,42,0.015)] quote-section-card animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="bg-white/95 backdrop-blur-sm border border-slate-200/60 rounded-2xl sm:rounded-[32px] p-4.5 sm:p-9 shadow-[0_14px_40px_-10px_rgba(15,23,42,0.04),0_2px_12px_-2px_rgba(15,23,42,0.015)] quote-section-card animate-in fade-in slide-in-from-bottom-2 duration-300">
                   <div className="border-b border-slate-100 pb-3 mb-6">
                     <h2 className="text-base font-bold text-slate-900">2. Event Overview &amp; Scale</h2>
                     <p className="text-xs text-slate-500">Provide high-level details regarding the format and expected attendance.</p>
@@ -780,21 +780,23 @@ export default function RequestQuoteClient() {
                   </div>
 
                   {/* Step 2 Actions */}
-                  <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between gap-4">
+                  <div className="mt-6 sm:mt-8 pt-5 sm:pt-6 border-t border-slate-100 flex items-center justify-between gap-3">
                     <button
                       type="button"
                       onClick={handlePrevStep}
-                      className="px-5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs sm:text-sm transition-all flex items-center gap-2 cursor-pointer shadow-2xs"
+                      className="px-3.5 sm:px-5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs sm:text-sm transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer shadow-2xs"
                     >
                       <ArrowLeft size={16} />
-                      <span>Back to Contact</span>
+                      <span className="hidden sm:inline">Back to Contact</span>
+                      <span className="sm:hidden">Back</span>
                     </button>
                     <button
                       type="button"
                       onClick={handleNextStep}
-                      className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm transition-all shadow-md shadow-blue-600/25 flex items-center gap-2 cursor-pointer"
+                      className="px-5 sm:px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm transition-all shadow-md shadow-blue-600/25 flex items-center gap-2 cursor-pointer"
                     >
-                      <span>Continue to Services</span>
+                      <span className="hidden sm:inline">Continue to Services</span>
+                      <span className="sm:hidden">Continue</span>
                       <ArrowRight size={16} />
                     </button>
                   </div>
@@ -803,7 +805,7 @@ export default function RequestQuoteClient() {
 
               {/* ── Step 3: Eventzone Modules & Services Checklist ── */}
               {currentStep === 3 && (
-                <div className="bg-white/95 backdrop-blur-sm border border-slate-200/60 rounded-[32px] p-6 sm:p-9 shadow-[0_14px_40px_-10px_rgba(15,23,42,0.04),0_2px_12px_-2px_rgba(15,23,42,0.015)] quote-section-card animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="bg-white/95 backdrop-blur-sm border border-slate-200/60 rounded-2xl sm:rounded-[32px] p-4.5 sm:p-9 shadow-[0_14px_40px_-10px_rgba(15,23,42,0.04),0_2px_12px_-2px_rgba(15,23,42,0.015)] quote-section-card animate-in fade-in slide-in-from-bottom-2 duration-300">
                   <div className="border-b border-slate-100 pb-3 mb-4">
                     <h2 className="text-base font-bold text-slate-900">3. Services &amp; Platform Capabilities Needed</h2>
                     <p className="text-xs text-slate-500">Select the modules you would like included in your tailored quotation.</p>
@@ -964,21 +966,23 @@ export default function RequestQuoteClient() {
                   </div>
 
                   {/* Step 3 Actions */}
-                  <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between gap-4">
+                  <div className="mt-6 sm:mt-8 pt-5 sm:pt-6 border-t border-slate-100 flex items-center justify-between gap-3">
                     <button
                       type="button"
                       onClick={handlePrevStep}
-                      className="px-5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs sm:text-sm transition-all flex items-center gap-2 cursor-pointer shadow-2xs"
+                      className="px-3.5 sm:px-5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs sm:text-sm transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer shadow-2xs"
                     >
                       <ArrowLeft size={16} />
-                      <span>Back to Event</span>
+                      <span className="hidden sm:inline">Back to Event</span>
+                      <span className="sm:hidden">Back</span>
                     </button>
                     <button
                       type="button"
                       onClick={handleNextStep}
-                      className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm transition-all shadow-md shadow-blue-600/25 flex items-center gap-2 cursor-pointer"
+                      className="px-5 sm:px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm transition-all shadow-md shadow-blue-600/25 flex items-center gap-2 cursor-pointer"
                     >
-                      <span>Continue to Budget &amp; Notes</span>
+                      <span className="hidden sm:inline">Continue to Budget &amp; Notes</span>
+                      <span className="sm:hidden">Continue</span>
                       <ArrowRight size={16} />
                     </button>
                   </div>
@@ -987,7 +991,7 @@ export default function RequestQuoteClient() {
 
               {/* ── Step 4: Budget & Custom Requirements ── */}
               {currentStep === 4 && (
-                <div className="bg-white/95 backdrop-blur-sm border border-slate-200/60 rounded-[32px] p-6 sm:p-9 shadow-[0_14px_40px_-10px_rgba(15,23,42,0.04),0_2px_12px_-2px_rgba(15,23,42,0.015)] quote-section-card animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="bg-white/95 backdrop-blur-sm border border-slate-200/60 rounded-2xl sm:rounded-[32px] p-4.5 sm:p-9 shadow-[0_14px_40px_-10px_rgba(15,23,42,0.04),0_2px_12px_-2px_rgba(15,23,42,0.015)] quote-section-card animate-in fade-in slide-in-from-bottom-2 duration-300">
                   <div className="border-b border-slate-100 pb-3 mb-6">
                     <h2 className="text-base font-bold text-slate-900">4. Budget &amp; Custom Requirements</h2>
                     <p className="text-xs text-slate-500">Help us understand your expected budget bracket and any bespoke requests.</p>
@@ -1022,11 +1026,11 @@ export default function RequestQuoteClient() {
                   </div>
 
                   {/* Step 4 Actions */}
-                  <div className="mt-8 pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="mt-6 sm:mt-8 pt-5 sm:pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
                     <button
                       type="button"
                       onClick={handlePrevStep}
-                      className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
+                      className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer shadow-2xs order-2 sm:order-1"
                     >
                       <ArrowLeft size={16} />
                       <span>Back to Services</span>
@@ -1035,7 +1039,7 @@ export default function RequestQuoteClient() {
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className="w-full sm:w-auto px-8 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm transition-all shadow-md shadow-blue-600/30 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                      className="w-full sm:w-auto px-8 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm transition-all shadow-md shadow-blue-600/30 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 order-1 sm:order-2"
                     >
                       {isSubmitting ? (
                         <>
