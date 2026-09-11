@@ -274,7 +274,7 @@ export default function FeatureNavbar({ featureTitle, category }) {
                 setLangMenuOpen(o => !o);
                 setActiveDropdown(null);
               }}
-              className="h-10 flex items-center gap-1.5 px-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer shadow-xs shrink-0"
+              className="h-10 flex items-center gap-1.5 px-3 rounded-[10px] border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer shadow-xs shrink-0"
               title="Change Language"
             >
               <img 
@@ -321,7 +321,7 @@ export default function FeatureNavbar({ featureTitle, category }) {
           {/* Request a Quote Button */}
           <Link
             href="/request-quote"
-            className="px-5 sm:px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-white bg-[#0c1a30] hover:bg-[#162b4c] rounded-xl sm:rounded-[14px] shadow-sm transition-all active:scale-95 cursor-pointer inline-flex items-center justify-center gap-1.5 shrink-0"
+            className="h-[44px] sm:h-[48px] px-5 sm:px-6 text-[13px] sm:text-[14px] font-semibold text-white bg-[#0c1a30] hover:bg-[#162b4c] rounded-[10px] shadow-sm transition-all active:scale-95 cursor-pointer inline-flex items-center justify-center gap-1.5 shrink-0"
           >
             <span>{ui.requestQuote || "Request a Quote"}</span>
           </Link>
@@ -370,7 +370,7 @@ export default function FeatureNavbar({ featureTitle, category }) {
 
           <Link
             href="/request-quote"
-            className="px-3.5 py-2 text-xs font-semibold text-white bg-[#0c1a30] hover:bg-[#162b4c] rounded-xl shadow-sm transition-all shrink-0"
+            className="px-3.5 py-2 text-xs font-semibold text-white bg-[#0c1a30] hover:bg-[#162b4c] rounded-[10px] shadow-sm transition-all shrink-0"
           >
             <span>{ui.requestQuote || "Devis"}</span>
           </Link>
@@ -455,7 +455,7 @@ export default function FeatureNavbar({ featureTitle, category }) {
               <Link
                 href="/request-quote"
                 onClick={() => setMobileMenuOpen(false)}
-                className="w-full text-center py-2.5 text-sm font-semibold text-white bg-[#0c1a30] hover:bg-[#162b4c] rounded-xl shadow-sm transition-all"
+                className="w-full text-center py-2.5 text-sm font-semibold text-white bg-[#0c1a30] hover:bg-[#162b4c] rounded-[10px] shadow-sm transition-all"
               >
                 {ui.requestQuote || "Request a Quote"}
               </Link>
