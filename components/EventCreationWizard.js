@@ -411,7 +411,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
         <div className="absolute top-20 right-0 w-[550px] h-[350px] bg-blue-600/8 rounded-full blur-3xl pointer-events-none translate-x-1/3 -translate-y-1/3" />
 
         {/* Top Navigation Bar */}
-        <header className="px-6 sm:px-10 py-4 border-b border-slate-200/80 bg-white/80 backdrop-blur-xl sticky top-0 z-40 flex items-center justify-between shadow-2xs">
+        <header className="px-3.5 sm:px-10 py-2.5 sm:py-4 border-b border-slate-200/80 bg-white/80 backdrop-blur-xl sticky top-0 z-40 flex items-center justify-between shadow-2xs">
           <div className="flex items-center gap-3">
             <div 
               onClick={onCancel} 
@@ -421,8 +421,8 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
               <img 
                 src="https://i.imgur.com/jFDrQbM.png" 
                 alt="eventzone" 
-                style={{ height: '28px', width: 'auto', maxWidth: '160px', objectFit: 'contain' }} 
-                className="h-7 w-auto object-contain transition-transform group-hover:scale-[1.02]" 
+                style={{ height: '24px', width: 'auto' }} 
+                className="h-5 sm:h-7 w-auto max-w-[95px] sm:max-w-[160px] object-contain transition-transform group-hover:scale-[1.02]" 
               />
             </div>
           </div>
@@ -430,7 +430,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer border border-slate-200/60 shadow-2xs"
+            className="px-3 sm:px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer border border-slate-200/60 shadow-2xs"
           >
             <ArrowLeft className={`w-3.5 h-3.5 ${isRTL ? "rotate-180" : ""}`} />
             <span>{t("wizard.backToEvents", "Back to Events")}</span>
@@ -438,15 +438,15 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
         </header>
 
         {/* Main Content Area */}
-        <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-8 py-10 sm:py-16 space-y-8 relative z-10 animate-fade-in text-left rtl:text-right">
+        <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-8 py-6 sm:py-16 space-y-6 sm:space-y-8 relative z-10 animate-fade-in text-left rtl:text-right">
           
           {/* BIG HEADER SECTION */}
-          <div className="space-y-4">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-[1.08]">
+          <div className="space-y-3 sm:space-y-4">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-[1.08]">
               {t("wizard.limitReachedTitle", "Event Quota Limit Reached")}
             </h1>
 
-            <p className="text-slate-600 text-sm sm:text-base md:text-lg leading-relaxed font-medium max-w-2xl">
+            <p className="text-slate-600 text-xs sm:text-base md:text-lg leading-relaxed font-medium max-w-2xl">
               {t(
                 "wizard.limitReachedDesc",
                 `You have reached the maximum number of events permitted for your organizer plan (${actualEventsCount} of ${quotaCap} allowed events hosted). To add, host, or publish more events, our concierge team can instantly expand your quota.`
@@ -458,7 +458,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
           <div className="pt-2">
             <a
               href={`mailto:contact@eventzone.pro?subject=${encodeURIComponent(`Event Quota Limit Increase Request - ${currentUser?.fullName || currentUser?.email}`)}&body=${encodeURIComponent(`Hello Eventzone Team,\n\nI have reached my event hosting limit (${actualEventsCount} / ${quotaCap} events) and would like to request an upgrade to add more events to my organizer account.\n\nOrganizer: ${currentUser?.fullName || 'Organizer'}\nAccount Email: ${currentUser?.email}\nCompany: ${currentUser?.companyName || 'N/A'}\n\nThank you!`)}`}
-              className="inline-flex items-center justify-center px-7 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white font-bold text-sm sm:text-base shadow-lg shadow-blue-600/25 hover:shadow-blue-600/35 transition-all cursor-pointer"
+              className="inline-flex items-center justify-center px-6 sm:px-7 py-3 sm:py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white font-bold text-xs sm:text-base shadow-lg shadow-blue-600/25 hover:shadow-blue-600/35 transition-all cursor-pointer"
             >
               {t("wizard.contactTeam", "Contact Team")}
             </a>
@@ -473,32 +473,37 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
       {/* ==================================================================== */}
       {/* 1. TOP BAR WITH EVENTZONE LOGO & STEPPER                             */}
       {/* ==================================================================== */}
-      <header className="bg-white border-b border-slate-200 px-6 py-4 sticky top-0 z-40 flex items-center justify-between shadow-xs">
+      <header className="bg-white border-b border-slate-200 px-3.5 sm:px-8 py-2.5 sm:py-3.5 sticky top-0 z-40 flex items-center justify-between shadow-xs">
         {/* Left: Eventzone Logo (Original colors on white background) */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center shrink-0">
           <div 
             onClick={onCancel} 
-            className="cursor-pointer select-none flex items-center gap-2"
+            className="cursor-pointer select-none flex items-center gap-2 group"
             title="Return to Events"
           >
-            <img src="https://i.imgur.com/jFDrQbM.png" alt="eventzone" style={{ height: '28px', width: 'auto', maxWidth: '160px', objectFit: 'contain' }} className="h-7 w-auto object-contain" />
+            <img 
+              src="https://i.imgur.com/jFDrQbM.png" 
+              alt="eventzone" 
+              style={{ height: '24px', width: 'auto' }} 
+              className="h-5 sm:h-7 w-auto max-w-[95px] sm:max-w-[160px] object-contain transition-transform group-hover:scale-105 shrink-0" 
+            />
           </div>
         </div>
 
         {/* Center: Stepper Line (1 Event name — 2 Event details — 3 Account information) */}
-        <div className="flex items-center gap-3 select-none">
+        <div className="flex items-center gap-1.5 sm:gap-3 select-none">
           {/* Step 1 */}
-          <div className="flex items-center gap-2">
-            <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <span className={`w-5.5 h-5.5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-[11px] sm:text-xs font-bold transition-all shrink-0 ${
               mainStep === 1 
-                ? "bg-blue-600 text-white shadow-sm ring-4 ring-blue-100" 
+                ? "bg-blue-600 text-white shadow-sm ring-2 sm:ring-4 ring-blue-100" 
                 : mainStep > 1 
                   ? "bg-emerald-600 text-white" 
                   : "bg-slate-200 text-slate-600"
             }`}>
               {mainStep > 1 ? "✓" : "1"}
             </span>
-            <span className={`text-xs font-bold transition-all ${
+            <span className={`hidden md:inline text-xs font-bold transition-all ${
               mainStep === 1 ? "text-blue-600 font-extrabold" : mainStep > 1 ? "text-slate-800" : "text-slate-400"
             }`}>
               Event name
@@ -506,20 +511,20 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
           </div>
 
           {/* Line 1 */}
-          <div className={`w-8 sm:w-16 h-0.5 transition-all ${mainStep > 1 ? "bg-emerald-500" : "bg-slate-200"}`} />
+          <div className={`w-4 sm:w-8 md:w-16 h-0.5 transition-all ${mainStep > 1 ? "bg-emerald-500" : "bg-slate-200"}`} />
 
           {/* Step 2 */}
-          <div className="flex items-center gap-2">
-            <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <span className={`w-5.5 h-5.5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-[11px] sm:text-xs font-bold transition-all shrink-0 ${
               mainStep === 2 
-                ? "bg-blue-600 text-white shadow-sm ring-4 ring-blue-100" 
+                ? "bg-blue-600 text-white shadow-sm ring-2 sm:ring-4 ring-blue-100" 
                 : mainStep > 2 
                   ? "bg-emerald-600 text-white" 
                   : "bg-slate-100 text-slate-400 border border-slate-300"
             }`}>
               {mainStep > 2 ? "✓" : "2"}
             </span>
-            <span className={`text-xs font-bold transition-all ${
+            <span className={`hidden md:inline text-xs font-bold transition-all ${
               mainStep === 2 ? "text-blue-600 font-extrabold" : mainStep > 2 ? "text-slate-800" : "text-slate-400"
             }`}>
               Event details
@@ -527,18 +532,18 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
           </div>
 
           {/* Line 2 */}
-          <div className={`w-8 sm:w-16 h-0.5 transition-all ${mainStep > 2 ? "bg-emerald-500" : "bg-slate-200"}`} />
+          <div className={`w-4 sm:w-8 md:w-16 h-0.5 transition-all ${mainStep > 2 ? "bg-emerald-500" : "bg-slate-200"}`} />
 
           {/* Step 3 */}
-          <div className="flex items-center gap-2">
-            <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <span className={`w-5.5 h-5.5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-[11px] sm:text-xs font-bold transition-all shrink-0 ${
               mainStep === 3 
-                ? "bg-blue-600 text-white shadow-sm ring-4 ring-blue-100" 
+                ? "bg-blue-600 text-white shadow-sm ring-2 sm:ring-4 ring-blue-100" 
                 : "bg-slate-100 text-slate-400 border border-slate-300"
             }`}>
               3
             </span>
-            <span className={`text-xs font-bold transition-all ${
+            <span className={`hidden md:inline text-xs font-bold transition-all ${
               mainStep === 3 ? "text-blue-600 font-extrabold" : "text-slate-400"
             }`}>
               Account information
@@ -547,7 +552,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
         </div>
 
         {/* Right Actions: Language Switcher & Exit Button */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {/* Language Selector */}
           <div className="relative">
             {(() => {
@@ -555,11 +560,11 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
               return (
                 <button
                   onClick={() => setLangMenuOpen(o => !o)}
-                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer shadow-xs"
+                  className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[11px] sm:text-xs font-bold transition-all cursor-pointer shadow-xs"
                   title="Change Language"
                 >
-                  <img src={curLang?.icon || "https://i.imgur.com/NXtMImD.png"} alt={lang} className="w-5 h-5 object-contain shrink-0" />
-                  <span className="uppercase tracking-wide font-extrabold text-[11px]">{lang}</span>
+                  <img src={curLang?.icon || "https://i.imgur.com/NXtMImD.png"} alt={lang} className="w-4 h-4 sm:w-5 sm:h-5 object-contain shrink-0" />
+                  <span className="uppercase tracking-wide font-extrabold text-[10px] sm:text-[11px]">{lang}</span>
                   <ChevronDown size={11} className={`text-slate-400 transition-transform ${langMenuOpen ? "rotate-180" : ""}`} />
                 </button>
               );
@@ -596,23 +601,23 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
       {/* ==================================================================== */}
       {/* 2. MAIN CONTENT CONTAINER                                            */}
       {/* ==================================================================== */}
-      <main className="flex-1 max-w-3xl w-full mx-auto px-6 py-12 flex flex-col items-center justify-center">
+      <main className="flex-1 max-w-3xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-12 flex flex-col items-center justify-start sm:justify-center">
         {/* ────────────────────────────────────────────────────────────────── */}
         {/* SUB-STEP 1A: {t("wizard.step1Title", "What is the name of your event?")}                       */}
         {/* ────────────────────────────────────────────────────────────────── */}
         {currentScreen === "1A" && (
           <div className="w-full animate-fade-in text-center">
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+            <h1 className="text-2xl sm:text-4xl font-black sm:font-extrabold text-slate-900 tracking-tight leading-tight">
               What is the name of your event?
             </h1>
-            <p className="text-sm text-slate-500 font-medium mt-2 mb-8 max-w-md mx-auto">
+            <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1.5 mb-5 sm:mb-8 max-w-md mx-auto">
               {t("wizard.step1Desc", "Give your event a clear, memorable title. You can customize the subtitle and banner next.")}
             </p>
 
-            <form onSubmit={handleNextFrom1A} className="space-y-6 max-w-xl mx-auto text-start">
-              <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs space-y-4">
+            <form onSubmit={handleNextFrom1A} className="space-y-4 sm:space-y-6 max-w-xl mx-auto text-start">
+              <div className="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-xs space-y-3 sm:space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                  <label className="block text-[11px] sm:text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 sm:mb-2">
                     Event Name <span className="text-rose-500">*</span>
                   </label>
                   <input
@@ -622,23 +627,23 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
                     placeholder={t("wizard.titlePlaceholder", "e.g. Algiers Tech Summit 2026")}
                     value={formData.title}
                     onChange={(e) => handleChange("title", e.target.value)}
-                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-50 rounded-2xl text-sm font-semibold text-slate-900 placeholder-slate-400 outline-none transition-all"
+                    className="w-full px-4 py-3 sm:px-5 sm:py-4 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-50 rounded-xl sm:rounded-2xl text-sm font-semibold text-slate-900 placeholder-slate-400 outline-none transition-all"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-2">
+              <div className="flex items-center justify-between pt-1 sm:pt-2">
                 <button
                   type="button"
                   onClick={onCancel}
-                  className="px-6 py-3.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold text-xs transition-all cursor-pointer"
+                  className="px-5 sm:px-6 py-3 sm:py-3.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold text-xs transition-all cursor-pointer"
                 >
                   {t("common.cancel", "Cancel")}
                 </button>
 
                 <button
                   type="submit"
-                  className="px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-lg shadow-blue-600/30 transition-all cursor-pointer"
+                  className="px-6 sm:px-8 py-3 sm:py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-lg shadow-blue-600/30 transition-all cursor-pointer"
                 >
                   {t("common.next", "Continue")}
                 </button>
@@ -652,14 +657,14 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
         {/* ────────────────────────────────────────────────────────────────── */}
         {currentScreen === "2A" && (
           <div className="w-full animate-fade-in text-center">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
+            <h1 className="text-xl sm:text-3xl md:text-4xl font-black sm:font-extrabold text-slate-900 tracking-tight leading-tight">
               What best describes your event?
             </h1>
-            <p className="text-sm text-slate-500 font-medium mt-2 mb-8">
+            <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1.5 mb-5 sm:mb-8">
               {t("wizard.step2Desc", "Select the format that best fits your event structure.")}
             </p>
 
-            <div className="flex flex-col gap-3.5 max-w-xl mx-auto">
+            <div className="flex flex-col gap-3 sm:gap-3.5 max-w-xl mx-auto">
               {[
                 {
                   id: "Single date, time and location",
@@ -676,7 +681,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
                   key={item.id}
                   type="button"
                   onClick={() => handleNextFrom2A(item.id)}
-                  className={`p-5 rounded-2xl border text-center transition-all duration-200 cursor-pointer flex flex-col justify-center items-center gap-1 group ${
+                  className={`p-4 sm:p-5 rounded-xl sm:rounded-2xl border text-center transition-all duration-200 cursor-pointer flex flex-col justify-center items-center gap-1 group ${
                     formData.structureType === item.id
                       ? "bg-white border-blue-600 shadow-md ring-2 ring-blue-500/20"
                       : "bg-white border-slate-200 hover:border-blue-400 hover:bg-blue-50/20"
@@ -694,11 +699,11 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
               ))}
             </div>
 
-            <div className="flex items-center justify-between max-w-xl mx-auto mt-8 pt-4 border-t border-slate-200/70">
+            <div className="flex items-center justify-between max-w-xl mx-auto mt-6 sm:mt-8 pt-3 sm:pt-4 border-t border-slate-200/70">
               <button
                 type="button"
                 onClick={handleBack}
-                className="px-5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold text-xs transition-all cursor-pointer"
+                className="px-4 sm:px-5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold text-xs transition-all cursor-pointer"
               >
                 {t("common.back", "Back")}
               </button>
@@ -706,7 +711,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
               <button
                 type="button"
                 onClick={() => handleNextFrom2A(formData.structureType)}
-                className="px-7 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-md shadow-blue-600/30 transition-all cursor-pointer"
+                className="px-5 sm:px-7 py-2.5 sm:py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-md shadow-blue-600/30 transition-all cursor-pointer"
               >
                 Next: Dates & Timing
               </button>
@@ -719,28 +724,28 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
         {/* ────────────────────────────────────────────────────────────────── */}
         {currentScreen === "2B" && (
           <div className="w-full animate-fade-in text-center">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
+            <h1 className="text-xl sm:text-3xl md:text-4xl font-black sm:font-extrabold text-slate-900 tracking-tight leading-tight">
               When is your event?
             </h1>
-            <p className="text-sm text-slate-500 font-medium mt-2 mb-2">
+            <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1.5 mb-1.5">
               Not sure yet? You can add timing later.
             </p>
 
             <button
               type="button"
               onClick={handleSkip2B}
-              className="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline mb-8 cursor-pointer inline-block"
+              className="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline mb-5 sm:mb-8 cursor-pointer inline-block"
             >
               Skip for now
             </button>
 
-            <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs max-w-xl mx-auto text-start space-y-6">
+            <div className="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-xs max-w-xl mx-auto text-start space-y-4 sm:space-y-6">
               {/* EVENT START */}
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-2">
+                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5 sm:mb-2">
                   Event Start
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                   <CustomDatePicker
                     value={formData.startDate}
                     onChange={(val) => handleChange("startDate", val)}
@@ -757,10 +762,10 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
 
               {/* EVENT END */}
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-2">
+                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5 sm:mb-2">
                   Event End
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                   <CustomDatePicker
                     value={formData.endDate}
                     minDate={formData.startDate || undefined}
@@ -778,7 +783,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
 
               {/* TIMEZONE */}
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-2">
+                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5 sm:mb-2">
                   Timezone
                 </label>
                 <SearchableSelect
@@ -798,17 +803,17 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
               <button
                 type="button"
                 onClick={handleNextFrom2B}
-                className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-xs shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center cursor-pointer mt-4"
+                className="w-full py-3.5 sm:py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl sm:rounded-2xl font-bold text-xs shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center cursor-pointer mt-3 sm:mt-4"
               >
                 Next: Event Location
               </button>
             </div>
 
-            <div className="flex items-center justify-start max-w-xl mx-auto mt-6">
+            <div className="flex items-center justify-start max-w-xl mx-auto mt-4 sm:mt-6">
               <button
                 type="button"
                 onClick={handleBack}
-                className="px-5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold text-xs transition-all cursor-pointer"
+                className="px-4 sm:px-5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold text-xs transition-all cursor-pointer"
               >
                 Back
               </button>
@@ -821,19 +826,19 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
         {/* ────────────────────────────────────────────────────────────────── */}
         {currentScreen === "2C" && (
           <div className="w-full animate-fade-in text-center">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
+            <h1 className="text-xl sm:text-3xl md:text-4xl font-black sm:font-extrabold text-slate-900 tracking-tight leading-tight">
               Where is your event located?
             </h1>
-            <p className="text-sm text-slate-500 font-medium mt-2 mb-8">
+            <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1.5 mb-5 sm:mb-8">
               Select venue format and physical or virtual address.
             </p>
 
-            <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs max-w-xl mx-auto text-start space-y-6">
+            <div className="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-xs max-w-xl mx-auto text-start space-y-4 sm:space-y-6">
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-2.5">
+                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-2 sm:mb-2.5">
                   Format
                 </label>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-2 sm:gap-3">
                   {[
                     { id: "In-Person", label: "Venue", desc: "Physical", icon: Building2 },
                     { id: "Hybrid", label: "Hybrid", desc: "Physical + Stream", icon: Globe },
@@ -843,16 +848,16 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
                       key={id}
                       type="button"
                       onClick={() => handleChange("type", id)}
-                      className={`p-3.5 rounded-2xl border text-center flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
+                      className={`p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl border text-center flex flex-col items-center gap-1 sm:gap-1.5 transition-all cursor-pointer ${
                         formData.type === id
                           ? "bg-blue-50 border-blue-600 ring-2 ring-blue-500/20 text-blue-800 shadow-sm"
                           : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
                       }`}
                     >
-                      <Icon size={18} className={formData.type === id ? "text-blue-600" : "text-slate-500"} />
+                      <Icon size={16} className={formData.type === id ? "text-blue-600" : "text-slate-500"} />
                       <div>
-                        <span className="text-xs font-bold block">{label}</span>
-                        <span className="text-[10px] text-slate-400 font-medium">{desc}</span>
+                        <span className="text-[11px] sm:text-xs font-bold block">{label}</span>
+                        <span className="text-[9px] sm:text-[10px] text-slate-400 font-medium">{desc}</span>
                       </div>
                     </button>
                   ))}
@@ -861,18 +866,18 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
 
               {/* Physical Venue Input (In-Person or Hybrid) */}
               {(formData.type === "In-Person" || formData.type === "Hybrid") && (
-                <div className="space-y-2 animate-fade-in">
+                <div className="space-y-1.5 sm:space-y-2 animate-fade-in">
                   <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">
                     Venue / Location Address
                   </label>
                   <div className="relative">
-                    <MapPin size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <MapPin size={16} className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                       type="text"
                       placeholder="e.g. Algiers International Conference Center (CIC), Algeria"
                       value={formData.location}
                       onChange={(e) => handleChange("location", e.target.value)}
-                      className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-2xl text-xs font-semibold text-slate-900 outline-none transition-all"
+                      className="w-full pl-10 sm:pl-11 pr-3.5 sm:pr-4 py-3 sm:py-3.5 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-xl sm:rounded-2xl text-xs font-semibold text-slate-900 outline-none transition-all"
                     />
                   </div>
                 </div>
@@ -880,7 +885,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
 
               {/* Virtual Stream Input (Virtual or Hybrid) */}
               {(formData.type === "Virtual" || formData.type === "Hybrid") && (
-                <div className="space-y-3 pt-3 border-t border-slate-100 animate-fade-in">
+                <div className="space-y-2.5 sm:space-y-3 pt-2.5 sm:pt-3 border-t border-slate-100 animate-fade-in">
                   <div className="text-xs font-bold text-slate-800">
                     Virtual Stream &amp; Remote Access
                   </div>
@@ -894,7 +899,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
                       placeholder="e.g. https://zoom.us/j/987654321, Google Meet, or YouTube Live"
                       value={formData.virtualUrl}
                       onChange={(e) => handleChange("virtualUrl", e.target.value)}
-                      className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-2xl text-xs font-semibold text-slate-900 font-mono outline-none transition-all"
+                      className="w-full px-3.5 sm:px-4 py-3 sm:py-3.5 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-xl sm:rounded-2xl text-xs font-semibold text-slate-900 font-mono outline-none transition-all"
                     />
                   </div>
                 </div>
@@ -903,17 +908,17 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
               <button
                 type="button"
                 onClick={handleNextFrom2C}
-                className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-xs shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center cursor-pointer mt-4"
+                className="w-full py-3.5 sm:py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl sm:rounded-2xl font-bold text-xs shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center cursor-pointer mt-3 sm:mt-4"
               >
                 Next: Category & Banner
               </button>
             </div>
 
-            <div className="flex items-center justify-start max-w-xl mx-auto mt-6">
+            <div className="flex items-center justify-start max-w-xl mx-auto mt-4 sm:mt-6">
               <button
                 type="button"
                 onClick={handleBack}
-                className="px-5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold text-xs transition-all cursor-pointer"
+                className="px-4 sm:px-5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold text-xs transition-all cursor-pointer"
               >
                 Back
               </button>
@@ -926,16 +931,16 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
         {/* ────────────────────────────────────────────────────────────────── */}
         {currentScreen === "2D" && (
           <div className="w-full animate-fade-in text-center">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
+            <h1 className="text-xl sm:text-3xl md:text-4xl font-black sm:font-extrabold text-slate-900 tracking-tight leading-tight">
               Choose industry category & cover banner
             </h1>
-            <p className="text-sm text-slate-500 font-medium mt-2 mb-8">
+            <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1.5 mb-5 sm:mb-8">
               Customize how your event card appears on the public discovery calendar.
             </p>
 
-            <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs max-w-2xl mx-auto text-start space-y-6">
+            <div className="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-xs max-w-2xl mx-auto text-start space-y-4 sm:space-y-6">
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-2">
+                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5 sm:mb-2">
                   {t("wizard.industryCategory", "Industry / Category")}
                 </label>
                 <SearchableSelect
@@ -948,7 +953,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-2.5">
+                <div className="flex items-center justify-between mb-2">
                   <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">
                     Event Cover Banner
                   </label>
@@ -971,22 +976,22 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
                 {/* Main Custom Upload Box */}
                 <div className="space-y-3">
                   {formData.banner ? (
-                    <div className="relative rounded-2xl overflow-hidden border-2 border-blue-600 shadow-md group">
-                      <div className="h-44 w-full relative bg-slate-950">
+                    <div className="relative rounded-xl sm:rounded-2xl overflow-hidden border-2 border-blue-600 shadow-md group">
+                      <div className="h-36 sm:h-44 w-full relative bg-slate-950">
                         <img 
                           src={formData.banner} 
                           alt="Custom Event Cover" 
                           className="w-full h-full object-cover"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end p-4">
-                          <h4 className="text-sm font-bold text-white">
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end p-3 sm:p-4">
+                          <h4 className="text-xs sm:text-sm font-bold text-white line-clamp-1">
                             {formData.title || "Your Event Title"}
                           </h4>
                         </div>
                       </div>
 
                       {/* Action Bar */}
-                      <div className="bg-slate-900 px-4 py-3 flex items-center justify-end gap-2">
+                      <div className="bg-slate-900 px-3 sm:px-4 py-2.5 sm:py-3 flex items-center justify-end gap-2">
                         <button
                           type="button"
                           onClick={() => fileInputRef.current?.click()}
@@ -1012,30 +1017,30 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
                   ) : (
                     <div 
                       onClick={() => !uploadingBanner && fileInputRef.current?.click()}
-                      className="border-2 border-dashed border-slate-300 hover:border-blue-500 bg-slate-50 hover:bg-blue-50/40 rounded-2xl p-6 text-center cursor-pointer transition-all group relative overflow-hidden"
+                      className="border-2 border-dashed border-slate-300 hover:border-blue-500 bg-slate-50 hover:bg-blue-50/40 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-center cursor-pointer transition-all group relative overflow-hidden"
                     >
                       {uploadingBanner ? (
                         <div className="flex flex-col items-center justify-center py-4 space-y-2">
-                          <Loader2 size={28} className="text-blue-600 animate-spin" />
+                          <Loader2 size={24} className="text-blue-600 animate-spin" />
                           <span className="text-xs font-bold text-slate-700">Uploading to Cloud Storage...</span>
-                          <span className="text-[11px] text-slate-400">Optimizing and storing banner asset</span>
+                          <span className="text-[10px] text-slate-400">Optimizing and storing banner asset</span>
                         </div>
                       ) : (
-                        <div className="space-y-3">
-                          <div className="w-12 h-12 rounded-2xl bg-blue-100/80 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all flex items-center justify-center mx-auto shadow-xs">
-                            <Upload size={22} />
+                        <div className="space-y-2 sm:space-y-3">
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-blue-100/80 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all flex items-center justify-center mx-auto shadow-xs">
+                            <Upload size={18} className="sm:w-[22px] sm:h-[22px]" />
                           </div>
                           <div>
                             <span className="text-xs font-bold text-slate-900 block group-hover:text-blue-600 transition-colors">
                               Click or Drag &amp; Drop Your Custom Event Picture
                             </span>
-                            <span className="text-[11px] text-slate-400 block mt-1">
-                              Supports PNG, JPG, WebP, SVG up to 10MB (Recommended: 16:9 ratio, 1600x900px)
+                            <span className="text-[10px] sm:text-[11px] text-slate-400 block mt-0.5 sm:mt-1">
+                              Supports PNG, JPG, WebP, SVG up to 10MB
                             </span>
                           </div>
-                          <div className="pt-1">
+                          <div className="pt-0.5 sm:pt-1">
                             <span className="inline-flex items-center px-3 py-1.5 bg-white border border-slate-200 group-hover:border-blue-300 rounded-xl text-xs font-bold text-slate-700 shadow-2xs">
-                              Browse Files on Computer
+                              Browse Files
                             </span>
                           </div>
                         </div>
@@ -1046,18 +1051,18 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-2">
+                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5 sm:mb-2">
                   Expected Capacity
                 </label>
                 <div className="relative">
-                  <Users size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <Users size={16} className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type="number"
                     min={50}
                     step={50}
                     value={formData.capacity}
                     onChange={(e) => handleChange("capacity", parseInt(e.target.value) || 100)}
-                    className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-2xl text-xs font-semibold text-slate-900 outline-none transition-all"
+                    className="w-full pl-10 sm:pl-11 pr-3.5 sm:pr-4 py-3 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-xl sm:rounded-2xl text-xs font-semibold text-slate-900 outline-none transition-all"
                   />
                 </div>
               </div>
@@ -1065,17 +1070,17 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
               <button
                 type="button"
                 onClick={handleNextFrom2D}
-                className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-xs shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center cursor-pointer mt-4"
+                className="w-full py-3.5 sm:py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl sm:rounded-2xl font-bold text-xs shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center cursor-pointer mt-3 sm:mt-4"
               >
                 Next: Customize URL
               </button>
             </div>
 
-            <div className="flex items-center justify-start max-w-2xl mx-auto mt-6">
+            <div className="flex items-center justify-start max-w-2xl mx-auto mt-4 sm:mt-6">
               <button
                 type="button"
                 onClick={handleBack}
-                className="px-5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold text-xs transition-all cursor-pointer"
+                className="px-4 sm:px-5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold text-xs transition-all cursor-pointer"
               >
                 Back
               </button>
@@ -1088,25 +1093,25 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
         {/* ────────────────────────────────────────────────────────────────── */}
         {currentScreen === "2E" && (
           <div className="w-full animate-fade-in text-center">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
+            <h1 className="text-xl sm:text-3xl md:text-4xl font-black sm:font-extrabold text-slate-900 tracking-tight leading-tight">
               Customize your Eventzone event URL.
             </h1>
-            <p className="text-sm text-slate-500 font-medium mt-2 mb-8">
+            <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1.5 mb-5 sm:mb-8">
               This is the link you&apos;ll give to guests so they can register.
             </p>
 
-            <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs max-w-xl mx-auto text-start space-y-6">
+            <div className="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-xs max-w-xl mx-auto text-start space-y-4 sm:space-y-6">
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-2">
+                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5 sm:mb-2">
                   EVENT URL
                 </label>
-                <div className={`bg-white border-2 rounded-2xl p-3.5 sm:p-4 flex items-center justify-between transition-all ${
+                <div className={`bg-white border-2 rounded-xl sm:rounded-2xl p-3 sm:p-4 flex items-center justify-between transition-all ${
                   slugStatus === "available"
-                    ? "border-emerald-500 ring-4 ring-emerald-50 shadow-xs"
+                    ? "border-emerald-500 ring-2 sm:ring-4 ring-emerald-50 shadow-xs"
                     : slugStatus === "taken" || slugStatus === "invalid"
-                      ? "border-rose-500 ring-4 ring-rose-50 shadow-xs"
+                      ? "border-rose-500 ring-2 sm:ring-4 ring-rose-50 shadow-xs"
                       : slugStatus === "checking"
-                        ? "border-blue-400 ring-4 ring-blue-50 shadow-xs"
+                        ? "border-blue-400 ring-2 sm:ring-4 ring-blue-50 shadow-xs"
                         : "border-slate-300"
                 }`}>
                   <div className="flex items-center flex-1 overflow-hidden pr-2">
@@ -1120,42 +1125,42 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
                       placeholder="my-event"
                       value={formData.slug}
                       onChange={handleSlugInputChange}
-                      className="w-full text-slate-900 font-bold text-base sm:text-lg outline-none bg-transparent placeholder-slate-400"
+                      className="w-full text-slate-900 font-bold text-sm sm:text-lg outline-none bg-transparent placeholder-slate-400"
                     />
                   </div>
 
                   {slugStatus === "checking" && (
-                    <div className="w-7 h-7 rounded-full bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center shrink-0">
-                      <Loader2 size={15} className="animate-spin text-blue-600 stroke-[2.5]" />
+                    <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center shrink-0">
+                      <Loader2 size={13} className="animate-spin text-blue-600 stroke-[2.5]" />
                     </div>
                   )}
                   {slugStatus === "available" && (
-                    <div className="w-7 h-7 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-600 flex items-center justify-center shrink-0 animate-scale-up">
-                      <Check size={16} className="stroke-[2.5]" />
+                    <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-600 flex items-center justify-center shrink-0 animate-scale-up">
+                      <Check size={14} className="stroke-[2.5]" />
                     </div>
                   )}
                   {(slugStatus === "taken" || slugStatus === "invalid") && (
-                    <div className="w-7 h-7 rounded-full bg-rose-50 border border-rose-300 text-rose-600 flex items-center justify-center shrink-0 animate-scale-up">
-                      <X size={16} className="stroke-[2.5]" />
+                    <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-rose-50 border border-rose-300 text-rose-600 flex items-center justify-center shrink-0 animate-scale-up">
+                      <X size={14} className="stroke-[2.5]" />
                     </div>
                   )}
                   {slugStatus === "idle" && (
-                    <div className="w-7 h-7 rounded-full bg-slate-50 border border-slate-200 text-slate-400 flex items-center justify-center shrink-0">
-                      <LinkIcon size={14} />
+                    <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-slate-50 border border-slate-200 text-slate-400 flex items-center justify-center shrink-0">
+                      <LinkIcon size={12} />
                     </div>
                   )}
                 </div>
 
                 {/* Status feedback & error messaging */}
                 {slugStatus === "checking" && (
-                  <p className="text-[12px] text-blue-600 font-semibold flex items-center gap-1.5 mt-2.5">
+                  <p className="text-[12px] text-blue-600 font-semibold flex items-center gap-1.5 mt-2 sm:mt-2.5">
                     <Loader2 size={13} className="animate-spin shrink-0" />
                     <span>Checking link availability...</span>
                   </p>
                 )}
 
                 {slugStatus === "available" && (
-                  <div className="mt-2.5 flex items-center justify-between flex-wrap gap-1">
+                  <div className="mt-2 sm:mt-2.5 flex items-center justify-between flex-wrap gap-1">
                     <p className="text-[12px] text-emerald-600 font-bold flex items-center gap-1.5">
                       <CheckCircle2 size={14} className="shrink-0" />
                       <span>Link is available!</span>
@@ -1167,13 +1172,13 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
                 )}
 
                 {(slugStatus === "taken" || slugStatus === "invalid") && (
-                  <div className="mt-2.5 space-y-2.5 animate-fade-in">
+                  <div className="mt-2 sm:mt-2.5 space-y-2 animate-fade-in">
                     <p className="text-[12px] text-rose-600 font-bold flex items-center gap-1.5">
                       <AlertCircle size={14} className="shrink-0" />
                       <span>{slugError || "This link is already taken by another event. Please choose an available link."}</span>
                     </p>
                     {slugSuggestions.length > 0 && (
-                      <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 space-y-1.5">
+                      <div className="bg-slate-50 border border-slate-200/80 rounded-xl sm:rounded-2xl p-2.5 sm:p-3 space-y-1.5">
                         <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block">
                           Suggested available links:
                         </span>
@@ -1196,7 +1201,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
                 )}
 
                 {slugStatus === "idle" && (
-                  <p className="text-[11px] text-slate-400 font-medium mt-2">
+                  <p className="text-[11px] text-slate-400 font-medium mt-1.5 sm:mt-2 truncate">
                     Direct Guest Link: <span className="text-blue-600 font-bold">{typeof window !== "undefined" ? `${window.location.origin}/${formData.slug || "my-event"}` : `https://eventzone.pro/${formData.slug || "my-event"}`}</span>
                   </p>
                 )}
@@ -1206,7 +1211,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
                 type="button"
                 onClick={handleNextFrom2E}
                 disabled={slugStatus !== "available" || loading}
-                className={`w-full py-4 rounded-2xl font-bold text-xs transition-all flex items-center justify-center gap-2 mt-4 ${
+                className={`w-full py-3.5 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-xs transition-all flex items-center justify-center gap-2 mt-3 sm:mt-4 ${
                   slugStatus === "available" && !loading
                     ? "bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/30 cursor-pointer"
                     : "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
@@ -1223,11 +1228,11 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
               </button>
             </div>
 
-            <div className="flex items-center justify-start max-w-xl mx-auto mt-6">
+            <div className="flex items-center justify-start max-w-xl mx-auto mt-4 sm:mt-6">
               <button
                 type="button"
                 onClick={handleBack}
-                className="px-5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold text-xs transition-all cursor-pointer"
+                className="px-4 sm:px-5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold text-xs transition-all cursor-pointer"
               >
                 Back
               </button>
@@ -1240,23 +1245,23 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
         {/* ────────────────────────────────────────────────────────────────── */}
         {currentScreen === "3" && (
           <div className="w-full animate-fade-in text-center">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
+            <h1 className="text-xl sm:text-3xl md:text-4xl font-black sm:font-extrabold text-slate-900 tracking-tight leading-tight">
               Account information & Summary
             </h1>
-            <p className="text-sm text-slate-500 font-medium mt-2 mb-8">
+            <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1.5 mb-5 sm:mb-8">
               Review your setup before launching your event manager dashboard.
             </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 max-w-3xl mx-auto text-start">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-6 max-w-3xl mx-auto text-start">
               {/* Host Fields */}
-              <div className="md:col-span-7 bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs space-y-4">
+              <div className="md:col-span-7 bg-white border border-slate-200 rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-xs space-y-3 sm:space-y-4">
                 <h3 className="text-sm font-bold text-slate-800 pb-2 border-b border-slate-100 flex items-center gap-2">
                   <ShieldCheck size={16} className="text-blue-600" />
                   <span>Host Account Details</span>
                 </h3>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1 sm:mb-1.5">
                     Organizer Name
                   </label>
                   <input
@@ -1264,12 +1269,12 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
                     required
                     value={formData.hostName}
                     onChange={(e) => handleChange("hostName", e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-xl text-xs font-semibold text-slate-900 outline-none"
+                    className="w-full px-3.5 sm:px-4 py-2.5 sm:py-3 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-xl text-xs font-semibold text-slate-900 outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1 sm:mb-1.5">
                     Contact Email
                   </label>
                   <input
@@ -1277,12 +1282,12 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
                     required
                     value={formData.hostEmail}
                     onChange={(e) => handleChange("hostEmail", e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-xl text-xs font-semibold text-slate-900 outline-none"
+                    className="w-full px-3.5 sm:px-4 py-2.5 sm:py-3 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-xl text-xs font-semibold text-slate-900 outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1 sm:mb-1.5">
                     Organization / Host Entity
                   </label>
                   <input
@@ -1290,14 +1295,14 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
                     value={formData.organization}
                     onChange={(e) => handleChange("organization", e.target.value)}
                     placeholder="e.g. Acme Corp, Tech Events Co. (Optional)"
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-xl text-xs font-semibold text-slate-900 outline-none"
+                    className="w-full px-3.5 sm:px-4 py-2.5 sm:py-3 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-xl text-xs font-semibold text-slate-900 outline-none"
                   />
                 </div>
               </div>
 
               {/* Live Preview Card Mini */}
-              <div className="md:col-span-5 flex flex-col justify-between bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-xs">
-                <div className="h-32 w-full relative overflow-hidden bg-slate-900">
+              <div className="md:col-span-5 flex flex-col justify-between bg-white border border-slate-200 rounded-2xl sm:rounded-3xl overflow-hidden shadow-xs">
+                <div className="h-28 sm:h-32 w-full relative overflow-hidden bg-slate-900">
                   <img src={formData.banner || DEFAULT_FALLBACK_BANNER} alt="Cover" className="w-full h-full object-cover" />
                   <div className="absolute top-2.5 left-2.5">
                     <span className="px-2.5 py-0.5 rounded-full text-[9px] font-extrabold bg-white/95 text-blue-700 uppercase">
@@ -1306,7 +1311,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
                   </div>
                 </div>
 
-                <div className="p-4 space-y-2 flex-1 flex flex-col justify-between">
+                <div className="p-3.5 sm:p-4 space-y-2 flex-1 flex flex-col justify-between">
                   <div>
                     <span className="text-[9px] font-bold text-blue-600 uppercase tracking-wider block">
                       {formData.category}
@@ -1349,11 +1354,11 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
             </div>
 
             {/* Launch CTA */}
-            <div className="flex items-center justify-between max-w-3xl mx-auto mt-8 pt-4 border-t border-slate-200/70">
+            <div className="flex items-center justify-between max-w-3xl mx-auto mt-6 sm:mt-8 pt-3 sm:pt-4 border-t border-slate-200/70">
               <button
                 type="button"
                 onClick={handleBack}
-                className="px-5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold text-xs transition-all cursor-pointer"
+                className="px-4 sm:px-5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold text-xs transition-all cursor-pointer"
               >
                 Back
               </button>
@@ -1362,7 +1367,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
                 type="button"
                 disabled={loading}
                 onClick={handleSubmit}
-                className="px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-lg shadow-blue-600/30 transition-all cursor-pointer disabled:opacity-50"
+                className="px-5 sm:px-8 py-3 sm:py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs sm:text-sm shadow-lg shadow-blue-600/30 transition-all cursor-pointer disabled:opacity-50"
               >
                 {loading ? (
                   <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />

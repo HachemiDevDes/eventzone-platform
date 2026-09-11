@@ -398,72 +398,15 @@ export default function RequestQuoteClient() {
       <AnimatedMeshBackground />
 
       {/* ── Top Header Navigation Bar ── */}
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-xl border-b border-slate-200/80 px-4 sm:px-8 py-3 flex items-center justify-between shadow-2xs">
-        <div className="flex items-center gap-6">
-          <Link href="/" className="flex items-center cursor-pointer" title="Eventzone Home">
-            <img
-              src="https://i.imgur.com/jFDrQbM.png"
-              alt="Eventzone"
-              style={{ height: "26px", width: "auto" }}
-              className="h-6 sm:h-7 w-auto object-contain"
-            />
-          </Link>
-          <div className="hidden md:flex items-center gap-5 text-xs font-bold text-slate-600">
-            <Link href="/#explore" className="hover:text-blue-600 transition-colors">
-              {t("nav.exploreEvents", "Explore Events")}
-            </Link>
-            <Link href="/features" className="hover:text-blue-600 transition-colors">
-              {t("nav.features", "Fonctionnalités")}
-            </Link>
-            <Link href="/checkin" className="hover:text-blue-600 transition-colors">
-              {t("dash.checkIn", "Check In")}
-            </Link>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          {/* Language Selector */}
-          <div className="relative">
-            <button
-              onClick={() => setLangMenuOpen((o) => !o)}
-              className="h-8 sm:h-9 flex items-center gap-1.5 px-2.5 sm:px-3 rounded-full hover:bg-slate-100/80 text-slate-700 hover:text-slate-900 text-xs font-bold transition-all cursor-pointer shrink-0"
-            >
-              <img
-                src={curLang?.icon || "https://i.imgur.com/NXtMImD.png"}
-                alt={lang}
-                className="w-4 h-4 object-contain shrink-0"
-              />
-              <span className="uppercase tracking-wide font-extrabold text-[10px] sm:text-[11px]">{lang}</span>
-            </button>
-
-            {langMenuOpen && (
-              <div className={`absolute top-full ${isRTL ? "left-0" : "right-0"} mt-1.5 w-36 bg-white border border-slate-200 rounded-2xl shadow-xl p-1 z-50 animate-scale-up space-y-0.5`}>
-                {languages.map((item) => (
-                  <button
-                    key={item.code}
-                    onClick={() => {
-                      setLang(item.code);
-                      setLangMenuOpen(false);
-                    }}
-                    className={`w-full text-start px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
-                      lang === item.code ? "bg-blue-50 text-blue-600 font-bold" : "text-slate-700 hover:bg-slate-50"
-                    }`}
-                  >
-                    <span>{item.label}</span>
-                    {lang === item.code && <Check size={12} className="text-blue-600" />}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <Link
-            href="/"
-            className="hidden sm:flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all shadow-xs"
-          >
-            <span>Back to Events</span>
-          </Link>
-        </div>
+      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-xl border-b border-slate-200/80 px-4 sm:px-8 py-2.5 sm:py-3 flex items-center justify-center shadow-2xs">
+        <Link href="/" className="flex items-center cursor-pointer transition-opacity hover:opacity-85" title="Eventzone Home">
+          <img
+            src="https://i.imgur.com/jFDrQbM.png"
+            alt="Eventzone"
+            style={{ height: "18px", width: "auto" }}
+            className="h-4.5 sm:h-5 w-auto object-contain"
+          />
+        </Link>
       </header>
 
       {/* ── Main Content Container ── */}

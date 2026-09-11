@@ -249,8 +249,16 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses, cutoutBg 
                 </li>
                 <li>
                   <Link
-                    href="/features"
+                    href="/request-quote"
                     className="hover:text-white transition-colors block text-start rtl:text-right text-left text-blue-400 font-bold"
+                  >
+                    {t("footer.requestQuote", "Request a Quote / Demander un devis")}
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/features"
+                    className="hover:text-white transition-colors block text-start rtl:text-right text-left"
                   >
                     {t("footer.featuresSuite", "Platform Features")}
                   </Link>

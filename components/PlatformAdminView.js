@@ -7,7 +7,8 @@ import {
   CreditCard, Search, Filter, Check, X, ChevronRight, ChevronLeft, ArrowUpRight, 
   ExternalLink, RefreshCw, Star, Download, Eye, AlertCircle, CheckCircle2, 
   Lock, Unlock, Edit3, Pin, ChevronDown, Sliders, BarChart3, TrendingUp,
-  MapPin, Clock, Smartphone, Mail, Globe, ArrowRight, ArrowUp, ArrowDown, Plus, Trash2
+  MapPin, Clock, Smartphone, Mail, Globe, ArrowRight, ArrowUp, ArrowDown, Plus, Trash2,
+  FileText, PhoneCall, Copy, DollarSign, Layers
 } from "lucide-react";
 import SearchableSelect from "./SearchableSelect";
 import { COUNTRY_CITIES_MAP } from "../lib/formPresets";
@@ -20,10 +21,41 @@ import {
   updateEventStatusAdmin,
   fetchAllPlatformPayments,
   fetchAllNewsletterSubscribers,
-  deleteNewsletterSubscriber
+  deleteNewsletterSubscriber,
+  fetchAllQuoteRequests,
+  updateQuoteRequest,
+  deleteQuoteRequest
 } from "../lib/db";
 
 const ALGERIA_WILAYAS = COUNTRY_CITIES_MAP["Algeria"] || [];
+
+const QUOTE_STATUS_OPTIONS = [
+  { value: "pending", label: "Pending Review" },
+  { value: "contacted", label: "Contacted / In Discussion" },
+  { value: "quoted", label: "Quoted (Proposal Sent)" },
+  { value: "won", label: "Won / Deal Closed" },
+  { value: "archived", label: "Archived / Lost" },
+];
+
+const STANDARD_QUOTE_SERVICES = [
+  "Interactive 2D Floor Plans",
+  "Multi-Tier Online Ticketing",
+  "CIB & Edahabia Payments",
+  "High-Speed QR Check-in",
+  "On-Site Thermal Badge Printing",
+  "Hardware Equipment Rental",
+  "Speaker & Agenda Management",
+  "B2B Networking & Matchmaking",
+  "VIP Logistics & Hospitality",
+  "Branded Event Mobile App",
+  "Dedicated On-Site Technical Staff",
+  "A4 Badging & Folded Sheets",
+  "LED Screens & Video Walls",
+  "Roll-ups, Banners & Event Signage",
+  "Sound System & Stage Audio/Lighting",
+  "Hostesses & Reception Staff",
+  "Event Security & Crowd Control",
+];
 
 const HERO_POSITION_OPTIONS = [
   { value: "1", label: "Position #1 (First slide)" },
@@ -82,6 +114,19 @@ export default function PlatformAdminView({
   const [subscriberSearch, setSubscriberSearch] = useState("");
   const [subscriberStatusFilter, setSubscriberStatusFilter] = useState("All");
 
+  // Quote Requests states
+  const [quoteRequests, setQuoteRequests] = useState([]);
+  const [quoteSearch, setQuoteSearch] = useState("");
+  const [quoteStatusFilter, setQuoteStatusFilter] = useState("All");
+  const [quoteWilayaFilter, setQuoteWilayaFilter] = useState("All");
+  const [quoteTypeFilter, setQuoteTypeFilter] = useState("All");
+  const [selectedQuoteForDrawer, setSelectedQuoteForDrawer] = useState(null);
+  const [quoteEditStatus, setQuoteEditStatus] = useState("pending");
+  const [quoteEditNotes, setQuoteEditNotes] = useState("");
+  const [quoteEditAmount, setQuoteEditAmount] = useState("");
+  const [isSavingQuote, setIsSavingQuote] = useState(false);
+  const [copiedQuoteRef, setCopiedQuoteRef] = useState(false);
+
   // Organizer Quota Edit Drawer state
   const [editingOrganizer, setEditingOrganizer] = useState(null);
   const [quotaMaxEvents, setQuotaMaxEvents] = useState("");
@@ -108,11 +153,12 @@ export default function PlatformAdminView({
   const loadAdminData = async (showLoading = true) => {
     if (showLoading) setIsLoading(true);
     try {
-      const [orgsData, eventsData, paysData, subsData] = await Promise.all([
+      const [orgsData, eventsData, paysData, subsData, quotesData] = await Promise.all([
         fetchAllPlatformOrganizers(),
         fetchAllPlatformEventsAdmin(),
         fetchAllPlatformPayments(),
-        fetchAllNewsletterSubscribers()
+        fetchAllNewsletterSubscribers(),
+        fetchAllQuoteRequests()
       ]);
 
       setOrganizers(orgsData);
@@ -120,6 +166,7 @@ export default function PlatformAdminView({
       setPayments(paysData.payments);
       setPaymentMetrics(paysData.metrics);
       setSubscribers(subsData || []);
+      setQuoteRequests(quotesData || []);
     } catch (err) {
       console.error("Error loading admin data:", err);
       showToast("Failed to load back-office records", "error");
@@ -412,8 +459,143 @@ export default function PlatformAdminView({
   };
 
   // ─────────────────────────────────────────────
+  //  QUOTE REQUESTS HANDLERS
+  // ─────────────────────────────────────────────
+  const openQuoteDrawer = (quote) => {
+    setSelectedQuoteForDrawer(quote);
+    setQuoteEditStatus(quote.status || "pending");
+    setQuoteEditNotes(quote.admin_notes || "");
+    setQuoteEditAmount(quote.quoted_amount !== null && quote.quoted_amount !== undefined ? String(quote.quoted_amount) : "");
+    setCopiedQuoteRef(false);
+  };
+
+  const handleSaveQuote = async () => {
+    if (!selectedQuoteForDrawer) return;
+    setIsSavingQuote(true);
+
+    try {
+      const parsedAmount = quoteEditAmount.trim() ? parseFloat(quoteEditAmount) : null;
+      const res = await updateQuoteRequest(selectedQuoteForDrawer.id, {
+        status: quoteEditStatus,
+        admin_notes: quoteEditNotes.trim(),
+        quoted_amount: isNaN(parsedAmount) ? null : parsedAmount,
+      });
+
+      if (res.success && res.quote) {
+        setQuoteRequests(prev => prev.map(q => q.id === selectedQuoteForDrawer.id ? res.quote : q));
+        setSelectedQuoteForDrawer(res.quote);
+        showToast("Quote request updated successfully");
+      } else {
+        showToast(res.error || "Failed to update quote request", "error");
+      }
+    } catch (err) {
+      console.error("handleSaveQuote error:", err);
+      showToast("Error updating quote request", "error");
+    } finally {
+      setIsSavingQuote(false);
+    }
+  };
+
+  const handleDeleteQuote = async (quoteId, refCode) => {
+    if (!confirm(`Are you sure you want to permanently remove quote request ${refCode || ''}? This action cannot be undone.`)) return;
+
+    try {
+      const ok = await deleteQuoteRequest(quoteId);
+      if (ok) {
+        setQuoteRequests(prev => prev.filter(q => q.id !== quoteId));
+        if (selectedQuoteForDrawer?.id === quoteId) {
+          setSelectedQuoteForDrawer(null);
+        }
+        showToast("Quote request deleted successfully");
+      } else {
+        showToast("Failed to delete quote request", "error");
+      }
+    } catch (err) {
+      console.error("handleDeleteQuote error:", err);
+      showToast("Error deleting quote request", "error");
+    }
+  };
+
+  const handleExportQuotesCsv = () => {
+    if (!filteredQuotes.length) return;
+    const headers = [
+      "Reference Code",
+      "Created At",
+      "Full Name",
+      "Company / Org",
+      "Job Title",
+      "Email",
+      "Phone",
+      "Wilaya",
+      "Event Name",
+      "Event Type",
+      "Estimated Attendance",
+      "Target Date",
+      "Duration",
+      "Venue Status",
+      "Budget Bracket",
+      "Quoted Amount (DZD)",
+      "Status",
+      "Requested Services",
+      "Admin Notes",
+      "Additional Requirements"
+    ];
+
+    const rows = filteredQuotes.map(q => [
+      `"${q.reference_code || ''}"`,
+      `"${q.created_at || ''}"`,
+      `"${(q.full_name || '').replace(/"/g, '""')}"`,
+      `"${(q.company_name || '').replace(/"/g, '""')}"`,
+      `"${(q.job_title || '').replace(/"/g, '""')}"`,
+      `"${q.email || ''}"`,
+      `"${q.phone || ''}"`,
+      `"${q.city_wilaya || ''}"`,
+      `"${(q.event_name || '').replace(/"/g, '""')}"`,
+      `"${q.event_type || ''}"`,
+      `"${q.attendees_count || ''}"`,
+      `"${q.event_date || ''}"`,
+      `"${q.duration || ''}"`,
+      `"${q.venue_status || ''}"`,
+      `"${q.budget_range || ''}"`,
+      q.quoted_amount !== null && q.quoted_amount !== undefined ? q.quoted_amount : "",
+      `"${q.status || 'pending'}"`,
+      `"${Array.isArray(q.services) ? q.services.join("; ") : ''}"`,
+      `"${(q.admin_notes || '').replace(/"/g, '""')}"`,
+      `"${(q.additional_details || '').replace(/"/g, '""')}"`,
+    ]);
+
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `eventzone_quote_requests_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast("Downloaded quote requests CSV");
+  };
+
+  // ─────────────────────────────────────────────
   //  MEMOIZED FILTERED LISTS
   // ─────────────────────────────────────────────
+  const filteredQuotes = useMemo(() => {
+    return quoteRequests.filter(q => {
+      const search = quoteSearch.trim().toLowerCase();
+      const matchesSearch = !search ||
+        (q.reference_code && q.reference_code.toLowerCase().includes(search)) ||
+        (q.full_name && q.full_name.toLowerCase().includes(search)) ||
+        (q.company_name && q.company_name.toLowerCase().includes(search)) ||
+        (q.email && q.email.toLowerCase().includes(search)) ||
+        (q.phone && q.phone.toLowerCase().includes(search)) ||
+        (q.event_name && q.event_name.toLowerCase().includes(search));
+
+      const matchesStatus = quoteStatusFilter === "All" || q.status === quoteStatusFilter;
+      const matchesWilaya = quoteWilayaFilter === "All" || q.city_wilaya === quoteWilayaFilter;
+      const matchesType = quoteTypeFilter === "All" || q.event_type === quoteTypeFilter;
+
+      return matchesSearch && matchesStatus && matchesWilaya && matchesType;
+    });
+  }, [quoteRequests, quoteSearch, quoteStatusFilter, quoteWilayaFilter, quoteTypeFilter]);
   const filteredSubscribers = useMemo(() => {
     return subscribers.filter(sub => {
       const q = subscriberSearch.trim().toLowerCase();
@@ -590,6 +772,7 @@ export default function PlatformAdminView({
       <nav className="bg-white border-b border-slate-200 px-6 flex items-center gap-1 overflow-x-auto scrollbar-none">
         {[
           { id: "overview", label: "Executive Overview" },
+          { id: "quotes", label: "Quote Requests", count: quoteRequests.length, pendingCount: quoteRequests.filter(q => q.status === "pending").length },
           { id: "organizers", label: "Organizers & Quotas", count: organizers.length },
           { id: "hero", label: "Homepage Hero Curator", count: curatedHeroEvents.length },
           { id: "events", label: "Master Events Directory", count: events.length },
@@ -608,7 +791,12 @@ export default function PlatformAdminView({
               }`}
             >
               <span>{tab.label}</span>
-              {tab.count !== undefined && (
+              {tab.pendingCount > 0 && (
+                <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-amber-500 text-white shadow-xs animate-pulse">
+                  {tab.pendingCount} New
+                </span>
+              )}
+              {tab.count !== undefined && !tab.pendingCount && (
                 <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
                   isActive ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"
                 }`}>
@@ -1770,6 +1958,354 @@ export default function PlatformAdminView({
                 </div>
               </div>
             )}
+
+            {/* ═══════════════════════════════════════════
+                TAB: INBOUND QUOTE REQUESTS
+            ═══════════════════════════════════════════ */}
+            {activeTab === "quotes" && (
+              <div className="space-y-6 animate-in fade-in duration-300">
+                {/* Header Strip */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-base font-bold text-slate-900 tracking-tight">
+                        Inbound Quote Requests
+                      </h2>
+                      <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
+                        {quoteRequests.length} Total
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Review incoming client quote inquiries, update negotiation status, specify quoted amounts, and assign internal notes.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <button
+                      onClick={() => loadAdminData(false)}
+                      disabled={isRefreshing}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
+                      <span>Refresh</span>
+                    </button>
+                    <button
+                      onClick={handleExportQuotesCsv}
+                      disabled={quoteRequests.length === 0}
+                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Export CSV</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* KPI Metrics */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Total Quotes */}
+                  <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-500 font-semibold">Total Quotes</span>
+                      <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                        <FileText className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div className="text-2xl font-black text-slate-900 font-mono mt-2">
+                      <bdi dir="ltr">{quoteRequests.length}</bdi>
+                    </div>
+                    <div className="text-[11px] text-slate-400 font-medium mt-1">
+                      All historical requests
+                    </div>
+                  </div>
+
+                  {/* Pending Review */}
+                  <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-500 font-semibold">Pending Review</span>
+                      <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                        <Clock className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div className="text-2xl font-black text-amber-600 font-mono mt-2">
+                      <bdi dir="ltr">{quoteRequests.filter(q => q.status === "pending").length}</bdi>
+                    </div>
+                    <div className="text-[11px] text-slate-400 font-medium mt-1">
+                      Awaiting initial outreach
+                    </div>
+                  </div>
+
+                  {/* In Discussion / Quoted */}
+                  <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-500 font-semibold">Quoted / In Discussion</span>
+                      <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                        <DollarSign className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div className="text-2xl font-black text-purple-600 font-mono mt-2">
+                      <bdi dir="ltr">{quoteRequests.filter(q => q.status === "contacted" || q.status === "quoted").length}</bdi>
+                    </div>
+                    <div className="text-[11px] text-slate-400 font-medium mt-1">
+                      Proposals sent / negotiation
+                    </div>
+                  </div>
+
+                  {/* Converted / Won */}
+                  <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-500 font-semibold">Converted / Won</span>
+                      <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                        <CheckCircle2 className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div className="text-2xl font-black text-emerald-600 font-mono mt-2">
+                      <bdi dir="ltr">{quoteRequests.filter(q => q.status === "won").length}</bdi>
+                    </div>
+                    <div className="text-[11px] text-slate-400 font-medium mt-1">
+                      Deals signed &amp; operational
+                    </div>
+                  </div>
+                </div>
+
+                {/* Filters & Search Toolbar */}
+                <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
+                  <div className="relative flex-1 min-w-[260px]">
+                    <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      value={quoteSearch}
+                      onChange={(e) => setQuoteSearch(e.target.value)}
+                      placeholder="Search by reference code, name, company, email, event..."
+                      className="w-full bg-slate-50 border border-slate-200 focus:bg-white rounded-xl pl-10 pr-4 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium"
+                    />
+                    {quoteSearch && (
+                      <button
+                        onClick={() => setQuoteSearch("")}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Status Filter */}
+                  <div className="w-48">
+                    <SearchableSelect
+                      value={quoteStatusFilter}
+                      onChange={setQuoteStatusFilter}
+                      options={[
+                        { value: "All", label: "All Statuses" },
+                        { value: "pending", label: "Pending Review" },
+                        { value: "contacted", label: "Contacted / Discussion" },
+                        { value: "quoted", label: "Quoted (Proposal Sent)" },
+                        { value: "won", label: "Won / Deal Closed" },
+                        { value: "archived", label: "Archived / Lost" }
+                      ]}
+                      placeholder="Status"
+                      buttonClassName="bg-white! border-slate-200! text-slate-800! text-xs! rounded-xl!"
+                    />
+                  </div>
+
+                  {/* Wilaya Filter */}
+                  <div className="w-44">
+                    <SearchableSelect
+                      value={quoteWilayaFilter}
+                      onChange={setQuoteWilayaFilter}
+                      options={[{ value: "All", label: "All Wilayas" }, ...ALGERIA_WILAYAS.map(w => ({ value: w, label: w }))]}
+                      placeholder="Wilaya"
+                      buttonClassName="bg-white! border-slate-200! text-slate-800! text-xs! rounded-xl!"
+                    />
+                  </div>
+                </div>
+
+                {/* Quotes Data Table */}
+                <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase text-[10px] tracking-wider">
+                          <th className="py-3 px-4">#</th>
+                          <th className="py-3 px-4">Ref &amp; Date</th>
+                          <th className="py-3 px-4">Client &amp; Company</th>
+                          <th className="py-3 px-4">Event &amp; Attendance</th>
+                          <th className="py-3 px-4">Requested Services</th>
+                          <th className="py-3 px-4">Budget / Quote</th>
+                          <th className="py-3 px-4">Status</th>
+                          <th className="py-3 px-4 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 font-medium">
+                        {filteredQuotes.length === 0 ? (
+                          <tr>
+                            <td colSpan={8} className="py-12 text-center text-slate-400">
+                              <div className="flex flex-col items-center justify-center gap-2">
+                                <FileText className="w-8 h-8 text-slate-300 stroke-1" />
+                                <p className="text-sm font-semibold text-slate-600">No quote requests found</p>
+                                <p className="text-xs text-slate-400">
+                                  {quoteRequests.length === 0
+                                    ? "No quote requests have been submitted yet."
+                                    : "No quotes match your current search and filter criteria."}
+                                </p>
+                              </div>
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredQuotes.map((q, idx) => {
+                            const servicesList = Array.isArray(q.services) ? q.services : [];
+                            return (
+                              <tr key={q.id || idx} className="hover:bg-slate-50/80 transition-colors">
+                                <td className="py-3.5 px-4 text-slate-400 font-mono text-[11px]">
+                                  {idx + 1}
+                                </td>
+
+                                {/* Ref & Date */}
+                                <td className="py-3.5 px-4">
+                                  <div className="flex items-center gap-1.5 font-mono font-bold text-blue-600">
+                                    <span>{q.reference_code || "—"}</span>
+                                  </div>
+                                  <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                                    {q.created_at ? new Date(q.created_at).toLocaleDateString() : "—"}
+                                  </div>
+                                </td>
+
+                                {/* Client & Company */}
+                                <td className="py-3.5 px-4">
+                                  <div className="font-bold text-slate-900">{q.full_name}</div>
+                                  <div className="text-[11px] text-slate-600 font-semibold">
+                                    {q.company_name} {q.job_title ? `• ${q.job_title}` : ""}
+                                  </div>
+                                  <div className="text-[10px] text-slate-400 flex items-center gap-2 mt-0.5">
+                                    <span className="select-all">{q.email}</span>
+                                    <span>•</span>
+                                    <span>{q.phone}</span>
+                                    {q.city_wilaya && (
+                                      <>
+                                        <span>•</span>
+                                        <span>{q.city_wilaya}</span>
+                                      </>
+                                    )}
+                                  </div>
+                                </td>
+
+                                {/* Event & Attendance */}
+                                <td className="py-3.5 px-4">
+                                  <div className="font-bold text-slate-900 truncate max-w-[200px]">
+                                    {q.event_name || "Untitled Project"}
+                                  </div>
+                                  <div className="text-[11px] text-slate-500">
+                                    {q.event_type || "Event"}
+                                  </div>
+                                  <div className="text-[10px] text-slate-400 mt-0.5">
+                                    {q.attendees_count || "Attendance flexible"} {q.duration ? `• ${q.duration}` : ""}
+                                  </div>
+                                </td>
+
+                                {/* Requested Services */}
+                                <td className="py-3.5 px-4 max-w-[220px]">
+                                  {servicesList.length === 0 ? (
+                                    <span className="text-slate-400 text-[11px]">None specified</span>
+                                  ) : (
+                                    <div className="flex flex-wrap gap-1">
+                                      {servicesList.slice(0, 2).map((srv, sIdx) => {
+                                        const isCustom = !STANDARD_QUOTE_SERVICES.includes(srv);
+                                        return (
+                                          <span
+                                            key={sIdx}
+                                            className={`px-1.5 py-0.5 rounded text-[10px] truncate max-w-[140px] ${
+                                              isCustom
+                                                ? "bg-amber-50 text-amber-800 border border-amber-300 font-bold"
+                                                : "bg-slate-100 text-slate-700 font-medium"
+                                            }`}
+                                          >
+                                            {isCustom ? `★ ${srv}` : srv}
+                                          </span>
+                                        );
+                                      })}
+                                      {servicesList.length > 2 && (
+                                        <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-bold">
+                                          +{servicesList.length - 2}
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                </td>
+
+                                {/* Budget & Quoted Amount */}
+                                <td className="py-3.5 px-4">
+                                  {q.quoted_amount ? (
+                                    <div>
+                                      <div className="font-bold font-mono text-emerald-600 text-xs">
+                                        {Number(q.quoted_amount).toLocaleString()} DZD
+                                      </div>
+                                      <div className="text-[10px] text-slate-400">
+                                        Budget: {q.budget_range || "Flexible"}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <span className="text-slate-600 text-xs font-medium">
+                                      {q.budget_range || "Flexible"}
+                                    </span>
+                                  )}
+                                </td>
+
+                                {/* Status */}
+                                <td className="py-3.5 px-4">
+                                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold capitalize border ${
+                                    q.status === "won"
+                                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                      : q.status === "quoted"
+                                      ? "bg-purple-50 text-purple-700 border-purple-200"
+                                      : q.status === "contacted"
+                                      ? "bg-blue-50 text-blue-700 border-blue-200"
+                                      : q.status === "archived"
+                                      ? "bg-slate-100 text-slate-600 border-slate-200"
+                                      : "bg-amber-50 text-amber-700 border-amber-200"
+                                  }`}>
+                                    {q.status === "won" && <Check className="w-3 h-3" />}
+                                    {q.status === "pending" ? "Pending Review" : (q.status || "pending")}
+                                  </span>
+                                </td>
+
+                                {/* Actions */}
+                                <td className="py-3.5 px-4 text-right">
+                                  <div className="flex items-center justify-end gap-1">
+                                    <button
+                                      onClick={() => openQuoteDrawer(q)}
+                                      className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                                      title="Review quote details & assign quote value"
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                    </button>
+                                    <a
+                                      href={`mailto:${q.email}?subject=Regarding your Eventzone quote request (${q.reference_code})`}
+                                      className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 transition-colors cursor-pointer"
+                                      title="Email client directly"
+                                    >
+                                      <Mail className="w-4 h-4" />
+                                    </a>
+                                    <button
+                                      onClick={() => handleDeleteQuote(q.id, q.reference_code)}
+                                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                                      title="Delete quote"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                  {filteredQuotes.length > 0 && (
+                    <div className="p-3 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 px-4">
+                      <span>Showing {filteredQuotes.length} of {quoteRequests.length} quote requests</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </>
         )}
       </main>
@@ -1998,6 +2534,311 @@ export default function PlatformAdminView({
                   ))
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────
+          DRAWER: QUOTE REQUEST DETAILS & COMMERCIAL MANAGEMENT
+      ───────────────────────────────────────────── */}
+      {selectedQuoteForDrawer && (
+        <div className="fixed inset-0 z-50 overflow-hidden">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity animate-in fade-in duration-300 cursor-pointer"
+            onClick={() => setSelectedQuoteForDrawer(null)}
+          />
+
+          {/* Slide-over panel on the right */}
+          <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
+            <div className="w-screen max-w-xl bg-white border-l border-slate-200 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+              
+              {/* Header */}
+              <div className="px-6 py-5 border-b border-slate-200 flex items-center justify-between bg-slate-50/70">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shadow-2xs shrink-0">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-bold text-slate-900">
+                        Quote Request: <span className="font-mono text-blue-600">{selectedQuoteForDrawer.reference_code}</span>
+                      </h3>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold capitalize border ${
+                        selectedQuoteForDrawer.status === "won"
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          : selectedQuoteForDrawer.status === "quoted"
+                          ? "bg-purple-50 text-purple-700 border-purple-200"
+                          : selectedQuoteForDrawer.status === "contacted"
+                          ? "bg-blue-50 text-blue-700 border-blue-200"
+                          : selectedQuoteForDrawer.status === "archived"
+                          ? "bg-slate-100 text-slate-600 border-slate-200"
+                          : "bg-amber-50 text-amber-700 border-amber-200"
+                      }`}>
+                        {selectedQuoteForDrawer.status === "pending" ? "Pending Review" : (selectedQuoteForDrawer.status || "pending")}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 font-medium mt-0.5">
+                      {selectedQuoteForDrawer.company_name} • Submitted {selectedQuoteForDrawer.created_at ? new Date(selectedQuoteForDrawer.created_at).toLocaleString() : "recently"}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedQuoteForDrawer(null)}
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Quick Action Toolbar */}
+              <div className="px-6 py-2.5 bg-white border-b border-slate-100 flex items-center gap-2 overflow-x-auto">
+                <a
+                  href={`mailto:${selectedQuoteForDrawer.email}?subject=Regarding your Eventzone quote request (${selectedQuoteForDrawer.reference_code})`}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold transition-colors shadow-2xs"
+                >
+                  <Mail className="w-3.5 h-3.5" />
+                  <span>Email Client</span>
+                </a>
+                <a
+                  href={`tel:${selectedQuoteForDrawer.phone}`}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold transition-colors shadow-2xs"
+                >
+                  <PhoneCall className="w-3.5 h-3.5" />
+                  <span>Call Phone</span>
+                </a>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const summary = `Eventzone Quote Request: ${selectedQuoteForDrawer.reference_code}\nClient: ${selectedQuoteForDrawer.full_name} (${selectedQuoteForDrawer.company_name})\nEmail: ${selectedQuoteForDrawer.email}\nPhone: ${selectedQuoteForDrawer.phone}\nEvent: ${selectedQuoteForDrawer.event_name || 'N/A'}\nType: ${selectedQuoteForDrawer.event_type}\nAttendees: ${selectedQuoteForDrawer.attendees_count}\nBudget: ${selectedQuoteForDrawer.budget_range}\nServices: ${Array.isArray(selectedQuoteForDrawer.services) ? selectedQuoteForDrawer.services.join(', ') : 'None'}`;
+                    navigator.clipboard.writeText(summary);
+                    setCopiedQuoteRef(true);
+                    setTimeout(() => setCopiedQuoteRef(false), 2000);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors shadow-2xs cursor-pointer"
+                >
+                  {copiedQuoteRef ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedQuoteRef ? "Copied!" : "Copy Summary"}</span>
+                </button>
+              </div>
+
+              {/* Drawer Scrollable Body */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6 text-xs">
+                
+                {/* Client & Organization Section */}
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+                  <h4 className="font-bold text-slate-900 text-xs flex items-center gap-2">
+                    <User className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Client &amp; Organization Details</span>
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <span className="text-slate-400 block text-[11px]">Full Name</span>
+                      <span className="font-bold text-slate-900">{selectedQuoteForDrawer.full_name}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[11px]">Company / Organization</span>
+                      <span className="font-bold text-slate-900">{selectedQuoteForDrawer.company_name}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[11px]">Job Title / Role</span>
+                      <span className="text-slate-700 font-medium">{selectedQuoteForDrawer.job_title || "—"}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[11px]">Wilaya / Location</span>
+                      <span className="text-slate-700 font-medium">{selectedQuoteForDrawer.city_wilaya || "—"}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[11px]">Email Address</span>
+                      <a href={`mailto:${selectedQuoteForDrawer.email}`} className="text-blue-600 hover:underline font-mono select-all">
+                        {selectedQuoteForDrawer.email}
+                      </a>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[11px]">Contact Phone</span>
+                      <a href={`tel:${selectedQuoteForDrawer.phone}`} className="text-emerald-600 hover:underline font-mono select-all">
+                        {selectedQuoteForDrawer.phone}
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Event Specifications */}
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+                  <h4 className="font-bold text-slate-900 text-xs flex items-center gap-2">
+                    <Calendar className="w-3.5 h-3.5 text-purple-600" />
+                    <span>Event Specifications &amp; Scale</span>
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div className="col-span-2">
+                      <span className="text-slate-400 block text-[11px]">Event Project Name</span>
+                      <span className="font-bold text-slate-900 text-sm">{selectedQuoteForDrawer.event_name || "Untitled Project"}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[11px]">Format / Category</span>
+                      <span className="font-semibold text-slate-800">{selectedQuoteForDrawer.event_type || "—"}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[11px]">Estimated Attendees</span>
+                      <span className="font-semibold text-slate-800">{selectedQuoteForDrawer.attendees_count || "—"}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[11px]">Target Date / Timeline</span>
+                      <span className="text-slate-700 font-medium">{selectedQuoteForDrawer.event_date || "—"}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[11px]">Duration</span>
+                      <span className="text-slate-700 font-medium">{selectedQuoteForDrawer.duration || "—"}</span>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-slate-400 block text-[11px]">Venue Booking Status</span>
+                      <span className="text-slate-700 font-medium">{selectedQuoteForDrawer.venue_status || "—"}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Requested Modules */}
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2.5">
+                  <h4 className="font-bold text-slate-900 text-xs flex items-center gap-2">
+                    <Layers className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Requested Services &amp; Modules ({Array.isArray(selectedQuoteForDrawer.services) ? selectedQuoteForDrawer.services.length : 0})</span>
+                  </h4>
+                  {Array.isArray(selectedQuoteForDrawer.services) && selectedQuoteForDrawer.services.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {selectedQuoteForDrawer.services.map((srv, idx) => {
+                        const isCustom = !STANDARD_QUOTE_SERVICES.includes(srv);
+                        return (
+                          <span
+                            key={idx}
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs shadow-2xs ${
+                              isCustom
+                                ? "bg-amber-50/80 border-amber-300 text-amber-900 ring-1 ring-amber-400/20 font-bold"
+                                : "bg-white border-slate-200 text-slate-800 font-semibold"
+                            }`}
+                          >
+                            <Check className={`w-3 h-3 ${isCustom ? "text-amber-600" : "text-blue-600"}`} />
+                            <span>{srv}</span>
+                            {isCustom && (
+                              <span className="text-[9px] font-extrabold uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-200/70 text-amber-800 ml-1">
+                                Custom Need
+                              </span>
+                            )}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-slate-400 text-xs italic">No specific service modules selected.</p>
+                  )}
+                </div>
+
+                {/* Additional Details / Message */}
+                {selectedQuoteForDrawer.additional_details && (
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
+                    <h4 className="font-bold text-slate-900 text-xs">Requester Message &amp; Requirements</h4>
+                    <p className="text-slate-700 bg-white p-3 rounded-xl border border-slate-200 text-xs leading-relaxed whitespace-pre-wrap">
+                      {selectedQuoteForDrawer.additional_details}
+                    </p>
+                  </div>
+                )}
+
+                {/* ── Commercial Management Form ── */}
+                <div className="p-5 rounded-2xl bg-blue-50/50 border border-blue-200/80 space-y-4">
+                  <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
+                    <h4 className="font-bold text-blue-950 text-xs flex items-center gap-2">
+                      <Sliders className="w-4 h-4 text-blue-600" />
+                      <span>Commercial Follow-up &amp; Quote Status</span>
+                    </h4>
+                    <span className="text-[10px] font-mono font-bold text-blue-700 bg-blue-100/80 px-2 py-0.5 rounded">
+                      Super Admin Only
+                    </span>
+                  </div>
+
+                  {/* Status Dropdown */}
+                  <div>
+                    <label className="block font-bold text-slate-800 mb-1.5">Quote Status</label>
+                    <SearchableSelect
+                      value={quoteEditStatus}
+                      onChange={setQuoteEditStatus}
+                      options={QUOTE_STATUS_OPTIONS}
+                      isClearable={false}
+                      buttonClassName="bg-white! border-slate-200! text-slate-900! text-xs! font-semibold! rounded-xl!"
+                    />
+                  </div>
+
+                  {/* Quoted Amount */}
+                  <div>
+                    <label className="block font-bold text-slate-800 mb-1">
+                      Quoted Commercial Value (DZD)
+                    </label>
+                    <p className="text-[11px] text-slate-500 mb-2">
+                      Client&apos;s indicated budget: <strong className="text-slate-700">{selectedQuoteForDrawer.budget_range || "Flexible"}</strong>
+                    </p>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="0"
+                        step="1000"
+                        value={quoteEditAmount}
+                        onChange={(e) => setQuoteEditAmount(e.target.value)}
+                        placeholder="e.g. 750000"
+                        className="w-full bg-white border border-slate-200 focus:bg-white rounded-xl px-3.5 py-2.5 text-xs text-slate-900 font-mono font-bold placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all pr-14"
+                      />
+                      <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 font-mono pointer-events-none">
+                        DZD
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Internal Admin Notes */}
+                  <div>
+                    <label className="block font-bold text-slate-800 mb-1.5">
+                      Internal Admin Notes &amp; Activity Log
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={quoteEditNotes}
+                      onChange={(e) => setQuoteEditNotes(e.target.value)}
+                      placeholder="e.g. Called client on 11/09. Agreed on 2-day conference with 3 scanners and 500 badges. Sent commercial proposal v1 via email..."
+                      className="w-full bg-white border border-slate-200 focus:bg-white rounded-xl p-3 text-xs text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all leading-relaxed"
+                    />
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Drawer Footer */}
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => handleDeleteQuote(selectedQuoteForDrawer.id, selectedQuoteForDrawer.reference_code)}
+                  className="px-3.5 py-2.5 rounded-xl text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200/80 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete Quote</span>
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedQuoteForDrawer(null)}
+                    className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveQuote}
+                    disabled={isSavingQuote}
+                    className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-1.5 shadow-sm shadow-blue-600/30 cursor-pointer"
+                  >
+                    {isSavingQuote ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                    <span>Save Quote Status &amp; Notes</span>
+                  </button>
+                </div>
+              </div>
+
             </div>
           </div>
         </div>
