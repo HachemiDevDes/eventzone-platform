@@ -65,8 +65,8 @@ export default function FeatureNavbar({ featureTitle, category }) {
   };
 
   return (
-    <div ref={navRef} className="sticky top-3 sm:top-4 z-50 w-[80%] mx-auto">
-      <header className="bg-white rounded-2xl border border-slate-200/90 shadow-[0_2px_14px_rgba(0,0,0,0.05)] px-4 sm:px-6 h-16 sm:h-[68px] flex items-center justify-between transition-all relative w-full">
+    <div ref={navRef} className="sticky top-3 sm:top-4 z-50 w-[95%] mx-auto">
+      <header className="bg-white rounded-[26px] sm:rounded-[28px] border border-slate-200/90 shadow-[0_2px_16px_rgba(0,0,0,0.06)] px-4 sm:px-6 h-16 sm:h-[70px] flex items-center justify-between transition-all relative w-full">
         
         {/* Left Side: Logo & Main Navigation Links */}
         <div className="flex items-center gap-6 xl:gap-8">
@@ -274,7 +274,7 @@ export default function FeatureNavbar({ featureTitle, category }) {
                 setLangMenuOpen(o => !o);
                 setActiveDropdown(null);
               }}
-              className="h-9 flex items-center gap-1.5 px-2.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer shadow-xs shrink-0"
+              className="h-10 flex items-center gap-1.5 px-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer shadow-xs shrink-0"
               title="Change Language"
             >
               <img 
@@ -321,7 +321,7 @@ export default function FeatureNavbar({ featureTitle, category }) {
           {/* Request a Quote Button */}
           <Link
             href="/request-quote"
-            className="px-4 xl:px-5 py-2 text-[13px] xl:text-[14px] font-semibold text-white bg-[#0c1a30] hover:bg-[#162b4c] rounded-lg shadow-sm transition-all active:scale-95 cursor-pointer inline-flex items-center gap-1.5 shrink-0"
+            className="px-5 sm:px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-white bg-[#0c1a30] hover:bg-[#162b4c] rounded-xl sm:rounded-[14px] shadow-sm transition-all active:scale-95 cursor-pointer inline-flex items-center justify-center gap-1.5 shrink-0"
           >
             <span>{ui.requestQuote || "Request a Quote"}</span>
           </Link>
@@ -370,7 +370,7 @@ export default function FeatureNavbar({ featureTitle, category }) {
 
           <Link
             href="/request-quote"
-            className="px-3 py-1.5 text-xs font-semibold text-white bg-[#0c1a30] hover:bg-[#162b4c] rounded-lg shadow-sm transition-all shrink-0"
+            className="px-3.5 py-2 text-xs font-semibold text-white bg-[#0c1a30] hover:bg-[#162b4c] rounded-xl shadow-sm transition-all shrink-0"
           >
             <span>{ui.requestQuote || "Devis"}</span>
           </Link>
@@ -455,7 +455,7 @@ export default function FeatureNavbar({ featureTitle, category }) {
               <Link
                 href="/request-quote"
                 onClick={() => setMobileMenuOpen(false)}
-                className="w-full text-center py-2.5 text-sm font-semibold text-white bg-[#0c1a30] hover:bg-[#162b4c] rounded-lg shadow-sm transition-all"
+                className="w-full text-center py-2.5 text-sm font-semibold text-white bg-[#0c1a30] hover:bg-[#162b4c] rounded-xl shadow-sm transition-all"
               >
                 {ui.requestQuote || "Request a Quote"}
               </Link>
