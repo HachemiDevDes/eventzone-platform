@@ -269,8 +269,8 @@ export default function FeatureNavbar({ featureTitle, category }) {
           </nav>
         </div>
 
-        {/* Right Side: Language Switcher, Talk to sales, Log In & Get started */}
-        <div className="hidden lg:flex items-center gap-3 xl:gap-4">
+        {/* Right Side: Language Switcher, Ghost Sign In & Request a Quote */}
+        <div className="hidden lg:flex items-center gap-2 xl:gap-2.5">
           
           {/* Language Selector Dropdown */}
           <div className="relative shrink-0">
@@ -317,6 +317,19 @@ export default function FeatureNavbar({ featureTitle, category }) {
               </div>
             )}
           </div>
+
+          {/* Sign In Ghost Button */}
+          <Link
+            href="/?view=auth&mode=signin"
+            className="h-[44px] sm:h-[48px] px-3.5 sm:px-4 text-[13px] sm:text-[14px] font-semibold text-slate-700 hover:text-slate-950 hover:bg-slate-100/80 active:bg-slate-200/60 rounded-[14px] transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 shrink-0 squircle-button squircle-smooth"
+            style={{
+              cornerSmoothing: "1",
+              WebkitCornerSmoothing: "1",
+              cornerShape: "squircle",
+            }}
+          >
+            <span>{ui.signIn || ui.logIn || "Sign In"}</span>
+          </Link>
 
           {/* Request a Quote Button */}
           <Link
@@ -464,6 +477,13 @@ export default function FeatureNavbar({ featureTitle, category }) {
             </div>
 
             <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
+              <Link
+                href="/?view=auth&mode=signin"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full text-center py-2.5 text-sm font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 rounded-xl transition-all"
+              >
+                {ui.signIn || ui.logIn || "Sign In"}
+              </Link>
               <Link
                 href="/request-quote"
                 onClick={() => setMobileMenuOpen(false)}
