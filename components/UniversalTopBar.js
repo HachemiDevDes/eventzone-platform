@@ -166,12 +166,11 @@ export default function UniversalTopBar({
                 setLangMenuOpen(o => !o);
                 setProfileOpen(false);
               }}
-              className="h-9 flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer shadow-xs shrink-0"
+              className="h-9 flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 rounded-full hover:bg-slate-100/80 text-slate-700 hover:text-slate-900 text-xs font-bold transition-all cursor-pointer shrink-0"
               title="Change Language"
             >
               <img src={curLang?.icon || "https://i.imgur.com/NXtMImD.png"} alt={lang} className="w-4 h-4 sm:w-5 sm:h-5 object-contain shrink-0" />
               <span className="uppercase tracking-wide font-extrabold text-[10px] sm:text-[11px]">{lang}</span>
-              <ChevronDown size={11} className={`text-slate-400 transition-transform ${langMenuOpen ? "rotate-180" : ""}`} />
             </button>
 
             {langMenuOpen && (

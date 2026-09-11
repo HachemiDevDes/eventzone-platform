@@ -8,10 +8,9 @@ import {
   Layers, CreditCard, QrCode, Printer, HardDrive, 
   Presentation, Handshake, Plane, Smartphone, Wrench, 
   FileText, Monitor, Flag, Volume2, UserCheck, Shield,
-  Plus, X, Copy, Check, AlertCircle, RefreshCw, ChevronDown,
+  Plus, X, Copy, Check, AlertCircle, RefreshCw,
   ArrowRight, ArrowLeft
 } from "lucide-react";
-import { useLanguage } from "../lib/i18n";
 import { COUNTRY_CITIES_MAP } from "../lib/formPresets";
 import SearchableSelect from "./SearchableSelect";
 import AnimatedMeshBackground from "./features/AnimatedMeshBackground";
@@ -192,9 +191,6 @@ const AVAILABLE_SERVICES = [
 ];
 
 export default function RequestQuoteClient() {
-  const { lang, setLang, t, languages, isRTL } = useLanguage();
-  const [langMenuOpen, setLangMenuOpen] = useState(false);
-
   // Stepper state
   const [currentStep, setCurrentStep] = useState(1);
   const formRef = useRef(null);
@@ -231,8 +227,6 @@ export default function RequestQuoteClient() {
   const [errorMessage, setErrorMessage] = useState(null);
   const [submittedQuote, setSubmittedQuote] = useState(null);
   const [copiedRef, setCopiedRef] = useState(false);
-
-  const curLang = languages.find((l) => l.code === lang) || languages[0];
 
   const toggleService = (title) => {
     setSelectedServices((prev) =>
@@ -432,7 +426,7 @@ export default function RequestQuoteClient() {
           <div className="relative">
             <button
               onClick={() => setLangMenuOpen((o) => !o)}
-              className="h-8 sm:h-9 flex items-center gap-1.5 px-2.5 sm:px-3 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer shadow-2xs"
+              className="h-8 sm:h-9 flex items-center gap-1.5 px-2.5 sm:px-3 rounded-full hover:bg-slate-100/80 text-slate-700 hover:text-slate-900 text-xs font-bold transition-all cursor-pointer shrink-0"
             >
               <img
                 src={curLang?.icon || "https://i.imgur.com/NXtMImD.png"}
@@ -440,7 +434,6 @@ export default function RequestQuoteClient() {
                 className="w-4 h-4 object-contain shrink-0"
               />
               <span className="uppercase tracking-wide font-extrabold text-[10px] sm:text-[11px]">{lang}</span>
-              <ChevronDown size={11} className={`text-slate-400 transition-transform ${langMenuOpen ? "rotate-180" : ""}`} />
             </button>
 
             {langMenuOpen && (
