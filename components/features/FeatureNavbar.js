@@ -63,10 +63,16 @@ export default function FeatureNavbar({ featureTitle, category }) {
     setLangMenuOpen(false);
     setActiveDropdown(activeDropdown === menuName ? null : menuName);
   };
-
   return (
     <div ref={navRef} className="sticky top-3 sm:top-4 z-50 w-[95%] mx-auto">
-      <header className="bg-white rounded-[26px] sm:rounded-[28px] border border-slate-200/90 shadow-[0_2px_16px_rgba(0,0,0,0.06)] px-4 sm:px-6 h-16 sm:h-[70px] flex items-center justify-between transition-all relative w-full">
+      <header 
+        className="bg-white rounded-[28px] sm:rounded-[30px] border border-slate-200/90 shadow-[0_2px_16px_rgba(0,0,0,0.06)] pl-4 sm:pl-6 pr-2.5 sm:pr-3.5 rtl:pr-4 sm:rtl:pr-6 rtl:pl-2.5 sm:rtl:pl-3.5 h-16 sm:h-[70px] flex items-center justify-between transition-all relative w-full squircle-smooth"
+        style={{
+          cornerSmoothing: 1,
+          WebkitCornerSmoothing: 1,
+          cornerShape: "squircle",
+        }}
+      >
         
         {/* Left Side: Logo & Main Navigation Links */}
         <div className="flex items-center gap-6 xl:gap-8">
@@ -274,7 +280,12 @@ export default function FeatureNavbar({ featureTitle, category }) {
                 setLangMenuOpen(o => !o);
                 setActiveDropdown(null);
               }}
-              className="h-10 flex items-center gap-1.5 px-3 rounded-[10px] border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer shadow-xs shrink-0"
+              className="h-10 flex items-center gap-1.5 px-3 rounded-[10px] border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer shadow-xs shrink-0 squircle-smooth"
+              style={{
+                cornerSmoothing: 1,
+                WebkitCornerSmoothing: 1,
+                cornerShape: "squircle",
+              }}
               title="Change Language"
             >
               <img 
@@ -321,7 +332,12 @@ export default function FeatureNavbar({ featureTitle, category }) {
           {/* Request a Quote Button */}
           <Link
             href="/request-quote"
-            className="h-[44px] sm:h-[48px] px-5 sm:px-6 text-[13px] sm:text-[14px] font-semibold text-white bg-[#0c1a30] hover:bg-[#162b4c] rounded-[10px] shadow-sm transition-all active:scale-95 cursor-pointer inline-flex items-center justify-center gap-1.5 shrink-0"
+            className="h-[44px] sm:h-[48px] px-5 sm:px-6 text-[13px] sm:text-[14px] font-semibold text-white bg-[#0c1a30] hover:bg-[#162b4c] rounded-[11px] sm:rounded-[12px] shadow-sm transition-all active:scale-95 cursor-pointer inline-flex items-center justify-center gap-1.5 shrink-0 squircle-smooth"
+            style={{
+              cornerSmoothing: 1,
+              WebkitCornerSmoothing: 1,
+              cornerShape: "squircle",
+            }}
           >
             <span>{ui.requestQuote || "Request a Quote"}</span>
           </Link>
@@ -370,7 +386,12 @@ export default function FeatureNavbar({ featureTitle, category }) {
 
           <Link
             href="/request-quote"
-            className="px-3.5 py-2 text-xs font-semibold text-white bg-[#0c1a30] hover:bg-[#162b4c] rounded-[10px] shadow-sm transition-all shrink-0"
+            className="px-3.5 py-2 text-xs font-semibold text-white bg-[#0c1a30] hover:bg-[#162b4c] rounded-[10px] shadow-sm transition-all shrink-0 squircle-smooth"
+            style={{
+              cornerSmoothing: 1,
+              WebkitCornerSmoothing: 1,
+              cornerShape: "squircle",
+            }}
           >
             <span>{ui.requestQuote || "Devis"}</span>
           </Link>

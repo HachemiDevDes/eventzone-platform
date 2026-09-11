@@ -39,6 +39,29 @@
   border-top-right-radius: 22px !important;
 }
 
+/* Quote Section Squircle Cards with Max Corner Smoothing & Softer Shadow */
+.quote-section-card {
+  border-radius: 32px !important;
+  corner-smoothing: 1;
+  -webkit-corner-smoothing: 1;
+  corner-shape: squircle;
+  box-shadow: 0 14px 40px -10px rgba(15, 23, 42, 0.04), 0 2px 12px -2px rgba(15, 23, 42, 0.015) !important;
+}
+
+/* Max Corner Smoothing & Continuous Curvature (Squircle / Superellipse) */
+.squircle-smooth {
+  corner-smoothing: 1;
+  -webkit-corner-smoothing: 1;
+  corner-shape: squircle;
+}
+
+@supports (corner-shape: superellipse(4)) {
+  .squircle-smooth {
+    corner-shape: superellipse(4);
+  }
+}
+
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
