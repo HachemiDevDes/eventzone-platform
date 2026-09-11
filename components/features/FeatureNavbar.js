@@ -318,17 +318,17 @@ export default function FeatureNavbar({ featureTitle, category }) {
             )}
           </div>
 
-          {/* Sign In Ghost Button */}
+          {/* Log In Outlined Button */}
           <Link
             href="/?view=auth&mode=signin"
-            className="h-[44px] sm:h-[48px] px-3.5 sm:px-4 text-[13px] sm:text-[14px] font-semibold text-slate-700 hover:text-slate-950 hover:bg-slate-100/80 active:bg-slate-200/60 rounded-[14px] transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 shrink-0 squircle-button squircle-smooth"
+            className="h-[44px] sm:h-[48px] px-4 sm:px-5 text-[13px] sm:text-[14px] font-semibold text-[#0c1a30] hover:text-[#0c1a30] bg-white hover:bg-slate-50 active:bg-slate-100 border border-[#0c1a30] rounded-[14px] shadow-2xs transition-all active:scale-95 cursor-pointer inline-flex items-center justify-center gap-1.5 shrink-0 squircle-button squircle-smooth"
             style={{
               cornerSmoothing: "1",
               WebkitCornerSmoothing: "1",
               cornerShape: "squircle",
             }}
           >
-            <span>{ui.signIn || ui.logIn || "Sign In"}</span>
+            <span>{ui.logIn || "Log In"}</span>
           </Link>
 
           {/* Request a Quote Button */}
@@ -480,9 +480,9 @@ export default function FeatureNavbar({ featureTitle, category }) {
               <Link
                 href="/?view=auth&mode=signin"
                 onClick={() => setMobileMenuOpen(false)}
-                className="w-full text-center py-2.5 text-sm font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 rounded-xl transition-all"
+                className="w-full text-center py-2.5 text-sm font-semibold text-[#0c1a30] bg-white hover:bg-slate-50 border border-[#0c1a30] rounded-xl transition-all"
               >
-                {ui.signIn || ui.logIn || "Sign In"}
+                {ui.logIn || "Log In"}
               </Link>
               <Link
                 href="/request-quote"
