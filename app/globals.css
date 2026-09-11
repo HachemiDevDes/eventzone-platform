@@ -77,6 +77,21 @@
   }
 }
 
+/* Button with Max Corner Smoothing */
+.squircle-button {
+  border-radius: 14px !important;
+  corner-smoothing: 1;
+  -webkit-corner-smoothing: 1;
+  corner-shape: squircle;
+}
+
+@supports (corner-shape: superellipse(4)) {
+  .squircle-button {
+    corner-shape: superellipse(4);
+  }
+}
+
+
 
 
 @keyframes fadeIn {
