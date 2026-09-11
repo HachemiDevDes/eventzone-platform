@@ -37,46 +37,6 @@ export default function UniversalTopBar({
     }
   };
 
-  const handleExploreClick = (e) => {
-    if (onGoToHome) {
-      e.preventDefault();
-      onGoToHome();
-      setTimeout(() => {
-        smoothScrollTo("#explore", { duration: 900, offset: 70, easing: "easeInOutCubic" });
-      }, 50);
-    }
-  };
-
-  const handleFeaturedClick = (e) => {
-    if (onGoToHome) {
-      e.preventDefault();
-      onGoToHome();
-      setTimeout(() => {
-        smoothScrollTo("#featured", { duration: 900, offset: 70, easing: "easeInOutCubic" });
-      }, 50);
-    }
-  };
-
-  const handleCategoriesClick = (e) => {
-    if (onGoToHome) {
-      e.preventDefault();
-      onGoToHome();
-      setTimeout(() => {
-        smoothScrollTo("#categories", { duration: 900, offset: 70, easing: "easeInOutCubic" });
-      }, 50);
-    }
-  };
-
-  const handleMobileAppClick = (e) => {
-    if (onGoToHome) {
-      e.preventDefault();
-      onGoToHome();
-      setTimeout(() => {
-        smoothScrollTo("#mobile-app", { duration: 900, offset: 70, easing: "easeInOutCubic" });
-      }, 50);
-    }
-  };
-
   const handleForOrganizersClick = () => {
     if (onOpenCreationWizard) {
       onOpenCreationWizard();
@@ -107,34 +67,6 @@ export default function UniversalTopBar({
 
       {/* Center: Quick Links in the middle */}
       <nav className="hidden md:flex items-center gap-7">
-        <a 
-          href="#explore" 
-          onClick={handleExploreClick}
-          className="text-xs font-bold text-slate-600 hover:text-blue-600 transition-colors cursor-pointer"
-        >
-          {t("nav.exploreEvents", "Explore Events")}
-        </a>
-        <a 
-          href="#featured" 
-          onClick={handleFeaturedClick}
-          className="text-xs font-bold text-slate-600 hover:text-blue-600 transition-colors cursor-pointer"
-        >
-          {t("nav.featuredSummits", "Featured Summits")}
-        </a>
-        <a 
-          href="#categories" 
-          onClick={handleCategoriesClick}
-          className="text-xs font-bold text-slate-600 hover:text-blue-600 transition-colors cursor-pointer"
-        >
-          {t("nav.categories", "Categories")}
-        </a>
-        <a 
-          href="#mobile-app" 
-          onClick={handleMobileAppClick}
-          className="text-xs font-bold text-slate-600 hover:text-blue-600 transition-colors cursor-pointer"
-        >
-          {t("nav.mobileApp", "Mobile App")}
-        </a>
         <Link 
           href="/features"
           className="text-xs font-bold text-slate-600 hover:text-blue-600 transition-colors cursor-pointer"
