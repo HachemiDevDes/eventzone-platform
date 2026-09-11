@@ -1112,6 +1112,210 @@ function VisualGraphicCard({ item, idx, featureSlug, lang = "fr" }) {
     );
   }
 
+  // 12. Module 12: Portail Participant & Espace Visiteur Interactif
+  if (type === "portal-badge-wallet") {
+    return (
+      <div className="space-y-4">
+        <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-white shadow-xl relative overflow-hidden border border-white/10">
+          <div className="flex items-center justify-between pb-3 border-b border-white/10">
+            <div className="flex items-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-300">
+                {lang === "ar" ? "شارة دخول رقمية معتمدة" : lang === "en" ? "Official Digital Pass" : "Pass Numérique Officiel"}
+              </span>
+            </div>
+            <span className="text-[10px] font-black text-amber-400 bg-amber-400/20 px-2 py-0.5 rounded-full border border-amber-400/40">
+              VIP ACCESS
+            </span>
+          </div>
+
+          <div className="mt-3.5 flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-xl bg-blue-600/30 border border-blue-400/40 flex items-center justify-center text-white font-black text-base shrink-0">
+              AM
+            </div>
+            <div className="min-w-0">
+              <h4 className="text-sm font-black text-white truncate">Dr. Amine Mansouri</h4>
+              <p className="text-[11px] text-slate-300 truncate">Directeur Innovation • MedTech Algérie</p>
+              <p className="text-[10px] font-bold text-blue-400 mt-0.5">
+                {lang === "ar" ? "بوابة الدخول: البوابة A (القاعة الرئيسية)" : lang === "en" ? "Gate: Entrance A (Main Hall)" : "Porte : Entrée A (Hall Principal)"}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 p-3 rounded-xl bg-white text-slate-900 flex items-center justify-between shadow-inner">
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 bg-slate-900 rounded-lg p-1.5 flex items-center justify-center shrink-0">
+                <div className="w-full h-full border-2 border-white grid grid-cols-2 gap-0.5 p-0.5">
+                  <div className="bg-white" />
+                  <div className="bg-white" />
+                  <div className="bg-white" />
+                  <div className="bg-white" />
+                </div>
+              </div>
+              <div>
+                <span className="text-[10px] font-mono font-black text-slate-500 block">QR PASS: #EZ-9842</span>
+                <span className="text-xs font-black text-slate-900">
+                  {lang === "ar" ? "جاهز للمسح السريع" : lang === "en" ? "Ready for fast scan" : "Prêt pour scan express"}
+                </span>
+              </div>
+            </div>
+            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200">
+              ✓ {lang === "ar" ? "صالح" : lang === "en" ? "Valid" : "Valide"}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between text-xs px-2 font-semibold text-slate-600">
+          <span>{lang === "ar" ? "رمز المرور السريع: 8492" : lang === "en" ? "Fast Passcode: #8492" : "Code Rapide : #8492"}</span>
+          <span className="text-blue-600 font-bold cursor-pointer hover:underline">
+            {lang === "ar" ? "تحميل PDF A4 ←" : lang === "en" ? "Download A4 PDF →" : "Télécharger PDF A4 →"}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  if (type === "portal-my-agenda") {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-100 text-xs">
+          <span className="font-bold text-slate-800">
+            {lang === "ar" ? "اليوم 1 • 14 أكتوبر 2026" : lang === "en" ? "Day 1 • Oct 14, 2026" : "Jour 1 • 14 Octobre 2026"}
+          </span>
+          <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+            {lang === "ar" ? "3 جلسات محفوظة" : lang === "en" ? "3 Bookmarked Sessions" : "3 Sessions Favoris"}
+          </span>
+        </div>
+
+        <div className="p-3 rounded-xl bg-blue-50/50 border border-blue-200/80 space-y-1">
+          <div className="flex items-center justify-between text-[11px]">
+            <span className="font-black text-blue-700">09:30 - 10:45</span>
+            <span className="font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded text-[10px]">
+              ⭐ {lang === "ar" ? "محفوظ" : lang === "en" ? "Saved" : "Favori"}
+            </span>
+          </div>
+          <h4 className="text-xs font-black text-slate-900">
+            {lang === "ar" ? "الجلسة الافتتاحية: الذكاء الاصطناعي والانتقال الطاقوي" : lang === "en" ? "Opening Keynote: AI & Energy Transition" : "Keynote Inaugurale : IA & Transition Énergétique"}
+          </h4>
+          <p className="text-[10px] text-slate-500 font-medium">
+            {lang === "ar" ? "القاعة الشرفية • المدرج الرئيسي" : lang === "en" ? "Grand Stage • Main Auditorium" : "Scène Plénière • Grand Auditorium"}
+          </p>
+        </div>
+
+        <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
+          <div className="flex items-center justify-between text-[11px]">
+            <span className="font-bold text-slate-700">11:15 - 12:30</span>
+            <span className="font-bold text-slate-500 text-[10px]">
+              ⭐ {lang === "ar" ? "محفوظ" : lang === "en" ? "Saved" : "Favori"}
+            </span>
+          </div>
+          <h4 className="text-xs font-black text-slate-900">
+            {lang === "ar" ? "ورشة عمل: أتمتة العمليات اللوجستية" : lang === "en" ? "Workshop: Automating Logistics Workflows" : "Atelier Pratique : Automatisation des Process"}
+          </h4>
+          <p className="text-[10px] text-slate-500 font-medium">
+            {lang === "ar" ? "قاعة ورشات العمل B" : lang === "en" ? "Workshop Room B" : "Salle B • Workshop Hub"}
+          </p>
+        </div>
+
+        <div className="p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-200 flex items-center justify-between text-xs">
+          <span className="text-emerald-900 font-bold">
+            ✓ {lang === "ar" ? "تمت المزامنة مع التقويم" : lang === "en" ? "Calendar Sync Active" : "Synchronisé avec le calendrier"}
+          </span>
+          <span className="text-[11px] text-emerald-700 font-extrabold">Google / Apple</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (type === "portal-attendee-networking") {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-100 text-xs">
+          <span className="font-bold text-slate-500 uppercase tracking-wider text-[11px]">
+            {lang === "ar" ? "دليل التواصل والمطابقة الذكية" : lang === "en" ? "Networking Directory & Match" : "Annuaire & Matchmaking B2B"}
+          </span>
+          <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
+            {lang === "ar" ? "متواجدون الآن" : lang === "en" ? "Live on-site" : "En direct sur site"}
+          </span>
+        </div>
+
+        <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
+              SB
+            </div>
+            <div className="min-w-0">
+              <h4 className="text-xs font-black text-slate-900 truncate">Sarah Benali</h4>
+              <p className="text-[11px] text-slate-500 truncate">Lead Partnerships • FinTech Algérie</p>
+              <span className="text-[10px] font-bold text-indigo-600">
+                98% Match B2B
+              </span>
+            </div>
+          </div>
+          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 shrink-0">
+            ✓ {lang === "ar" ? "تم الاتصال" : lang === "en" ? "Connected" : "Connecté"}
+          </span>
+        </div>
+
+        <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-blue-500 text-white flex items-center justify-center font-bold text-xs shrink-0">
+              KZ
+            </div>
+            <div className="min-w-0">
+              <h4 className="text-xs font-black text-slate-900 truncate">Karim Zerrouki</h4>
+              <p className="text-[11px] text-slate-500 truncate">Founder & CEO • CloudSolutions</p>
+              <span className="text-[10px] font-bold text-blue-600">
+                #CyberSecurity
+              </span>
+            </div>
+          </div>
+          <button type="button" className="text-[10px] font-bold text-white bg-blue-600 hover:bg-blue-700 px-2.5 py-1 rounded-lg transition-colors shrink-0">
+            {lang === "ar" ? "إرسال طلب" : lang === "en" ? "Connect" : "Inviter"}
+          </button>
+        </div>
+
+        <div className="p-2 rounded-xl bg-slate-100 text-center text-[10px] text-slate-500 font-medium">
+          🔒 {lang === "ar" ? "البيانات محمية وتظهر للمشاركين المعتمدين فقط" : lang === "en" ? "Contact details protected until mutual consent" : "Coordonnées protégées jusqu'à accord mutuel"}
+        </div>
+      </div>
+    );
+  }
+
+  if (type === "portal-floorplan-booths") {
+    return (
+      <div className="space-y-3">
+        <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-[10px] font-black uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
+              {lang === "ar" ? "الموقع على المخطط" : lang === "en" ? "Interactive Map Location" : "Localisation sur Plan 2D"}
+            </span>
+            <span className="text-xs font-mono font-bold text-slate-700">Stand #B14</span>
+          </div>
+          <h4 className="text-sm font-black text-slate-900">Sonatrach Innovation Hub</h4>
+          <p className="text-[11px] text-slate-500 font-medium">
+            {lang === "ar" ? "الرواق الرئيسي • بجانب جناح المؤتمرات والذكاء الاصطناعي" : lang === "en" ? "Main Hall • Next to AI & Enterprise Stage" : "Hall Central • À côté de la Scène Enterprise & IA"}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 text-center text-xs">
+          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+            <span className="text-[10px] font-bold text-slate-400 block">{lang === "ar" ? "المسافة من المدخل" : lang === "en" ? "Walking Distance" : "Distance de marche"}</span>
+            <span className="text-xs font-black text-slate-900">2 min • 85 m</span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-200">
+            <span className="text-[10px] font-bold text-emerald-700 block">{lang === "ar" ? "حالة الجناح" : lang === "en" ? "Booth Status" : "Statut du stand"}</span>
+            <span className="text-xs font-black text-emerald-800">✓ {lang === "ar" ? "مفتوح للزوار" : lang === "en" ? "Open Now" : "Ouvert au public"}</span>
+          </div>
+        </div>
+
+        <div className="p-2.5 rounded-xl bg-blue-600 text-white text-xs font-bold text-center shadow-xs cursor-pointer hover:bg-blue-700 transition-colors">
+          {lang === "ar" ? "فتح المخطط التفاعلي والتوجيه ←" : lang === "en" ? "Open Interactive Map & Route →" : "Ouvrir le Plan Vectoriel & Itinéraire →"}
+        </div>
+      </div>
+    );
+  }
+
   // Fallback
   return (
     <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200/80 text-center">

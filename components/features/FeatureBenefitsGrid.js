@@ -7,7 +7,8 @@ import {
   Printer, UploadCloud, Sparkles, Users, 
   Plane, Hotel, Layers, Link2, BarChart3, 
   DollarSign, Activity, Award, FileDown, CheckCircle,
-  Globe, Search, Calendar, Handshake
+  Globe, Search, Calendar, Handshake,
+  Smartphone, Ticket, MessageCircle
 } from "lucide-react";
 import { useLanguage } from "../../lib/i18n";
 import { getLocalizedFeature, getFeaturesUI } from "../../lib/featuresData";
@@ -19,7 +20,8 @@ const ICON_MAP = {
   Printer, UploadCloud, Sparkles, Users,
   Plane, Hotel, Layers, Link2, BarChart3,
   DollarSign, Activity, Award, FileDown,
-  Globe, Search, Calendar, Handshake
+  Globe, Search, Calendar, Handshake,
+  Smartphone, Ticket, MessageCircle
 };
 
 export default function FeatureBenefitsGrid({ feature }) {
