@@ -15,7 +15,7 @@ export default function FeaturesIndexClient() {
   const features = getLocalizedAllFeatures(lang);
 
   return (
-    <div className="min-h-screen w-full max-w-full overflow-x-hidden flex flex-col relative bg-white/40 text-slate-900 font-sans selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen w-full max-w-full overflow-x-clip flex flex-col relative bg-white/40 text-slate-900 font-sans selection:bg-blue-600 selection:text-white">
       {/* Blurry Low-Opacity Animated Blue Mesh */}
       <AnimatedMeshBackground />
 
