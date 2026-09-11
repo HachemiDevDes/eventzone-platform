@@ -66,7 +66,7 @@ export default function FeatureNavbar({ featureTitle, category }) {
   return (
     <div ref={navRef} className="sticky top-3 sm:top-4 z-50 w-[95%] mx-auto">
       <header 
-        className="bg-white rounded-[28px] sm:rounded-[30px] border border-slate-200/90 shadow-[0_2px_16px_rgba(0,0,0,0.06)] pl-4 sm:pl-6 pr-2.5 sm:pr-3.5 rtl:pr-4 sm:rtl:pr-6 rtl:pl-2.5 sm:rtl:pl-3.5 h-16 sm:h-[70px] flex items-center justify-between transition-all relative w-full squircle-smooth"
+        className="bg-white rounded-[18px] sm:rounded-[20px] border border-slate-200/90 shadow-[0_2px_16px_rgba(0,0,0,0.06)] pl-4 sm:pl-6 pr-2.5 sm:pr-3.5 rtl:pr-4 sm:rtl:pr-6 rtl:pl-2.5 sm:rtl:pl-3.5 h-16 sm:h-[70px] flex items-center justify-between transition-all relative w-full squircle-smooth"
         style={{
           cornerSmoothing: 1,
           WebkitCornerSmoothing: 1,
