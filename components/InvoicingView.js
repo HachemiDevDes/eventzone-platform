@@ -336,7 +336,7 @@ export default function InvoicingView({
   };
 
   return (
-    <div className="space-y-6 w-full max-w-[95%] mx-auto font-sans pb-12">
+    <div className="space-y-6 w-[95%] max-w-[95%] mx-auto font-sans pb-12">
       {/* Toast Notification Banner */}
       {toastMessage && (
         <div className="fixed top-20 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 text-xs font-bold animate-slide-in-right">

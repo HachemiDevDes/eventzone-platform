@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { formatCurrency, DOCUMENT_TYPES, DOCUMENT_STATUSES } from "../lib/invoicingConstants";
 import SearchableSelect from "./SearchableSelect";
+import { useLanguage } from "../lib/i18n";
 
 /**
  * InvoicingDashboard
@@ -33,6 +34,7 @@ export default function InvoicingDashboard({
   onCopyShareLink,
   onDownloadPdf,
 }) {
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("all"); // 'all', 'encaisse', 'en_attente', 'en_retard', 'partiel', 'brouillon'
   const [openStatusMenuId, setOpenStatusMenuId] = useState(null);
@@ -108,15 +110,65 @@ export default function InvoicingDashboard({
   }, [profiles]);
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-8 animate-fade-in w-full">
       {/* 1. Page Title & Subtitle */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-          Tableau de bord
-        </h1>
-        <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
-          Vue d&apos;ensemble de votre activité facturation
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+            {t("dash.invoicing", "Facturation & Devis")}
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
+            {t("invoicing.subtitle", "Gérez et suivez vos devis, factures et factures proforma pour votre organisation")}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Quick Create Document Button */}
+          <div className="relative group">
+            <button
+              onClick={() => onCreateNewDocument("facture")}
+              className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs flex items-center gap-2 transition-all cursor-pointer active:scale-95"
+            >
+              <Plus size={15} className="stroke-[3]" />
+              <span>Nouveau document</span>
+              <ChevronDown size={13} className="text-blue-200" />
+            </button>
+
+            {/* Hover Dropdown */}
+            <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-slate-200 rounded-2xl shadow-xl p-1.5 hidden group-hover:block z-20">
+              <button
+                onClick={() => onCreateNewDocument("facture")}
+                className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:bg-slate-50 flex items-center gap-2 transition-colors cursor-pointer"
+              >
+                <FileText size={14} className="text-blue-600" />
+                <span>Facture</span>
+              </button>
+              <button
+                onClick={() => onCreateNewDocument("devis")}
+                className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:bg-slate-50 flex items-center gap-2 transition-colors cursor-pointer"
+              >
+                <FileText size={14} className="text-amber-600" />
+                <span>Devis</span>
+              </button>
+              <button
+                onClick={() => onCreateNewDocument("proforma")}
+                className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:bg-slate-50 flex items-center gap-2 transition-colors cursor-pointer"
+              >
+                <FileText size={14} className="text-purple-600" />
+                <span>Facture Proforma</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Profile Settings Button */}
+          <button
+            onClick={onOpenSettings}
+            className="p-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-colors cursor-pointer bg-white"
+            title="Paramètres de facturation"
+          >
+            <Settings size={16} />
+          </button>
+        </div>
       </div>
 
       {/* 2. Top 4 KPI Metric Cards (Image 1 reference) */}
