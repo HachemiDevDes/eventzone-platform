@@ -49,11 +49,13 @@ import {
   Award,
   Video,
   FileText,
-  UserX
+  UserX,
+  Eye
 } from "lucide-react";
 import SearchableSelect from "./SearchableSelect";
 import { useLanguage } from "../lib/i18n";
 import { uploadMedia } from "@/lib/storage";
+import { canEditModule } from "../lib/permissions";
 
 // Custom SVG Icons for Social Networks
 const LinkedinIcon = ({ size = 14, className = "" }) => (
@@ -109,6 +111,7 @@ export default function SpeakersView({
   onSwitchView,
 }) {
   const { t } = useLanguage();
+  const canEdit = canEditModule("speakers", state?.effectivePermissions);
   const { sessions = [], attendees = [], eventDetails = {} } = state;
 
   // View & Filter States
@@ -447,6 +450,7 @@ export default function SpeakersView({
 
   // Direct Photo Quick-Change from Speaker Card Avatar
   const handleQuickPhotoChange = async (speaker, e) => {
+    if (!canEdit) return;
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -527,6 +531,7 @@ export default function SpeakersView({
   // ─────────────────────────────────────────────────────────
   const handleAddSpeakerSubmit = (e) => {
     e.preventDefault();
+    if (!canEdit) return;
 
     const targetName = addName.trim();
     if (!targetName) {
@@ -657,6 +662,7 @@ export default function SpeakersView({
   // ─────────────────────────────────────────────────────────
   const handleSaveSpeakerEdit = (e) => {
     e.preventDefault();
+    if (!canEdit) return;
     if (!editingSpeaker) return;
 
     const targetName = editingSpeaker.name.trim();
@@ -782,6 +788,7 @@ export default function SpeakersView({
   // ─────────────────────────────────────────────────────────
   const handleQuickAssignSubmit = (e) => {
     e.preventDefault();
+    if (!canEdit) return;
     if (!assigningSpeaker || !quickSessionId) return;
 
     const session = sessions.find((s) => String(s.id) === String(quickSessionId));
@@ -832,6 +839,7 @@ export default function SpeakersView({
   // 9. REMOVE / UNASSIGN SPEAKER
   // ─────────────────────────────────────────────────────────
   const handleConfirmDelete = (mode) => {
+    if (!canEdit) return;
     if (!speakerToDelete) return;
     const targetName = speakerToDelete.name;
 
@@ -873,6 +881,7 @@ export default function SpeakersView({
   // 10. EXPORT TO CSV
   // ─────────────────────────────────────────────────────────
   const handleExportCSV = () => {
+    if (!canEdit) return;
     if (speakersDirectory.length === 0) {
       alert("No speakers to export.");
       return;
@@ -965,14 +974,23 @@ export default function SpeakersView({
         </div>
 
         <div className="flex items-center gap-2.5">
-          <button
-            onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition-all shadow-2xs cursor-pointer"
-            title="Export Speakers Roster to CSV"
-          >
-            <Download size={13} />
-            <span>{t("speakers.exportRoster", "Export Roster")}</span>
-          </button>
+          {!canEdit && (
+            <span className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 font-bold text-xs border border-slate-200/80 flex items-center gap-1.5">
+              <Eye size={13} className="text-slate-500" />
+              <span>Viewer Mode</span>
+            </span>
+          )}
+
+          {canEdit && (
+            <button
+              onClick={handleExportCSV}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition-all shadow-2xs cursor-pointer"
+              title="Export Speakers Roster to CSV"
+            >
+              <Download size={13} />
+              <span>{t("speakers.exportRoster", "Export Roster")}</span>
+            </button>
+          )}
 
           {onSwitchView && (
             <button
@@ -984,16 +1002,18 @@ export default function SpeakersView({
             </button>
           )}
 
-          <button
-            onClick={() => {
-              setAddMode("attendee");
-              setShowAddModal(true);
-            }}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-indigo-650 hover:bg-indigo-700 text-white transition-all shadow-sm cursor-pointer"
-          >
-            <Plus size={14} />
-            <span>{t("speakers.addSpeaker", "Add / Assign Speaker")}</span>
-          </button>
+          {canEdit && (
+            <button
+              onClick={() => {
+                setAddMode("attendee");
+                setShowAddModal(true);
+              }}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-indigo-650 hover:bg-indigo-700 text-white transition-all shadow-sm cursor-pointer"
+            >
+              <Plus size={14} />
+              <span>{t("speakers.addSpeaker", "Add / Assign Speaker")}</span>
+            </button>
+          )}
         </div>
       </header>
 
@@ -1214,16 +1234,18 @@ export default function SpeakersView({
                 {t("speakers.resetFilters", "Clear Filters")}
               </button>
             )}
-            <button
-              onClick={() => {
-                setAddMode("attendee");
-                setShowAddModal(true);
-              }}
-              className="px-4 py-2 text-xs font-bold text-white bg-indigo-650 hover:bg-indigo-700 rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5"
-            >
-              <UserPlus size={13} />
-              <span>{t("speakers.addSpeakerBtn", "Assign from Attendees")}</span>
-            </button>
+            {canEdit && (
+              <button
+                onClick={() => {
+                  setAddMode("attendee");
+                  setShowAddModal(true);
+                }}
+                className="px-4 py-2 text-xs font-bold text-white bg-indigo-650 hover:bg-indigo-700 rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5"
+              >
+                <UserPlus size={13} />
+                <span>{t("speakers.addSpeakerBtn", "Assign from Attendees")}</span>
+              </button>
+            )}
           </div>
         </div>
       ) : viewMode === "grid" ? (
@@ -1251,39 +1273,51 @@ export default function SpeakersView({
                     </span>
                   )}
 
-                  <button
-                    onClick={() => setSpeakerToDelete(speaker)}
-                    className="p-1 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                    title="Remove speaker"
-                  >
-                    <Trash2 size={13} />
-                  </button>
+                  {canEdit && (
+                    <button
+                      onClick={() => setSpeakerToDelete(speaker)}
+                      className="p-1 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                      title="Remove speaker"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  )}
                 </div>
               </div>
 
               {/* Center: Avatar & Speaker Details */}
               <div className="flex flex-col items-center text-center gap-2 w-full my-1">
                 {/* Clickable Avatar to Quick-Change Photo */}
-                <label
-                  className="relative cursor-pointer group/avatar block"
-                  title="Click to upload / change speaker photo"
-                >
-                  <img
-                    src={speaker.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(speaker.name)}&background=4f46e5&color=fff`}
-                    className="w-20 h-20 rounded-2xl object-cover shadow-2xs border-2 border-slate-100 group-hover/avatar:border-indigo-400 transition-colors"
-                    alt={speaker.name}
-                  />
-                  <span className="absolute inset-0 bg-black/45 rounded-2xl flex flex-col items-center justify-center text-white opacity-0 group-hover/avatar:opacity-100 transition-opacity">
-                    <Camera size={18} />
-                    <span className="text-[9px] font-bold mt-0.5">Change</span>
-                  </span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleQuickPhotoChange(speaker, e)}
-                    className="hidden"
-                  />
-                </label>
+                {canEdit ? (
+                  <label
+                    className="relative cursor-pointer group/avatar block"
+                    title="Click to upload / change speaker photo"
+                  >
+                    <img
+                      src={speaker.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(speaker.name)}&background=4f46e5&color=fff`}
+                      className="w-20 h-20 rounded-2xl object-cover shadow-2xs border-2 border-slate-100 group-hover/avatar:border-indigo-400 transition-colors"
+                      alt={speaker.name}
+                    />
+                    <span className="absolute inset-0 bg-black/45 rounded-2xl flex flex-col items-center justify-center text-white opacity-0 group-hover/avatar:opacity-100 transition-opacity">
+                      <Camera size={18} />
+                      <span className="text-[9px] font-bold mt-0.5">Change</span>
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleQuickPhotoChange(speaker, e)}
+                      className="hidden"
+                    />
+                  </label>
+                ) : (
+                  <div className="relative block">
+                    <img
+                      src={speaker.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(speaker.name)}&background=4f46e5&color=fff`}
+                      className="w-20 h-20 rounded-2xl object-cover shadow-2xs border-2 border-slate-100"
+                      alt={speaker.name}
+                    />
+                  </div>
+                )}
 
                 <div className="w-full mt-1">
                   <h3 className="text-sm font-bold text-slate-900 truncate" title={speaker.name}>
@@ -1371,12 +1405,14 @@ export default function SpeakersView({
                       <AlertCircle size={12} className="text-amber-600 shrink-0" />
                       {t("speakers.sourceCustom", "Unassigned")}
                     </span>
-                    <button
-                      onClick={() => setAssigningSpeaker(speaker)}
-                      className="text-[10px] font-bold text-amber-800 hover:text-amber-950 underline cursor-pointer"
-                    >
-                      + {t("speakers.quickAssign", "Assign")}
-                    </button>
+                    {canEdit && (
+                      <button
+                        onClick={() => setAssigningSpeaker(speaker)}
+                        className="text-[10px] font-bold text-amber-800 hover:text-amber-950 underline cursor-pointer"
+                      >
+                        + {t("speakers.quickAssign", "Assign")}
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <div className="flex flex-col gap-1 max-h-24 overflow-y-auto pr-0.5">
@@ -1400,23 +1436,35 @@ export default function SpeakersView({
               </div>
 
               {/* Card Action Buttons */}
-              <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-100">
-                <button
-                  onClick={() => setAssigningSpeaker(speaker)}
-                  className="px-2 py-1.5 text-[11px] font-bold rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 transition-colors flex items-center justify-center gap-1 cursor-pointer"
-                >
-                  <Calendar size={12} />
-                  <span>{t("speakers.sessions", "Sessions")}</span>
-                </button>
+              {!canEdit ? (
+                <div className="mt-4 pt-3 border-t border-slate-100">
+                  <button
+                    onClick={() => setEditingSpeaker({ ...speaker })}
+                    className="w-full px-2 py-1.5 text-[11px] font-bold rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <Eye size={12} />
+                    <span>{t("speakers.viewProfile", "View Profile")}</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-100">
+                  <button
+                    onClick={() => setAssigningSpeaker(speaker)}
+                    className="px-2 py-1.5 text-[11px] font-bold rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <Calendar size={12} />
+                    <span>{t("speakers.sessions", "Sessions")}</span>
+                  </button>
 
-                <button
-                  onClick={() => setEditingSpeaker({ ...speaker })}
-                  className="px-2 py-1.5 text-[11px] font-bold rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition-colors flex items-center justify-center gap-1 cursor-pointer"
-                >
-                  <Pencil size={12} />
-                  <span>{t("speakers.editSpeaker", "Edit Profile")}</span>
-                </button>
-              </div>
+                  <button
+                    onClick={() => setEditingSpeaker({ ...speaker })}
+                    className="px-2 py-1.5 text-[11px] font-bold rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <Pencil size={12} />
+                    <span>{t("speakers.editSpeaker", "Edit Profile")}</span>
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -1557,27 +1605,37 @@ export default function SpeakersView({
 
                     {/* Actions */}
                     <td className="py-3 px-5 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          onClick={() => setAssigningSpeaker(spk)}
-                          className="px-2.5 py-1 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                        >
-                          {t("speakers.sessions", "Sessions")}
-                        </button>
+                      {!canEdit ? (
                         <button
                           onClick={() => setEditingSpeaker({ ...spk })}
-                          className="px-2.5 py-1 text-indigo-650 hover:text-indigo-800 hover:bg-indigo-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                          className="px-2.5 py-1 text-slate-600 hover:text-indigo-650 hover:bg-slate-100 rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1"
                         >
-                          {t("common.edit", "Edit")}
+                          <Eye size={13} />
+                          <span>{t("common.view", "View")}</span>
                         </button>
-                        <button
-                          onClick={() => setSpeakerToDelete(spk)}
-                          className="p-1 text-slate-300 hover:text-rose-600 rounded-lg cursor-pointer"
-                          title="Remove"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
+                      ) : (
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => setAssigningSpeaker(spk)}
+                            className="px-2.5 py-1 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                          >
+                            {t("speakers.sessions", "Sessions")}
+                          </button>
+                          <button
+                            onClick={() => setEditingSpeaker({ ...spk })}
+                            className="px-2.5 py-1 text-indigo-650 hover:text-indigo-800 hover:bg-indigo-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                          >
+                            {t("common.edit", "Edit")}
+                          </button>
+                          <button
+                            onClick={() => setSpeakerToDelete(spk)}
+                            className="p-1 text-slate-300 hover:text-rose-600 rounded-lg cursor-pointer"
+                            title="Remove"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -1965,10 +2023,12 @@ export default function SpeakersView({
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
                 <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                  Edit Speaker Profile: {editingSpeaker.name}
+                  {canEdit ? `Edit Speaker Profile: ${editingSpeaker.name}` : `Speaker Profile: ${editingSpeaker.name}`}
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Update speaker bio, presentation details, photo, and assigned agenda sessions.
+                  {canEdit
+                    ? "Update speaker bio, presentation details, photo, and assigned agenda sessions."
+                    : "Speaker bio, presentation details, and assigned agenda sessions."}
                 </p>
               </div>
               <button
@@ -1979,36 +2039,53 @@ export default function SpeakersView({
               </button>
             </div>
 
+            {!canEdit && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-2 text-amber-800 text-xs font-semibold">
+                <Eye size={16} className="text-amber-600 shrink-0" />
+                <span>Viewing speaker in read-only mode. Changes cannot be made.</span>
+              </div>
+            )}
+
             <form onSubmit={handleSaveSpeakerEdit} className="flex flex-col gap-4">
               {/* Photo & Basic Info */}
               <div className="flex items-start gap-4">
                 {/* Photo uploader */}
                 <div className="flex flex-col items-center gap-1.5 shrink-0">
-                  <label className="relative cursor-pointer group block" title="Change Photo">
+                  {canEdit ? (
+                    <>
+                      <label className="relative cursor-pointer group block" title="Change Photo">
+                        <img
+                          src={editingSpeaker.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(editingSpeaker.name)}&background=4f46e5&color=fff`}
+                          className="w-20 h-20 rounded-2xl object-cover border-2 border-slate-200 group-hover:border-indigo-500 transition-colors"
+                          alt=""
+                        />
+                        <span className="absolute inset-0 bg-black/45 rounded-2xl flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Camera size={18} />
+                          <span className="text-[9px] font-bold mt-0.5">Upload</span>
+                        </span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            setIsUploadingPhoto(true);
+                            const url = await uploadImageFile(file);
+                            if (url) setEditingSpeaker({ ...editingSpeaker, image: url });
+                            setIsUploadingPhoto(false);
+                          }}
+                          className="hidden"
+                        />
+                      </label>
+                      <span className="text-[10px] font-bold text-slate-400">Click to change</span>
+                    </>
+                  ) : (
                     <img
                       src={editingSpeaker.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(editingSpeaker.name)}&background=4f46e5&color=fff`}
-                      className="w-20 h-20 rounded-2xl object-cover border-2 border-slate-200 group-hover:border-indigo-500 transition-colors"
+                      className="w-20 h-20 rounded-2xl object-cover border-2 border-slate-200"
                       alt=""
                     />
-                    <span className="absolute inset-0 bg-black/45 rounded-2xl flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Camera size={18} />
-                      <span className="text-[9px] font-bold mt-0.5">Upload</span>
-                    </span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        setIsUploadingPhoto(true);
-                        const url = await uploadImageFile(file);
-                        if (url) setEditingSpeaker({ ...editingSpeaker, image: url });
-                        setIsUploadingPhoto(false);
-                      }}
-                      className="hidden"
-                    />
-                  </label>
-                  <span className="text-[10px] font-bold text-slate-400">Click to change</span>
+                  )}
                 </div>
 
                 <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -2018,10 +2095,11 @@ export default function SpeakersView({
                     </label>
                     <input
                       type="text"
+                      disabled={!canEdit}
                       value={editingSpeaker.name}
                       onChange={(e) => setEditingSpeaker({ ...editingSpeaker, name: e.target.value })}
                       required
-                      className="px-3.5 py-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-indigo-500"
+                      className="px-3.5 py-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-indigo-500 disabled:bg-slate-50 disabled:text-slate-500"
                     />
                   </div>
 
@@ -2035,6 +2113,7 @@ export default function SpeakersView({
                       options={SPEAKER_ROLES.map(r => ({ ...r, label: t("speakers.role_" + r.value.toLowerCase().replace(/[^a-z0-9]/g, "_"), r.label) }))}
                       placeholder="Select Role"
                       required
+                      disabled={!canEdit}
                     />
                   </div>
 
@@ -2044,10 +2123,11 @@ export default function SpeakersView({
                     </label>
                     <input
                       type="text"
+                      disabled={!canEdit}
                       value={editingSpeaker.jobTitle || ""}
                       onChange={(e) => setEditingSpeaker({ ...editingSpeaker, jobTitle: e.target.value })}
                       placeholder="e.g. VP of Innovation"
-                      className="px-3.5 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-indigo-500"
+                      className="px-3.5 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-indigo-500 disabled:bg-slate-50 disabled:text-slate-500"
                     />
                   </div>
 
@@ -2057,10 +2137,11 @@ export default function SpeakersView({
                     </label>
                     <input
                       type="text"
+                      disabled={!canEdit}
                       value={editingSpeaker.company || ""}
                       onChange={(e) => setEditingSpeaker({ ...editingSpeaker, company: e.target.value })}
                       placeholder="e.g. OpenAI / Stanford"
-                      className="px-3.5 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-indigo-500"
+                      className="px-3.5 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-indigo-500 disabled:bg-slate-50 disabled:text-slate-500"
                     />
                   </div>
                 </div>
@@ -2074,9 +2155,10 @@ export default function SpeakersView({
                   </label>
                   <input
                     type="email"
+                    disabled={!canEdit}
                     value={editingSpeaker.email || ""}
                     onChange={(e) => setEditingSpeaker({ ...editingSpeaker, email: e.target.value })}
-                    className="px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-indigo-500"
+                    className="px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-indigo-500 disabled:bg-slate-50 disabled:text-slate-500"
                   />
                 </div>
 
@@ -2086,9 +2168,10 @@ export default function SpeakersView({
                   </label>
                   <input
                     type="tel"
+                    disabled={!canEdit}
                     value={editingSpeaker.phone || ""}
                     onChange={(e) => setEditingSpeaker({ ...editingSpeaker, phone: e.target.value })}
-                    className="px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-indigo-500"
+                    className="px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-indigo-500 disabled:bg-slate-50 disabled:text-slate-500"
                   />
                 </div>
 
@@ -2099,6 +2182,7 @@ export default function SpeakersView({
                   <SearchableSelect
                     value={editingSpeaker.status || "Confirmed"}
                     onChange={(val) => setEditingSpeaker({ ...editingSpeaker, status: val })}
+                    disabled={!canEdit}
                     options={[
                       { value: "Confirmed", label: "Confirmed" },
                       { value: "Pending", label: "Pending Confirmation" },
@@ -2116,10 +2200,11 @@ export default function SpeakersView({
                   </label>
                   <input
                     type="text"
+                    disabled={!canEdit}
                     value={editingSpeaker.topic || ""}
                     onChange={(e) => setEditingSpeaker({ ...editingSpeaker, topic: e.target.value })}
                     placeholder="e.g. AI-driven Automation"
-                    className="px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-indigo-500"
+                    className="px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-indigo-500 disabled:bg-slate-50 disabled:text-slate-500"
                   />
                 </div>
 
@@ -2129,10 +2214,11 @@ export default function SpeakersView({
                   </label>
                   <input
                     type="url"
+                    disabled={!canEdit}
                     value={editingSpeaker.slidesUrl || ""}
                     onChange={(e) => setEditingSpeaker({ ...editingSpeaker, slidesUrl: e.target.value })}
                     placeholder="https://slideshare.net/..."
-                    className="px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-indigo-500"
+                    className="px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-indigo-500 disabled:bg-slate-50 disabled:text-slate-500"
                   />
                 </div>
               </div>
@@ -2145,6 +2231,7 @@ export default function SpeakersView({
                   </label>
                   <input
                     type="url"
+                    disabled={!canEdit}
                     value={editingSpeaker.socials?.linkedin || ""}
                     onChange={(e) =>
                       setEditingSpeaker({
@@ -2153,7 +2240,7 @@ export default function SpeakersView({
                       })
                     }
                     placeholder="LinkedIn URL"
-                    className="px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none"
+                    className="px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
                   />
                 </div>
 
@@ -2163,6 +2250,7 @@ export default function SpeakersView({
                   </label>
                   <input
                     type="text"
+                    disabled={!canEdit}
                     value={editingSpeaker.socials?.twitter || ""}
                     onChange={(e) =>
                       setEditingSpeaker({
@@ -2171,7 +2259,7 @@ export default function SpeakersView({
                       })
                     }
                     placeholder="Twitter URL"
-                    className="px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none"
+                    className="px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
                   />
                 </div>
 
@@ -2181,6 +2269,7 @@ export default function SpeakersView({
                   </label>
                   <input
                     type="url"
+                    disabled={!canEdit}
                     value={editingSpeaker.socials?.website || ""}
                     onChange={(e) =>
                       setEditingSpeaker({
@@ -2189,7 +2278,7 @@ export default function SpeakersView({
                       })
                     }
                     placeholder="Personal website"
-                    className="px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none"
+                    className="px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
                   />
                 </div>
               </div>
@@ -2201,10 +2290,11 @@ export default function SpeakersView({
                 </label>
                 <textarea
                   rows={3}
+                  disabled={!canEdit}
                   value={editingSpeaker.bio || ""}
                   onChange={(e) => setEditingSpeaker({ ...editingSpeaker, bio: e.target.value })}
                   placeholder="Speaker bio..."
-                  className="px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none"
+                  className="px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
                 />
               </div>
 
@@ -2234,9 +2324,10 @@ export default function SpeakersView({
                               : "bg-white border-slate-200 text-slate-700"
                           }`}
                         >
-                          <label className="flex items-center gap-2.5 truncate cursor-pointer flex-1 mr-2">
+                          <label className={`flex items-center gap-2.5 truncate flex-1 mr-2 ${canEdit ? "cursor-pointer" : "cursor-default"}`}>
                             <input
                               type="checkbox"
+                              disabled={!canEdit}
                               checked={isAssigned}
                               onChange={(e) => {
                                 if (e.target.checked) {
@@ -2266,7 +2357,7 @@ export default function SpeakersView({
                                   });
                                 }
                               }}
-                              className="rounded border-slate-300 text-indigo-650 focus:ring-indigo-500"
+                              className="rounded border-slate-300 text-indigo-650 focus:ring-indigo-500 disabled:opacity-50"
                             />
                             <div className="truncate">
                               <span className="font-bold block truncate">{sess.title}</span>
@@ -2281,6 +2372,7 @@ export default function SpeakersView({
                             <div className="w-32 shrink-0">
                               <SearchableSelect
                                 value={currentAssignedObj?.sessionRole || "speaker"}
+                                disabled={!canEdit}
                                 onChange={(val) => {
                                   const updatedAssigned = (editingSpeaker.assignedSessions || []).map((s) =>
                                     String(s.id) === String(sess.id) ? { ...s, sessionRole: val } : s
@@ -2312,14 +2404,16 @@ export default function SpeakersView({
                   onClick={() => setEditingSpeaker(null)}
                   className="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold text-xs cursor-pointer"
                 >
-                  Cancel
+                  {canEdit ? "Cancel" : "Close"}
                 </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-indigo-650 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm cursor-pointer"
-                >
-                  Save Changes
-                </button>
+                {canEdit && (
+                  <button
+                    type="submit"
+                    className="px-5 py-2.5 rounded-xl bg-indigo-650 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm cursor-pointer"
+                  >
+                    Save Changes
+                  </button>
+                )}
               </div>
             </form>
           </div>

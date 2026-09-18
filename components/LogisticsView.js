@@ -7,12 +7,13 @@ import {
   User, ShieldCheck, RefreshCw, Trash2, Edit3, Sparkles,
   Layers, ChevronRight, Check, X, Calendar, DollarSign,
   Info, ExternalLink, HelpCircle, FileText, AlertCircle,
-  Package, ChevronDown
+  Package, ChevronDown, Eye
 } from "lucide-react";
 import { useLanguage } from "../lib/i18n";
 import SearchableSelect from "./SearchableSelect";
 import CountryPhoneInput from "./CountryPhoneInput";
 import { LogisticsSkeleton } from "./SkeletonLoaders";
+import { canEditModule } from "../lib/permissions";
 
 // ─────────────────────────────────────────────
 //  CONSTANTS & SELECTOR OPTIONS
@@ -144,9 +145,11 @@ export default function LogisticsView({
   floorPlans = [],
   eventDetails = {},
   onSwitchView,
-  onRefreshData
+  onRefreshData,
+  effectivePermissions
 }) {
   const { t, isRTL } = useLanguage();
+  const canEdit = canEditModule("logistics", effectivePermissions);
 
   const getCategoryLabel = (cat) => {
     const map = {
@@ -526,6 +529,7 @@ export default function LogisticsView({
   //  MODAL OPEN HANDLERS
   // ─────────────────────────────────────────────
   const handleOpenAddModal = () => {
+    if (!canEdit) return;
     setEditingItem(null);
     if (activeTab === "inventory") {
       setInventoryForm({
@@ -672,7 +676,7 @@ export default function LogisticsView({
   // ─────────────────────────────────────────────
   const handleSubmitForm = async (e) => {
     e.preventDefault();
-    if (!onSaveLogisticsItem) return;
+    if (!canEdit || !onSaveLogisticsItem) return;
 
     if (modalType === "inventory") {
       await onSaveLogisticsItem("inventory", {
@@ -715,7 +719,7 @@ export default function LogisticsView({
 
   // Toggle checklist completed
   const handleToggleChecklist = async (item) => {
-    if (!onSaveLogisticsItem) return;
+    if (!canEdit || !onSaveLogisticsItem) return;
     await onSaveLogisticsItem("checklists", {
       ...item,
       isCompleted: !item.isCompleted,
@@ -725,7 +729,7 @@ export default function LogisticsView({
 
   // Toggle incident status
   const handleUpdateIncidentStatus = async (item, newStatus) => {
-    if (!onSaveLogisticsItem) return;
+    if (!canEdit || !onSaveLogisticsItem) return;
     await onSaveLogisticsItem("incidents", {
       ...item,
       status: newStatus,
@@ -735,7 +739,7 @@ export default function LogisticsView({
 
   // Adjust inventory quantities on the fly
   const handleAdjustInventoryStock = async (item, deltaInUse) => {
-    if (!onSaveLogisticsItem) return;
+    if (!canEdit || !onSaveLogisticsItem) return;
     const currentInUse = Number(item.inUse) || 0;
     const totalQty = Number(item.quantity) || 0;
     const nextInUse = Math.max(0, Math.min(totalQty, currentInUse + deltaInUse));
@@ -749,6 +753,7 @@ export default function LogisticsView({
   //  EXPORT CSV MANIFEST
   // ─────────────────────────────────────────────
   const handleExportCSV = () => {
+    if (!canEdit) return;
     let rows = [];
     let filename = `Eventzone_Logistics_${activeTab}_${new Date().toISOString().split("T")[0]}.csv`;
 
@@ -831,6 +836,7 @@ export default function LogisticsView({
 
   // Print Run of Show
   const handlePrintRunOfShow = () => {
+    if (!canEdit) return;
     window.print();
   };
 
@@ -894,16 +900,25 @@ export default function LogisticsView({
         </div>
 
         <div className="flex items-center flex-wrap gap-2.5">
-          <button
-            onClick={handleExportCSV}
-            className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl text-xs sm:text-sm transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
-            title={t("logistics.exportManifest", "Export Manifest (CSV)")}
-          >
-            <Download size={14} />
-            <span>{t("logistics.exportManifest", "Export Manifest (CSV)")}</span>
-          </button>
+          {!canEdit && (
+            <span className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 font-bold text-xs border border-slate-200/80 flex items-center gap-1.5 shadow-xs">
+              <Eye size={13} className="text-slate-500" />
+              <span>Viewer Mode</span>
+            </span>
+          )}
 
-          {activeTab === "runOfShow" && (
+          {canEdit && (
+            <button
+              onClick={handleExportCSV}
+              className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl text-xs sm:text-sm transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+              title={t("logistics.exportManifest", "Export Manifest (CSV)")}
+            >
+              <Download size={14} />
+              <span>{t("logistics.exportManifest", "Export Manifest (CSV)")}</span>
+            </button>
+          )}
+
+          {canEdit && activeTab === "runOfShow" && (
             <button
               onClick={handlePrintRunOfShow}
               className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl text-xs sm:text-sm transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
@@ -913,7 +928,7 @@ export default function LogisticsView({
             </button>
           )}
 
-          {activeTab === "checklists" && (
+          {canEdit && activeTab === "checklists" && (
             <button
               onClick={() => {
                 setEditingItem(null);
@@ -935,19 +950,21 @@ export default function LogisticsView({
             </button>
           )}
 
-          <button
-            onClick={handleOpenAddModal}
-            className="bg-indigo-650 hover:bg-indigo-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs sm:text-sm shadow-sm transition-all flex items-center gap-2 cursor-pointer"
-          >
-            <Plus size={16} />
-            <span>
-              {activeTab === "inventory" && t("logistics.addItem", "Add Equipment")}
-              {activeTab === "vendors" && t("logistics.addVendor", "Add Supplier")}
-              {activeTab === "travel" && t("logistics.addTravel", "Add VIP Travel")}
-              {activeTab === "runOfShow" && t("logistics.addCue", "Add Run of Show Cue")}
-              {activeTab === "checklists" && t("logistics.addChecklist", "Add Checklist Task")}
-            </span>
-          </button>
+          {canEdit && (
+            <button
+              onClick={handleOpenAddModal}
+              className="bg-indigo-650 hover:bg-indigo-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs sm:text-sm shadow-sm transition-all flex items-center gap-2 cursor-pointer"
+            >
+              <Plus size={16} />
+              <span>
+                {activeTab === "inventory" && t("logistics.addItem", "Add Equipment")}
+                {activeTab === "vendors" && t("logistics.addVendor", "Add Supplier")}
+                {activeTab === "travel" && t("logistics.addTravel", "Add VIP Travel")}
+                {activeTab === "runOfShow" && t("logistics.addCue", "Add Run of Show Cue")}
+                {activeTab === "checklists" && t("logistics.addChecklist", "Add Checklist Task")}
+              </span>
+            </button>
+          )}
         </div>
       </header>
 
@@ -1236,12 +1253,14 @@ export default function LogisticsView({
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
                 {t("logistics.noEquipmentDesc", "Track sound systems, laser projectors, microphones, roll-ups, and merchandise in real-time.")}
               </p>
-              <button
-                onClick={handleOpenAddModal}
-                className="px-4 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-700 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
-              >
-                <Plus size={14} /> {t("logistics.addFirstItem", "Add First Item")}
-              </button>
+              {canEdit && (
+                <button
+                  onClick={handleOpenAddModal}
+                  className="px-4 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-700 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Plus size={14} /> {t("logistics.addFirstItem", "Add First Item")}
+                </button>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1313,40 +1332,48 @@ export default function LogisticsView({
 
                       <div className="flex items-center justify-between pt-1">
                         <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => handleAdjustInventoryStock(item, -1)}
-                            disabled={inUse <= 0}
-                            title={t("logistics.returnItemTooltip", "Return 1 item")}
-                            className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-xs flex items-center justify-center disabled:opacity-30 cursor-pointer"
-                          >
-                            -
-                          </button>
-                          <span className="text-[11px] font-bold text-slate-600 px-1"><bdi dir="ltr">{available}</bdi> {t("logistics.left", "left")}</span>
-                          <button
-                            onClick={() => handleAdjustInventoryStock(item, 1)}
-                            disabled={inUse >= total}
-                            title={t("logistics.deployItemTooltip", "Deploy 1 item")}
-                            className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-xs flex items-center justify-center disabled:opacity-30 cursor-pointer"
-                          >
-                            +
-                          </button>
+                          {canEdit ? (
+                            <>
+                              <button
+                                onClick={() => handleAdjustInventoryStock(item, -1)}
+                                disabled={inUse <= 0}
+                                title={t("logistics.returnItemTooltip", "Return 1 item")}
+                                className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-xs flex items-center justify-center disabled:opacity-30 cursor-pointer"
+                              >
+                                -
+                              </button>
+                              <span className="text-[11px] font-bold text-slate-600 px-1"><bdi dir="ltr">{available}</bdi> {t("logistics.left", "left")}</span>
+                              <button
+                                onClick={() => handleAdjustInventoryStock(item, 1)}
+                                disabled={inUse >= total}
+                                title={t("logistics.deployItemTooltip", "Deploy 1 item")}
+                                className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-xs flex items-center justify-center disabled:opacity-30 cursor-pointer"
+                              >
+                                +
+                              </button>
+                            </>
+                          ) : (
+                            <span className="text-[11px] font-bold text-slate-600 px-1"><bdi dir="ltr">{available}</bdi> {t("logistics.left", "left")}</span>
+                          )}
                         </div>
 
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => handleEditItem("inventory", item)}
                             className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-colors cursor-pointer"
-                            title={t("common.edit", "Edit")}
+                            title={canEdit ? t("common.edit", "Edit") : t("common.view", "View")}
                           >
-                            <Edit3 size={13} />
+                            {canEdit ? <Edit3 size={13} /> : <Eye size={13} />}
                           </button>
-                          <button
-                            onClick={() => onDeleteLogisticsItem && onDeleteLogisticsItem("inventory", item.id)}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
-                            title={t("common.delete", "Delete")}
-                          >
-                            <Trash2 size={13} />
-                          </button>
+                          {canEdit && (
+                            <button
+                              onClick={() => onDeleteLogisticsItem && onDeleteLogisticsItem("inventory", item.id)}
+                              className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+                              title={t("common.delete", "Delete")}
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1372,12 +1399,14 @@ export default function LogisticsView({
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
                 {t("logistics.noVendorsDesc", "Keep track of caterers, AV production rigs, staging contractors, and cleaning teams with strict load-in windows.")}
               </p>
-              <button
-                onClick={handleOpenAddModal}
-                className="px-4 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-700 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
-              >
-                <Plus size={14} /> {t("logistics.addSupplier", "Add Supplier")}
-              </button>
+              {canEdit && (
+                <button
+                  onClick={handleOpenAddModal}
+                  className="px-4 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-700 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Plus size={14} /> {t("logistics.addSupplier", "Add Supplier")}
+                </button>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1466,14 +1495,16 @@ export default function LogisticsView({
                           onClick={() => handleEditItem("vendor", vendor)}
                           className="px-2.5 py-1 text-xs font-bold text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
                         >
-                          {t("common.edit", "Edit")}
+                          {canEdit ? t("common.edit", "Edit") : t("common.view", "View")}
                         </button>
-                        <button
-                          onClick={() => onDeleteLogisticsItem && onDeleteLogisticsItem("vendors", vendor.id)}
-                          className="p-1 text-slate-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
-                        >
-                          <Trash2 size={13} />
-                        </button>
+                        {canEdit && (
+                          <button
+                            onClick={() => onDeleteLogisticsItem && onDeleteLogisticsItem("vendors", vendor.id)}
+                            className="p-1 text-slate-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1498,12 +1529,14 @@ export default function LogisticsView({
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
                 {t("logistics.noVipTravelDesc", "Manage keynote speaker flights, airport pickup drivers, luxury hotel room allocations, and rider requirements.")}
               </p>
-              <button
-                onClick={handleOpenAddModal}
-                className="px-4 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-700 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
-              >
-                <Plus size={14} /> {t("logistics.addVipTravel", "Add VIP Travel")}
-              </button>
+              {canEdit && (
+                <button
+                  onClick={handleOpenAddModal}
+                  className="px-4 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-700 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Plus size={14} /> {t("logistics.addVipTravel", "Add VIP Travel")}
+                </button>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1579,14 +1612,16 @@ export default function LogisticsView({
                         onClick={() => handleEditItem("travel", item)}
                         className="px-2.5 py-1 text-xs font-bold text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
                       >
-                        {t("common.edit", "Edit")}
+                        {canEdit ? t("common.edit", "Edit") : t("common.view", "View")}
                       </button>
-                      <button
-                        onClick={() => onDeleteLogisticsItem && onDeleteLogisticsItem("travel", item.id)}
-                        className="p-1 text-slate-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
-                      >
-                        <Trash2 size={13} />
-                      </button>
+                      {canEdit && (
+                        <button
+                          onClick={() => onDeleteLogisticsItem && onDeleteLogisticsItem("travel", item.id)}
+                          className="p-1 text-slate-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -1610,12 +1645,14 @@ export default function LogisticsView({
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
                 {t("logistics.noCuesDesc", "Create minute-by-minute technical cues for stage managers, mic technicians, VIP escorts, and catering dispatches.")}
               </p>
-              <button
-                onClick={handleOpenAddModal}
-                className="px-4 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-700 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
-              >
-                <Plus size={14} /> {t("logistics.addFirstCue", "Add First Cue")}
-              </button>
+              {canEdit && (
+                <button
+                  onClick={handleOpenAddModal}
+                  className="px-4 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-700 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Plus size={14} /> {t("logistics.addFirstCue", "Add First Cue")}
+                </button>
+              )}
             </div>
           ) : (
             <div className="bg-white rounded-3xl border border-slate-150 shadow-xs overflow-hidden">
@@ -1675,11 +1712,16 @@ export default function LogisticsView({
                       {/* Status Selector & Controls */}
                       <div className="flex items-center gap-2 self-end md:self-center">
                         <button
+                          type="button"
                           onClick={() => {
+                            if (!canEdit) return;
                             const nextStatus = isCompleted ? "pending" : isInProgress ? "completed" : "in_progress";
                             onSaveLogisticsItem && onSaveLogisticsItem("runOfShow", { ...cue, status: nextStatus });
                           }}
-                          className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer ${
+                          disabled={!canEdit}
+                          className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-colors ${
+                            !canEdit ? "cursor-default" : "cursor-pointer"
+                          } ${
                             isCompleted
                               ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
                               : isInProgress
@@ -1695,15 +1737,19 @@ export default function LogisticsView({
                         <button
                           onClick={() => handleEditItem("cue", cue)}
                           className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg transition-colors cursor-pointer"
+                          title={canEdit ? t("common.edit", "Edit") : t("common.view", "View")}
                         >
-                          <Edit3 size={13} />
+                          {canEdit ? <Edit3 size={13} /> : <Eye size={13} />}
                         </button>
-                        <button
-                          onClick={() => onDeleteLogisticsItem && onDeleteLogisticsItem("runOfShow", cue.id)}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
-                        >
-                          <Trash2 size={13} />
-                        </button>
+                        {canEdit && (
+                          <button
+                            onClick={() => onDeleteLogisticsItem && onDeleteLogisticsItem("runOfShow", cue.id)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
+                            title={t("common.delete", "Delete")}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
@@ -1734,22 +1780,24 @@ export default function LogisticsView({
                   </div>
                 </div>
 
-                <button
-                  onClick={() => {
-                    setEditingItem(null);
-                    setChecklistForm({
-                      title: "",
-                      category: "AV & Tech",
-                      dueDate: "08:00 AM",
-                      completedBy: "",
-                      isCompleted: false
-                    });
-                    setModalType("checklist");
-                  }}
-                  className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold text-xs flex items-center gap-1 cursor-pointer"
-                >
-                  <Plus size={14} /> {t("logistics.addTask", "Add Task")}
-                </button>
+                {canEdit && (
+                  <button
+                    onClick={() => {
+                      setEditingItem(null);
+                      setChecklistForm({
+                        title: "",
+                        category: "AV & Tech",
+                        dueDate: "08:00 AM",
+                        completedBy: "",
+                        isCompleted: false
+                      });
+                      setModalType("checklist");
+                    }}
+                    className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold text-xs flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus size={14} /> {t("logistics.addTask", "Add Task")}
+                  </button>
+                )}
               </div>
 
               {/* Progress Summary */}
@@ -1763,8 +1811,13 @@ export default function LogisticsView({
                 {checklists.map((task) => (
                   <div
                     key={task.id}
-                    onClick={() => handleToggleChecklist(task)}
-                    className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 cursor-pointer group ${
+                    onClick={() => {
+                      if (!canEdit) return;
+                      handleToggleChecklist(task);
+                    }}
+                    className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
+                      canEdit ? "cursor-pointer" : "cursor-default"
+                    } group ${
                       task.isCompleted ? "bg-emerald-50/30 border-emerald-100 text-slate-500" : "bg-white border-slate-200 hover:border-blue-300"
                     }`}
                   >
@@ -1787,15 +1840,17 @@ export default function LogisticsView({
                       </div>
                     </div>
 
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteLogisticsItem && onDeleteLogisticsItem("checklists", task.id);
-                      }}
-                      className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-600 transition-opacity"
-                    >
-                      <Trash2 size={12} />
-                    </button>
+                    {canEdit && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteLogisticsItem && onDeleteLogisticsItem("checklists", task.id);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-600 transition-opacity cursor-pointer"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1816,24 +1871,26 @@ export default function LogisticsView({
                   </div>
                 </div>
 
-                <button
-                  onClick={() => {
-                    setEditingItem(null);
-                    setIncidentForm({
-                      title: "",
-                      location: availableLocations[0] || "Main Auditorium",
-                      severity: "medium",
-                      status: "open",
-                      reportedBy: "Operations Staff",
-                      assignedTo: availableStaff[0] || "",
-                      description: ""
-                    });
-                    setModalType("incident");
-                  }}
-                  className="px-2.5 py-1.5 rounded-xl bg-rose-600 text-white hover:bg-rose-700 font-bold text-xs flex items-center gap-1 cursor-pointer"
-                >
-                  <Plus size={13} /> {t("logistics.report", "Report")}
-                </button>
+                {canEdit && (
+                  <button
+                    onClick={() => {
+                      setEditingItem(null);
+                      setIncidentForm({
+                        title: "",
+                        location: availableLocations[0] || "Main Auditorium",
+                        severity: "medium",
+                        status: "open",
+                        reportedBy: "Operations Staff",
+                        assignedTo: availableStaff[0] || "",
+                        description: ""
+                      });
+                      setModalType("incident");
+                    }}
+                    className="px-2.5 py-1.5 rounded-xl bg-rose-600 text-white hover:bg-rose-700 font-bold text-xs flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus size={13} /> {t("logistics.report", "Report")}
+                  </button>
+                )}
               </div>
 
               {/* Incidents List */}
@@ -1862,23 +1919,25 @@ export default function LogisticsView({
                           </span>
                           
                           {/* Status toggle buttons */}
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => handleUpdateIncidentStatus(inc, isResolved ? "open" : "resolved")}
-                              className={`text-[10px] font-bold px-2 py-0.5 rounded-md transition-colors cursor-pointer ${
-                                isResolved ? "bg-slate-200 text-slate-700" : "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
-                              }`}
-                            >
-                              {isResolved ? t("logistics.reopen", "Reopen") : t("logistics.markFixed", "Mark Fixed")}
-                            </button>
+                          {canEdit && (
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleUpdateIncidentStatus(inc, isResolved ? "open" : "resolved")}
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-md transition-colors cursor-pointer ${
+                                  isResolved ? "bg-slate-200 text-slate-700" : "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                                }`}
+                              >
+                                {isResolved ? t("logistics.reopen", "Reopen") : t("logistics.markFixed", "Mark Fixed")}
+                              </button>
 
-                            <button
-                              onClick={() => onDeleteLogisticsItem && onDeleteLogisticsItem("incidents", inc.id)}
-                              className="p-1 text-slate-400 hover:text-rose-600"
-                            >
-                              <Trash2 size={12} />
-                            </button>
-                          </div>
+                              <button
+                                onClick={() => onDeleteLogisticsItem && onDeleteLogisticsItem("incidents", inc.id)}
+                                className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          )}
                         </div>
 
                         <div>
@@ -1952,7 +2011,7 @@ export default function LogisticsView({
             </header>
 
             {/* Segmented Mode Selector Tabs (only when creating a new record) */}
-            {!editingItem && (
+            {!editingItem && canEdit && (
               <div className="px-6 py-3 bg-slate-50 border-b border-slate-200 select-none overflow-x-auto">
                 <div className="flex items-center gap-1.5 p-1 bg-slate-200/70 rounded-2xl min-w-max">
                   <button
@@ -2026,7 +2085,19 @@ export default function LogisticsView({
 
             {/* Scrollable Form Body */}
             <form id="logistics-drawer-form" onSubmit={handleSubmitForm} className="flex-1 overflow-y-auto p-6 md:p-8 flex flex-col gap-5 text-xs">
+              {!canEdit && (
+                <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200/80 flex items-start gap-2.5 text-amber-800 text-xs shrink-0">
+                  <AlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-bold">Viewer / Read-Only Mode</p>
+                    <p className="text-amber-700/90 text-[11px] mt-0.5">
+                      You have read-only access to logistics. Editing and saving changes are disabled.
+                    </p>
+                  </div>
+                </div>
+              )}
               
+              <fieldset disabled={!canEdit} className="contents space-y-5 border-none p-0 m-0">
               {/* --- 1. INVENTORY FORM --- */}
               {modalType === "inventory" && (
                 <div className="space-y-4 animate-fade-in">
@@ -2574,6 +2645,7 @@ export default function LogisticsView({
                   </div>
                 </div>
               )}
+              </fieldset>
             </form>
 
             {/* Sticky Drawer Footer */}
@@ -2583,16 +2655,18 @@ export default function LogisticsView({
                 onClick={() => { setModalType(null); setEditingItem(null); }}
                 className="px-5 py-2.5 rounded-xl font-bold text-xs text-slate-600 hover:bg-slate-200 transition-colors cursor-pointer"
               >
-                {t("common.cancel", "Cancel")}
+                {canEdit ? t("common.cancel", "Cancel") : t("common.close", "Close")}
               </button>
-              <button
-                type="submit"
-                form="logistics-drawer-form"
-                className="px-6 py-2.5 rounded-xl font-black text-xs text-white bg-blue-600 hover:bg-blue-700 shadow-md transition-all flex items-center gap-2 cursor-pointer"
-              >
-                <Check size={15} className="stroke-[3]" />
-                <span>{getDrawerButtonLabel()}</span>
-              </button>
+              {canEdit && (
+                <button
+                  type="submit"
+                  form="logistics-drawer-form"
+                  className="px-6 py-2.5 rounded-xl font-black text-xs text-white bg-blue-600 hover:bg-blue-700 shadow-md transition-all flex items-center gap-2 cursor-pointer"
+                >
+                  <Check size={15} className="stroke-[3]" />
+                  <span>{getDrawerButtonLabel()}</span>
+                </button>
+              )}
             </footer>
 
           </div>

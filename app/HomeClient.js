@@ -5218,6 +5218,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               floorPlans={floorPlans}
               eventDetails={eventDetails}
               onSwitchView={setCurrentView}
+              effectivePermissions={effectivePermissions}
               onRefreshData={async () => {
                 const fresh = await fetchLogistics(activeEventId);
                 if (fresh) setLogisticsData(fresh);
@@ -5234,6 +5235,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               onUploadFile={uploadFileToBucket}
               activeEventId={activeEventId}
               eventDetails={eventDetails}
+              effectivePermissions={effectivePermissions}
               onRefreshData={async () => {
                 const fresh = await fetchDocuments(activeEventId);
                 if (fresh) setDocuments(fresh);

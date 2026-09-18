@@ -1316,6 +1316,123 @@ function VisualGraphicCard({ item, idx, featureSlug, lang = "fr" }) {
     );
   }
 
+  if (type === "video-hero-preview") {
+    return (
+      <div className="space-y-3">
+        <div className="relative rounded-2xl overflow-hidden aspect-video bg-slate-900 flex items-center justify-center border border-slate-700/60 shadow-inner group">
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-full h-full object-cover opacity-85 group-hover:opacity-100 transition-opacity"
+          >
+            <source src="/website-bg-video.mp4" type="video/mp4" />
+          </video>
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-black/20" />
+          <div className="absolute top-2.5 left-3 flex items-center gap-2">
+            <span className="text-[10px] font-black uppercase tracking-wider text-white bg-blue-600 px-2 py-0.5 rounded-full shadow-xs">
+              Live Hero Video
+            </span>
+            <span className="text-[10px] font-bold text-slate-300 bg-black/40 backdrop-blur-xs px-2 py-0.5 rounded-full">
+              4K • 60 FPS
+            </span>
+          </div>
+          <div className="absolute bottom-2.5 inset-x-3 flex items-center justify-between text-white text-[11px] font-medium">
+            <span>Eventzone Video Engine</span>
+            <span className="text-emerald-400 font-bold">● Streaming HD</span>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2 text-center text-xs">
+          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+            <span className="text-[10px] font-bold text-slate-400 block">GPU Render</span>
+            <span className="text-xs font-black text-slate-900">Accelerated</span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-blue-50/70 border border-blue-200">
+            <span className="text-[10px] font-bold text-blue-700 block">Playback</span>
+            <span className="text-xs font-black text-blue-800">Seamless Loop</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (type === "glassmorphic-cards") {
+    return (
+      <div className="relative p-5 rounded-2xl bg-gradient-to-br from-blue-600/10 via-indigo-500/10 to-transparent border border-blue-200/60 overflow-hidden space-y-3">
+        <div className="p-3.5 rounded-xl bg-white/70 backdrop-blur-md border border-white/60 shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-black text-slate-900">Surface Glass Layer 01</span>
+            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">blur: 16px</span>
+          </div>
+          <p className="text-[11px] text-slate-500 mt-1">Frosted backdrop filter with 1px luminous border</p>
+        </div>
+        <div className="p-3.5 rounded-xl bg-white/90 backdrop-blur-lg border border-white/80 shadow-lg translate-x-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-black text-slate-900">Elevated Modal Layer 02</span>
+            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Active</span>
+          </div>
+          <p className="text-[11px] text-slate-500 mt-1">Depth elevation with realistic ambient light</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (type === "performance-metrics") {
+    return (
+      <div className="space-y-3">
+        <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-bold text-slate-700">Largest Contentful Paint (LCP)</span>
+            <span className="font-mono font-black text-emerald-600">0.82s (Optimal)</span>
+          </div>
+          <div className="w-full h-2 rounded-full bg-slate-200 overflow-hidden">
+            <div className="h-full bg-emerald-500 rounded-full w-[94%]" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 text-center">
+          <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200">
+            <span className="text-[10px] font-bold text-emerald-700 block">Frame Rate</span>
+            <span className="text-xs font-black text-emerald-900">60 FPS Flat</span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-blue-50 border border-blue-200">
+            <span className="text-[10px] font-bold text-blue-700 block">Thread Blocking</span>
+            <span className="text-xs font-black text-blue-900">0 ms (Free)</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (type === "design-customizer") {
+    return (
+      <div className="space-y-3">
+        <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+          <div className="flex items-center justify-between">
+            <span className="font-bold text-slate-700">Backdrop Opacity</span>
+            <span className="font-mono font-bold text-blue-600">65%</span>
+          </div>
+          <div className="w-full h-1.5 rounded-full bg-slate-200 overflow-hidden">
+            <div className="h-full bg-blue-600 rounded-full w-[65%]" />
+          </div>
+
+          <div className="flex items-center justify-between pt-1">
+            <span className="font-bold text-slate-700">Frosted Glass Blur</span>
+            <span className="font-mono font-bold text-blue-600">12px</span>
+          </div>
+          <div className="w-full h-1.5 rounded-full bg-slate-200 overflow-hidden">
+            <div className="h-full bg-blue-600 rounded-full w-[50%]" />
+          </div>
+        </div>
+
+        <div className="p-2.5 rounded-xl bg-blue-600 text-white text-xs font-bold text-center shadow-xs">
+          Eventzone Design Engine Active
+        </div>
+      </div>
+    );
+  }
+
   // Fallback
   return (
     <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200/80 text-center">

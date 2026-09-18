@@ -9,7 +9,7 @@ import {
   Layers, ExternalLink, Play, LogOut, Copy, Send, Loader2
 } from "lucide-react";
 import { useLanguage } from "../lib/i18n";
-import { EVENT_MODULES, ROLE_PRESETS, getPermissionSummary } from "../lib/permissions";
+import { EVENT_MODULES, ROLE_PRESETS, getPermissionSummary, canEditModule } from "../lib/permissions";
 import SearchableSelect from "./SearchableSelect";
 
 export default function TeamView({
@@ -23,6 +23,7 @@ export default function TeamView({
 }) {
   const { t, isRTL } = useLanguage();
   const { team = [], eventDetails = {} } = state;
+  const canEdit = canEditModule("my-team", state?.effectivePermissions);
 
   // Search & Filter State
   const [searchTerm, setSearchTerm] = useState("");
@@ -37,6 +38,7 @@ export default function TeamView({
   const [sentInviteId, setSentInviteId] = useState(null);
 
   const handleResendInviteEmail = async (member) => {
+    if (!canEdit) return;
     if (!member.email) {
       alert(t("team.errNoEmail", "This member does not have a valid email address."));
       return;
@@ -86,6 +88,7 @@ export default function TeamView({
 
   // Status Handlers
   const handleArchive = (id) => {
+    if (!canEdit) return;
     if (confirm(t("team.confirmArchiveMember", "Archive this team member? Their access will be paused but records preserved."))) {
       const updated = team.map(t => t.id === id ? { ...t, status: 'Archived', isArchived: true } : t);
       onUpdateState("team", updated);
@@ -93,11 +96,13 @@ export default function TeamView({
   };
 
   const handleRestore = (id) => {
+    if (!canEdit) return;
     const updated = team.map(t => t.id === id ? { ...t, status: 'Active', isArchived: false } : t);
     onUpdateState("team", updated);
   };
 
   const handleDelete = (id) => {
+    if (!canEdit) return;
     if (confirm(t("team.confirmDeleteMember", "Permanently remove this team member?"))) {
       const updated = team.filter(t => t.id !== id);
       onUpdateState("team", updated);
@@ -105,6 +110,7 @@ export default function TeamView({
   };
 
   const handleCopyInvite = (member) => {
+    if (!canEdit) return;
     const inviteLink = `${window.location.origin}/?eventId=${eventDetails?.id || state.activeEventId || 'default'}&inviteToken=${member.id}`;
     navigator.clipboard.writeText(inviteLink);
     setCopiedInviteId(member.id);
@@ -240,6 +246,13 @@ export default function TeamView({
         </div>
 
         <div className="flex items-center gap-3">
+          {!canEdit && (
+            <span className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 font-bold text-xs border border-slate-200/80 flex items-center gap-1.5 shadow-xs">
+              <Eye size={13} className="text-slate-500" />
+              <span>Viewer Mode</span>
+            </span>
+          )}
+
           {/* Quick Role Simulator Selector */}
           {team.length > 0 && (
             <div className="hidden lg:flex items-center gap-2 bg-slate-100 p-1 rounded-2xl border border-slate-200/80">
@@ -262,13 +275,15 @@ export default function TeamView({
             </div>
           )}
 
-          <button 
-            onClick={() => onOpenModal("team")}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-4 rounded-xl text-xs transition-all hover:shadow-md hover:-translate-y-0.5 flex items-center gap-2 cursor-pointer shadow-xs shadow-blue-100"
-          >
-            <Plus size={16} />
-            <span>{t("team.inviteMember", "Add Member")}</span>
-          </button>
+          {canEdit && (
+            <button 
+              onClick={() => onOpenModal("team")}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-4 rounded-xl text-xs transition-all hover:shadow-md hover:-translate-y-0.5 flex items-center gap-2 cursor-pointer shadow-xs shadow-blue-100"
+            >
+              <Plus size={16} />
+              <span>{t("team.inviteMember", "Add Member")}</span>
+            </button>
+          )}
         </div>
       </header>
 
@@ -590,70 +605,83 @@ export default function TeamView({
                       {/* Actions */}
                       <td className={`py-4 px-6 ${isRTL ? "text-left" : "text-right"}`}>
                         <div className={`flex items-center ${isRTL ? "justify-start" : "justify-end"} gap-1`}>
-                          {!isArchived && (
-                            <>
-                              <button 
-                                onClick={() => onOpenModal("team", member)}
-                                className="px-2.5 py-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                                title={t("team.editMember", "Edit Member Permissions")}
-                              >
-                                {t("common.edit", "Edit")}
-                              </button>
-
-                              <button
-                                onClick={() => handleCopyInvite(member)}
-                                className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all cursor-pointer"
-                                title={t("team.copyInvite", "Copy Magic Invite Link")}
-                              >
-                                {copiedInviteId === member.id ? (
-                                  <Check size={13} className="text-emerald-600" />
-                                ) : (
-                                  <Copy size={13} />
-                                )}
-                              </button>
-
-                              <button
-                                onClick={() => handleResendInviteEmail(member)}
-                                disabled={sendingInviteId === member.id}
-                                className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all cursor-pointer disabled:opacity-50"
-                                title={sentInviteId === member.id ? t("team.inviteSent", "Invitation Email Sent!") : t("team.resendInvite", "Send / Resend Invitation Email")}
-                              >
-                                {sendingInviteId === member.id ? (
-                                  <Loader2 size={13} className="animate-spin text-blue-600" />
-                                ) : sentInviteId === member.id ? (
-                                  <Check size={13} className="text-emerald-600" />
-                                ) : (
-                                  <Mail size={13} />
-                                )}
-                              </button>
-
-                              <button
-                                onClick={() => onSimulateMember(member.id)}
-                                className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all cursor-pointer"
-                                title={t("team.simulate", "Simulate / Test This Role")}
-                              >
-                                <Play size={13} />
-                              </button>
-                            </>
-                          )}
-
-                          {isArchived ? (
+                          {!canEdit ? (
                             <button 
-                              onClick={() => handleRestore(member.id)}
-                              className="px-2 py-1 text-emerald-600 hover:bg-emerald-50 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
-                              title={t("common.restore", "Restore")}
+                              onClick={() => onOpenModal("team", member)}
+                              className="px-2.5 py-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                              title={t("team.viewMember", "View Member Permissions")}
                             >
-                              <RotateCcw size={11} />
-                              <span>{t("common.restore", "Restore")}</span>
+                              <Eye size={12} />
+                              <span>{t("common.view", "View")}</span>
                             </button>
                           ) : (
-                            <button 
-                              onClick={() => handleArchive(member.id)}
-                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
-                              title={t("common.archive", "Archive")}
-                            >
-                              <Archive size={13} />
-                            </button>
+                            <>
+                              {!isArchived && (
+                                <>
+                                  <button 
+                                    onClick={() => onOpenModal("team", member)}
+                                    className="px-2.5 py-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                                    title={t("team.editMember", "Edit Member Permissions")}
+                                  >
+                                    {t("common.edit", "Edit")}
+                                  </button>
+
+                                  <button
+                                    onClick={() => handleCopyInvite(member)}
+                                    className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all cursor-pointer"
+                                    title={t("team.copyInvite", "Copy Magic Invite Link")}
+                                  >
+                                    {copiedInviteId === member.id ? (
+                                      <Check size={13} className="text-emerald-600" />
+                                    ) : (
+                                      <Copy size={13} />
+                                    )}
+                                  </button>
+
+                                  <button
+                                    onClick={() => handleResendInviteEmail(member)}
+                                    disabled={sendingInviteId === member.id}
+                                    className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all cursor-pointer disabled:opacity-50"
+                                    title={sentInviteId === member.id ? t("team.inviteSent", "Invitation Email Sent!") : t("team.resendInvite", "Send / Resend Invitation Email")}
+                                  >
+                                    {sendingInviteId === member.id ? (
+                                      <Loader2 size={13} className="animate-spin text-blue-600" />
+                                    ) : sentInviteId === member.id ? (
+                                      <Check size={13} className="text-emerald-600" />
+                                    ) : (
+                                      <Mail size={13} />
+                                    )}
+                                  </button>
+
+                                  <button
+                                    onClick={() => onSimulateMember(member.id)}
+                                    className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all cursor-pointer"
+                                    title={t("team.simulate", "Simulate / Test This Role")}
+                                  >
+                                    <Play size={13} />
+                                  </button>
+                                </>
+                              )}
+
+                              {isArchived ? (
+                                <button 
+                                  onClick={() => handleRestore(member.id)}
+                                  className="px-2 py-1 text-emerald-600 hover:bg-emerald-50 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                                  title={t("common.restore", "Restore")}
+                                >
+                                  <RotateCcw size={11} />
+                                  <span>{t("common.restore", "Restore")}</span>
+                                </button>
+                              ) : (
+                                <button 
+                                  onClick={() => handleArchive(member.id)}
+                                  className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
+                                  title={t("common.archive", "Archive")}
+                                >
+                                  <Archive size={13} />
+                                </button>
+                              )}
+                            </>
                           )}
                         </div>
                       </td>

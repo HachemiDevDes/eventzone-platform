@@ -4081,21 +4081,30 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
         </div>
 
         <div className="flex items-center gap-2.5">
-          <button 
-            type="button"
-            onClick={handleOpenManageTiersModal}
-            className="bg-white hover:bg-slate-50 text-slate-700 font-bold py-2.5 px-3.5 rounded-xl text-xs border border-slate-200 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs hover:border-slate-300 shrink-0"
-          >
-            <Pencil size={13} className="text-slate-500" />
-            <span>{t("table.editTiers", "Edit Tiers")}</span>
-          </button>
-          <button 
-            onClick={() => onOpenModal("sponsor")}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-4 rounded-xl text-xs transition-all hover:shadow-md hover:-translate-y-0.5 flex items-center gap-2 cursor-pointer shadow-xs shadow-blue-100 shrink-0"
-          >
-            <Plus size={16} />
-            <span>Add Sponsor</span>
-          </button>
+          {canEdit ? (
+            <>
+              <button 
+                type="button"
+                onClick={handleOpenManageTiersModal}
+                className="bg-white hover:bg-slate-50 text-slate-700 font-bold py-2.5 px-3.5 rounded-xl text-xs border border-slate-200 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs hover:border-slate-300 shrink-0"
+              >
+                <Pencil size={13} className="text-slate-500" />
+                <span>{t("table.editTiers", "Edit Tiers")}</span>
+              </button>
+              <button 
+                onClick={() => onOpenModal("sponsor")}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-4 rounded-xl text-xs transition-all hover:shadow-md hover:-translate-y-0.5 flex items-center gap-2 cursor-pointer shadow-xs shadow-blue-100 shrink-0"
+              >
+                <Plus size={16} />
+                <span>Add Sponsor</span>
+              </button>
+            </>
+          ) : (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-500 text-xs font-bold shrink-0">
+              <Eye size={14} className="text-slate-400" />
+              <span>{t("table.viewerMode", "Viewer Mode (Read Only)")}</span>
+            </div>
+          )}
         </div>
       </header>
 
@@ -4158,12 +4167,14 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
           <p className="text-xs text-slate-500 max-w-sm">
             Add official corporate sponsors or link partner organizations to sponsor packages.
           </p>
-          <button
-            onClick={() => onOpenModal("sponsor")}
-            className="mt-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl text-xs transition-colors cursor-pointer"
-          >
-            Add Sponsor
-          </button>
+          {canEdit && (
+            <button
+              onClick={() => onOpenModal("sponsor")}
+              className="mt-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl text-xs transition-colors cursor-pointer"
+            >
+              Add Sponsor
+            </button>
+          )}
         </div>
       ) : viewMode === "grid" ? (
         <div className="flex flex-col gap-5">
@@ -4225,25 +4236,29 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
                             {list.length}
                           </span>
                         </h3>
+                        {canEdit && (
+                          <button
+                            type="button"
+                            onClick={() => handleStartEditTier(tier.key, tier.name)}
+                            className="opacity-0 group-hover/tier-header:opacity-100 p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ml-1"
+                            title={t("sponsors.renameTier", "Rename Tier")}
+                          >
+                            <Pencil size={12} />
+                            <span className="text-[11px] font-semibold text-slate-500 hover:text-blue-600">{t("common.rename", "Rename")}</span>
+                          </button>
+                        )}
+                      </div>
+
+                      {canEdit && (
                         <button
                           type="button"
                           onClick={() => handleStartEditTier(tier.key, tier.name)}
-                          className="opacity-0 group-hover/tier-header:opacity-100 p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ml-1"
-                          title={t("sponsors.renameTier", "Rename Tier")}
+                          className="text-[11px] font-bold text-slate-400 hover:text-blue-600 flex items-center gap-1 transition-colors cursor-pointer px-2 py-1 rounded-lg hover:bg-slate-50"
                         >
-                          <Pencil size={12} />
-                          <span className="text-[11px] font-semibold text-slate-500 hover:text-blue-600">{t("common.rename", "Rename")}</span>
+                          <Pencil size={11} />
+                          <span>{t("common.editName", "Edit Name")}</span>
                         </button>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => handleStartEditTier(tier.key, tier.name)}
-                        className="text-[11px] font-bold text-slate-400 hover:text-blue-600 flex items-center gap-1 transition-colors cursor-pointer px-2 py-1 rounded-lg hover:bg-slate-50"
-                      >
-                        <Pencil size={11} />
-                        <span>{t("common.editName", "Edit Name")}</span>
-                      </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -4272,47 +4287,58 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
                           className={`bg-slate-50 border ${isArchived ? 'border-slate-300 opacity-70' : 'border-slate-200'} rounded-2xl p-4 flex flex-col items-center text-center gap-2.5 relative group hover:bg-white hover:border-blue-200 hover:shadow-xs transition-all duration-200`}
                         >
                           <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                            {!isArchived ? (
-                              <div className="flex items-center gap-1">
-                                <button 
-                                  onClick={() => onOpenModal("sponsor", s)}
-                                  className="text-blue-600 hover:bg-blue-50 p-1 rounded-md text-[10px] font-bold cursor-pointer"
-                                  title="Edit Sponsor"
-                                >
-                                  Edit
-                                </button>
-                                <button 
-                                  onClick={() => handleArchive(s.id)}
-                                  className="text-slate-400 hover:text-amber-600 hover:bg-amber-50 p-1 rounded-md cursor-pointer"
-                                  title={t("table.archiveSponsor", "Archive Sponsor")}
-                                >
-                                  <Archive size={12} />
-                                </button>
-                                <button 
-                                  onClick={() => handleDeletePermanent(s.id)}
-                                  className="text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-1 rounded-md cursor-pointer"
-                                  title={t("table.deleteSponsor", "Delete Sponsor")}
-                                >
-                                  <Trash2 size={12} />
-                                </button>
-                              </div>
+                            {canEdit ? (
+                              !isArchived ? (
+                                <div className="flex items-center gap-1">
+                                  <button 
+                                    onClick={() => onOpenModal("sponsor", s)}
+                                    className="text-blue-600 hover:bg-blue-50 p-1 rounded-md text-[10px] font-bold cursor-pointer"
+                                    title="Edit Sponsor"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button 
+                                    onClick={() => handleArchive(s.id)}
+                                    className="text-slate-400 hover:text-amber-600 hover:bg-amber-50 p-1 rounded-md cursor-pointer"
+                                    title={t("table.archiveSponsor", "Archive Sponsor")}
+                                  >
+                                    <Archive size={12} />
+                                  </button>
+                                  <button 
+                                    onClick={() => handleDeletePermanent(s.id)}
+                                    className="text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-1 rounded-md cursor-pointer"
+                                    title={t("table.deleteSponsor", "Delete Sponsor")}
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1">
+                                  <button 
+                                    onClick={() => handleRestore(s.id)}
+                                    className="text-emerald-600 hover:bg-emerald-50 p-1 rounded-md cursor-pointer"
+                                    title="Restore"
+                                  >
+                                    <RotateCcw size={12} />
+                                  </button>
+                                  <button 
+                                    onClick={() => handleDeletePermanent(s.id)}
+                                    className="text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-1 rounded-md cursor-pointer"
+                                    title={t("table.deletePermanently", "Permanently Delete")}
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
+                                </div>
+                              )
                             ) : (
-                              <div className="flex items-center gap-1">
-                                <button 
-                                  onClick={() => handleRestore(s.id)}
-                                  className="text-emerald-600 hover:bg-emerald-50 p-1 rounded-md cursor-pointer"
-                                  title="Restore"
-                                >
-                                  <RotateCcw size={12} />
-                                </button>
-                                <button 
-                                  onClick={() => handleDeletePermanent(s.id)}
-                                  className="text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-1 rounded-md cursor-pointer"
-                                  title={t("table.deletePermanently", "Permanently Delete")}
-                                >
-                                  <Trash2 size={12} />
-                                </button>
-                              </div>
+                              <button 
+                                onClick={() => onOpenModal("sponsor", s)}
+                                className="text-blue-600 hover:bg-blue-50 p-1 px-1.5 rounded-md text-[10px] font-bold cursor-pointer flex items-center gap-1"
+                                title="View Details"
+                              >
+                                <Eye size={11} />
+                                <span>View</span>
+                              </button>
                             )}
                           </div>
 
@@ -4482,26 +4508,39 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
                       </td>
                       <td className="py-4 px-6 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => onOpenModal("sponsor", s)}
-                            className="px-2.5 py-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => isArchived ? handleRestore(s.id) : handleArchive(s.id)}
-                            className="p-1.5 text-slate-400 hover:text-amber-600 rounded-lg cursor-pointer"
-                            title={isArchived ? "Restore Sponsor" : "Archive Sponsor"}
-                          >
-                            {isArchived ? <RotateCcw size={13} /> : <Archive size={13} />}
-                          </button>
-                          <button
-                            onClick={() => handleDeletePermanent(s.id)}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer transition-colors"
-                            title="Permanently Delete Sponsor"
-                          >
-                            <Trash2 size={13} />
-                          </button>
+                          {canEdit ? (
+                            <>
+                              <button
+                                onClick={() => onOpenModal("sponsor", s)}
+                                className="px-2.5 py-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => isArchived ? handleRestore(s.id) : handleArchive(s.id)}
+                                className="p-1.5 text-slate-400 hover:text-amber-600 rounded-lg cursor-pointer"
+                                title={isArchived ? "Restore Sponsor" : "Archive Sponsor"}
+                              >
+                                {isArchived ? <RotateCcw size={13} /> : <Archive size={13} />}
+                              </button>
+                              <button
+                                onClick={() => handleDeletePermanent(s.id)}
+                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer transition-colors"
+                                title="Permanently Delete Sponsor"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              onClick={() => onOpenModal("sponsor", s)}
+                              className="px-2.5 py-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                              title="View Details"
+                            >
+                              <Eye size={13} />
+                              <span>View</span>
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -4599,10 +4638,12 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
 function ExhibitorsView({ state, onUpdateState, onOpenModal }) {
   const { t, lang, isRTL } = useLanguage();
   const { exhibitors = [], organizations = [], attendees = [] } = state;
+  const canEdit = canEditModule("exhibitors", state?.effectivePermissions);
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState("grid"); // "grid" | "table"
 
   const handleDelete = async (id) => {
+    if (!canEdit) return;
     if (confirm("Remove this exhibitor from the event? (Organization profile will remain preserved).")) {
       if (state.onDeleteExhibitor) {
         await state.onDeleteExhibitor(id);
@@ -4643,13 +4684,20 @@ function ExhibitorsView({ state, onUpdateState, onOpenModal }) {
           </p>
         </div>
 
-        <button 
-          onClick={() => onOpenModal("exhibitor")}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-4 rounded-xl text-xs transition-all hover:shadow-md hover:-translate-y-0.5 flex items-center gap-2 cursor-pointer shadow-xs shadow-blue-100 shrink-0"
-        >
-          <Plus size={16} />
-          <span>{t("table.addExhibitor", "Add Exhibitor")}</span>
-        </button>
+        {canEdit ? (
+          <button 
+            onClick={() => onOpenModal("exhibitor")}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-4 rounded-xl text-xs transition-all hover:shadow-md hover:-translate-y-0.5 flex items-center gap-2 cursor-pointer shadow-xs shadow-blue-100 shrink-0"
+          >
+            <Plus size={16} />
+            <span>{t("table.addExhibitor", "Add Exhibitor")}</span>
+          </button>
+        ) : (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-500 text-xs font-bold shrink-0">
+            <Eye size={14} className="text-slate-400" />
+            <span>{t("table.viewerMode", "Viewer Mode (Read Only)")}</span>
+          </div>
+        )}
       </header>
 
       {/* Toolbar */}
@@ -4705,12 +4753,14 @@ function ExhibitorsView({ state, onUpdateState, onOpenModal }) {
           <p className="text-xs text-slate-500 max-w-sm">
             Assign booth spaces to registered organizations or add a standalone exhibitor.
           </p>
-          <button
-            onClick={() => onOpenModal("exhibitor")}
-            className="mt-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl text-xs transition-colors cursor-pointer"
-          >
-            Add Exhibitor
-          </button>
+          {canEdit && (
+            <button
+              onClick={() => onOpenModal("exhibitor")}
+              className="mt-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl text-xs transition-colors cursor-pointer"
+            >
+              Add Exhibitor
+            </button>
+          )}
         </div>
       ) : viewMode === "grid" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -4765,20 +4815,33 @@ function ExhibitorsView({ state, onUpdateState, onOpenModal }) {
                     )}
 
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                      <button 
-                        onClick={() => onOpenModal("exhibitor", e)}
-                        className="px-2.5 py-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                        title="Edit Exhibitor"
-                      >
-                        Edit
-                      </button>
-                      <button 
-                        onClick={() => handleDelete(e.id)}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                        title={t("table.removeExhibitor", "Remove Exhibitor")}
-                      >
-                        <Trash2 size={13} />
-                      </button>
+                      {canEdit ? (
+                        <>
+                          <button 
+                            onClick={() => onOpenModal("exhibitor", e)}
+                            className="px-2.5 py-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                            title="Edit Exhibitor"
+                          >
+                            Edit
+                          </button>
+                          <button 
+                            onClick={() => handleDelete(e.id)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                            title={t("table.removeExhibitor", "Remove Exhibitor")}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </>
+                      ) : (
+                        <button 
+                          onClick={() => onOpenModal("exhibitor", e)}
+                          className="px-2.5 py-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                          title="View Details"
+                        >
+                          <Eye size={13} />
+                          <span>View</span>
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -4954,18 +5017,31 @@ function ExhibitorsView({ state, onUpdateState, onOpenModal }) {
                       </td>
                       <td className="py-4 px-6 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => onOpenModal("exhibitor", e)}
-                            className="px-2.5 py-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDelete(e.id)}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg cursor-pointer"
-                          >
-                            <Trash2 size={13} />
-                          </button>
+                          {canEdit ? (
+                            <>
+                              <button
+                                onClick={() => onOpenModal("exhibitor", e)}
+                                className="px-2.5 py-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDelete(e.id)}
+                                className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg cursor-pointer"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              onClick={() => onOpenModal("exhibitor", e)}
+                              className="px-2.5 py-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                              title="View Details"
+                            >
+                              <Eye size={13} />
+                              <span>View</span>
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -4985,19 +5061,23 @@ function ExhibitorsView({ state, onUpdateState, onOpenModal }) {
 function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
   const { t, lang, isRTL } = useLanguage();
   const { tickets, attendees, forms = [] } = state;
+  const canEdit = canEditModule("tickets", state?.effectivePermissions);
   const [ticketFilter, setTicketFilter] = useState("active"); // "active" | "archived" | "all"
 
   const handleArchive = (id) => {
+    if (!canEdit) return;
     if (confirm("Archive this ticket tier? (Tickets and attendee data are safely preserved)")) {
       onUpdateState("tickets", tickets.map(ticketItem => ticketItem.id === id ? { ...ticketItem, status: 'Archived', isArchived: true } : ticketItem));
     }
   };
 
   const handleRestore = (id) => {
+    if (!canEdit) return;
     onUpdateState("tickets", tickets.map(ticketItem => ticketItem.id === id ? { ...ticketItem, status: 'Active', isArchived: false } : ticketItem));
   };
 
   const handleDeletePermanent = (id) => {
+    if (!canEdit) return;
     if (confirm("Permanently delete this ticket tier? This action cannot be undone.")) {
       onUpdateState("tickets", tickets.filter(ticketItem => ticketItem.id !== id));
     }
@@ -5030,18 +5110,27 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
           <p className="text-sm text-slate-500">{t("tickets.subtitle", "Configure admission passes, pricing, capacities, and access perks.")}</p>
         </div>
         <div className="flex items-center gap-2.5">
-          <button 
-            onClick={() => onSwitchView && onSwitchView("forms")}
-            className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl text-sm transition-all shadow-xs cursor-pointer"
-          >
-            {t("tickets.customizeForms", "Customize Registration Forms")}
-          </button>
-          <button 
-            onClick={() => onOpenModal("ticket")}
-            className="bg-indigo-650 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-xl text-sm transition-all hover:shadow duration-200 cursor-pointer"
-          >
-            {t("tickets.addTicketTier", "Add Ticket Tier")}
-          </button>
+          {canEdit && (
+            <button 
+              onClick={() => onSwitchView && onSwitchView("forms")}
+              className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl text-sm transition-all shadow-xs cursor-pointer"
+            >
+              {t("tickets.customizeForms", "Customize Registration Forms")}
+            </button>
+          )}
+          {canEdit ? (
+            <button 
+              onClick={() => onOpenModal("ticket")}
+              className="bg-indigo-650 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-xl text-sm transition-all hover:shadow duration-200 cursor-pointer"
+            >
+              {t("tickets.addTicketTier", "Add Ticket Tier")}
+            </button>
+          ) : (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-500 text-xs font-bold shrink-0">
+              <Eye size={14} className="text-slate-400" />
+              <span>{t("table.viewerMode", "Viewer Mode (Read Only)")}</span>
+            </div>
+          )}
         </div>
       </header>
 
@@ -5206,43 +5295,56 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
                   </span>
                   
                   <div className="flex items-center gap-1">
-                    {!isArchived && (
+                    {canEdit ? (
+                      <>
+                        {!isArchived && (
+                          <button 
+                            type="button"
+                            onClick={() => onOpenModal("ticket", ticket)}
+                            className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 border border-transparent hover:border-indigo-100 rounded-xl transition-all cursor-pointer flex items-center justify-center"
+                            title={t("tickets.editTierTooltip", "Edit & Design Ticket Tier")}
+                          >
+                            <Pencil size={15} />
+                          </button>
+                        )}
+                        {isArchived ? (
+                          <div className="flex items-center gap-1">
+                            <button 
+                              type="button"
+                              onClick={() => handleRestore(ticket.id)}
+                              className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 border border-transparent hover:border-emerald-100 rounded-xl transition-all cursor-pointer flex items-center justify-center"
+                              title={t("tickets.restoreTierTooltip", "Restore Ticket Tier")}
+                            >
+                              <RotateCcw size={15} />
+                            </button>
+                            <button 
+                              type="button"
+                              onClick={() => handleDeletePermanent(ticket.id)}
+                              className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-100 rounded-xl transition-all cursor-pointer flex items-center justify-center"
+                              title={t("tickets.deleteTierPermanentTooltip", "Delete Ticket Tier Permanently")}
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        ) : (
+                          <button 
+                            type="button"
+                            onClick={() => handleArchive(ticket.id)}
+                            className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 border border-transparent hover:border-amber-100 rounded-xl transition-all cursor-pointer flex items-center justify-center"
+                            title={t("tickets.archiveTierTooltip", "Archive Ticket Tier")}
+                          >
+                            <Archive size={15} />
+                          </button>
+                        )}
+                      </>
+                    ) : (
                       <button 
                         type="button"
                         onClick={() => onOpenModal("ticket", ticket)}
                         className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 border border-transparent hover:border-indigo-100 rounded-xl transition-all cursor-pointer flex items-center justify-center"
-                        title={t("tickets.editTierTooltip", "Edit & Design Ticket Tier")}
+                        title="View Details"
                       >
-                        <Pencil size={15} />
-                      </button>
-                    )}
-                    {isArchived ? (
-                      <div className="flex items-center gap-1">
-                        <button 
-                          type="button"
-                          onClick={() => handleRestore(ticket.id)}
-                          className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 border border-transparent hover:border-emerald-100 rounded-xl transition-all cursor-pointer flex items-center justify-center"
-                          title={t("tickets.restoreTierTooltip", "Restore Ticket Tier")}
-                        >
-                          <RotateCcw size={15} />
-                        </button>
-                        <button 
-                          type="button"
-                          onClick={() => handleDeletePermanent(ticket.id)}
-                          className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-100 rounded-xl transition-all cursor-pointer flex items-center justify-center"
-                          title={t("tickets.deleteTierPermanentTooltip", "Delete Ticket Tier Permanently")}
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    ) : (
-                      <button 
-                        type="button"
-                        onClick={() => handleArchive(ticket.id)}
-                        className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 border border-transparent hover:border-amber-100 rounded-xl transition-all cursor-pointer flex items-center justify-center"
-                        title={t("tickets.archiveTierTooltip", "Archive Ticket Tier")}
-                      >
-                        <Archive size={15} />
+                        <Eye size={15} />
                       </button>
                     )}
                   </div>
@@ -5260,6 +5362,7 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
 function CheckInView({ state, onUpdateState }) {
   const { t, lang, isRTL } = useLanguage();
   const { attendees = [], tickets = [] } = state;
+  const canEdit = canEditModule("check-in", state?.effectivePermissions);
   const activeEventId = state.activeEventId || state.eventDetails?.id;
   const {
     isOnline,
@@ -5370,6 +5473,7 @@ function CheckInView({ state, onUpdateState }) {
   }, [attendees, rawGates]);
 
   const handleOpenAddGate = () => {
+    if (!canEdit) return;
     setEditingGate(null);
     setGateFormName("");
     setGateFormPasscode(generateGatePasscode());
@@ -5378,6 +5482,7 @@ function CheckInView({ state, onUpdateState }) {
   };
 
   const handleOpenEditGate = (gate) => {
+    if (!canEdit) return;
     if (gate.isPrincipal) return;
     setEditingGate(gate);
     setGateFormName(gate.name || "");
@@ -5387,6 +5492,7 @@ function CheckInView({ state, onUpdateState }) {
   };
 
   const handleSaveGate = async (e) => {
+    if (!canEdit) return;
     if (e) e.preventDefault();
     const trimmedName = gateFormName.trim();
     const cleanPasscode = gateFormPasscode.trim().toUpperCase();
@@ -5475,6 +5581,7 @@ function CheckInView({ state, onUpdateState }) {
   };
 
   const handleDeleteGate = async (gateId) => {
+    if (!canEdit) return;
     if (!gateId || gateId === "principal") return;
     const updatedGates = rawGates.filter(g => g.id !== gateId);
 
@@ -5525,6 +5632,7 @@ function CheckInView({ state, onUpdateState }) {
   }, [search, gateFilter]);
 
   const handleToggle = async (id) => {
+    if (!canEdit) return;
     const target = attendees.find(a => a.id === id);
     if (!target) return;
     const isCurrentlyChecked = Boolean(target.status === "checked-in" || target.status === "checked_in" || target.checkedIn || target.checked_in);
@@ -5555,6 +5663,7 @@ function CheckInView({ state, onUpdateState }) {
 
   // Direct 1-Click Print Badge Handler for CheckInView
   const handleDirectPrintAttendeeBadge = (attendee) => {
+    if (!canEdit) return;
     if (!attendee) return;
 
     // Automatically count printing badge as a check-in for the attendee
@@ -5622,6 +5731,7 @@ function CheckInView({ state, onUpdateState }) {
 
   // Live QR Check-in Scan Processor
   const handleScanPass = (rawCode) => {
+    if (!canEdit) return;
     if (!rawCode || !rawCode.trim()) return;
     const clean = rawCode.trim();
     let targetId = clean;
@@ -5742,6 +5852,13 @@ function CheckInView({ state, onUpdateState }) {
           <div className="flex items-center gap-2.5 flex-wrap">
             <h2 className="text-2xl font-bold text-slate-900 tracking-tight">{t("checkin.title", "On-Site Check-In Command")}</h2>
             
+            {!canEdit && (
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 border border-slate-200 text-slate-500 text-xs font-bold shrink-0">
+                <Eye size={14} className="text-slate-400" />
+                <span>{t("table.viewerMode", "Viewer Mode (Read Only)")}</span>
+              </div>
+            )}
+
             {/* Connection & Offline Sync Status Indicator */}
             {(syncState === "syncing" || !isOnline || pendingCount > 0) && (
               <div className="inline-flex items-center">
@@ -5860,15 +5977,17 @@ function CheckInView({ state, onUpdateState }) {
                         </button>
                       );
                     })}
-                    <button
-                      type="button"
-                      onClick={handleOpenAddGate}
-                      className="px-2.5 py-1.5 rounded-xl text-xs font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-all cursor-pointer flex items-center gap-1"
-                      title={t("checkin.addNewGate", "Add Gate")}
-                    >
-                      <Plus size={13} className="stroke-[2.5]" />
-                      <span>{t("checkin.addGateBtnShort", "Add Gate")}</span>
-                    </button>
+                    {canEdit && (
+                      <button
+                        type="button"
+                        onClick={handleOpenAddGate}
+                        className="px-2.5 py-1.5 rounded-xl text-xs font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-all cursor-pointer flex items-center gap-1"
+                        title={t("checkin.addNewGate", "Add Gate")}
+                      >
+                        <Plus size={13} className="stroke-[2.5]" />
+                        <span>{t("checkin.addGateBtnShort", "Add Gate")}</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -5947,14 +6066,16 @@ function CheckInView({ state, onUpdateState }) {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={handleOpenAddGate}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-sm shadow-blue-600/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 self-start sm:self-auto shrink-0"
-          >
-            <Plus size={14} className="stroke-[2.5]" />
-            <span>{t("checkin.addGateBtn", "+ Add Admission Gate")}</span>
-          </button>
+          {canEdit && (
+            <button
+              type="button"
+              onClick={handleOpenAddGate}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-sm shadow-blue-600/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 self-start sm:self-auto shrink-0"
+            >
+              <Plus size={14} className="stroke-[2.5]" />
+              <span>{t("checkin.addGateBtn", "+ Add Admission Gate")}</span>
+            </button>
+          )}
         </div>
 
         {/* Gates Cards Grid */}
@@ -6076,7 +6197,7 @@ function CheckInView({ state, onUpdateState }) {
                     </button>
                   </div>
 
-                  {!gate.isPrincipal && (
+                  {canEdit && !gate.isPrincipal && (
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
@@ -6171,29 +6292,31 @@ function CheckInView({ state, onUpdateState }) {
           </div>
 
           {/* Barcode input for scanner gun */}
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (scanInputCode) handleScanPass(scanInputCode);
-            }}
-            className="flex items-center gap-2"
-          >
-            <div className="relative">
-              <input
-                type="text"
-                placeholder={t("checkin.scanBadgePlaceholder", "Scan / Type QR Badge Code...")}
-                value={scanInputCode}
-                onChange={(e) => setScanInputCode(e.target.value)}
-                className="w-48 sm:w-56 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600"
-              />
-            </div>
-            <button
-              type="submit"
-              className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold cursor-pointer transition-colors shrink-0"
+          {canEdit && (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (scanInputCode) handleScanPass(scanInputCode);
+              }}
+              className="flex items-center gap-2"
             >
-              Check In
-            </button>
-          </form>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder={t("checkin.scanBadgePlaceholder", "Scan / Type QR Badge Code...")}
+                  value={scanInputCode}
+                  onChange={(e) => setScanInputCode(e.target.value)}
+                  className="w-48 sm:w-56 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600"
+                />
+              </div>
+              <button
+                type="submit"
+                className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold cursor-pointer transition-colors shrink-0"
+              >
+                Check In
+              </button>
+            </form>
+          )}
         </div>
 
         <div className="overflow-x-auto w-full">
@@ -6244,21 +6367,25 @@ function CheckInView({ state, onUpdateState }) {
                       </td>
                       <td className="py-4 px-6 text-slate-400 font-bold">{a.checkinTime || "-"}</td>
                       <td className="py-4 px-6">
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            onClick={() => handleDirectPrintAttendeeBadge(a)}
-                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 border border-transparent hover:border-blue-100 rounded-lg transition-all cursor-pointer flex items-center justify-center"
-                            title={t("checkin.printBadgeTooltip", "Print Attendee Badge (A4 4-Fold)")}
-                          >
-                            <Printer size={15} />
-                          </button>
-                          <button 
-                            onClick={() => handleToggle(a.id)}
-                            className={`font-semibold py-1.5 px-4 rounded-xl text-[11px] shadow-sm transition-all duration-200 cursor-pointer ${isCheckedIn ? 'bg-rose-50 hover:bg-rose-500 hover:text-white text-rose-600' : 'bg-indigo-650 hover:bg-indigo-700 text-white'}`}
-                          >
-                            {isCheckedIn ? t("checkin.checkOutBtn", "Check Out") : t("checkin.checkInBtn", "Check In")}
-                          </button>
-                        </div>
+                        {canEdit ? (
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => handleDirectPrintAttendeeBadge(a)}
+                              className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 border border-transparent hover:border-blue-100 rounded-lg transition-all cursor-pointer flex items-center justify-center"
+                              title={t("checkin.printBadgeTooltip", "Print Attendee Badge (A4 4-Fold)")}
+                            >
+                              <Printer size={15} />
+                            </button>
+                            <button 
+                              onClick={() => handleToggle(a.id)}
+                              className={`font-semibold py-1.5 px-4 rounded-xl text-[11px] shadow-sm transition-all duration-200 cursor-pointer ${isCheckedIn ? 'bg-rose-50 hover:bg-rose-500 hover:text-white text-rose-600' : 'bg-indigo-650 hover:bg-indigo-700 text-white'}`}
+                            >
+                              {isCheckedIn ? t("checkin.checkOutBtn", "Check Out") : t("checkin.checkInBtn", "Check In")}
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-slate-300 font-mono text-xs">—</span>
+                        )}
                       </td>
                     </tr>
                   );

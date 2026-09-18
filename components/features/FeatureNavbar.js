@@ -6,7 +6,7 @@ import {
   ChevronDown, Menu, X, ArrowRight, Check,
   Map, Ticket, QrCode, Users, Shield, 
   Building2, Calendar, HelpCircle, FileText, Sparkles,
-  Plane, Link2, BarChart3, Globe, Handshake, Smartphone
+  Plane, Link2, BarChart3, Globe, Handshake, Smartphone, Video
 } from "lucide-react";
 import { useLanguage } from "../../lib/i18n";
 import { getFeaturesUI, getLocalizedAllFeatures } from "../../lib/featuresData";
@@ -25,6 +25,7 @@ const FEATURE_ICONS = {
   "marketing-influence-affiliation": Link2,
   "dashboard-analytics-certificats": BarChart3,
   "portail-participant": Smartphone,
+  "video-test": Video,
 };
 
 export default function FeatureNavbar({ featureTitle, category }) {

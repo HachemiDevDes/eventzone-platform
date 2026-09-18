@@ -95,7 +95,8 @@ export default function TeamMemberDrawer({
   member = null,
   onSaveMember,
   activeEventId,
-  eventTitle = "Eventzone Summit"
+  eventTitle = "Eventzone Summit",
+  isReadOnly = false
 }) {
   const { t, isRTL } = useLanguage();
 
@@ -236,6 +237,7 @@ export default function TeamMemberDrawer({
   // Submit handler
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isReadOnly) return;
     setErrorMessage("");
 
     if (!name.trim()) {
@@ -381,6 +383,20 @@ export default function TeamMemberDrawer({
           {/* Form / Content Area */}
           <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
             
+            {isReadOnly && (
+              <div className="p-3.5 bg-amber-50 border border-amber-200/80 rounded-2xl flex items-start gap-2.5 text-xs text-amber-800 font-semibold">
+                <AlertCircle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold">Viewer / Read-Only Mode</p>
+                  <p className="text-amber-700/90 text-[11px] mt-0.5">
+                    You have read-only access to team members. Modifications and invitation actions are disabled.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <fieldset disabled={isReadOnly} className="contents space-y-6 border-none p-0 m-0">
+
             {errorMessage && (
               <div className="p-3.5 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-2.5 text-xs text-rose-700 font-semibold">
                 <ShieldAlert size={16} className="text-rose-600 shrink-0" />
@@ -751,6 +767,7 @@ export default function TeamMemberDrawer({
 
               </div>
             )}
+            </fieldset>
 
             {/* Sticky Action Footer */}
             <div className="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between gap-3 bg-white">
@@ -759,26 +776,28 @@ export default function TeamMemberDrawer({
                 onClick={onClose}
                 className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold text-xs transition-colors cursor-pointer"
               >
-                {t("common.cancel", "Cancel")}
+                {isReadOnly ? t("common.close", "Close") : t("common.cancel", "Cancel")}
               </button>
 
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-100 hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 size={14} className="animate-spin" />
-                    <span>{t("common.saving", "Saving Permissions...")}</span>
-                  </>
-                ) : (
-                  <>
-                    <Check size={14} />
-                    <span>{member ? t("team.saveMember", "Save Member Permissions") : t("team.inviteMember", "Send Invite & Grant Access")}</span>
-                  </>
-                )}
-              </button>
+              {!isReadOnly && (
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-100 hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
+                      <span>{t("common.saving", "Saving Permissions...")}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check size={14} />
+                      <span>{member ? t("team.saveMember", "Save Member Permissions") : t("team.inviteMember", "Send Invite & Grant Access")}</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
 
           </form>

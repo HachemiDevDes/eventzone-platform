@@ -15,6 +15,7 @@ import { useLanguage } from "../lib/i18n";
 import SearchableSelect from "./SearchableSelect";
 import { DocumentsSkeleton } from "./SkeletonLoaders";
 import { uploadMedia } from "@/lib/storage";
+import { canEditModule } from "../lib/permissions";
 
 // ─────────────────────────────────────────────
 //  CONSTANTS & CONFIGURATIONS
@@ -91,9 +92,11 @@ export default function DocumentsView({
   onUploadFile,
   activeEventId,
   eventDetails = {},
-  onRefreshData
+  onRefreshData,
+  effectivePermissions,
 }) {
   const { t, isRTL } = useLanguage();
+  const canEdit = canEditModule("documents", effectivePermissions);
 
   // Active Sub-Tab (Matches LogisticsView sub-tabs)
   const [activeTab, setActiveTab] = useState("all"); // 'all' | 'contracts' | 'sponsorship' | 'presentations' | 'technical' | 'policies'
@@ -257,6 +260,7 @@ export default function DocumentsView({
 
   // Drag & Drop / File Select validation (100 MB organizer storage limit)
   const handleValidateAndSelectFile = (file) => {
+    if (!canEdit) return;
     if (!file) return;
 
     if (file.size > MAX_SINGLE_FILE_BYTES) {
@@ -298,6 +302,7 @@ export default function DocumentsView({
 
   const handleDrop = (e) => {
     e.preventDefault();
+    if (!canEdit) return;
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleValidateAndSelectFile(e.dataTransfer.files[0]);
@@ -306,6 +311,7 @@ export default function DocumentsView({
 
   const handleDragOver = (e) => {
     e.preventDefault();
+    if (!canEdit) return;
     setIsDragging(true);
   };
 
@@ -315,6 +321,7 @@ export default function DocumentsView({
 
   // Submit Upload / Edit Form
   const handlePerformUpload = async () => {
+    if (!canEdit) return;
     if (!uploadFileObj && !editingDoc) {
       setUploadError("Please choose a file to upload.");
       return;
@@ -387,6 +394,7 @@ export default function DocumentsView({
   };
 
   const handleOpenEdit = (doc) => {
+    if (!canEdit) return;
     setEditingDoc(doc);
     setUploadForm({
       name: doc.name || "",
@@ -401,6 +409,7 @@ export default function DocumentsView({
   };
 
   const handleCopyLink = (doc) => {
+    if (!canEdit) return;
     if (!doc.fileUrl) return;
     navigator.clipboard.writeText(doc.fileUrl);
     setCopiedId(doc.id);
@@ -408,6 +417,7 @@ export default function DocumentsView({
   };
 
   const handleDownload = (doc) => {
+    if (!canEdit) return;
     if (!doc.fileUrl) return;
     const a = document.createElement("a");
     a.href = doc.fileUrl;
@@ -420,6 +430,7 @@ export default function DocumentsView({
 
   // Export CSV Manifest
   const handleExportCSV = () => {
+    if (!canEdit) return;
     if (activeDocs.length === 0) return;
     const headers = ["ID", "Title", "File Name", "Category", "Access Level", "File Size (Bytes)", "File Type", "Uploaded By", "Created At", "URL"];
     const rows = activeDocs.map(d => [
@@ -475,14 +486,23 @@ export default function DocumentsView({
         </div>
 
         <div className="flex items-center flex-wrap gap-2.5">
-          <button
-            onClick={handleExportCSV}
-            className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl text-xs sm:text-sm transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
-            title="Export CSV Manifest"
-          >
-            <Download size={14} />
-            <span>Export Manifest (CSV)</span>
-          </button>
+          {!canEdit && (
+            <span className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 font-bold text-xs border border-slate-200/80 flex items-center gap-1.5">
+              <Eye size={13} className="text-slate-500" />
+              <span>Viewer Mode</span>
+            </span>
+          )}
+
+          {canEdit && (
+            <button
+              onClick={handleExportCSV}
+              className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl text-xs sm:text-sm transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+              title="Export CSV Manifest"
+            >
+              <Download size={14} />
+              <span>Export Manifest (CSV)</span>
+            </button>
+          )}
 
           {onRefreshData && (
             <button
@@ -494,25 +514,27 @@ export default function DocumentsView({
             </button>
           )}
 
-          <button
-            onClick={() => {
-              setEditingDoc(null);
-              setUploadFileObj(null);
-              setUploadError(null);
-              setUploadForm({
-                name: "",
-                category: getSubTabCategoryForUpload(activeTab),
-                accessLevel: "team",
-                description: "",
-                isPinned: false
-              });
-              setShowUploadModal(true);
-            }}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs sm:text-sm shadow-sm transition-all flex items-center gap-2 cursor-pointer"
-          >
-            <Plus size={16} />
-            <span>{t("docs.uploadBtn", "Add Document")}</span>
-          </button>
+          {canEdit && (
+            <button
+              onClick={() => {
+                setEditingDoc(null);
+                setUploadFileObj(null);
+                setUploadError(null);
+                setUploadForm({
+                  name: "",
+                  category: getSubTabCategoryForUpload(activeTab),
+                  accessLevel: "team",
+                  description: "",
+                  isPinned: false
+                });
+                setShowUploadModal(true);
+              }}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs sm:text-sm shadow-sm transition-all flex items-center gap-2 cursor-pointer"
+            >
+              <Plus size={16} />
+              <span>{t("docs.uploadBtn", "Add Document")}</span>
+            </button>
+          )}
         </div>
       </header>
 
@@ -791,185 +813,200 @@ export default function DocumentsView({
               ? "No files match your current search and filter combination."
               : "Upload contracts, presentation templates, floor plans, and guidelines to share with your team and attendees."}
           </p>
-          <button
-            onClick={() => {
-              setEditingDoc(null);
-              setUploadFileObj(null);
-              setUploadError(null);
-              setUploadForm({
-                name: "",
-                category: getSubTabCategoryForUpload(activeTab),
-                accessLevel: "team",
-                description: "",
-                isPinned: false
-              });
-              setShowUploadModal(true);
-            }}
-            className="px-4 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-700 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
-          >
-            <Plus size={14} /> Add First Document
-          </button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredDocs.map((doc) => {
-            const fileCfg = FILE_TYPE_MAP[doc.fileType?.toLowerCase()] || FILE_TYPE_MAP.other;
-            const accessCfg = ACCESS_LEVELS.find(a => a.value === doc.accessLevel) || ACCESS_LEVELS[0];
-            const percentOfQuota = Math.min(100, Math.max(1, ((Number(doc.fileSize) || 0) / MAX_ORGANIZER_STORAGE_BYTES) * 100));
-
-            return (
-              <div
-                key={doc.id}
-                className={`bg-white p-5 rounded-3xl border shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between space-y-4 group ${
-                  doc.isPinned ? "border-amber-300 bg-amber-50/10" : "border-slate-150"
-                }`}
+          {canEdit && (
+            <button
+                onClick={() => {
+                  setEditingDoc(null);
+                  setUploadFileObj(null);
+                  setUploadError(null);
+                  setUploadForm({
+                    name: "",
+                    category: getSubTabCategoryForUpload(activeTab),
+                    accessLevel: "team",
+                    description: "",
+                    isPinned: false
+                  });
+                  setShowUploadModal(true);
+                }}
+                className="px-4 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-700 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
               >
-                <div className="space-y-2.5">
-                  {/* Top row: Category pill on left, Access Badge on right */}
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
-                      {doc.category || "General"}
-                    </span>
-                    <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${accessCfg.color}`}>
-                      {accessCfg.label}
-                    </span>
-                  </div>
+                <Plus size={14} /> Add First Document
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredDocs.map((doc) => {
+              const fileCfg = FILE_TYPE_MAP[doc.fileType?.toLowerCase()] || FILE_TYPE_MAP.other;
+              const accessCfg = ACCESS_LEVELS.find(a => a.value === doc.accessLevel) || ACCESS_LEVELS[0];
+              const percentOfQuota = Math.min(100, Math.max(1, ((Number(doc.fileSize) || 0) / MAX_ORGANIZER_STORAGE_BYTES) * 100));
 
-                  {/* Title and metadata */}
-                  <div>
-                    <h4 
-                      onClick={() => setPreviewDoc(doc)}
-                      className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1 cursor-pointer"
-                    >
-                      {doc.name}
-                    </h4>
-                    <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-1">
-                      <FileText size={12} className="text-slate-400 shrink-0" />
-                      <span className="font-mono text-slate-600 truncate max-w-[150px]">
-                        {doc.fileName || `${doc.name}.${fileCfg.ext.toLowerCase()}`}
+              return (
+                <div
+                  key={doc.id}
+                  className={`bg-white p-5 rounded-3xl border shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between space-y-4 group ${
+                    doc.isPinned ? "border-amber-300 bg-amber-50/10" : "border-slate-150"
+                  }`}
+                >
+                  <div className="space-y-2.5">
+                    {/* Top row: Category pill on left, Access Badge on right */}
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+                        {doc.category || "General"}
                       </span>
-                      <span className="text-slate-300">•</span>
-                      <span className="font-semibold text-slate-700">{formatBytes(doc.fileSize)}</span>
-                    </div>
-                  </div>
-
-                  {/* Description / Notes bubble */}
-                  {doc.description ? (
-                    <p className="text-[11px] text-slate-500 bg-slate-50 p-2.5 rounded-xl line-clamp-2 border border-slate-100 min-h-[42px] leading-relaxed">
-                      {doc.description}
-                    </p>
-                  ) : (
-                    <div className="text-[11px] text-slate-400 bg-slate-50/50 p-2.5 rounded-xl border border-slate-100 min-h-[42px] flex items-center italic">
-                      Uploaded by {doc.uploadedBy || "Event Organizer"}
-                    </div>
-                  )}
-                </div>
-
-                {/* Progress / File Size Bar (Logistics style) */}
-                <div className="space-y-3 pt-1">
-                  <div>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-500 font-medium">File Size:</span>
-                      <span className="font-bold text-slate-800">
-                        {formatBytes(doc.fileSize)} <span className="text-slate-400 font-normal">({((Number(doc.fileSize) || 0) / MAX_ORGANIZER_STORAGE_BYTES * 100).toFixed(1)}% of 100 MB)</span>
+                      <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${accessCfg.color}`}>
+                        {accessCfg.label}
                       </span>
                     </div>
-                    <div className="w-full bg-slate-150 h-1.5 rounded-full mt-1.5 overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-blue-600 transition-all duration-300"
-                        style={{ width: `${Math.max(2, percentOfQuota)}%` }}
-                      />
-                    </div>
-                  </div>
 
-                  {/* Action row at bottom */}
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => onTogglePin && onTogglePin(doc.id)}
-                        className={`p-1.5 rounded-lg transition-colors ${
-                          doc.isPinned ? "text-amber-500 bg-amber-50" : "text-slate-300 hover:text-slate-600 hover:bg-slate-100"
-                        }`}
-                        title={doc.isPinned ? "Unpin document" : "Pin to top"}
-                      >
-                        <Star size={14} className={doc.isPinned ? "fill-amber-500" : ""} />
-                      </button>
-                      <button
-                        onClick={() => handleCopyLink(doc)}
-                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        title="Copy document URL"
-                      >
-                        {copiedId === doc.id ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
-                      </button>
-                    </div>
-
-                    <div className="flex items-center gap-1">
-                      <button
+                    {/* Title and metadata */}
+                    <div>
+                      <h4 
                         onClick={() => setPreviewDoc(doc)}
-                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        title="Preview"
+                        className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1 cursor-pointer"
                       >
-                        <Eye size={14} />
-                      </button>
-                      <button
-                        onClick={() => handleDownload(doc)}
-                        className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                        title="Download"
-                      >
-                        <Download size={14} />
-                      </button>
-                      {!doc.isArchived && (
-                        <button
-                          onClick={() => handleOpenEdit(doc)}
-                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
-                          title="Edit metadata"
-                        >
-                          <Pencil size={14} />
-                        </button>
-                      )}
+                        {doc.name}
+                      </h4>
+                      <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-1">
+                        <FileText size={12} className="text-slate-400 shrink-0" />
+                        <span className="font-mono text-slate-600 truncate max-w-[150px]">
+                          {doc.fileName || `${doc.name}.${fileCfg.ext.toLowerCase()}`}
+                        </span>
+                        <span className="text-slate-300">•</span>
+                        <span className="font-semibold text-slate-700">{formatBytes(doc.fileSize)}</span>
+                      </div>
+                    </div>
 
-                      {doc.isArchived ? (
+                    {/* Description / Notes bubble */}
+                    {doc.description ? (
+                      <p className="text-[11px] text-slate-500 bg-slate-50 p-2.5 rounded-xl line-clamp-2 border border-slate-100 min-h-[42px] leading-relaxed">
+                        {doc.description}
+                      </p>
+                    ) : (
+                      <div className="text-[11px] text-slate-400 bg-slate-50/50 p-2.5 rounded-xl border border-slate-100 min-h-[42px] flex items-center italic">
+                        Uploaded by {doc.uploadedBy || "Event Organizer"}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Progress / File Size Bar (Logistics style) */}
+                  <div className="space-y-3 pt-1">
+                    <div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-500 font-medium">File Size:</span>
+                        <span className="font-bold text-slate-800">
+                          {formatBytes(doc.fileSize)} <span className="text-slate-400 font-normal">({((Number(doc.fileSize) || 0) / MAX_ORGANIZER_STORAGE_BYTES * 100).toFixed(1)}% of 100 MB)</span>
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-150 h-1.5 rounded-full mt-1.5 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-blue-600 transition-all duration-300"
+                          style={{ width: `${Math.max(2, percentOfQuota)}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Action row at bottom */}
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                      {!canEdit ? (
                         <button
-                          onClick={async () => {
-                            if (onSaveDocument) {
-                              await onSaveDocument({ ...doc, isArchived: false, status: 'published' });
-                            }
-                          }}
-                          className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer flex items-center gap-1 font-bold text-[10px]"
-                          title="Restore document"
+                          onClick={() => setPreviewDoc(doc)}
+                          className="w-full py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold border border-slate-200 rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                          title="Preview"
                         >
-                          <RotateCcw size={14} />
-                          <span>Restore</span>
+                          <Eye size={14} />
+                          <span>Preview Document</span>
                         </button>
                       ) : (
-                        <button
-                          onClick={async () => {
-                            if (confirm(`Archive document "${doc.name}"? (Preserved safely in archives)`)) {
-                              if (onSaveDocument) {
-                                await onSaveDocument({ ...doc, isArchived: true, status: 'archived' });
-                              }
-                            }
-                          }}
-                          className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
-                          title="Archive Document"
-                        >
-                          <Archive size={14} />
-                        </button>
-                      )}
+                        <>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => onTogglePin && onTogglePin(doc.id)}
+                              className={`p-1.5 rounded-lg transition-colors ${
+                                doc.isPinned ? "text-amber-500 bg-amber-50" : "text-slate-300 hover:text-slate-600 hover:bg-slate-100"
+                              }`}
+                              title={doc.isPinned ? "Unpin document" : "Pin to top"}
+                            >
+                              <Star size={14} className={doc.isPinned ? "fill-amber-500" : ""} />
+                            </button>
+                            <button
+                              onClick={() => handleCopyLink(doc)}
+                              className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="Copy document URL"
+                            >
+                              {copiedId === doc.id ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
+                            </button>
+                          </div>
 
-                      <button
-                        onClick={() => setDeletingDoc(doc)}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                        title={doc.isArchived ? "Delete permanently" : "Delete document"}
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => setPreviewDoc(doc)}
+                              className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="Preview"
+                            >
+                              <Eye size={14} />
+                            </button>
+                            <button
+                              onClick={() => handleDownload(doc)}
+                              className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                              title="Download"
+                            >
+                              <Download size={14} />
+                            </button>
+                            {!doc.isArchived && (
+                              <button
+                                onClick={() => handleOpenEdit(doc)}
+                                className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                                title="Edit metadata"
+                              >
+                                <Pencil size={14} />
+                              </button>
+                            )}
+
+                            {doc.isArchived ? (
+                              <button
+                                onClick={async () => {
+                                  if (onSaveDocument) {
+                                    await onSaveDocument({ ...doc, isArchived: false, status: 'published' });
+                                  }
+                                }}
+                                className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer flex items-center gap-1 font-bold text-[10px]"
+                                title="Restore document"
+                              >
+                                <RotateCcw size={14} />
+                                <span>Restore</span>
+                              </button>
+                            ) : (
+                              <button
+                                onClick={async () => {
+                                  if (confirm(`Archive document "${doc.name}"? (Preserved safely in archives)`)) {
+                                    if (onSaveDocument) {
+                                      await onSaveDocument({ ...doc, isArchived: true, status: 'archived' });
+                                    }
+                                  }
+                                }}
+                                className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
+                                title="Archive Document"
+                              >
+                                <Archive size={14} />
+                              </button>
+                            )}
+
+                            <button
+                              onClick={() => setDeletingDoc(doc)}
+                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                              title={doc.isArchived ? "Delete permanently" : "Delete document"}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
         </div>
       )}
 
@@ -1249,20 +1286,24 @@ export default function DocumentsView({
               </div>
 
               <div className="flex items-center gap-2 shrink-0">
-                <button
-                  onClick={() => handleCopyLink(previewDoc)}
-                  className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors"
-                  title="Copy Link"
-                >
-                  {copiedId === previewDoc.id ? <Check size={16} className="text-emerald-600" /> : <Copy size={16} />}
-                </button>
-                <button
-                  onClick={() => handleDownload(previewDoc)}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
-                >
-                  <Download size={14} />
-                  <span>Download</span>
-                </button>
+                {canEdit && (
+                  <>
+                    <button
+                      onClick={() => handleCopyLink(previewDoc)}
+                      className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors"
+                      title="Copy Link"
+                    >
+                      {copiedId === previewDoc.id ? <Check size={16} className="text-emerald-600" /> : <Copy size={16} />}
+                    </button>
+                    <button
+                      onClick={() => handleDownload(previewDoc)}
+                      className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+                    >
+                      <Download size={14} />
+                      <span>Download</span>
+                    </button>
+                  </>
+                )}
                 <button
                   onClick={() => setPreviewDoc(null)}
                   className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
@@ -1295,17 +1336,21 @@ export default function DocumentsView({
                     {previewDoc.name}
                   </h4>
                   <p className="text-xs text-slate-500 mb-5">
-                    This file format ({previewDoc.fileType?.toUpperCase()}) can be downloaded or shared directly with authorized recipients.
+                    {canEdit
+                      ? `This file format (${previewDoc.fileType?.toUpperCase()}) can be downloaded or shared directly with authorized recipients.`
+                      : `This file format (${previewDoc.fileType?.toUpperCase()}) preview is available in view-only mode.`}
                   </p>
-                  <div className="flex justify-center gap-2">
-                    <button
-                      onClick={() => handleDownload(previewDoc)}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
-                    >
-                      <Download size={14} className="inline mr-1" />
-                      Download File ({formatBytes(previewDoc.fileSize)})
-                    </button>
-                  </div>
+                  {canEdit && (
+                    <div className="flex justify-center gap-2">
+                      <button
+                        onClick={() => handleDownload(previewDoc)}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+                      >
+                        <Download size={14} className="inline mr-1" />
+                        Download File ({formatBytes(previewDoc.fileSize)})
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

@@ -8,12 +8,13 @@ import {
   MoreVertical, Calendar, Phone, Mail, FileText, ChevronRight,
   Layers, RotateCcw, Award, Trash2, Edit3, MessageSquare, 
   PieChart, BarChart2, Check, Download, AlertCircle, Clock, Archive,
-  Receipt, CreditCard
+  Receipt, CreditCard, Eye
 } from "lucide-react";
 import { useLanguage } from "../lib/i18n";
 import SearchableSelect from "./SearchableSelect";
 import CountryPhoneInput from "./CountryPhoneInput";
 import { getLocalizedIndustry } from "../lib/constants";
+import { canEditModule } from "../lib/permissions";
 
 export const FUNNEL_STAGES = [
   {
@@ -149,6 +150,7 @@ export default function OpportunitiesView({
   const organizations = state.organizations || [];
   const sponsors = state.sponsors || [];
   const exhibitors = state.exhibitors || [];
+  const canEdit = canEditModule("opportunities", state?.effectivePermissions);
 
   // Local state
   const [mounted, setMounted] = useState(false);
@@ -261,6 +263,7 @@ export default function OpportunitiesView({
 
   // Stage Move Handler
   const handleMoveStage = (oppId, newStageId) => {
+    if (!canEdit) return;
     const targetOpp = opportunities.find(o => o.id === oppId);
     if (!targetOpp) return;
 
@@ -315,6 +318,7 @@ export default function OpportunitiesView({
 
   // Quick forward / backward stage
   const handleShiftStage = (opp, direction) => {
+    if (!canEdit) return;
     const currentIndex = FUNNEL_STAGES.findIndex(s => s.id === opp.stage);
     if (currentIndex === -1) return;
 
@@ -327,7 +331,7 @@ export default function OpportunitiesView({
 
   // Convert to Sponsor Execution
   const handleExecuteSponsorConversion = () => {
-    if (!convertingOpp) return;
+    if (!canEdit || !convertingOpp) return;
 
     const companyName = convertingOpp.companyName || convertingOpp.name;
     const tier = selectedTier || convertingOpp.tierInterest || "gold";
@@ -392,7 +396,7 @@ export default function OpportunitiesView({
 
   // Convert to Exhibitor Execution
   const handleExecuteExhibitorConversion = () => {
-    if (!convertingOpp) return;
+    if (!canEdit || !convertingOpp) return;
 
     const companyName = convertingOpp.companyName || convertingOpp.name;
     const booth = selectedBooth || convertingOpp.boothPreference || "Pending Assignment";
@@ -458,7 +462,7 @@ export default function OpportunitiesView({
 
   // Lost Execution
   const handleExecuteLost = () => {
-    if (!lostModalOpp) return;
+    if (!canEdit || !lostModalOpp) return;
 
     const reason = selectedLostReason + (customLostNote ? ` — ${customLostNote}` : "");
     const updatedOpp = {
@@ -486,6 +490,7 @@ export default function OpportunitiesView({
 
   // Re-open opportunity
   const handleReopen = (opp) => {
+    if (!canEdit) return;
     const updated = {
       ...opp,
       stage: "lead",
@@ -509,6 +514,7 @@ export default function OpportunitiesView({
 
   // Save / Upsert Opportunity from Drawer
   const handleSaveOpportunity = (oppData) => {
+    if (!canEdit) return;
     const isNew = !oppData.id;
     const oppId = oppData.id || (crypto.randomUUID ? crypto.randomUUID() : `opp-${Date.now()}`);
     
@@ -545,6 +551,7 @@ export default function OpportunitiesView({
 
   // Archive / Delete Opportunity
   const handleArchiveOpp = (id) => {
+    if (!canEdit) return;
     if (confirm("Archive this prospect from the pipeline? (Record preserved in archives)")) {
       onUpdateState("opportunities", opportunities.map(o => o.id === id ? { ...o, isArchived: true, status: "archived" } : o));
       showToast("Prospect archived.");
@@ -552,11 +559,13 @@ export default function OpportunitiesView({
   };
 
   const handleRestoreOpp = (id) => {
+    if (!canEdit) return;
     onUpdateState("opportunities", opportunities.map(o => o.id === id ? { ...o, isArchived: false, status: "lead" } : o));
-    showToast("Prospect restored.");
+      showToast("Prospect restored.");
   };
 
   const handleDeletePermanentOpp = (id) => {
+    if (!canEdit) return;
     if (confirm("Permanently delete this prospect? This action cannot be undone.")) {
       onUpdateState("opportunities", opportunities.filter(o => o.id !== id));
       if (editingOpp?.id === id) {
@@ -575,6 +584,7 @@ export default function OpportunitiesView({
 
   // CSV Export
   const handleExportCSV = () => {
+    if (!canEdit) return;
     const headers = ["Company Name", "Target Role", "Stage", "Deal Value", "Currency", "Probability (%)", "Contact Person", "Email", "Phone", "Industry", "Priority", "Status", "Lost Reason"];
     const rows = filteredOpportunities.map(o => [
       `"${(o.companyName || o.name || '').replace(/"/g, '""')}"`,
@@ -639,25 +649,33 @@ export default function OpportunitiesView({
             </button>
           </div>
 
-          <button
-            onClick={handleExportCSV}
-            className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl text-sm transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
-            title="Export CSV"
-          >
-            <Download size={14} />
-            <span>{t("opp.exportCSV", "Export CSV")}</span>
-          </button>
+          {canEdit && (
+            <button
+              onClick={handleExportCSV}
+              className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl text-sm transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+              title="Export CSV"
+            >
+              <Download size={14} />
+              <span>{t("opp.exportCSV", "Export CSV")}</span>
+            </button>
+          )}
 
-          <button
-            onClick={() => {
-              setEditingOpp(null);
-              setShowDrawer(true);
-            }}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-xl text-sm transition-all hover:shadow duration-200 cursor-pointer flex items-center gap-1.5"
-          >
-            <Plus size={15} />
-            <span>{t("opp.addProspect", "Add Prospect")}</span>
-          </button>
+          {canEdit ? (
+            <button
+              onClick={() => {
+                setEditingOpp(null);
+                setShowDrawer(true);
+              }}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-xl text-sm transition-all hover:shadow duration-200 cursor-pointer flex items-center gap-1.5"
+            >
+              <Plus size={15} />
+              <span>{t("opp.addProspect", "Add Prospect")}</span>
+            </button>
+          ) : (
+            <span className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 font-bold text-xs border border-slate-200/80 flex items-center gap-1.5">
+              <Eye size={13} className="text-slate-500" /> Viewer Mode
+            </span>
+          )}
         </div>
       </header>
 
@@ -780,19 +798,19 @@ export default function OpportunitiesView({
             return (
               <div
                 key={stage.id}
-                onDragOver={(e) => {
+                onDragOver={canEdit ? (e) => {
                   e.preventDefault();
                   setDragOverStage(stage.id);
-                }}
-                onDragLeave={() => setDragOverStage(null)}
-                onDrop={(e) => {
+                } : undefined}
+                onDragLeave={canEdit ? () => setDragOverStage(null) : undefined}
+                onDrop={canEdit ? (e) => {
                   e.preventDefault();
                   if (draggedOppId) {
                     handleMoveStage(draggedOppId, stage.id);
                     setDraggedOppId(null);
                     setDragOverStage(null);
                   }
-                }}
+                } : undefined}
                 className={`w-[310px] min-w-[310px] shrink-0 bg-slate-50/90 border rounded-2xl p-3.5 flex flex-col gap-3 transition-all shadow-2xs ${isDragTarget ? "border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/40" : "border-slate-200/90"}`}
               >
                 {/* Column Header */}
@@ -825,6 +843,7 @@ export default function OpportunitiesView({
                       <OpportunityCard
                         key={opp.id}
                         opp={opp}
+                        canEdit={canEdit}
                         onEdit={() => {
                           setEditingOpp(opp);
                           setShowDrawer(true);
@@ -913,14 +932,20 @@ export default function OpportunitiesView({
                         </td>
 
                         <td className="py-3 px-4 w-44">
-                          <SearchableSelect
-                            value={opp.stage}
-                            onChange={(val) => handleMoveStage(opp.id, val)}
-                            options={FUNNEL_STAGES.map(s => ({ value: s.id, label: t(s.labelKey, s.fallbackLabel) }))}
-                            showSearch={false}
-                            isClearable={false}
-                            buttonClassName="py-1 px-2 text-[11px] font-bold"
-                          />
+                          {canEdit ? (
+                            <SearchableSelect
+                              value={opp.stage}
+                              onChange={(val) => handleMoveStage(opp.id, val)}
+                              options={FUNNEL_STAGES.map(s => ({ value: s.id, label: t(s.labelKey, s.fallbackLabel) }))}
+                              showSearch={false}
+                              isClearable={false}
+                              buttonClassName="py-1 px-2 text-[11px] font-bold"
+                            />
+                          ) : (
+                            <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-bold text-xs border border-slate-200/80 inline-block">
+                              {FUNNEL_STAGES.find(s => s.id === opp.stage)?.fallbackLabel || opp.stage}
+                            </span>
+                          )}
                         </td>
 
                         <td className="py-3 px-4 font-black text-slate-900">
@@ -957,34 +982,50 @@ export default function OpportunitiesView({
 
                         <td className="py-3 px-4 text-right">
                           <div className="flex items-center justify-end gap-1">
-                            <button
-                              onClick={() => {
-                                setEditingOpp(opp);
-                                setShowDrawer(true);
-                              }}
-                              className="px-2 py-1 text-slate-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                              title={t("opp.editProspect", "Edit Prospect")}
-                            >
-                              {t("common.edit", "Edit")}
-                            </button>
+                            {canEdit ? (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    setEditingOpp(opp);
+                                    setShowDrawer(true);
+                                  }}
+                                  className="px-2 py-1 text-slate-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                                  title={t("opp.editProspect", "Edit Prospect")}
+                                >
+                                  {t("common.edit", "Edit")}
+                                </button>
 
-                            {opp.stage !== "won_sponsor" && (
-                              <button
-                                onClick={() => handleMoveStage(opp.id, "won_sponsor")}
-                                className="px-2 py-1 text-emerald-700 hover:bg-emerald-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                                title={t("opp.convertToSponsor", "Convert to Sponsor")}
-                              >
-                                {t("table.sponsor", "Sponsor")}
-                              </button>
-                            )}
+                                {opp.stage !== "won_sponsor" && (
+                                  <button
+                                    onClick={() => handleMoveStage(opp.id, "won_sponsor")}
+                                    className="px-2 py-1 text-emerald-700 hover:bg-emerald-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                                    title={t("opp.convertToSponsor", "Convert to Sponsor")}
+                                  >
+                                    {t("table.sponsor", "Sponsor")}
+                                  </button>
+                                )}
 
-                            {opp.stage !== "won_exhibitor" && (
+                                {opp.stage !== "won_exhibitor" && (
+                                  <button
+                                    onClick={() => handleMoveStage(opp.id, "won_exhibitor")}
+                                    className="px-2 py-1 text-teal-700 hover:bg-teal-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                                    title={t("opp.convertToExhibitor", "Convert to Exhibitor")}
+                                  >
+                                    {t("table.exhibitor", "Exhibitor")}
+                                  </button>
+                                )}
+                              </>
+                            ) : (
                               <button
-                                onClick={() => handleMoveStage(opp.id, "won_exhibitor")}
-                                className="px-2 py-1 text-teal-700 hover:bg-teal-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                                title={t("opp.convertToExhibitor", "Convert to Exhibitor")}
+                                onClick={() => {
+                                  setEditingOpp(opp);
+                                  setShowDrawer(true);
+                                }}
+                                className="px-2.5 py-1 text-slate-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                                title="View Details"
                               >
-                                {t("table.exhibitor", "Exhibitor")}
+                                <Eye size={12} />
+                                <span>View</span>
                               </button>
                             )}
                           </div>
@@ -1003,6 +1044,7 @@ export default function OpportunitiesView({
       {showDrawer && (
         <ProspectDrawer
           isOpen={showDrawer}
+          isReadOnly={!canEdit}
           onClose={() => {
             setShowDrawer(false);
             setEditingOpp(null);
@@ -1245,6 +1287,7 @@ export default function OpportunitiesView({
 // ─────────────────────────────────────────────
 function OpportunityCard({
   opp,
+  canEdit = true,
   onEdit,
   onShift,
   onMoveStage,
@@ -1264,9 +1307,9 @@ function OpportunityCard({
 
   return (
     <div
-      draggable
-      onDragStart={onDragStart}
-      className={`bg-white border rounded-2xl p-3.5 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col gap-3 group relative cursor-grab active:cursor-grabbing ${
+      draggable={canEdit}
+      onDragStart={canEdit ? onDragStart : undefined}
+      className={`bg-white border rounded-2xl p-3.5 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col gap-3 group relative ${canEdit ? "cursor-grab active:cursor-grabbing" : "cursor-default"} ${
         isWonSponsor ? "border-emerald-200 bg-emerald-50/10" :
         isWonExhibitor ? "border-teal-200 bg-teal-50/10" :
         isLost ? "border-rose-200 bg-rose-50/10 opacity-75" : "border-slate-200/90 hover:border-blue-300"
@@ -1298,138 +1341,148 @@ function OpportunityCard({
           )}
         </div>
 
-        <div className="relative">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowMenu(!showMenu);
-            }}
-            className="w-6 h-6 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-700 flex items-center justify-center text-xs transition-colors cursor-pointer"
-          >
-            <MoreVertical size={13} />
-          </button>
-
-          {showMenu && (
-            <div
-              onClick={(e) => e.stopPropagation()}
-              className="absolute end-0 top-7 w-40 bg-white border border-slate-200 rounded-xl shadow-xl z-20 py-1.5 flex flex-col text-xs font-semibold text-slate-700 animate-scale-up"
+        {canEdit ? (
+          <div className="relative">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowMenu(!showMenu);
+              }}
+              className="w-6 h-6 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-700 flex items-center justify-center text-xs transition-colors cursor-pointer"
             >
-              <button
-                onClick={() => {
-                  setShowMenu(false);
-                  onEdit();
-                }}
-                className="px-3 py-1.5 text-start hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2 cursor-pointer"
+              <MoreVertical size={13} />
+            </button>
+
+            {showMenu && (
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="absolute end-0 top-7 w-40 bg-white border border-slate-200 rounded-xl shadow-xl z-20 py-1.5 flex flex-col text-xs font-semibold text-slate-700 animate-scale-up"
               >
-                <Edit3 size={12} />
-                <span>{t("opp.editProspect", "Edit Prospect")}</span>
-              </button>
-
-              {!isWonSponsor && (
                 <button
                   onClick={() => {
                     setShowMenu(false);
-                    onMoveStage(opp.id, "won_sponsor");
+                    onEdit();
                   }}
-                  className="px-3 py-1.5 text-start hover:bg-emerald-50 text-emerald-700 flex items-center gap-2 cursor-pointer font-bold"
+                  className="px-3 py-1.5 text-start hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2 cursor-pointer"
                 >
-                  <Sparkles size={12} />
-                  <span>{t("opp.convertToSponsor", "Convert Sponsor")}</span>
+                  <Edit3 size={12} />
+                  <span>{t("opp.editProspect", "Edit Prospect")}</span>
                 </button>
-              )}
 
-              {!isWonExhibitor && (
-                <button
-                  onClick={() => {
-                    setShowMenu(false);
-                    onMoveStage(opp.id, "won_exhibitor");
-                  }}
-                  className="px-3 py-1.5 text-start hover:bg-teal-50 text-teal-700 flex items-center gap-2 cursor-pointer font-bold"
-                >
-                  <Store size={12} />
-                  <span>{t("opp.convertToExhibitor", "Convert Exhibitor")}</span>
-                </button>
-              )}
-
-              {!isLost && (
-                <button
-                  onClick={() => {
-                    setShowMenu(false);
-                    onMoveStage(opp.id, "lost");
-                  }}
-                  className="px-3 py-1.5 text-start hover:bg-rose-50 text-rose-600 flex items-center gap-2 cursor-pointer"
-                >
-                  <XCircle size={12} />
-                  <span>{t("opp.markLost", "Mark as Lost")}</span>
-                </button>
-              )}
-
-              {isLost && (
-                <button
-                  onClick={() => {
-                    setShowMenu(false);
-                    onReopen(opp);
-                  }}
-                  className="px-3 py-1.5 text-start hover:bg-blue-50 text-blue-700 flex items-center gap-2 cursor-pointer"
-                >
-                  <RotateCcw size={12} />
-                  <span>{t("opp.reopen", "Re-open Deal")}</span>
-                </button>
-              )}
-
-              <hr className="my-1 border-slate-100" />
-
-              {isArchived ? (
-                <>
+                {!isWonSponsor && (
                   <button
                     onClick={() => {
                       setShowMenu(false);
-                      if (onRestore) onRestore(opp.id);
+                      onMoveStage(opp.id, "won_sponsor");
                     }}
-                    className="px-3 py-1.5 text-start hover:bg-emerald-50 text-emerald-600 flex items-center gap-2 cursor-pointer"
+                    className="px-3 py-1.5 text-start hover:bg-emerald-50 text-emerald-700 flex items-center gap-2 cursor-pointer font-bold"
                   >
-                    <RotateCcw size={12} />
-                    <span>{t("table.restore", "Restore")}</span>
+                    <Sparkles size={12} />
+                    <span>{t("opp.convertToSponsor", "Convert Sponsor")}</span>
                   </button>
+                )}
+
+                {!isWonExhibitor && (
                   <button
                     onClick={() => {
                       setShowMenu(false);
-                      if (onPermanentDelete) onPermanentDelete(opp.id);
-                      else if (onArchive) onArchive(opp.id);
+                      onMoveStage(opp.id, "won_exhibitor");
+                    }}
+                    className="px-3 py-1.5 text-start hover:bg-teal-50 text-teal-700 flex items-center gap-2 cursor-pointer font-bold"
+                  >
+                    <Store size={12} />
+                    <span>{t("opp.convertToExhibitor", "Convert Exhibitor")}</span>
+                  </button>
+                )}
+
+                {!isLost && (
+                  <button
+                    onClick={() => {
+                      setShowMenu(false);
+                      onMoveStage(opp.id, "lost");
                     }}
                     className="px-3 py-1.5 text-start hover:bg-rose-50 text-rose-600 flex items-center gap-2 cursor-pointer"
                   >
-                    <Trash2 size={12} />
-                    <span>{t("table.deletePermanently", "Delete Permanently")}</span>
+                    <XCircle size={12} />
+                    <span>{t("opp.markLost", "Mark as Lost")}</span>
                   </button>
-                </>
-              ) : (
-                <>
+                )}
+
+                {isLost && (
                   <button
                     onClick={() => {
                       setShowMenu(false);
-                      onArchive(opp.id);
+                      onReopen(opp);
                     }}
-                    className="px-3 py-1.5 text-start hover:bg-amber-50 text-slate-500 hover:text-amber-600 flex items-center gap-2 cursor-pointer"
+                    className="px-3 py-1.5 text-start hover:bg-blue-50 text-blue-700 flex items-center gap-2 cursor-pointer"
                   >
-                    <Archive size={12} />
-                    <span>{t("common.archive", "Archive")}</span>
+                    <RotateCcw size={12} />
+                    <span>{t("opp.reopen", "Re-open Deal")}</span>
                   </button>
-                  <button
-                    onClick={() => {
-                      setShowMenu(false);
-                      if (onPermanentDelete) onPermanentDelete(opp.id);
-                    }}
-                    className="px-3 py-1.5 text-start hover:bg-rose-50 text-slate-400 hover:text-rose-600 flex items-center gap-2 cursor-pointer"
-                  >
-                    <Trash2 size={12} />
-                    <span>{t("table.deletePermanently", "Delete Permanently")}</span>
-                  </button>
-                </>
-              )}
-            </div>
-          )}
-        </div>
+                )}
+
+                <hr className="my-1 border-slate-100" />
+
+                {isArchived ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                        if (onRestore) onRestore(opp.id);
+                      }}
+                      className="px-3 py-1.5 text-start hover:bg-emerald-50 text-emerald-600 flex items-center gap-2 cursor-pointer"
+                    >
+                      <RotateCcw size={12} />
+                      <span>{t("table.restore", "Restore")}</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                        if (onPermanentDelete) onPermanentDelete(opp.id);
+                        else if (onArchive) onArchive(opp.id);
+                      }}
+                      className="px-3 py-1.5 text-start hover:bg-rose-50 text-rose-600 flex items-center gap-2 cursor-pointer"
+                    >
+                      <Trash2 size={12} />
+                      <span>{t("table.deletePermanently", "Delete Permanently")}</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                        onArchive(opp.id);
+                      }}
+                      className="px-3 py-1.5 text-start hover:bg-amber-50 text-slate-500 hover:text-amber-600 flex items-center gap-2 cursor-pointer"
+                    >
+                      <Archive size={12} />
+                      <span>{t("common.archive", "Archive")}</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                        if (onPermanentDelete) onPermanentDelete(opp.id);
+                      }}
+                      className="px-3 py-1.5 text-start hover:bg-rose-50 text-slate-400 hover:text-rose-600 flex items-center gap-2 cursor-pointer"
+                    >
+                      <Trash2 size={12} />
+                      <span>{t("table.deletePermanently", "Delete Permanently")}</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        ) : (
+          <button
+            onClick={onEdit}
+            className="w-6 h-6 rounded-md hover:bg-slate-100 text-slate-400 hover:text-blue-600 flex items-center justify-center text-xs transition-colors cursor-pointer"
+            title="View Details"
+          >
+            <Eye size={13} />
+          </button>
+        )}
       </div>
 
       {/* Main Body: Company & Contact */}
@@ -1501,25 +1554,29 @@ function OpportunityCard({
 
       {/* Stage Progression Quick Action Footer */}
       <div className="pt-2 border-t border-slate-100/70 flex items-center justify-between gap-1 text-[10px]">
-        <button
-          onClick={() => onShift(opp, "prev")}
-          className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
-          title="Previous Stage"
-        >
-          <ArrowLeft size={12} />
-        </button>
+        {canEdit ? (
+          <button
+            onClick={() => onShift(opp, "prev")}
+            className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
+            title="Previous Stage"
+          >
+            <ArrowLeft size={12} />
+          </button>
+        ) : <div className="w-5" />}
 
         <span className="text-[10px] font-bold text-slate-400 tracking-tight truncate max-w-[110px]">
           {isWonSponsor ? "🏆 Confirmed" : isWonExhibitor ? "🎪 Confirmed" : isLost ? "❌ Closed" : "In Funnel"}
         </span>
 
-        <button
-          onClick={() => onShift(opp, "next")}
-          className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
-          title="Next Stage"
-        >
-          <ArrowRight size={12} />
-        </button>
+        {canEdit ? (
+          <button
+            onClick={() => onShift(opp, "next")}
+            className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
+            title="Next Stage"
+          >
+            <ArrowRight size={12} />
+          </button>
+        ) : <div className="w-5" />}
       </div>
     </div>
   );
@@ -1530,6 +1587,7 @@ function OpportunityCard({
 // ─────────────────────────────────────────────
 function ProspectDrawer({
   isOpen,
+  isReadOnly = false,
   onClose,
   opp,
   organizations = [],
@@ -1585,7 +1643,7 @@ function ProspectDrawer({
 
   const handleAddActivity = (e) => {
     e.preventDefault();
-    if (!newActivityText.trim()) return;
+    if (isReadOnly || !newActivityText.trim()) return;
 
     const entry = {
       id: Date.now().toString(),
@@ -1601,7 +1659,7 @@ function ProspectDrawer({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!companyName.trim()) return;
+    if (isReadOnly || !companyName.trim()) return;
 
     onSave({
       id: opp?.id,
@@ -1713,10 +1771,17 @@ function ProspectDrawer({
 
         {/* Form Body */}
         <form id="prospect-form" onSubmit={handleSubmit} className="p-6 flex flex-col gap-6 flex-1">
+          {isReadOnly && (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-2 text-amber-800 text-xs font-semibold">
+              <Eye size={16} className="text-amber-600 shrink-0" />
+              <span>Viewing prospect in read-only mode. Changes cannot be made.</span>
+            </div>
+          )}
+
           {activeTab === "deal" && (
             <>
               {/* Quick Actions for Editing */}
-          {isEditing && (
+          {!isReadOnly && isEditing && (
             <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-center justify-between flex-wrap gap-2">
               <span className="text-[10px] font-extrabold uppercase text-slate-400">Quick Conversions:</span>
               <div className="flex items-center gap-1.5">
@@ -1778,10 +1843,11 @@ function ProspectDrawer({
               <input
                 type="text"
                 required
+                disabled={isReadOnly}
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
                 placeholder="e.g. Sonatrach, Cisco, Ooredoo"
-                className="px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600"
+                className="px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 disabled:bg-slate-50 disabled:text-slate-500"
               />
             </div>
 
@@ -1794,6 +1860,7 @@ function ProspectDrawer({
                   options={TARGET_TYPE_OPTIONS}
                   showSearch={false}
                   isClearable={false}
+                  disabled={isReadOnly}
                 />
               </div>
 
@@ -1805,6 +1872,7 @@ function ProspectDrawer({
                   options={INDUSTRY_OPTIONS.map(ind => ({ value: ind, label: getLocalizedIndustry(ind, t) }))}
                   placeholder={t("opp.selectIndustry", "Select industry...")}
                   searchPlaceholder={t("opp.searchIndustry", "Search industry...")}
+                  disabled={isReadOnly}
                 />
               </div>
             </div>
@@ -1822,10 +1890,11 @@ function ProspectDrawer({
                 <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Contact Person Name</label>
                 <input
                   type="text"
+                  disabled={isReadOnly}
                   value={contactName}
                   onChange={(e) => setContactName(e.target.value)}
                   placeholder="e.g. Karim Hadj"
-                  className="px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600"
+                  className="px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 disabled:bg-slate-50 disabled:text-slate-500"
                 />
               </div>
 
@@ -1833,10 +1902,11 @@ function ProspectDrawer({
                 <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Contact Email</label>
                 <input
                   type="email"
+                  disabled={isReadOnly}
                   value={contactEmail}
                   onChange={(e) => setContactEmail(e.target.value)}
                   placeholder="karim@company.com"
-                  className="px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600"
+                  className="px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 disabled:bg-slate-50 disabled:text-slate-500"
                 />
               </div>
             </div>
@@ -1846,6 +1916,7 @@ function ProspectDrawer({
               <CountryPhoneInput
                 value={contactPhone}
                 onChange={(val) => setContactPhone(val)}
+                disabled={isReadOnly}
               />
             </div>
           </div>
@@ -1870,6 +1941,7 @@ function ProspectDrawer({
                   options={FUNNEL_STAGES.map(s => ({ value: s.id, label: t(s.labelKey, s.fallbackLabel) }))}
                   showSearch={false}
                   isClearable={false}
+                  disabled={isReadOnly}
                 />
               </div>
 
@@ -1881,6 +1953,7 @@ function ProspectDrawer({
                   options={PRIORITY_OPTIONS}
                   showSearch={false}
                   isClearable={false}
+                  disabled={isReadOnly}
                 />
               </div>
             </div>
@@ -1895,10 +1968,11 @@ function ProspectDrawer({
                       type="number"
                       min="0"
                       step="1000"
+                      disabled={isReadOnly}
                       value={dealValue}
                       onChange={(e) => setDealValue(e.target.value)}
                       placeholder="150000"
-                      className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600/20 shadow-2xs"
+                      className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600/20 shadow-2xs disabled:bg-slate-50 disabled:text-slate-500"
                     />
                   </div>
                   <div className="w-24 shrink-0">
@@ -1909,6 +1983,7 @@ function ProspectDrawer({
                       showSearch={false}
                       isClearable={false}
                       buttonClassName="py-2.5 px-3 font-bold"
+                      disabled={isReadOnly}
                     />
                   </div>
                 </div>
@@ -1928,9 +2003,10 @@ function ProspectDrawer({
                     min="0"
                     max="100"
                     step="5"
+                    disabled={isReadOnly}
                     value={probability}
                     onChange={(e) => setProbability(parseInt(e.target.value, 10))}
-                    className="w-full accent-blue-600 cursor-pointer h-1.5 bg-slate-200 rounded-lg"
+                    className="w-full accent-blue-600 cursor-pointer h-1.5 bg-slate-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -1945,6 +2021,7 @@ function ProspectDrawer({
                   options={SPONSOR_TIER_OPTIONS}
                   showSearch={false}
                   isClearable={false}
+                  disabled={isReadOnly}
                 />
               </div>
             )}
@@ -1954,10 +2031,11 @@ function ProspectDrawer({
                 <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Preferred Booth / Space</label>
                 <input
                   type="text"
+                  disabled={isReadOnly}
                   value={boothPreference}
                   onChange={(e) => setBoothPreference(e.target.value)}
                   placeholder="e.g. Corner Booth 6x3m, Booth A-15"
-                  className="px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600"
+                  className="px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 disabled:bg-slate-50 disabled:text-slate-500"
                 />
               </div>
             )}
@@ -1966,10 +2044,11 @@ function ProspectDrawer({
               <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Commercial Notes & Terms</label>
               <textarea
                 value={notes}
+                disabled={isReadOnly}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Discussion summary, client requirements, discount agreements..."
                 rows={3}
-                className="px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 resize-none"
+                className="px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 resize-none disabled:bg-slate-50 disabled:text-slate-500"
               />
             </div>
           </div>
@@ -1982,37 +2061,39 @@ function ProspectDrawer({
             </h4>
 
             {/* Quick add note form */}
-            <div className="bg-slate-50 border border-slate-200/80 p-3 rounded-2xl flex flex-col gap-2.5">
-              <div className="flex items-center gap-2">
-                <select
-                  value={newActivityType}
-                  onChange={(e) => setNewActivityType(e.target.value)}
-                  className="px-2.5 py-1.5 border border-slate-200 bg-white rounded-lg text-xs font-bold text-slate-700"
-                >
-                  <option value="call">📞 Phone Call</option>
-                  <option value="meeting">🤝 Meeting / Demo</option>
-                  <option value="email">✉️ Email Exchange</option>
-                  <option value="note">📝 General Note</option>
-                </select>
-                <span className="text-[10px] font-bold text-slate-400">Add interaction entry</span>
+            {!isReadOnly && (
+              <div className="bg-slate-50 border border-slate-200/80 p-3 rounded-2xl flex flex-col gap-2.5">
+                <div className="flex items-center gap-2">
+                  <select
+                    value={newActivityType}
+                    onChange={(e) => setNewActivityType(e.target.value)}
+                    className="px-2.5 py-1.5 border border-slate-200 bg-white rounded-lg text-xs font-bold text-slate-700"
+                  >
+                    <option value="call">📞 Phone Call</option>
+                    <option value="meeting">🤝 Meeting / Demo</option>
+                    <option value="email">✉️ Email Exchange</option>
+                    <option value="note">📝 General Note</option>
+                  </select>
+                  <span className="text-[10px] font-bold text-slate-400">Add interaction entry</span>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newActivityText}
+                    onChange={(e) => setNewActivityText(e.target.value)}
+                    placeholder="Record summary of discussion..."
+                    className="flex-1 px-3 py-2 border border-slate-200 bg-white rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddActivity}
+                    className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0"
+                  >
+                    Add Note
+                  </button>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={newActivityText}
-                  onChange={(e) => setNewActivityText(e.target.value)}
-                  placeholder="Record summary of discussion..."
-                  className="flex-1 px-3 py-2 border border-slate-200 bg-white rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddActivity}
-                  className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0"
-                >
-                  Add Note
-                </button>
-              </div>
-            </div>
+            )}
 
             {/* Activity History List */}
             <div className="flex flex-col gap-2 max-h-48 overflow-y-auto">
@@ -2059,10 +2140,11 @@ function ProspectDrawer({
               </label>
               <input
                 type="text"
+                disabled={isReadOnly}
                 value={legalName}
                 onChange={(e) => setLegalName(e.target.value)}
                 placeholder={companyName || "e.g. SARL Algerie Telecom, Sonatrach SPA"}
-                className="px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600"
+                className="px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 disabled:bg-slate-50 disabled:text-slate-500"
               />
               <span className="text-[10px] text-slate-400">
                 Defaults to prospect name if empty
@@ -2075,10 +2157,11 @@ function ProspectDrawer({
               </label>
               <textarea
                 rows={2}
+                disabled={isReadOnly}
                 value={legalAddress}
                 onChange={(e) => setLegalAddress(e.target.value)}
                 placeholder="Full legal billing address, City, Wilaya..."
-                className="p-3 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 resize-none"
+                className="p-3 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 resize-none disabled:bg-slate-50 disabled:text-slate-500"
               />
             </div>
           </div>
@@ -2096,10 +2179,11 @@ function ProspectDrawer({
                 </label>
                 <input
                   type="text"
+                  disabled={isReadOnly}
                   value={nif}
                   onChange={(e) => setNif(e.target.value)}
                   placeholder="002616124370413 (15 chiffres)"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none focus:border-blue-600"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none focus:border-blue-600 disabled:bg-slate-100 disabled:text-slate-500"
                 />
               </div>
 
@@ -2109,10 +2193,11 @@ function ProspectDrawer({
                 </label>
                 <input
                   type="text"
+                  disabled={isReadOnly}
                   value={rc}
                   onChange={(e) => setRc(e.target.value)}
                   placeholder="26B1243704-00/16"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none focus:border-blue-600"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none focus:border-blue-600 disabled:bg-slate-100 disabled:text-slate-500"
                 />
               </div>
 
@@ -2122,10 +2207,11 @@ function ProspectDrawer({
                 </label>
                 <input
                   type="text"
+                  disabled={isReadOnly}
                   value={nis}
                   onChange={(e) => setNis(e.target.value)}
                   placeholder="002616124370413"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none focus:border-blue-600"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none focus:border-blue-600 disabled:bg-slate-100 disabled:text-slate-500"
                 />
               </div>
 
@@ -2135,10 +2221,11 @@ function ProspectDrawer({
                 </label>
                 <input
                   type="text"
+                  disabled={isReadOnly}
                   value={articleImposition}
                   onChange={(e) => setArticleImposition(e.target.value)}
                   placeholder="1618480001"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none focus:border-blue-600"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none focus:border-blue-600 disabled:bg-slate-100 disabled:text-slate-500"
                 />
               </div>
             </div>
@@ -2152,10 +2239,11 @@ function ProspectDrawer({
               </label>
               <input
                 type="email"
+                disabled={isReadOnly}
                 value={invoicingEmail}
                 onChange={(e) => setInvoicingEmail(e.target.value)}
                 placeholder={contactEmail || "compta@client.com"}
-                className="px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600"
+                className="px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 disabled:bg-slate-50 disabled:text-slate-500"
               />
             </div>
 
@@ -2165,10 +2253,11 @@ function ProspectDrawer({
               </label>
               <input
                 type="text"
+                disabled={isReadOnly}
                 value={invoicingPhone}
                 onChange={(e) => setInvoicingPhone(e.target.value)}
                 placeholder={contactPhone || "0550 12 34 56"}
-                className="px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-mono font-semibold focus:outline-none focus:border-blue-600"
+                className="px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-mono font-semibold focus:outline-none focus:border-blue-600 disabled:bg-slate-50 disabled:text-slate-500"
               />
             </div>
           </div>
@@ -2189,10 +2278,11 @@ function ProspectDrawer({
                 </label>
                 <input
                   type="text"
+                  disabled={isReadOnly}
                   value={bankName}
                   onChange={(e) => setBankName(e.target.value)}
                   placeholder="e.g. BNA, BEA, Société Générale"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 bg-white focus:outline-none focus:border-blue-600"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 bg-white focus:outline-none focus:border-blue-600 disabled:bg-slate-100 disabled:text-slate-500"
                 />
               </div>
 
@@ -2202,10 +2292,11 @@ function ProspectDrawer({
                 </label>
                 <input
                   type="text"
+                  disabled={isReadOnly}
                   value={rib}
                   onChange={(e) => setRib(e.target.value)}
                   placeholder="002 00000 0000000000 00"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 bg-white focus:outline-none focus:border-blue-600"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 bg-white focus:outline-none focus:border-blue-600 disabled:bg-slate-100 disabled:text-slate-500"
                 />
               </div>
             </div>
@@ -2216,7 +2307,7 @@ function ProspectDrawer({
 
         {/* Drawer Footer */}
         <footer className="p-6 border-t border-slate-150 bg-white sticky bottom-0 flex items-center justify-between gap-3">
-          {isEditing && (
+          {!isReadOnly && isEditing && (
             <button
               type="button"
               onClick={() => onArchive(opp.id)}
@@ -2233,15 +2324,17 @@ function ProspectDrawer({
               onClick={onClose}
               className="py-2.5 px-4 border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-xs transition-all cursor-pointer"
             >
-              Cancel
+              {isReadOnly ? "Close" : "Cancel"}
             </button>
-            <button
-              type="submit"
-              form="prospect-form"
-              className="py-2.5 px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition-all shadow-sm hover:shadow cursor-pointer"
-            >
-              {isEditing ? "Save Changes" : "Create Prospect"}
-            </button>
+            {!isReadOnly && (
+              <button
+                type="submit"
+                form="prospect-form"
+                className="py-2.5 px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition-all shadow-sm hover:shadow cursor-pointer"
+              >
+                {isEditing ? "Save Changes" : "Create Prospect"}
+              </button>
+            )}
           </div>
         </footer>
       </div>
