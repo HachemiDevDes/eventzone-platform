@@ -1019,13 +1019,24 @@ export default function InvoicingEditor({
         </div>
 
         {/* RIGHT COLUMN: Sticky Live A4 Preview (6 cols on lg) */}
-        <div className="lg:col-span-6 xl:col-span-6 sticky top-20 space-y-3">
+        <div className="lg:col-span-6 xl:col-span-6 lg:sticky lg:top-4 self-start space-y-3 z-20">
           <div className="flex items-center justify-between px-1">
             <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">
               APERÇU DU DOCUMENT (FORMAT A4)
             </span>
 
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleSaveDocument}
+                disabled={isSaving}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+                title="Enregistrer"
+              >
+                {saveSuccess ? <CheckCircle2 size={13} className="text-emerald-600" /> : <Save size={13} />}
+                <span>{saveSuccess ? "Enregistré" : isSaving ? "..." : "Enregistrer"}</span>
+              </button>
+
               <button
                 type="button"
                 onClick={handlePrintDocument}
@@ -1057,7 +1068,7 @@ export default function InvoicingEditor({
           </div>
 
           {/* Live Document Preview Workspace Canvas */}
-          <div className="overflow-y-auto max-h-[calc(100vh-140px)] border border-slate-200/90 rounded-3xl shadow-inner bg-slate-200/60 p-2 sm:p-5 flex justify-center">
+          <div className="overflow-y-auto max-h-[calc(100vh-80px)] border border-slate-200/90 rounded-3xl shadow-inner bg-slate-200/60 p-2 sm:p-5 flex justify-center">
             <InvoicingDocumentPreview document={doc} />
           </div>
         </div>

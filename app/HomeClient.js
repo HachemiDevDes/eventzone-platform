@@ -4692,7 +4692,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
         <div className={`flex-1 ${
           isEditingFloorPlan
             ? "overflow-hidden h-screen flex flex-col p-0" 
-            : "overflow-y-auto p-6 md:p-8"
+            : "p-6 md:p-8"
         }`}>
           {/* Top Banner when Role Simulation is Active */}
           {simulatedMemberId && (
