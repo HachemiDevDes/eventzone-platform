@@ -122,7 +122,9 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
 
   // File Upload State
   const fileInputRef = useRef(null);
+  const logoFileInputRef = useRef(null);
   const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [isCustomBanner, setIsCustomBanner] = useState(false);
 
   // Slug Availability Verification State
@@ -157,6 +159,8 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
     hostName: currentUser?.fullName || "",
     hostEmail: currentUser?.email || "",
     organization: currentUser?.companyName || "",
+    contactPhone: "",
+    organizerLogo: "",
   });
 
   useEffect(() => {
@@ -172,6 +176,41 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert("Please upload a valid image file (PNG, JPG, WebP, SVG)");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert("File size exceeds 10MB limit. Please choose a smaller image.");
+      return;
+    }
+
+    setUploadingLogo(true);
+    try {
+      let publicUrl = null;
+      if (onUploadFile) {
+        publicUrl = await onUploadFile(file, 'event-images');
+      } else {
+        publicUrl = await uploadFileToBucket(file, 'event-images');
+      }
+
+      if (publicUrl) {
+        handleChange("organizerLogo", publicUrl);
+      }
+    } catch (err) {
+      console.error("Logo upload failed:", err);
+      alert("Failed to upload logo. Please try again.");
+    } finally {
+      setUploadingLogo(false);
+      if (logoFileInputRef.current) logoFileInputRef.current.value = "";
+    }
   };
 
   const handleBannerUpload = async (e) => {
@@ -389,8 +428,34 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
         ? Math.min(Number(formData.capacity) || 500, currentUser.maxAttendees)
         : (Number(formData.capacity) || 500);
 
+      const resolvedOrgName = (formData.organization?.trim() || formData.hostName?.trim() || currentUser?.companyName || "Eventzone").trim();
+      const resolvedHostName = (formData.hostName?.trim() || resolvedOrgName).trim();
+      const resolvedContactEmail = (formData.hostEmail?.trim() || currentUser?.email || "").trim();
+      const resolvedContactPhone = (formData.contactPhone || "").trim();
+      const resolvedOrganizerLogo = (formData.organizerLogo || "").trim();
+
+      const creationPayload = {
+        ...formData,
+        capacity: sanitizedCapacity,
+        organizerName: resolvedOrgName,
+        organizer_name: resolvedOrgName,
+        organization: resolvedOrgName,
+        hostName: resolvedHostName,
+        host_name: resolvedHostName,
+        contactEmail: resolvedContactEmail,
+        contact_email: resolvedContactEmail,
+        hostEmail: resolvedContactEmail,
+        host_email: resolvedContactEmail,
+        contactPhone: resolvedContactPhone,
+        contact_phone: resolvedContactPhone,
+        organizerLogo: resolvedOrganizerLogo,
+        organizer_logo: resolvedOrganizerLogo,
+        hostLogo: resolvedOrganizerLogo,
+        host_logo: resolvedOrganizerLogo,
+      };
+
       if (onEventCreated) {
-        await onEventCreated({ ...formData, capacity: sanitizedCapacity });
+        await onEventCreated(creationPayload);
       }
     } catch (err) {
       console.error("Error creating event:", err);
@@ -1296,6 +1361,61 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
                     onChange={(e) => handleChange("organization", e.target.value)}
                     placeholder="e.g. Acme Corp, Tech Events Co. (Optional)"
                     className="w-full px-3.5 sm:px-4 py-2.5 sm:py-3 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-xl text-xs font-semibold text-slate-900 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1 sm:mb-1.5">
+                    Phone / WhatsApp Support
+                  </label>
+                  <input
+                    type="tel"
+                    value={formData.contactPhone}
+                    onChange={(e) => handleChange("contactPhone", e.target.value)}
+                    placeholder="e.g. +213 550 12 34 56 (Optional)"
+                    className="w-full px-3.5 sm:px-4 py-2.5 sm:py-3 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-xl text-xs font-semibold text-slate-900 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1 sm:mb-1.5">
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                      Organizer Logo
+                    </label>
+                    <span className="text-[10px] text-slate-400 font-normal">Optional</span>
+                  </div>
+                  {formData.organizerLogo ? (
+                    <div className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
+                      <div className="flex items-center gap-2.5">
+                        <img src={formData.organizerLogo} alt="Logo" className="w-8 h-8 object-contain rounded-lg bg-white border border-slate-200 p-1" />
+                        <span className="text-xs font-semibold text-slate-700">Logo attached</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleChange("organizerLogo", "")}
+                        className="text-xs font-bold text-red-500 hover:text-red-700 cursor-pointer"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      onClick={() => !uploadingLogo && logoFileInputRef.current?.click()}
+                      className="w-full px-3.5 sm:px-4 py-2.5 border border-dashed border-slate-300 hover:border-blue-500 bg-slate-50 hover:bg-blue-50/20 rounded-xl text-xs font-semibold text-slate-600 flex items-center justify-between cursor-pointer transition-all"
+                    >
+                      <span className="flex items-center gap-2 text-slate-500 text-[11px]">
+                        <Upload size={14} />
+                        {uploadingLogo ? "Uploading logo..." : "Upload host / company logo"}
+                      </span>
+                      <span className="text-[10px] font-bold bg-white px-2 py-0.5 rounded-md border border-slate-200 text-slate-700 shadow-2xs">Browse</span>
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    ref={logoFileInputRef}
+                    accept="image/png, image/jpeg, image/jpg, image/webp, image/svg+xml"
+                    onChange={handleLogoUpload}
+                    className="hidden"
                   />
                 </div>
               </div>

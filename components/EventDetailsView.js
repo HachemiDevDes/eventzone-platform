@@ -163,8 +163,9 @@ function RichTextEditor({
   // Sync external value changes into editor innerHTML only when not internally typing
   useEffect(() => {
     if (editorRef.current && !isInternalChange.current) {
-      if (editorRef.current.innerHTML !== (value || "")) {
-        editorRef.current.innerHTML = value || "";
+      const cleanVal = (value || "").replace(/font-family:[^;"]*;?/gi, "");
+      if (editorRef.current.innerHTML !== cleanVal) {
+        editorRef.current.innerHTML = cleanVal;
       }
     }
     isInternalChange.current = false;
@@ -185,6 +186,13 @@ function RichTextEditor({
         onChange(html === "<p><br></p>" || html === "<br>" ? "" : html);
       }
     }
+  };
+
+  const handlePaste = (e) => {
+    e.preventDefault();
+    const text = e.clipboardData?.getData("text/plain") || "";
+    document.execCommand("insertText", false, text);
+    handleInput();
   };
 
   const applyTextSize = (sizeObj) => {
@@ -208,9 +216,9 @@ function RichTextEditor({
   };
 
   return (
-    <div className="border border-slate-200 rounded-2xl bg-white overflow-hidden shadow-2xs focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/10 transition-all text-start">
+    <div className="border border-slate-200 rounded-2xl bg-white overflow-hidden shadow-2xs focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/10 transition-all text-start font-sans">
       {/* ── RICH TEXT TOOLBAR ── */}
-      <div className="bg-slate-50/90 border-b border-slate-200 px-3 py-2 flex flex-wrap items-center gap-1.5 select-none">
+      <div className="bg-slate-50/90 border-b border-slate-200 px-3 py-2 flex flex-wrap items-center gap-1.5 select-none font-sans">
         
         {/* Text Size / Heading Dropdown */}
         <div className="relative">
@@ -221,7 +229,7 @@ function RichTextEditor({
               setColorMenuOpen(false);
               setHighlightMenuOpen(false);
             }}
-            className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-semibold flex items-center gap-1.5 shadow-2xs cursor-pointer transition-colors"
+            className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-semibold flex items-center gap-1.5 shadow-2xs cursor-pointer transition-colors font-sans"
             title="Text Size & Style"
           >
             <span>{activeSize}</span>
@@ -229,13 +237,13 @@ function RichTextEditor({
           </button>
 
           {sizeMenuOpen && (
-            <div className="absolute top-full left-0 mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-xl p-1 z-50 space-y-0.5 animate-scale-up">
+            <div className="absolute top-full left-0 mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-xl p-1 z-50 space-y-0.5 animate-scale-up font-sans">
               {TEXT_SIZES.map((sz) => (
                 <button
                   key={sz.label}
                   type="button"
                   onClick={() => applyTextSize(sz)}
-                  className={`w-full text-start px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-colors ${
+                  className={`w-full text-start px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-colors font-sans ${
                     activeSize === sz.label ? "bg-blue-50 text-blue-700 font-bold" : "hover:bg-slate-50 text-slate-700 font-medium"
                   }`}
                 >
@@ -297,7 +305,7 @@ function RichTextEditor({
               setSizeMenuOpen(false);
               setHighlightMenuOpen(false);
             }}
-            className="h-7 px-2 rounded-lg hover:bg-slate-200/70 text-slate-700 flex items-center gap-1.5 cursor-pointer transition-colors text-xs"
+            className="h-7 px-2 rounded-lg hover:bg-slate-200/70 text-slate-700 flex items-center gap-1.5 cursor-pointer transition-colors text-xs font-sans"
             title="Text Color"
           >
             <div className="flex items-center gap-1">
@@ -308,7 +316,7 @@ function RichTextEditor({
           </button>
 
           {colorMenuOpen && (
-            <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-slate-200 rounded-xl shadow-xl p-2 z-50 animate-scale-up space-y-2">
+            <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-slate-200 rounded-xl shadow-xl p-2 z-50 animate-scale-up space-y-2 font-sans">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block px-1">Text Color</span>
               <div className="grid grid-cols-4 gap-1.5">
                 {TEXT_COLORS.map((c) => (
@@ -353,7 +361,7 @@ function RichTextEditor({
           </button>
 
           {highlightMenuOpen && (
-            <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-slate-200 rounded-xl shadow-xl p-2 z-50 animate-scale-up space-y-2">
+            <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-slate-200 rounded-xl shadow-xl p-2 z-50 animate-scale-up space-y-2 font-sans">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block px-1">Highlight</span>
               <div className="grid grid-cols-4 gap-1.5">
                 {HIGHLIGHT_COLORS.map((c) => (
@@ -459,12 +467,44 @@ function RichTextEditor({
         contentEditable
         onInput={handleInput}
         onBlur={handleInput}
+        onPaste={handlePaste}
         data-placeholder={placeholder}
-        style={{ minHeight }}
-        className="p-4 text-xs sm:text-sm text-slate-900 focus:outline-none resize-y overflow-auto leading-relaxed empty:before:content-[attr(data-placeholder)] empty:before:text-slate-400 empty:before:pointer-events-none [&_h1]:text-2xl [&_h1]:font-black [&_h1]:my-2 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:my-2 [&_h3]:text-base [&_h3]:font-bold [&_h3]:my-1.5 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-1.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-1.5 [&_blockquote]:border-l-4 [&_blockquote]:border-blue-500 [&_blockquote]:pl-3 [&_blockquote]:italic [&_blockquote]:my-2 [&_blockquote]:text-slate-600"
+        style={{
+          minHeight,
+          fontFamily: "var(--font-plus-jakarta-sans), 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+        }}
+        className="rich-text-editor-content p-4 font-sans text-xs sm:text-sm text-slate-900 focus:outline-none resize-y overflow-auto leading-relaxed empty:before:content-[attr(data-placeholder)] empty:before:text-slate-400 empty:before:pointer-events-none [&_*]:font-sans [&_p]:font-sans [&_div]:font-sans [&_span]:font-sans [&_li]:font-sans [&_h1]:font-sans [&_h1]:text-2xl [&_h1]:font-black [&_h1]:my-2 [&_h2]:font-sans [&_h2]:text-xl [&_h2]:font-bold [&_h2]:my-2 [&_h3]:font-sans [&_h3]:text-base [&_h3]:font-bold [&_h3]:my-1.5 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-1.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-1.5 [&_blockquote]:border-l-4 [&_blockquote]:border-blue-500 [&_blockquote]:pl-3 [&_blockquote]:italic [&_blockquote]:my-2 [&_blockquote]:text-slate-600 [&_blockquote]:font-sans"
       />
     </div>
   );
+}
+
+function extractCleanVenueName(rawVenue, countryStr = "Algeria", cityStr = "Algiers") {
+  if (!rawVenue) return "";
+  let str = String(rawVenue).trim();
+  if (str.includes("Locations") || str.includes("Scheduled")) return "";
+
+  const tokens = [countryStr, cityStr].filter(Boolean).map(t => String(t).trim()).filter(Boolean);
+  let changed = true;
+  let iterations = 0;
+  while (changed && iterations < 15) {
+    changed = false;
+    iterations++;
+    for (const token of tokens) {
+      const esc = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const frontRegex = new RegExp(`^${esc}[,\\s]+`, 'i');
+      const backRegex = new RegExp(`[,\\s]+${esc}$`, 'i');
+      if (frontRegex.test(str)) {
+        str = str.replace(frontRegex, '').trim();
+        changed = true;
+      }
+      if (backRegex.test(str)) {
+        str = str.replace(backRegex, '').trim();
+        changed = true;
+      }
+    }
+  }
+  return str;
 }
 
 export default function EventDetailsView({ 
@@ -505,8 +545,11 @@ export default function EventDetailsView({
   const [country, setCountry] = useState(eventDetails?.country || "Algeria");
   const [city, setCity] = useState(eventDetails?.city || "Algiers");
   const [venueName, setVenueName] = useState(() => {
-    const raw = eventDetails?.venueName || eventDetails?.venue_name || eventDetails?.location || "";
-    return (raw.includes("Locations") || raw.includes("Scheduled")) ? "" : raw;
+    return extractCleanVenueName(
+      eventDetails?.venueName || eventDetails?.venue_name || "",
+      eventDetails?.country || "Algeria",
+      eventDetails?.city || "Algiers"
+    );
   });
   const [venueAddress, setVenueAddress] = useState(eventDetails?.venueAddress || "");
   const [virtualUrl, setVirtualUrl] = useState(eventDetails?.virtualUrl || eventDetails?.onlineLink || "");
@@ -556,12 +599,21 @@ export default function EventDetailsView({
   const [uploadingImage, setUploadingImage] = useState(false);
   const imageFileInputRef = useRef(null);
 
-  // ─── TAB 4: ORGANIZER & CONTACT ──────────────────────────────────────────
-  const [organizerName, setOrganizerName] = useState(eventDetails?.organizerName || "Eventzone");
-  const [contactEmail, setContactEmail] = useState(eventDetails?.contactEmail || "");
-  const [contactPhone, setContactPhone] = useState(eventDetails?.contactPhone || "");
-  const [websiteUrl, setWebsiteUrl] = useState(eventDetails?.websiteUrl || "");
-  const [organizerLogo, setOrganizerLogo] = useState(eventDetails?.organizerLogo || eventDetails?.hostLogo || "");
+  const [organizerName, setOrganizerName] = useState(
+    eventDetails?.organizerName || eventDetails?.organizer_name || eventDetails?.organization || eventDetails?.hostName || "Eventzone"
+  );
+  const [contactEmail, setContactEmail] = useState(
+    eventDetails?.contactEmail || eventDetails?.contact_email || eventDetails?.hostEmail || ""
+  );
+  const [contactPhone, setContactPhone] = useState(
+    eventDetails?.contactPhone || eventDetails?.contact_phone || ""
+  );
+  const [websiteUrl, setWebsiteUrl] = useState(
+    eventDetails?.websiteUrl || eventDetails?.website_url || ""
+  );
+  const [organizerLogo, setOrganizerLogo] = useState(
+    eventDetails?.organizerLogo || eventDetails?.organizer_logo || eventDetails?.hostLogo || ""
+  );
   const [uploadingOrganizerLogo, setUploadingOrganizerLogo] = useState(false);
   const organizerLogoFileInputRef = useRef(null);
 
@@ -622,10 +674,16 @@ export default function EventDetailsView({
       setScheduleTime(eventDetails.scheduleTime || "09:00 AM – 05:00 PM");
       setScheduleMode(eventDetails.scheduleMode || (Array.isArray(eventDetails.multiLocations) && eventDetails.multiLocations.length > 1 ? "multiple" : "single"));
       
-      setCountry(eventDetails.country || "Algeria");
-      setCity(eventDetails.city || "Algiers");
-      const rawLoc = eventDetails.venueName || eventDetails.venue_name || eventDetails.location || "";
-      setVenueName((rawLoc.includes("Locations") || rawLoc.includes("Scheduled")) ? "" : rawLoc);
+      const currentCountry = eventDetails.country || "Algeria";
+      const currentCity = eventDetails.city || "Algiers";
+      setCountry(currentCountry);
+      setCity(currentCity);
+      const cleanV = extractCleanVenueName(
+        eventDetails.venueName || eventDetails.venue_name || "",
+        currentCountry,
+        currentCity
+      );
+      setVenueName(cleanV);
       setVenueAddress(eventDetails.venueAddress || "");
       setVirtualUrl(eventDetails.virtualUrl || eventDetails.onlineLink || "");
       setVirtualPlatform(eventDetails.virtualPlatform || "Zoom Webinar / Meeting");
@@ -639,13 +697,19 @@ export default function EventDetailsView({
       const currentBanner = eventDetails.banner || eventDetails.cover_url || "";
       setBanner(currentBanner);
       setCapacity(eventDetails.capacity || 500);
-      setOrganizerName(eventDetails.organizerName || "Eventzone");
-      setContactEmail(eventDetails.contactEmail || "");
-      setContactPhone(eventDetails.contactPhone || "");
-      setWebsiteUrl(eventDetails.websiteUrl || "");
+      const resolvedOrg = eventDetails.organizerName || eventDetails.organizer_name || eventDetails.organization || eventDetails.hostName || "Eventzone";
+      const resolvedEmail = eventDetails.contactEmail || eventDetails.contact_email || eventDetails.hostEmail || "";
+      const resolvedPhone = eventDetails.contactPhone || eventDetails.contact_phone || "";
+      const resolvedWeb = eventDetails.websiteUrl || eventDetails.website_url || "";
+      const resolvedOrgLogo = eventDetails.organizerLogo || eventDetails.organizer_logo || eventDetails.hostLogo || "";
+
+      setOrganizerName(resolvedOrg);
+      setContactEmail(resolvedEmail);
+      setContactPhone(resolvedPhone);
+      setWebsiteUrl(resolvedWeb);
       setYoutubeUrl(eventDetails.youtubeUrl || eventDetails.videoUrl || eventDetails.youtube_url || "");
       setEventLogo(eventDetails.eventLogo || eventDetails.logo || eventDetails.logo_url || "");
-      setOrganizerLogo(eventDetails.organizerLogo || eventDetails.hostLogo || "");
+      setOrganizerLogo(resolvedOrgLogo);
       
       const galleryList = Array.isArray(eventDetails.gallery) && eventDetails.gallery.length > 0
         ? eventDetails.gallery.slice(0, 5) 
@@ -655,8 +719,16 @@ export default function EventDetailsView({
       // Record baseline snapshot so initial load NEVER triggers an auto-save overwrite
       lastSavedSnapshotRef.current = getComparableSnapshot({
         ...eventDetails,
+        country: currentCountry,
+        city: currentCity,
+        venueName: cleanV,
         banner: currentBanner,
-        gallery: galleryList
+        gallery: galleryList,
+        organizerName: resolvedOrg,
+        contactEmail: resolvedEmail,
+        contactPhone: resolvedPhone,
+        websiteUrl: resolvedWeb,
+        organizerLogo: resolvedOrgLogo,
       });
 
       // Clear any pending autosave timer from prior event
@@ -676,18 +748,23 @@ export default function EventDetailsView({
     const currentGallery = galleryImages.slice(0, 5);
     const primaryBanner = banner || (currentGallery.length > 0 ? currentGallery[0] : "");
 
-    // Generate comprehensive composite location string
+    // Generate comprehensive composite location string: Country + city + venue name
     let compositeLocation = "";
+    const cleanCurrentVenue = extractCleanVenueName(venueName, country, city) || venueName.trim();
     if (scheduleMode === "multiple") {
+      const firstStop = multiLocations[0];
+      const stopParts = [firstStop?.country, firstStop?.city, firstStop?.venueName || firstStop?.name].filter(Boolean);
       compositeLocation = multiLocations.length > 0
-        ? `${multiLocations.length} Locations (${multiLocations[0]?.city || multiLocations[0]?.name || "Multiple Stops"})`
+        ? `${multiLocations.length} Locations (${stopParts.join(", ") || "Multiple Stops"})`
         : "Multiple Scheduled Locations";
     } else {
       if (type === "Virtual") {
         compositeLocation = virtualPlatform ? `${virtualPlatform} (Online)` : "Online Virtual Event";
       } else {
-        const parts = [venueName, city, country].filter(Boolean);
-        compositeLocation = parts.length > 0 ? parts.join(", ") : "Main Venue";
+        // Strict order: Country + city + venue name
+        const parts = [country, city, cleanCurrentVenue].filter(Boolean);
+        const uniqueParts = parts.filter((part, idx) => parts.indexOf(part) === idx);
+        compositeLocation = uniqueParts.length > 0 ? uniqueParts.join(", ") : "Main Venue";
         if (type === "Hybrid") {
           compositeLocation += " (Hybrid)";
         }
@@ -706,7 +783,7 @@ export default function EventDetailsView({
       scheduleMode,
       country,
       city,
-      venueName,
+      venueName: cleanCurrentVenue,
       venueAddress,
       virtualUrl,
       virtualPlatform,
@@ -718,9 +795,18 @@ export default function EventDetailsView({
       cover_url: primaryBanner,
       capacity: Number(capacity) || 500,
       organizerName,
+      organizer_name: organizerName,
+      hostName: organizerName,
+      host_name: organizerName,
+      organization: organizerName,
       contactEmail,
+      contact_email: contactEmail,
+      hostEmail: contactEmail,
+      host_email: contactEmail,
       contactPhone,
+      contact_phone: contactPhone,
       websiteUrl,
+      website_url: websiteUrl,
       youtubeUrl,
       videoUrl: youtubeUrl,
       youtube_url: youtubeUrl,
@@ -729,7 +815,9 @@ export default function EventDetailsView({
       logo: eventLogo,
       logo_url: eventLogo,
       organizerLogo,
+      organizer_logo: organizerLogo,
       hostLogo: organizerLogo,
+      host_logo: organizerLogo,
       gallery: currentGallery
     };
   }, [
@@ -2095,6 +2183,44 @@ export default function EventDetailsView({
                   placeholder="e.g. 550 12 34 56"
                 />
               </div>
+            </div>
+
+            {/* Manual Save & Feedback Action */}
+            <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+              <span className="text-xs text-slate-400 font-medium">
+                {syncStatus === "saving" ? t("details.savingRealtime", "Saving changes in real time...") : t("details.allChangesSaved", "All changes saved")}
+              </span>
+              <button
+                type="button"
+                disabled={syncStatus === "saving"}
+                onClick={async () => {
+                  setSyncStatus("saving");
+                  const payload = buildPayload();
+                  try {
+                    if (onUpdateEventDetails) {
+                      await onUpdateEventDetails(payload);
+                    }
+                    lastSavedSnapshotRef.current = getComparableSnapshot(payload);
+                    setSyncStatus("saved");
+                  } catch (err) {
+                    console.error("Save organizer details error:", err);
+                    setSyncStatus("saved");
+                  }
+                }}
+                className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {syncStatus === "saving" ? (
+                  <>
+                    <Loader2 size={13} className="animate-spin" />
+                    <span>{t("common.saving", "Saving...")}</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 size={13} />
+                    <span>{t("details.saveOrganizerDetails", "Save Organizer Details")}</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
         )}

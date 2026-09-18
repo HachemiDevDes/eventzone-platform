@@ -8,11 +8,12 @@ import {
   Layers, CreditCard, QrCode, Printer, HardDrive, 
   Presentation, Handshake, Plane, Smartphone, Wrench, 
   FileText, Monitor, Flag, Volume2, UserCheck, Shield,
-  Plus, X, Copy, Check, AlertCircle, RefreshCw,
+  Plus, X, Check, AlertCircle, RefreshCw,
   ArrowRight, ArrowLeft
 } from "lucide-react";
 import { COUNTRY_CITIES_MAP } from "../lib/formPresets";
 import SearchableSelect from "./SearchableSelect";
+import CustomDatePicker from "./CustomDatePicker";
 import AnimatedMeshBackground from "./features/AnimatedMeshBackground";
 
 const STEPS = [
@@ -226,7 +227,6 @@ export default function RequestQuoteClient() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
   const [submittedQuote, setSubmittedQuote] = useState(null);
-  const [copiedRef, setCopiedRef] = useState(false);
 
   const toggleService = (title) => {
     setSelectedServices((prev) =>
@@ -252,13 +252,6 @@ export default function RequestQuoteClient() {
   const handleRemoveCustomNeed = (need) => {
     setCustomNeeds((prev) => prev.filter((n) => n !== need));
     setSelectedServices((prev) => prev.filter((s) => s !== need));
-  };
-
-  const handleCopyReference = () => {
-    if (!submittedQuote?.reference_code) return;
-    navigator.clipboard.writeText(submittedQuote.reference_code);
-    setCopiedRef(true);
-    setTimeout(() => setCopiedRef(false), 2500);
   };
 
   const scrollToForm = () => {
@@ -420,10 +413,6 @@ export default function RequestQuoteClient() {
               <CheckCircle2 className="w-7 h-7" />
             </div>
 
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60 mb-3">
-              Quote Request Submitted Successfully
-            </span>
-
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
               We&apos;ve Received Your Request!
             </h1>
@@ -431,34 +420,6 @@ export default function RequestQuoteClient() {
             <p className="mt-3 text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
               Thank you, <strong className="text-slate-900">{submittedQuote.full_name}</strong>. Our event technology team has received your project details and is currently preparing a tailored commercial proposal.
             </p>
-
-            {/* Reference Badge */}
-            <div className="mt-6 p-4 rounded-2xl bg-slate-50 border border-slate-200/80 max-w-sm mx-auto flex items-center justify-between gap-3">
-              <div className="text-start">
-                <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Quote Reference</span>
-                <span className="font-mono text-base font-black text-blue-600 select-all">
-                  {submittedQuote.reference_code}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={handleCopyReference}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 transition-all cursor-pointer shadow-2xs"
-                title="Copy Reference"
-              >
-                {copiedRef ? (
-                  <>
-                    <Check size={13} className="text-emerald-600" />
-                    <span className="text-emerald-600">Copied!</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy size={13} className="text-slate-500" />
-                    <span>Copy</span>
-                  </>
-                )}
-              </button>
-            </div>
 
             {/* Single Sign In Button */}
             <div className="mt-8 flex flex-col items-center gap-3">
@@ -739,14 +700,13 @@ export default function RequestQuoteClient() {
                     {/* Target Date */}
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                        Target Date / Approximate Month
+                        Target Date
                       </label>
-                      <input
-                        type="text"
+                      <CustomDatePicker
                         value={eventDate}
-                        onChange={(e) => setEventDate(e.target.value)}
-                        placeholder="e.g. November 2026 or 15-18 Oct 2026"
-                        className="w-full bg-slate-50 border border-slate-200 focus:bg-white rounded-xl px-3.5 py-2.5 text-xs text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                        onChange={(val) => setEventDate(val)}
+                        placeholder="Select target date..."
+                        minDate={new Date().toISOString().split("T")[0]}
                       />
                     </div>
 

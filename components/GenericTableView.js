@@ -169,6 +169,7 @@ export default function GenericTableView({
           onSwitchView={onSwitchView}
           simulatedMemberId={state.simulatedMemberId}
           onSimulateMember={state.onSimulateMember}
+          onSendInviteEmail={state.onSendInviteEmail}
         />
       );
     case "analytics":

@@ -853,6 +853,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
             const created = await createEvent(finalForm, session.user.id);
             setUserEvents(prev => [created, ...prev]);
             setPublicEvents(prev => [created, ...prev]);
+            setEventDetails(created);
             setActiveEventStateId(created.id);
             setCurrentView("overview");
             return;
@@ -1819,6 +1820,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
         const created = await createEvent(finalForm, user.id);
         setUserEvents(prev => [created, ...prev]);
         setPublicEvents(prev => [created, ...prev]);
+        setEventDetails(created);
         setActiveEventStateId(created.id);
         setCurrentView("overview");
         return;
@@ -1969,6 +1971,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
       const created = await createEvent(sanitizedFormData, currentUser.id);
       setUserEvents(prev => [created, ...prev]);
       setPublicEvents(prev => [created, ...prev]);
+      setEventDetails(created);
       setActiveEventStateId(created.id);
       setIsCreationWizardOpen(false);
       setCurrentView("overview");

@@ -140,8 +140,8 @@ export default async function Page({ params }) {
       },
       "organizer": {
         "@type": "Organization",
-        "name": "Eventzone",
-        "url": "https://eventzone.pro"
+        "name": event.organizerName || event.organization || event.hostName || "Eventzone",
+        "url": event.websiteUrl || canonicalUrl
       },
       "offers": {
         "@type": "AggregateOffer",

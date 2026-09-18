@@ -6,7 +6,7 @@ import {
   Users, UserCheck, ShieldCheck, ShieldAlert, Plus, Search, Filter,
   Mail, Phone, Building2, Eye, Pencil, Trash2, Archive, RotateCcw,
   CheckCircle2, Clock, Sparkles, ChevronDown, Check, X, AlertCircle,
-  Layers, ExternalLink, Play, LogOut, Copy, Send
+  Layers, ExternalLink, Play, LogOut, Copy, Send, Loader2
 } from "lucide-react";
 import { useLanguage } from "../lib/i18n";
 import { EVENT_MODULES, ROLE_PRESETS, getPermissionSummary } from "../lib/permissions";
@@ -18,7 +18,8 @@ export default function TeamView({
   onOpenModal,
   onSwitchView,
   simulatedMemberId = null,
-  onSimulateMember = () => {}
+  onSimulateMember = () => {},
+  onSendInviteEmail = null
 }) {
   const { t, isRTL } = useLanguage();
   const { team = [], eventDetails = {} } = state;
@@ -32,6 +33,55 @@ export default function TeamView({
   // Selected Member for Permission Matrix Modal
   const [matrixMember, setMatrixMember] = useState(null);
   const [copiedInviteId, setCopiedInviteId] = useState(null);
+  const [sendingInviteId, setSendingInviteId] = useState(null);
+  const [sentInviteId, setSentInviteId] = useState(null);
+
+  const handleResendInviteEmail = async (member) => {
+    if (!member.email) {
+      alert(t("team.errNoEmail", "This member does not have a valid email address."));
+      return;
+    }
+    try {
+      setSendingInviteId(member.id);
+      if (onSendInviteEmail) {
+        await onSendInviteEmail(member);
+      } else {
+        const origin = typeof window !== "undefined" ? window.location.origin : "";
+        const targetEventId = eventDetails?.id || state?.activeEventId || "";
+        const inviteUrl = `${origin}/?eventId=${targetEventId}&inviteToken=${member.id}&teamEmail=${encodeURIComponent(member.email)}`;
+        const res = await fetch("/api/email/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "team_invite",
+            to: member.email,
+            recipientName: member.name || "Team Member",
+            role: member.role || "Staff",
+            department: member.department || "",
+            permissions: member.permissions || {},
+            eventTitle: eventDetails?.title || eventDetails?.name || "Eventzone Event",
+            eventDate: eventDetails?.date || eventDetails?.start_date || "",
+            eventLocation: eventDetails?.venue || eventDetails?.location || "",
+            organizerName: "Eventzone Organizing Team",
+            message: member.notes || "",
+            inviteUrl,
+            eventId: targetEventId
+          })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || "Failed to send invitation email");
+        }
+      }
+      setSentInviteId(member.id);
+      setTimeout(() => setSentInviteId(null), 4000);
+    } catch (err) {
+      console.error("Resend invite error:", err);
+      alert(t("team.errSendInviteFailed", "Failed to send invitation email: ") + err.message);
+    } finally {
+      setSendingInviteId(null);
+    }
+  };
 
   // Status Handlers
   const handleArchive = (id) => {
@@ -558,6 +608,21 @@ export default function TeamView({
                                   <Check size={13} className="text-emerald-600" />
                                 ) : (
                                   <Copy size={13} />
+                                )}
+                              </button>
+
+                              <button
+                                onClick={() => handleResendInviteEmail(member)}
+                                disabled={sendingInviteId === member.id}
+                                className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all cursor-pointer disabled:opacity-50"
+                                title={sentInviteId === member.id ? t("team.inviteSent", "Invitation Email Sent!") : t("team.resendInvite", "Send / Resend Invitation Email")}
+                              >
+                                {sendingInviteId === member.id ? (
+                                  <Loader2 size={13} className="animate-spin text-blue-600" />
+                                ) : sentInviteId === member.id ? (
+                                  <Check size={13} className="text-emerald-600" />
+                                ) : (
+                                  <Mail size={13} />
                                 )}
                               </button>
 

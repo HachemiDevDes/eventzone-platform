@@ -4,7 +4,8 @@ import {
   sendRSVPConfirmationEmail, 
   sendBroadcastEmail, 
   sendExhibitorPacketEmail,
-  sendCertificateEmail
+  sendCertificateEmail,
+  sendTeamInviteEmail
 } from "@/lib/mailer";
 import { getServiceSupabase, verifyOrganizerSession } from "@/lib/apiAuth";
 
@@ -211,6 +212,48 @@ export async function POST(request) {
           ...rest
         });
         break;
+
+      case "team_invite": {
+        let eventTitle = rest.eventTitle || rest.eventName || "";
+        let eventDate = rest.eventDate || "";
+        let venueAddress = rest.venueAddress || rest.eventLocation || "";
+
+        if ((!eventTitle || !eventDate || !venueAddress) && eventId && isValidUuid(eventId)) {
+          try {
+            const supabase = getServiceSupabase();
+            const { data: ev } = await supabase
+              .from("events")
+              .select("name, title, date, start_date, end_date, location, venue")
+              .eq("id", eventId)
+              .maybeSingle();
+            if (ev) {
+              eventTitle = eventTitle || ev.title || ev.name || "";
+              eventDate = eventDate || ev.date || ev.start_date || "";
+              venueAddress = venueAddress || ev.venue || ev.location || "";
+            }
+          } catch (evErr) {
+            console.warn("Could not query event details for team invite email:", evErr);
+          }
+        }
+
+        result = await sendTeamInviteEmail({
+          to,
+          subject: finalSubject,
+          recipientName: rest.recipientName || rest.name || "Team Member",
+          role: rest.role || "Staff",
+          department: rest.department || "",
+          permissions: rest.permissions || {},
+          eventTitle,
+          eventDate,
+          eventLocation: venueAddress,
+          organizerName: rest.organizerName || "Eventzone Organizing Team",
+          message: rest.message || rest.notes || "",
+          inviteUrl: rest.inviteUrl || "",
+          eventId,
+          ...rest
+        });
+        break;
+      }
 
       default:
         return NextResponse.json({ error: `Unknown email type: ${type}` }, { status: 400 });

@@ -345,19 +345,68 @@ export default function EventPublicLandingPage({
   // Real event properties with default fallbacks
   const title = effectiveDetails?.title || "Eventzone Summit";
   const tagline = effectiveDetails?.tagline || effectiveDetails?.description || "Premier International Technology & Innovation Summit";
-  const location = effectiveDetails?.venueName || effectiveDetails?.venue_name || effectiveDetails?.location || "Algiers Exhibition Center";
+  const type = effectiveDetails?.type || "Hybrid";
+
+  // Location formatting: Country + city + venue name
+  const eventCountry = effectiveDetails?.country || "Algeria";
+  const eventCity = effectiveDetails?.city || "Algiers";
+  const rawVenue = effectiveDetails?.venueName || effectiveDetails?.venue_name || "";
+  
+  let cleanVenue = String(rawVenue || "").trim();
+  const tokensToClean = [eventCountry, eventCity].filter(Boolean).map(t => String(t).trim()).filter(Boolean);
+  let changedTokens = true;
+  let cleanIters = 0;
+  while (changedTokens && cleanIters < 15) {
+    changedTokens = false;
+    cleanIters++;
+    for (const t of tokensToClean) {
+      const esc = t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const frontRegex = new RegExp(`^${esc}[,\\s]+`, 'i');
+      const backRegex = new RegExp(`[,\\s]+${esc}$`, 'i');
+      if (frontRegex.test(cleanVenue)) {
+        cleanVenue = cleanVenue.replace(frontRegex, '').trim();
+        changedTokens = true;
+      }
+      if (backRegex.test(cleanVenue)) {
+        cleanVenue = cleanVenue.replace(backRegex, '').trim();
+        changedTokens = true;
+      }
+    }
+  }
+
+  let location = "";
+  if (type === "Virtual") {
+    location = effectiveDetails?.virtualPlatform 
+      ? `${effectiveDetails.virtualPlatform} (Online)` 
+      : "Online Virtual Event";
+  } else if (effectiveDetails?.scheduleMode === "multiple" && Array.isArray(effectiveDetails?.multiLocations) && effectiveDetails.multiLocations.length > 1) {
+    const firstStop = effectiveDetails.multiLocations[0];
+    const firstStopParts = [firstStop?.country, firstStop?.city, firstStop?.venueName || firstStop?.name].filter(Boolean);
+    location = `${effectiveDetails.multiLocations.length} Locations (${firstStopParts.join(", ")})`;
+  } else {
+    // Format: Country + city + venue name
+    const parts = [eventCountry, eventCity, cleanVenue].filter(Boolean);
+    const uniqueParts = parts.filter((part, idx) => parts.indexOf(part) === idx);
+    if (uniqueParts.length > 0) {
+      location = uniqueParts.join(", ");
+    } else {
+      location = effectiveDetails?.location || "Algeria, Algiers";
+    }
+    if (type === "Hybrid") {
+      location += " (Hybrid)";
+    }
+  }
   const startDate = effectiveDetails?.startDate || "2026-10-12";
   const endDate = effectiveDetails?.endDate || "2026-10-14";
   const category = effectiveDetails?.category || "Technology & Software";
-  const type = effectiveDetails?.type || "Hybrid";
   const banner = effectiveDetails?.banner || effectiveDetails?.cover_url || "";
-  const organizerName = effectiveDetails?.organizerName || effectiveDetails?.organizer_name || effectiveDetails?.organization || "Eventzone";
-  const organization = organizerName;
-  const hostName = effectiveDetails?.hostName || effectiveDetails?.host_name || organizerName;
-  const organizerLogo = effectiveDetails?.organizerLogo || effectiveDetails?.organizer_logo || effectiveDetails?.eventLogo || effectiveDetails?.logo || "";
-  const contactEmail = effectiveDetails?.contactEmail || effectiveDetails?.contact_email || effectiveDetails?.hostEmail || effectiveDetails?.host_email || "";
-  const contactPhone = effectiveDetails?.contactPhone || effectiveDetails?.contact_phone || "";
-  const websiteUrl = effectiveDetails?.websiteUrl || effectiveDetails?.website_url || "";
+  const organizerName = effectiveDetails?.organizerName || effectiveDetails?.organizer_name || effectiveDetails?.organization || effectiveDetails?.hostName || effectiveDetails?.host_name || effectiveDetails?.portal_settings?.organizerName || effectiveDetails?.portal_settings?.organization || "Eventzone";
+  const organization = effectiveDetails?.organization || organizerName;
+  const hostName = effectiveDetails?.hostName || effectiveDetails?.host_name || effectiveDetails?.portal_settings?.hostName || organizerName;
+  const organizerLogo = effectiveDetails?.organizerLogo || effectiveDetails?.organizer_logo || effectiveDetails?.hostLogo || effectiveDetails?.host_logo || effectiveDetails?.portal_settings?.organizerLogo || effectiveDetails?.eventLogo || effectiveDetails?.logo || "";
+  const contactEmail = effectiveDetails?.contactEmail || effectiveDetails?.contact_email || effectiveDetails?.hostEmail || effectiveDetails?.host_email || effectiveDetails?.portal_settings?.contactEmail || "";
+  const contactPhone = effectiveDetails?.contactPhone || effectiveDetails?.contact_phone || effectiveDetails?.portal_settings?.contactPhone || "";
+  const websiteUrl = effectiveDetails?.websiteUrl || effectiveDetails?.website_url || effectiveDetails?.portal_settings?.websiteUrl || "";
 
   // ─── HERO MEDIA SHOWCASE & PHOTO CAROUSEL STATE ───────────────────────────
   const youtubeUrl = 
@@ -1114,7 +1163,7 @@ export default function EventPublicLandingPage({
                 badgeSettings: selectedTicket?.badgeSettings || eventDetails?.badgeSettings || {},
                 attendeePhoto: badgePhotoUrl || currentUser?.avatar || "",
                 requiresApproval: Boolean(selectedTicket?.requiresApproval || selectedTicket?.requires_approval),
-                organizerName: eventDetails?.organizerName || "Eventzone Platform",
+                organizerName: eventDetails?.organizerName || organizerName || "Eventzone",
               }),
             }).catch((emailErr) => console.warn("Failed to dispatch confirmation email:", emailErr));
           }
@@ -1650,9 +1699,13 @@ export default function EventPublicLandingPage({
             {eventDetails?.description ? (
               eventDetails.description.includes("<") && eventDetails.description.includes(">") ? (
                 <div 
-                  className="text-slate-600 text-sm sm:text-base leading-relaxed font-normal space-y-2.5 [&_h1]:text-2xl [&_h1]:font-black [&_h1]:text-slate-900 [&_h1]:my-2 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-slate-900 [&_h2]:my-2 [&_h3]:text-base [&_h3]:font-bold [&_h3]:text-slate-900 [&_h3]:my-1.5 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-1.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-1.5 [&_blockquote]:border-l-4 [&_blockquote]:border-blue-500 [&_blockquote]:pl-3 [&_blockquote]:italic [&_blockquote]:my-2 [&_blockquote]:text-slate-600"
+                  style={{
+                    fontFamily: "var(--font-plus-jakarta-sans), 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+                  }}
+                  className="description-rendered-content font-sans text-slate-600 text-sm sm:text-base leading-relaxed font-normal space-y-2.5 [&_*]:font-sans [&_p]:font-sans [&_div]:font-sans [&_span]:font-sans [&_li]:font-sans [&_h1]:font-sans [&_h1]:text-2xl [&_h1]:font-black [&_h1]:text-slate-900 [&_h1]:my-2 [&_h2]:font-sans [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-slate-900 [&_h2]:my-2 [&_h3]:font-sans [&_h3]:text-base [&_h3]:font-bold [&_h3]:text-slate-900 [&_h3]:my-1.5 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-1.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-1.5 [&_blockquote]:border-l-4 [&_blockquote]:border-blue-500 [&_blockquote]:pl-3 [&_blockquote]:italic [&_blockquote]:my-2 [&_blockquote]:text-slate-600 [&_blockquote]:font-sans"
                   dangerouslySetInnerHTML={{ 
                     __html: eventDetails.description
+                      .replace(/font-family:[^;"]*;?/gi, "")
                       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
                       .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, "")
                       .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, "")
@@ -1662,12 +1715,22 @@ export default function EventPublicLandingPage({
                   }}
                 />
               ) : (
-                <p className="text-slate-600 text-sm sm:text-base leading-relaxed font-normal whitespace-pre-line">
+                <p 
+                  style={{
+                    fontFamily: "var(--font-plus-jakarta-sans), 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+                  }}
+                  className="font-sans text-slate-600 text-sm sm:text-base leading-relaxed font-normal whitespace-pre-line"
+                >
                   {eventDetails.description}
                 </p>
               )
             ) : (
-              <p className="text-slate-600 text-sm sm:text-base leading-relaxed font-normal">
+              <p 
+                style={{
+                  fontFamily: "var(--font-plus-jakarta-sans), 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+                }}
+                className="font-sans text-slate-600 text-sm sm:text-base leading-relaxed font-normal"
+              >
                 {t("event.defaultDescription", "This premier summit gathers international executives, technical pioneers, and regulatory leaders for in-depth keynote presentations, exhibition showcases, and high-level networking sessions.")}
               </p>
             )}
