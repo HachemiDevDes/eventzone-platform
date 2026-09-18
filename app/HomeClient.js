@@ -5402,6 +5402,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
         onSaveMember={handleSaveTeamMember}
         activeEventId={activeEventId}
         eventTitle={eventDetails?.title || "Eventzone Summit"}
+        isReadOnly={!canEditModule("my-team", effectivePermissions)}
       />
 
       {/* Company / Organization / Sponsor / Exhibitor Slide-Over Drawer */}
@@ -5410,6 +5411,14 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
         onClose={closeModal}
         mode={activeModalType || "org"}
         item={editingItem}
+        isReadOnly={
+          activeModalType === "sponsor"
+            ? !canEditModule("sponsors", effectivePermissions)
+            : activeModalType === "exhibitor"
+            ? !canEditModule("exhibitors", effectivePermissions)
+            : !canEditModule("organizations", effectivePermissions)
+        }
+        effectivePermissions={effectivePermissions}
         organizations={organizations}
         sponsors={sponsors}
         exhibitors={exhibitors}

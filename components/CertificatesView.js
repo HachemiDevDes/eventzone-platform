@@ -62,6 +62,7 @@ import {
   deleteCertificateTemplate
 } from "../lib/db";
 import { CertificatesSkeleton } from "./SkeletonLoaders";
+import { canEditModule } from "../lib/permissions";
 
 const ACCENT_COLORS = [
   { name: "Executive Gold", color: "#D4AF37", bg: "bg-amber-500" },
@@ -126,6 +127,7 @@ export default function CertificatesView({
   onSwitchView,
 }) {
   const { t, lang, isRTL } = useLanguage();
+  const canEdit = canEditModule("certificates", state?.effectivePermissions);
 
   const {
     eventDetails = {},
@@ -509,6 +511,7 @@ export default function CertificatesView({
 
   // Update Template field with instant local auto-save
   const handleUpdateActiveTemplate = (field, value) => {
+    if (!canEdit) return;
     setActiveTemplate(prev => {
       const next = {
         ...prev,
@@ -525,6 +528,7 @@ export default function CertificatesView({
 
   // Save Template permanently
   const handleSaveTemplate = async () => {
+    if (!canEdit) return;
     setIsSavingTemplate(true);
     try {
       const isExistingCustom = activeTemplate.isCustom || !defaultTemplateIds.has(activeTemplate.id);
@@ -578,6 +582,7 @@ export default function CertificatesView({
   }, [savedTemplates, defaultTemplateIds]);
 
   const handleOpenSaveCustomModal = (existingTpl = null) => {
+    if (!canEdit) return;
     if (existingTpl) {
       setEditingTemplateId(existingTpl.id);
       setCustomTemplateName(existingTpl.name || "Custom Certificate Template");
@@ -591,7 +596,7 @@ export default function CertificatesView({
   };
 
   const handleConfirmSaveCustomTemplate = async () => {
-    if (!customTemplateName.trim()) return;
+    if (!canEdit || !customTemplateName.trim()) return;
     try {
       const isEditing = !!editingTemplateId;
       const targetTpl = isEditing ? savedTemplates.find(t => t.id === editingTemplateId) : null;
@@ -629,6 +634,7 @@ export default function CertificatesView({
 
   const handleOverwriteCustomTemplate = async (tplId, e) => {
     e?.stopPropagation();
+    if (!canEdit) return;
     const existing = savedTemplates.find(t => t.id === tplId);
     if (!existing) return;
     try {
@@ -654,6 +660,7 @@ export default function CertificatesView({
 
   const handleDeleteSavedTemplate = async (tplId, e) => {
     e?.stopPropagation();
+    if (!canEdit) return;
     const target = savedTemplates.find(t => t.id === tplId);
     const name = target?.name || "this template";
     if (!window.confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) return;
@@ -674,7 +681,7 @@ export default function CertificatesView({
 
   // Signatory Helpers
   const handleAddSignatory = () => {
-    if ((activeTemplate.signatories || []).length >= 3) return;
+    if (!canEdit || (activeTemplate.signatories || []).length >= 3) return;
     const newSig = {
       id: `sig-${Date.now()}`,
       name: "New Signatory",
@@ -688,6 +695,7 @@ export default function CertificatesView({
   };
 
   const handleUpdateSignatory = (index, field, value) => {
+    if (!canEdit) return;
     const sigs = [...(activeTemplate.signatories || [])];
     if (sigs[index]) {
       sigs[index] = { ...sigs[index], [field]: value };
@@ -696,12 +704,14 @@ export default function CertificatesView({
   };
 
   const handleDeleteSignatory = (index) => {
+    if (!canEdit) return;
     const sigs = (activeTemplate.signatories || []).filter((_, i) => i !== index);
     handleUpdateActiveTemplate("signatories", sigs);
   };
 
   // Custom Floating Overlay Elements Handlers
   const handleAddCustomTextElement = () => {
+    if (!canEdit) return;
     const newId = `el_txt_${Date.now()}`;
     const newEl = {
       id: newId,
@@ -723,6 +733,7 @@ export default function CertificatesView({
   };
 
   const handleAddCustomImageElement = () => {
+    if (!canEdit) return;
     const newId = `el_img_${Date.now()}`;
     const newEl = {
       id: newId,
@@ -739,6 +750,7 @@ export default function CertificatesView({
   };
 
   const handleUpdateCustomElement = (id, field, value) => {
+    if (!canEdit) return;
     const elements = (activeTemplate.customElements || []).map(el => {
       if (el.id === id) {
         return { ...el, [field]: value };
@@ -749,12 +761,14 @@ export default function CertificatesView({
   };
 
   const handleDeleteCustomElement = (id) => {
+    if (!canEdit) return;
     const elements = (activeTemplate.customElements || []).filter(el => el.id !== id);
     handleUpdateActiveTemplate("customElements", elements);
     if (expandedElementId === id) setExpandedElementId(null);
   };
 
   const handleDuplicateCustomElement = (id) => {
+    if (!canEdit) return;
     const target = (activeTemplate.customElements || []).find(el => el.id === id);
     if (!target) return;
     const duplicatedId = `el_${target.type}_${Date.now()}`;
@@ -791,6 +805,7 @@ export default function CertificatesView({
 
   // Print Handlers
   const handlePrintSingle = async (rec) => {
+    if (!canEdit) return;
     await printA4CertificatesDocument({
       recipients: [rec],
       template: activeTemplate,
@@ -799,6 +814,7 @@ export default function CertificatesView({
   };
 
   const handlePrintBatchSelected = async () => {
+    if (!canEdit) return;
     const listToPrint = selectedRecipientIds.size > 0
       ? filteredRecipients.filter(r => selectedRecipientIds.has(r.id))
       : filteredRecipients;
@@ -824,7 +840,7 @@ export default function CertificatesView({
   //  EMAIL CERTIFICATE HANDLERS
   // ─────────────────────────────────────────────
   const handleOpenEmailModal = (rec) => {
-    if (!rec) return;
+    if (!canEdit || !rec) return;
     setEmailTargetRecipient(rec);
     setEmailRecipientAddress(rec.email || "");
     setEmailSubject(`Your ${activeTemplate.certificateTitle || "Certificate of Attendance"} for ${eventDetails?.title || "the event"}`);
@@ -858,6 +874,7 @@ export default function CertificatesView({
 
   const handleSendSingleEmail = async (e) => {
     if (e) e.preventDefault();
+    if (!canEdit) return;
     const destEmail = (emailRecipientAddress || emailTargetRecipient?.email || "").trim();
     if (!destEmail || !destEmail.includes("@")) {
       setEmailSendStatus("error");
@@ -933,6 +950,7 @@ export default function CertificatesView({
   };
 
   const handleOpenBatchEmailModal = () => {
+    if (!canEdit) return;
     const list = selectedRecipientIds.size > 0
       ? filteredRecipients.filter(r => selectedRecipientIds.has(r.id))
       : filteredRecipients;
@@ -945,6 +963,7 @@ export default function CertificatesView({
   };
 
   const handleSendBatchEmails = async () => {
+    if (!canEdit) return;
     const list = selectedRecipientIds.size > 0
       ? filteredRecipients.filter(r => selectedRecipientIds.has(r.id))
       : filteredRecipients;
@@ -1066,7 +1085,7 @@ export default function CertificatesView({
   // Add Custom Recipient Submit
   const handleAddCustomRecipientSubmit = (e) => {
     e.preventDefault();
-    if (!newRecName.trim()) return;
+    if (!canEdit || !newRecName.trim()) return;
     const newCust = {
       id: `cust-${Date.now()}`,
       name: newRecName.trim(),
@@ -1087,7 +1106,7 @@ export default function CertificatesView({
   // Import CSV Submit
   const handleImportCsvSubmit = (e) => {
     e.preventDefault();
-    if (!csvText.trim()) return;
+    if (!canEdit || !csvText.trim()) return;
     const lines = csvText.split("\n").map(l => l.trim()).filter(Boolean);
     const parsed = [];
     
@@ -1115,6 +1134,7 @@ export default function CertificatesView({
 
   // Export CSV
   const handleExportCSV = () => {
+    if (!canEdit) return;
     let rows = [["Recipient Name", "Role", "Company / Organization", "Job Title", "Email", "Certificate ID", "Issue Date"]];
     filteredRecipients.forEach(r => {
       rows.push([
@@ -1164,48 +1184,59 @@ export default function CertificatesView({
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
-          <button
-            onClick={handleSaveTemplate}
-            disabled={isSavingTemplate}
-            className={`font-bold py-2 px-4 rounded-xl text-xs border shadow-2xs transition-all cursor-pointer ${
-              templateSavedFeedback
-                ? "bg-emerald-50 border-emerald-300 text-emerald-700"
-                : "bg-white hover:bg-slate-50 text-slate-800 border-slate-200"
-            }`}
-          >
-            <span>{isSavingTemplate ? t("cert.savingBtn", "Saving...") : templateSavedFeedback ? t("cert.savedBtn", "Saved!") : t("cert.saveTemplateBtn", "Save Template")}</span>
-          </button>
-
-          <button
-            onClick={handleOpenBatchEmailModal}
-            disabled={isBatchSendingEmail || isBatchPrinting}
-            className="bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 font-bold py-2 px-3.5 sm:px-4 rounded-xl text-xs border border-slate-200 shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
-            title={t("cert.sendEmailTooltip", "Send Certificates via Email")}
-          >
-            <Mail size={14} className="text-blue-600" />
-            <span>
-              {selectedRecipientIds.size > 0 ? (
-                <span>{t("cert.emailSelectedBtn", "Email Selected")} (<bdi dir="ltr">{selectedRecipientIds.size}</bdi>)</span>
-              ) : (
-                <span>{t("cert.emailAllBtn", "Email All")} (<bdi dir="ltr">{filteredRecipients.length}</bdi>)</span>
-              )}
+          {!canEdit && (
+            <span className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 font-bold text-xs border border-slate-200/80 flex items-center gap-1.5 shadow-xs">
+              <Eye size={13} className="text-slate-500" />
+              <span>Viewer Mode</span>
             </span>
-          </button>
+          )}
 
-          <button
-            onClick={handlePrintBatchSelected}
-            disabled={isBatchPrinting}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 sm:px-4.5 rounded-xl text-xs shadow-xs transition-all flex items-center gap-2 cursor-pointer"
-          >
-            <Printer size={15} />
-            <span>
-              {selectedRecipientIds.size > 0 ? (
-                <span>{t("cert.printSelectedBtn", "Print Selected")} (<bdi dir="ltr">{selectedRecipientIds.size}</bdi>)</span>
-              ) : (
-                <span>{t("cert.batchPrintAllBtn", "Batch Print All")} (<bdi dir="ltr">{filteredRecipients.length}</bdi>)</span>
-              )}
-            </span>
-          </button>
+          {canEdit && (
+            <>
+              <button
+                onClick={handleSaveTemplate}
+                disabled={isSavingTemplate}
+                className={`font-bold py-2 px-4 rounded-xl text-xs border shadow-2xs transition-all cursor-pointer ${
+                  templateSavedFeedback
+                    ? "bg-emerald-50 border-emerald-300 text-emerald-700"
+                    : "bg-white hover:bg-slate-50 text-slate-800 border-slate-200"
+                }`}
+              >
+                <span>{isSavingTemplate ? t("cert.savingBtn", "Saving...") : templateSavedFeedback ? t("cert.savedBtn", "Saved!") : t("cert.saveTemplateBtn", "Save Template")}</span>
+              </button>
+
+              <button
+                onClick={handleOpenBatchEmailModal}
+                disabled={isBatchSendingEmail || isBatchPrinting}
+                className="bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 font-bold py-2 px-3.5 sm:px-4 rounded-xl text-xs border border-slate-200 shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
+                title={t("cert.sendEmailTooltip", "Send Certificates via Email")}
+              >
+                <Mail size={14} className="text-blue-600" />
+                <span>
+                  {selectedRecipientIds.size > 0 ? (
+                    <span>{t("cert.emailSelectedBtn", "Email Selected")} (<bdi dir="ltr">{selectedRecipientIds.size}</bdi>)</span>
+                  ) : (
+                    <span>{t("cert.emailAllBtn", "Email All")} (<bdi dir="ltr">{filteredRecipients.length}</bdi>)</span>
+                  )}
+                </span>
+              </button>
+
+              <button
+                onClick={handlePrintBatchSelected}
+                disabled={isBatchPrinting}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 sm:px-4.5 rounded-xl text-xs shadow-xs transition-all flex items-center gap-2 cursor-pointer"
+              >
+                <Printer size={15} />
+                <span>
+                  {selectedRecipientIds.size > 0 ? (
+                    <span>{t("cert.printSelectedBtn", "Print Selected")} (<bdi dir="ltr">{selectedRecipientIds.size}</bdi>)</span>
+                  ) : (
+                    <span>{t("cert.batchPrintAllBtn", "Batch Print All")} (<bdi dir="ltr">{filteredRecipients.length}</bdi>)</span>
+                  )}
+                </span>
+              </button>
+            </>
+          )}
         </div>
       </header>
 
@@ -1314,6 +1345,14 @@ export default function CertificatesView({
         {/* LEFT COLUMN: Editor Tabs & Customization Panels (5 cols) */}
         <div className="lg:col-span-5 bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-xs space-y-5 lg:max-h-[calc(100vh-140px)] lg:overflow-y-auto custom-scrollbar">
           
+          {!canEdit && (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-2 text-xs text-amber-800 font-semibold">
+              <Eye size={15} className="text-amber-600 shrink-0" />
+              <span>Viewing in Read-Only Mode. Template customization, printing, and email dispatch are disabled.</span>
+            </div>
+          )}
+
+          <fieldset disabled={!canEdit} className="space-y-5">
           {/* Sub-Tabs: Content | Styling | Signatures | Templates */}
           <div className="flex items-center border-b border-slate-200 overflow-x-auto -mx-5 -mt-5 px-3 sm:-mx-6 sm:-mt-6 sm:px-4 pt-1">
             <button

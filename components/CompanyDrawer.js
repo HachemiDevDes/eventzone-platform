@@ -30,13 +30,15 @@ import {
   Ticket,
   ChevronRight,
   Receipt,
-  CreditCard
+  CreditCard,
+  Eye
 } from 'lucide-react';
 import { useLanguage } from '../lib/i18n';
 import SearchableSelect from './SearchableSelect';
 import CountryPhoneInput from './CountryPhoneInput';
 import FormImageUploader from './FormImageUploader';
 import { getLocalizedIndustry } from '../lib/constants';
+import { canEditModule } from '../lib/permissions';
 
 // Uses getLocalizedIndustry from lib/constants
 
@@ -137,6 +139,8 @@ export default function CompanyDrawer({
   onClose,
   mode = "org", // "org" | "sponsor" | "exhibitor"
   item = null,
+  isReadOnly: propReadOnly = false,
+  effectivePermissions = null,
   organizations = [],
   sponsors = [],
   exhibitors = [],
@@ -186,6 +190,13 @@ export default function CompanyDrawer({
   // Active drawer mode state (can switch within the drawer)
   const [currentMode, setCurrentMode] = useState(mode || "org");
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Permission evaluation for viewer role
+  const canEdit = canEditModule(
+    currentMode === "sponsor" ? "sponsors" : currentMode === "exhibitor" ? "exhibitors" : "organizations",
+    effectivePermissions
+  );
+  const isReadOnly = Boolean(propReadOnly || !canEdit);
 
   // Organization fields
   const [orgName, setOrgName] = useState("");
@@ -511,7 +522,7 @@ export default function CompanyDrawer({
 
   // Handlers for personnel assignment
   const handleAssignSelectedAttendee = async () => {
-    if (!selectedAttendeeIdToAssign) return;
+    if (isReadOnly || !selectedAttendeeIdToAssign) return;
     if (isQuotaReached) {
       setErrorMessage(`Cannot assign more personnel. Staff badge quota reached (${assignedPersonnel.length} of ${maxStaffBadges}). Increase the Staff Badge Count to assign more.`);
       return;
@@ -546,6 +557,7 @@ export default function CompanyDrawer({
 
   const handleRegisterPersonnel = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
+    if (isReadOnly) return;
     if (!newStaffName.trim() || !newStaffEmail.trim()) {
       setErrorMessage("Please provide a full name and email for the new personnel.");
       return;
@@ -580,6 +592,7 @@ export default function CompanyDrawer({
   };
 
   const handleRemovePersonnel = async (attendeeId) => {
+    if (isReadOnly) return;
     if (confirm("Remove this attendee from company personnel?")) {
       try {
         if (onRemoveAttendeeFromCompany) {
@@ -1037,6 +1050,7 @@ export default function CompanyDrawer({
   // Submission handler
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isReadOnly) return;
     setErrorMessage("");
 
     if (currentMode === "sponsor" && !item && !selectedOrgIdForSponsor) {
@@ -1224,7 +1238,7 @@ export default function CompanyDrawer({
   };
 
   const handleDeleteCompany = async () => {
-    if (!item?.id) return;
+    if (isReadOnly || !item?.id) return;
     const isOrg = currentMode === "org";
     const isSponsor = currentMode === "sponsor";
     const isExhibitor = currentMode === "exhibitor";
@@ -1274,11 +1288,19 @@ export default function CompanyDrawer({
           {/* Header */}
           <header className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
             <div>
-              <h3 className="text-base font-extrabold text-slate-900 leading-tight">
-                {currentMode === "org" && (item ? t("drawer.editCompany", "Edit Organization") : t("table.addCompany", "Add Partner Organization"))}
-                {currentMode === "sponsor" && (item ? t("drawer.editSponsor", "Edit Sponsor") : t("table.addSponsor", "Add Event Sponsor"))}
-                {currentMode === "exhibitor" && (item ? t("drawer.editExhibitor", "Edit Exhibitor") : t("table.addExhibitor", "Add Event Exhibitor"))}
-              </h3>
+              <div className="flex items-center gap-2.5">
+                <h3 className="text-base font-extrabold text-slate-900 leading-tight">
+                  {currentMode === "org" && (item ? t("drawer.editCompany", "Edit Organization") : t("table.addCompany", "Add Partner Organization"))}
+                  {currentMode === "sponsor" && (item ? t("drawer.editSponsor", "Edit Sponsor") : t("table.addSponsor", "Add Event Sponsor"))}
+                  {currentMode === "exhibitor" && (item ? t("drawer.editExhibitor", "Edit Exhibitor") : t("table.addExhibitor", "Add Event Exhibitor"))}
+                </h3>
+                {isReadOnly && (
+                  <span className="px-2.5 py-0.5 rounded-lg bg-slate-100 text-slate-600 font-bold text-[11px] border border-slate-200/80 flex items-center gap-1.5 shadow-2xs">
+                    <Eye size={12} className="text-slate-500" />
+                    <span>Viewer Mode</span>
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-slate-500 font-medium mt-0.5">
                 {currentMode === "org" && t("drawer.manageCompanyProfile", "Manage company profile, contact liaison, and partner assets")}
                 {currentMode === "sponsor" && t("drawer.manageSponsorProfile", "Configure sponsorship package, branding tier, and contact liaison")}
@@ -1372,6 +1394,14 @@ export default function CompanyDrawer({
           {/* Form Content Area */}
           <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
             
+            {/* Read-Only Mode Notification Banner */}
+            {isReadOnly && (
+              <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-2.5 text-xs text-amber-800 font-semibold shrink-0">
+                <Info size={16} className="text-amber-600 shrink-0" />
+                <span>Viewing in Read-Only Mode. Modifications, uploads, and deletions are disabled for your role.</span>
+              </div>
+            )}
+
             {/* Error Notification */}
             {errorMessage && (
               <div className="p-3.5 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-2.5 text-xs text-rose-700 font-semibold">
@@ -1380,6 +1410,7 @@ export default function CompanyDrawer({
               </div>
             )}
 
+            <fieldset disabled={isReadOnly} className="contents">
             {/* ========================================================================= */}
             {/* TAB 1: SHOWCASE & PROFILE / SPONSOR DETAILS / EXHIBITOR DETAILS          */}
             {/* ========================================================================= */}
@@ -1392,6 +1423,7 @@ export default function CompanyDrawer({
                     <FormImageUploader
                       value={orgLogo}
                       onChange={(url) => setOrgLogo(url)}
+                      disabled={isReadOnly}
                       label={t("drawer.orgLogo", "Company / Organization Logo")}
                       placeholder={t("drawer.logoUploadPlaceholder", "Upload official high-resolution brand logo (JPG, PNG, SVG)")}
                     />
@@ -2093,62 +2125,64 @@ export default function CompanyDrawer({
                 )}
 
                 {/* Section 1: Assign from registered attendees */}
-                <div className={`p-4 rounded-2xl flex flex-col gap-4 transition-all ${
-                  isQuotaReached ? "bg-slate-50/70 border border-slate-200/80 opacity-70" : "bg-blue-50/40 border border-blue-100"
-                }`}>
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-bold text-slate-900">{t("drawer.assignPersonnelTitle", "Assign Registered Attendee to Personnel")}</h4>
-                    {maxStaffBadges !== null && (
-                      <span className="text-[10px] font-bold text-slate-500">
-                        {t("drawer.quotaLabel", "Quota")}: <bdi dir="ltr"><span className="font-extrabold text-blue-700">{assignedPersonnel.length}</span> / {maxStaffBadges}</bdi> {t("drawer.badges", "Badges")}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex flex-col gap-3">
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                        Select Attendee
-                      </label>
-                      <SearchableSelect
-                        value={selectedAttendeeIdToAssign}
-                        onChange={(val) => setSelectedAttendeeIdToAssign(val)}
-                        options={unassignedAttendeesOptions}
-                        placeholder={isQuotaReached ? t("drawer.badgeLimitReached", "-- Badge limit reached ({max} max) --", { max: maxStaffBadges }) : t("drawer.chooseStaffPlaceholder", "-- Choose a registered attendee to add as staff --")}
-                        searchPlaceholder="Search attendee by name, email, or company..."
-                        disabled={isQuotaReached}
-                      />
+                {!isReadOnly && (
+                  <div className={`p-4 rounded-2xl flex flex-col gap-4 transition-all ${
+                    isQuotaReached ? "bg-slate-50/70 border border-slate-200/80 opacity-70" : "bg-blue-50/40 border border-blue-100"
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-bold text-slate-900">{t("drawer.assignPersonnelTitle", "Assign Registered Attendee to Personnel")}</h4>
+                      {maxStaffBadges !== null && (
+                        <span className="text-[10px] font-bold text-slate-500">
+                          {t("drawer.quotaLabel", "Quota")}: <bdi dir="ltr"><span className="font-extrabold text-blue-700">{assignedPersonnel.length}</span> / {maxStaffBadges}</bdi> {t("drawer.badges", "Badges")}
+                        </span>
+                      )}
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-3">
                       <div className="flex flex-col gap-1.5">
                         <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                          Role / Title in Company
+                          Select Attendee
                         </label>
-                        <input
-                          type="text"
-                          value={assignPersonnelRole}
-                          onChange={(e) => setAssignPersonnelRole(e.target.value)}
-                          placeholder={t("drawer.rolePlaceholder", "e.g. Booth Manager, Senior Engineer, CEO")}
+                        <SearchableSelect
+                          value={selectedAttendeeIdToAssign}
+                          onChange={(val) => setSelectedAttendeeIdToAssign(val)}
+                          options={unassignedAttendeesOptions}
+                          placeholder={isQuotaReached ? t("drawer.badgeLimitReached", "-- Badge limit reached ({max} max) --", { max: maxStaffBadges }) : t("drawer.chooseStaffPlaceholder", "-- Choose a registered attendee to add as staff --")}
+                          searchPlaceholder="Search attendee by name, email, or company..."
                           disabled={isQuotaReached}
-                          className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 bg-white disabled:bg-slate-100 disabled:text-slate-400"
                         />
                       </div>
 
-                      <div className="flex items-end">
-                        <button
-                          type="button"
-                          onClick={handleAssignSelectedAttendee}
-                          disabled={!selectedAttendeeIdToAssign || isAssigning || isQuotaReached}
-                          className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                          {isAssigning ? <Loader2 size={14} className="animate-spin" /> : <UserCheck size={14} />}
-                          <span>{t("drawer.assignAttendeeBtn", "Assign Attendee")}</span>
-                        </button>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                            Role / Title in Company
+                          </label>
+                          <input
+                            type="text"
+                            value={assignPersonnelRole}
+                            onChange={(e) => setAssignPersonnelRole(e.target.value)}
+                            placeholder={t("drawer.rolePlaceholder", "e.g. Booth Manager, Senior Engineer, CEO")}
+                            disabled={isQuotaReached}
+                            className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 bg-white disabled:bg-slate-100 disabled:text-slate-400"
+                          />
+                        </div>
+
+                        <div className="flex items-end">
+                          <button
+                            type="button"
+                            onClick={handleAssignSelectedAttendee}
+                            disabled={!selectedAttendeeIdToAssign || isAssigning || isQuotaReached}
+                            className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                          >
+                            {isAssigning ? <Loader2 size={14} className="animate-spin" /> : <UserCheck size={14} />}
+                            <span>{t("drawer.assignAttendeeBtn", "Assign Attendee")}</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                )}
 
                 {/* Section 2: Current Assigned Personnel List */}
                 <div className="flex flex-col gap-3">
@@ -2244,14 +2278,16 @@ export default function CompanyDrawer({
                                 </span>
                               )}
 
-                              <button
-                                type="button"
-                                onClick={() => handleRemovePersonnel(person.id)}
-                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                                title={t("drawer.removePersonnel", "Remove from Company Personnel")}
-                              >
-                                <Trash2 size={14} />
-                              </button>
+                              {!isReadOnly && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemovePersonnel(person.id)}
+                                  className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                  title={t("drawer.removePersonnel", "Remove from Company Personnel")}
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              )}
                             </div>
                           </div>
                         );
@@ -2261,6 +2297,7 @@ export default function CompanyDrawer({
                 </div>
               </div>
             )}
+            </fieldset>
 
             {/* Sticky Action Footer */}
             <div className="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between gap-3 bg-white">
@@ -2270,10 +2307,10 @@ export default function CompanyDrawer({
                   onClick={onClose}
                   className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold text-xs transition-colors cursor-pointer"
                 >
-                  {t("common.cancel", "Cancel")}
+                  {isReadOnly ? t("common.close", "Close") : t("common.cancel", "Cancel")}
                 </button>
 
-                {item?.id && (
+                {!isReadOnly && item?.id && (
                   <button
                     type="button"
                     onClick={handleDeleteCompany}
@@ -2290,25 +2327,27 @@ export default function CompanyDrawer({
                 )}
               </div>
 
-              <button
-                type="submit"
-                disabled={isSubmitting || isDeleting}
-                className="px-6 py-2.5 rounded-xl text-white font-bold text-xs shadow-md bg-blue-600 hover:bg-blue-700 shadow-blue-100 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 size={14} className="animate-spin" />
-                    <span>{t("common.saving", "Saving Entry...")}</span>
-                  </>
-                ) : (
-                  <>
-                    <Check size={14} />
-                    <span>
-                      {item ? t("common.saveChanges", "Save Changes") : t("common.save", "Save")}
-                    </span>
-                  </>
-                )}
-              </button>
+              {!isReadOnly && (
+                <button
+                  type="submit"
+                  disabled={isSubmitting || isDeleting}
+                  className="px-6 py-2.5 rounded-xl text-white font-bold text-xs shadow-md bg-blue-600 hover:bg-blue-700 shadow-blue-100 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
+                      <span>{t("common.saving", "Saving Entry...")}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check size={14} />
+                      <span>
+                        {item ? t("common.saveChanges", "Save Changes") : t("common.save", "Save")}
+                      </span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
 
           </form>

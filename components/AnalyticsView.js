@@ -7,11 +7,12 @@ import {
   Printer, Filter, RefreshCw, Calendar, PieChart, Layers, Store, 
   Truck, CheckSquare, Clock, ArrowUpRight, HelpCircle, UserCheck, 
   AlertCircle, ChevronRight, Share2, Compass, ShieldCheck, Utensils,
-  Maximize2, ArrowRight, Check, Package, Plane, AlertTriangle
+  Maximize2, ArrowRight, Check, Package, Plane, AlertTriangle, Eye
 } from "lucide-react";
 import SearchableSelect from "./SearchableSelect";
 import { useLanguage } from "../lib/i18n";
 import { AnalyticsSkeleton } from "./SkeletonLoaders";
+import { canEditModule } from "../lib/permissions";
 
 /**
  * AnalyticsView - Eventzone Intelligence Command Center
@@ -25,6 +26,7 @@ export default function AnalyticsView({
   onOpenModal 
 }) {
   const { t, isRTL } = useLanguage();
+  const canEdit = canEditModule("analytics", state?.effectivePermissions);
 
   // Extract all data domains from state
   const {
@@ -679,6 +681,7 @@ export default function AnalyticsView({
   // 10. EXPORT REPORT GENERATOR (CSV & EXECUTIVE PRINT)
   // ─────────────────────────────────────────────────────────────────────────────
   const handleExportCSV = () => {
+    if (!canEdit) return;
     const listToExport = filteredAttendees.length > 0 ? filteredAttendees : attendees;
     if (listToExport.length === 0) {
       alert("No attendee records to export.");
@@ -720,6 +723,7 @@ export default function AnalyticsView({
   };
 
   const handlePrintExecutiveReport = () => {
+    if (!canEdit) return;
     const printWindow = window.open("", "_blank", "width=1000,height=900");
     if (!printWindow) {
       alert("Please allow popups to open the Executive Briefing print document.");
@@ -1241,23 +1245,34 @@ export default function AnalyticsView({
         </div>
 
         <div className="flex items-center flex-wrap gap-2.5">
-          <button
-            onClick={handleExportCSV}
-            className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl text-xs sm:text-sm transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
-            title="Download full attendees CSV manifest"
-          >
-            <Download size={14} />
-            <span>{t("analytics.exportCsv", "Export Manifest (CSV)")}</span>
-          </button>
+          {!canEdit && (
+            <span className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 font-bold text-xs border border-slate-200/80 flex items-center gap-1.5 shadow-xs">
+              <Eye size={13} className="text-slate-500" />
+              <span>Viewer Mode</span>
+            </span>
+          )}
 
-          <button
-            onClick={handlePrintExecutiveReport}
-            className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl text-xs sm:text-sm transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
-            title="Print executive briefing summary"
-          >
-            <Printer size={14} />
-            <span>{t("analytics.printBriefing", "Executive Briefing")}</span>
-          </button>
+          {canEdit && (
+            <>
+              <button
+                onClick={handleExportCSV}
+                className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl text-xs sm:text-sm transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+                title="Download full attendees CSV manifest"
+              >
+                <Download size={14} />
+                <span>{t("analytics.exportCsv", "Export Manifest (CSV)")}</span>
+              </button>
+
+              <button
+                onClick={handlePrintExecutiveReport}
+                className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl text-xs sm:text-sm transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+                title="Print executive briefing summary"
+              >
+                <Printer size={14} />
+                <span>{t("analytics.printBriefing", "Executive Briefing")}</span>
+              </button>
+            </>
+          )}
 
           <button
             onClick={() => onSwitchView && onSwitchView("check-in")}
