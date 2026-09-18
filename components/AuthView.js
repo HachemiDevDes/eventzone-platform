@@ -5,7 +5,7 @@ import React, { useState } from "react";
 import { 
   Building2, Ticket, Sparkles, ArrowRight, 
   CheckCircle2, Lock, Mail, User, ShieldCheck, 
-  KeyRound, AlertCircle, ArrowLeft, Zap, Eye, EyeOff, Globe, ChevronDown, Check
+  KeyRound, AlertCircle, ArrowLeft, Zap, Eye, EyeOff, Globe, ChevronDown, Check, Users
 } from "lucide-react";
 import { supabase, safeLocalStorageSet, sanitizeUserForStorage, cleanupLocalStorageQuota } from "../lib/supabase";
 import { useLanguage } from "../lib/i18n";
@@ -15,11 +15,44 @@ export default function AuthView({
   onAuthSuccess, 
   onClose, 
   onGoToHome,
-  initialMode = "signin" 
+  initialMode = "signin",
+  initialEmail = "",
+  invitedEventId = null,
+  invitedRole = null,
+  invitedEventTitle = null
 }) {
   const { t, lang, setLang, isRTL, languages } = useLanguage();
   const [langMenuOpen, setLangMenuOpen] = useState(false);
-  const [authMode, setAuthMode] = useState(initialMode); // "signin" | "signup" | "forgot-password" | "check-email"
+
+  // Detect invitation params from props or search parameters
+  const [teamInviteInfo, setTeamInviteInfo] = useState(() => {
+    if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search);
+      const inviteToken = searchParams.get("inviteToken") || searchParams.get("token");
+      const eventId = invitedEventId || searchParams.get("inviteEventId") || searchParams.get("eventId");
+      const role = invitedRole || searchParams.get("teamRole") || searchParams.get("role");
+      const eventTitle = invitedEventTitle || searchParams.get("eventTitle");
+      if (inviteToken || searchParams.has("teamEmail") || searchParams.has("inviteEventId")) {
+        return {
+          inviteToken,
+          eventId,
+          role: role || "Team Member",
+          eventTitle: eventTitle || "your event"
+        };
+      }
+    }
+    return null;
+  });
+
+  const [authMode, setAuthMode] = useState(() => {
+    if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search);
+      const modeParam = searchParams.get("auth") || searchParams.get("mode");
+      if (modeParam === "signup" || modeParam === "register") return "signup";
+      if (modeParam === "signin" || modeParam === "login") return "signin";
+    }
+    return initialMode || "signin";
+  }); // "signin" | "signup" | "forgot-password" | "check-email"
   
   const [pendingEventTitle, setPendingEventTitle] = useState(() => {
     if (typeof window !== "undefined") {
@@ -35,7 +68,11 @@ export default function AuthView({
   });
 
   const [email, setEmail] = useState(() => {
+    if (initialEmail) return initialEmail;
     if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search);
+      const urlEmail = searchParams.get("email") || searchParams.get("teamEmail") || searchParams.get("invitedEmail");
+      if (urlEmail) return urlEmail.trim().toLowerCase();
       try {
         const saved = sessionStorage.getItem("eventzone_pending_event_creation");
         if (saved) {
@@ -52,6 +89,9 @@ export default function AuthView({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [fullName, setFullName] = useState(() => {
     if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search);
+      const urlName = searchParams.get("name") || searchParams.get("teamName");
+      if (urlName) return urlName;
       try {
         const saved = sessionStorage.getItem("eventzone_pending_event_creation");
         if (saved) {
@@ -64,7 +104,15 @@ export default function AuthView({
     }
     return "";
   });
-  const [selectedRole, setSelectedRole] = useState("organizer"); // "organizer" | "attendee"
+  const [selectedRole, setSelectedRole] = useState(() => {
+    if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search);
+      if (searchParams.get("inviteToken") || searchParams.get("teamEmail") || searchParams.get("inviteEventId")) {
+        return "organizer";
+      }
+    }
+    return "organizer";
+  }); // "organizer" | "attendee"
   const [showPassword, setShowPassword] = useState(false);
   
   const [loading, setLoading] = useState(false);
@@ -558,6 +606,31 @@ export default function AuthView({
         ) : (
           /* Standard Sign In / Create Account */
           <div className="space-y-4 sm:space-y-5 text-start animate-fade-in">
+            {/* Team Invitation Notification Banner */}
+            {teamInviteInfo && (
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-blue-50/90 border border-blue-200/80 shadow-xs flex items-start gap-3">
+                <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-blue-200 mt-0.5">
+                  <Users size={16} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[11px] font-black text-blue-950 uppercase tracking-wide flex items-center gap-1.5 flex-wrap">
+                    <span>Official Team Invitation</span>
+                    {teamInviteInfo.role && (
+                      <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-[10px] font-bold">
+                        {teamInviteInfo.role}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-blue-900 font-medium mt-1 leading-relaxed">
+                    You were invited to join the organizing team for <strong>{teamInviteInfo.eventTitle}</strong>. 
+                    {authMode === "signup" 
+                      ? " Create your password below to accept and access your workspace." 
+                      : " Sign in to access your event dashboard."}
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Clean Switcher Tabs */}
             <div className="grid grid-cols-2 bg-slate-100 p-1 rounded-xl sm:rounded-2xl">
               <button
@@ -631,36 +704,39 @@ export default function AuthView({
             <form onSubmit={handleEmailAuth} className="space-y-3 sm:space-y-3.5">
               {authMode === "signup" && (
                 <>
-                  {/* Role Selector */}
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                      {t("auth.iAmOrganizer", "Account Type")}
-                    </label>
-                    <div className="grid grid-cols-2 gap-1.5 sm:gap-2 bg-slate-100 p-1 rounded-xl">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedRole("organizer")}
-                        className={`py-1.5 sm:py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center cursor-pointer ${
-                          selectedRole === "organizer"
-                            ? "bg-white text-blue-600 shadow-xs"
-                            : "text-slate-500 hover:text-slate-800"
-                        }`}
-                      >
-                        {t("nav.roleOrganizer", "Organizer")}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedRole("attendee")}
-                        className={`py-1.5 sm:py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center cursor-pointer ${
-                          selectedRole === "attendee"
-                            ? "bg-white text-emerald-600 shadow-xs"
-                            : "text-slate-500 hover:text-slate-800"
-                        }`}
-                      >
-                        {t("nav.roleVisitor", "Visitor")}
-                      </button>
+                  {/* Role Selector (Hidden if arriving from an official team invite) */}
+                  {!teamInviteInfo && (
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                        {t("auth.iAmOrganizer", "Account Type")}
+                      </label>
+                      <div className="grid grid-cols-2 gap-1.5 sm:gap-2 bg-slate-100 p-1 rounded-xl">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedRole("organizer")}
+                          className={`py-1.5 sm:py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center cursor-pointer ${
+                            selectedRole === "organizer"
+                              ? "bg-white text-blue-600 shadow-xs"
+                              : "text-slate-500 hover:text-slate-800"
+                          }`}
+                        >
+                          {t("nav.roleOrganizer", "Organizer")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedRole("attendee")}
+                          className={`py-1.5 sm:py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center cursor-pointer ${
+                            selectedRole === "attendee"
+                              ? "bg-white text-emerald-600 shadow-xs"
+                              : "text-slate-500 hover:text-slate-800"
+                          }`}
+                        >
+                          {t("nav.roleVisitor", "Visitor")}
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  )}
+
 
                   {/* Full Name */}
                   <div>

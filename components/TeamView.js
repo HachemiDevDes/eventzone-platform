@@ -48,7 +48,8 @@ export default function TeamView({
       } else {
         const origin = typeof window !== "undefined" ? window.location.origin : "";
         const targetEventId = eventDetails?.id || state?.activeEventId || "";
-        const inviteUrl = `${origin}/?eventId=${targetEventId}&inviteToken=${member.id}&teamEmail=${encodeURIComponent(member.email)}`;
+        const evTitle = eventDetails?.title || eventDetails?.name || "Eventzone Event";
+        const inviteUrl = `${origin}/?view=auth&mode=signup&email=${encodeURIComponent(member.email)}&inviteEventId=${targetEventId}&inviteToken=${member.id}&teamRole=${encodeURIComponent(member.role || 'Staff')}&eventTitle=${encodeURIComponent(evTitle)}`;
         const res = await fetch("/api/email/send", {
           method: "POST",
           headers: { "Content-Type": "application/json" },

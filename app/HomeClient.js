@@ -91,7 +91,7 @@ import {
   fetchLogistics, upsertLogisticsItem, deleteLogisticsItem, archiveLogisticsItem, upsertFullLogistics,
   fetchDocuments, upsertDocument, deleteDocument, archiveDocument, togglePinDocument,
   uploadFileToBucket,
-  fetchUserEvents, fetchPublicEvents, createEvent, deleteEvent, archiveEvent, unarchiveEvent,
+  fetchUserEvents, fetchPublicEvents, createEvent, deleteEvent, archiveEvent, unarchiveEvent, activateTeamMembership,
   fetchVisitorRegistrations, registerVisitorForEvent, upsertUserProfile, fetchUserProfile, fetchSiblingProfiles, clearQueryCache,
   isMatchingEmail, isMatchingPhoneNumber, cleanPhoneNumber,
   setActiveEventId, getActiveEventId, DEFAULT_EVENT_ID, SHOWCASE_EVENTS,
@@ -147,7 +147,7 @@ export function resolveActiveEventId() {
   if (typeof window === "undefined") return DEFAULT_EVENT_ID;
   try {
     const searchParams = new URLSearchParams(window.location.search);
-    const urlId = searchParams.get("eventId") || searchParams.get("event");
+    const urlId = searchParams.get("inviteEventId") || searchParams.get("eventId") || searchParams.get("event");
     if (urlId) {
       return urlId;
     }
@@ -293,6 +293,10 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
       ];
       if (viewParam && validViews.includes(viewParam)) {
         return viewParam;
+      }
+      if (searchParams.get("inviteToken") || searchParams.get("inviteEventId") || searchParams.get("teamEmail")) {
+        const storedUser = safeLocalStorageGet("eventzone_user", null);
+        if (!storedUser) return "auth";
       }
       if (searchParams.get("ref") || searchParams.get("influencer") || searchParams.get("referral")) {
         return "event-landing";
@@ -863,6 +867,23 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
           }
         }
 
+        // Check if there was a team invitation in URL
+        let inviteEventId = null;
+        if (typeof window !== "undefined") {
+          try {
+            const sp = new URLSearchParams(window.location.search);
+            inviteEventId = sp.get("inviteEventId") || (sp.get("inviteToken") ? sp.get("eventId") : null);
+          } catch (e) {}
+        }
+
+        if (inviteEventId && session?.user?.email) {
+          try {
+            await activateTeamMembership(session.user.email, inviteEventId);
+          } catch (e) {
+            console.warn("Could not activate team membership on SIGNED_IN:", e);
+          }
+        }
+
         // Eagerly fetch user events upon SIGNED_IN so organizer center is immediately populated
         if (event === "SIGNED_IN" && session?.user?.id) {
           try {
@@ -870,6 +891,15 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
             if (uEvents && Array.isArray(uEvents) && isMounted) {
               setUserEvents(uEvents);
               safeLocalStorageSet("eventzone_cache_user_events", uEvents);
+
+              if (inviteEventId) {
+                const matchedEv = uEvents.find(e => String(e.id) === String(inviteEventId));
+                if (matchedEv) {
+                  setEventDetails(matchedEv);
+                  setActiveEventStateId(matchedEv.id);
+                  setCurrentView("overview");
+                }
+              }
             }
           } catch (e) {
             console.warn("Error fetching user events on SIGNED_IN:", e);
@@ -886,9 +916,10 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
             setCurrentView(prev => {
               // Only redirect if the user was explicitly on the dedicated auth view
               if (prev === "auth") {
+                if (inviteEventId) return "overview";
                 const urlParams = new URLSearchParams(window.location.search);
                 const requestedView = urlParams.get("view");
-                return requestedView || (syncedUser?.role === "organizer" ? "events-hub" : "home");
+                return (requestedView && requestedView !== "auth") ? requestedView : (syncedUser?.role === "organizer" ? "events-hub" : "home");
               }
               return prev;
             });
@@ -1775,22 +1806,60 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
     setCurrentUser(user);
     setAuthModalOpen(false);
 
+    // Check if user authenticated via team invite link
+    let inviteEventId = null;
+    if (typeof window !== "undefined") {
+      try {
+        const sp = new URLSearchParams(window.location.search);
+        inviteEventId = sp.get("inviteEventId") || (sp.get("inviteToken") ? sp.get("eventId") : null);
+      } catch (e) {}
+    }
+
+    if (inviteEventId && user?.email) {
+      try {
+        await activateTeamMembership(user.email, inviteEventId);
+      } catch (e) {
+        console.warn("Could not activate team membership in handleAuthSuccess:", e);
+      }
+    }
+
     // Eagerly fetch user events for this user so they appear immediately without needing a refresh
     if (user?.id) {
       setIsLoading(true);
-      fetchUserEvents(user.id, user.email, true)
-        .then((uEvents) => {
-          if (uEvents && Array.isArray(uEvents)) {
-            setUserEvents(uEvents);
-            safeLocalStorageSet("eventzone_cache_user_events", uEvents);
+      try {
+        const uEvents = await fetchUserEvents(user.id, user.email, true);
+        if (uEvents && Array.isArray(uEvents)) {
+          setUserEvents(uEvents);
+          safeLocalStorageSet("eventzone_cache_user_events", uEvents);
+
+          if (inviteEventId) {
+            const matchedEv = uEvents.find(e => String(e.id) === String(inviteEventId));
+            if (matchedEv) {
+              setEventDetails(matchedEv);
+              setActiveEventStateId(matchedEv.id);
+              setCurrentView("overview");
+              setIsLoading(false);
+              return;
+            }
           }
-        })
-        .catch((err) => {
-          console.warn("Failed eager events fetch on handleAuthSuccess:", err);
-        })
-        .finally(() => {
-          setIsLoading(false);
-        });
+        }
+      } catch (err) {
+        console.warn("Failed eager events fetch on handleAuthSuccess:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    if (inviteEventId) {
+      try {
+        const ev = await fetchEventDetails(inviteEventId);
+        if (ev) {
+          setEventDetails(ev);
+          setActiveEventStateId(ev.id);
+          setCurrentView("overview");
+          return;
+        }
+      } catch (e) {}
     }
 
     // Check if there is a pending event waiting to be published
@@ -2711,7 +2780,8 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
     }
     try {
       const origin = typeof window !== "undefined" ? window.location.origin : (process.env.NEXT_PUBLIC_APP_URL || "https://eventzone.pro");
-      const inviteUrl = `${origin}/?eventId=${activeEventId}&inviteToken=${member.id}&teamEmail=${encodeURIComponent(member.email)}`;
+      const evTitle = eventDetails?.title || eventDetails?.name || "Eventzone Event";
+      const inviteUrl = `${origin}/?view=auth&mode=signup&email=${encodeURIComponent(member.email)}&inviteEventId=${activeEventId}&inviteToken=${member.id}&teamRole=${encodeURIComponent(member.role || 'Staff')}&eventTitle=${encodeURIComponent(evTitle)}`;
       
       const res = await fetch("/api/email/send", {
         method: "POST",

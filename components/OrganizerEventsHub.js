@@ -247,10 +247,16 @@ export default function OrganizerEventsHub({
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent" />
                     
-                    <div className="absolute top-3 left-3 flex items-center gap-2">
+                    <div className="absolute top-3 left-3 flex items-center gap-1.5 flex-wrap max-w-[70%]">
                       <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-white/90 backdrop-blur-md text-blue-700 shadow-xs border border-white/50 uppercase tracking-wider">
                         {ev.type === "In-Person" ? t("eventsHub.inPerson", "In-Person") : ev.type === "Virtual" ? t("eventsHub.virtual", "Virtual") : t("eventsHub.hybrid", "Hybrid")}
                       </span>
+                      {ev.isTeamMember && (
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-blue-600 text-white shadow-xs uppercase tracking-wider flex items-center gap-1 border border-blue-400/30">
+                          <Users size={10} />
+                          <span>{ev.teamRole || "Team Member"}</span>
+                        </span>
+                      )}
                     </div>
 
                     <div className="absolute top-3 right-3 flex items-center gap-1.5">

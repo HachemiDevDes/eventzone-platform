@@ -78,11 +78,13 @@ export default async function Page(props) {
     if (validViews.includes(viewParam)) {
       initialView = viewParam;
     }
+  } else if (searchParams?.inviteToken || searchParams?.inviteEventId || searchParams?.teamEmail) {
+    initialView = "auth";
   } else if (searchParams?.ref || searchParams?.influencer || searchParams?.referral) {
     initialView = "event-landing";
   }
 
-  const initialAuthMode = searchParams?.mode === "signup" ? "signup" : "signin";
+  const initialAuthMode = (searchParams?.mode === "signup" || searchParams?.auth === "signup" || searchParams?.inviteToken || searchParams?.inviteEventId) ? "signup" : "signin";
 
   let events = [];
   try {
