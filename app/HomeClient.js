@@ -91,7 +91,7 @@ import {
   fetchDocuments, upsertDocument, deleteDocument, archiveDocument, togglePinDocument,
   uploadFileToBucket,
   fetchUserEvents, fetchPublicEvents, createEvent, deleteEvent, archiveEvent, unarchiveEvent,
-  fetchVisitorRegistrations, registerVisitorForEvent, upsertUserProfile, fetchUserProfile, fetchSiblingProfiles,
+  fetchVisitorRegistrations, registerVisitorForEvent, upsertUserProfile, fetchUserProfile, fetchSiblingProfiles, clearQueryCache,
   isMatchingEmail, isMatchingPhoneNumber, cleanPhoneNumber,
   setActiveEventId, getActiveEventId, DEFAULT_EVENT_ID, SHOWCASE_EVENTS,
   subscribeToRealtimeSync, broadcastRealtimeChange,
@@ -416,6 +416,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
   });
   const isInitializedRef = useRef(false);
   const lastEventsDataFetchRef = useRef(0);
+  const lastFetchedUserKeyRef = useRef(null);
 
   // Modal State
   const [activeModalType, setActiveModalType] = useState(null);
@@ -860,6 +861,19 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
           }
         }
 
+        // Eagerly fetch user events upon SIGNED_IN so organizer center is immediately populated
+        if (event === "SIGNED_IN" && session?.user?.id) {
+          try {
+            const uEvents = await fetchUserEvents(session.user.id, session.user.email, true);
+            if (uEvents && Array.isArray(uEvents) && isMounted) {
+              setUserEvents(uEvents);
+              safeLocalStorageSet("eventzone_cache_user_events", uEvents);
+            }
+          } catch (e) {
+            console.warn("Error fetching user events on SIGNED_IN:", e);
+          }
+        }
+
         // Handle post-login navigation ONLY on explicit SIGNED_IN (never on background TOKEN_REFRESHED or USER_UPDATED)
         if (event === "SIGNED_IN" && typeof window !== "undefined") {
           const returnView = sessionStorage.getItem("eventzone_auth_return_view");
@@ -1009,12 +1023,21 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
 
   // Load User Events & Public Events
   useEffect(() => {
+    const currentUserKey = currentUser?.id ? `${currentUser.id}_${currentUser.email || ""}` : null;
+    const isUserChange = currentUserKey !== lastFetchedUserKeyRef.current;
+
     const loadEventsData = async (isReconnect = false) => {
       const now = Date.now();
-      if (!isReconnect && (now - lastEventsDataFetchRef.current) < 15000) {
+      // If user changed (e.g. login, switch account), NEVER skip/throttle the fetch!
+      if (!isReconnect && !isUserChange && (now - lastEventsDataFetchRef.current) < 15000) {
         return;
       }
       lastEventsDataFetchRef.current = now;
+      lastFetchedUserKeyRef.current = currentUserKey;
+
+      if (currentUserKey && isUserChange) {
+        setIsLoading(true);
+      }
 
       if (typeof navigator !== "undefined" && !navigator.onLine) {
         // Fast path for offline mode: hydrate cached user events and active event
@@ -1038,7 +1061,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
       try {
         const [pEvents, uEvents, vRegs] = await Promise.all([
           fetchPublicEvents(),
-          currentUser?.id ? fetchUserEvents(currentUser.id, currentUser.email) : Promise.resolve([]),
+          currentUser?.id ? fetchUserEvents(currentUser.id, currentUser.email, isUserChange) : Promise.resolve([]),
           currentUser?.email ? fetchVisitorRegistrations(currentUser.email) : Promise.resolve([]),
         ]);
         if (pEvents) {
@@ -1073,6 +1096,8 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
         }
       } catch (err) {
         console.error("Error loading events hub:", err);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -1748,6 +1773,24 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
     setCurrentUser(user);
     setAuthModalOpen(false);
 
+    // Eagerly fetch user events for this user so they appear immediately without needing a refresh
+    if (user?.id) {
+      setIsLoading(true);
+      fetchUserEvents(user.id, user.email, true)
+        .then((uEvents) => {
+          if (uEvents && Array.isArray(uEvents)) {
+            setUserEvents(uEvents);
+            safeLocalStorageSet("eventzone_cache_user_events", uEvents);
+          }
+        })
+        .catch((err) => {
+          console.warn("Failed eager events fetch on handleAuthSuccess:", err);
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    }
+
     // Check if there is a pending event waiting to be published
     let pendingData = pendingEventCreation;
     if (!pendingData && typeof window !== "undefined") {
@@ -1798,6 +1841,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
     } catch (e) {
       console.warn("Supabase signout exception:", e);
     }
+    clearQueryCache();
     if (typeof window !== "undefined") {
       try {
         localStorage.removeItem("eventzone_user");
@@ -3944,8 +3988,8 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
       return (
         <AuthView
           initialMode="signin"
-          onAuthSuccess={(u) => {
-            setCurrentUser(u);
+          onAuthSuccess={async (u) => {
+            await handleAuthSuccess(u);
             setCurrentView("events-hub");
           }}
           onGoToHome={() => setCurrentView("home")}
@@ -3960,6 +4004,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
       <OrganizerEventsHub
         events={userEvents}
         registrations={visitorRegistrations}
+        isLoading={isLoading}
         onSelectEvent={(id) => {
           setActiveEventStateId(id);
           setCurrentView("overview");
@@ -4051,8 +4096,8 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
     return (
       <AuthView
         initialMode="signin"
-        onAuthSuccess={(u) => {
-          setCurrentUser(u);
+        onAuthSuccess={async (u) => {
+          await handleAuthSuccess(u);
         }}
         onGoToHome={() => setCurrentView("home")}
         onClose={() => setCurrentView("home")}
