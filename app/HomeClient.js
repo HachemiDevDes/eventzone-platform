@@ -165,6 +165,12 @@ export function resolveActiveEventId() {
   return DEFAULT_EVENT_ID;
 }
 
+function getModuleKeyFromView(view) {
+  if (view === "page-builder") return "event-details";
+  if (view === "invoices") return "invoicing";
+  return view;
+}
+
 export function HomeContent({ initialPublicEvents = [], initialView = "home", initialAuthMode = "signin" }) {
   const searchParamsHook = useSearchParams();
   const { t, lang, setLang, isRTL, dir, languages } = useLanguage();
@@ -405,36 +411,6 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
     return getEffectivePermissions(currentUser, eventDetails, team, simulatedMemberId, userEvents, activeEventId);
   }, [currentUser, eventDetails, team, simulatedMemberId, userEvents, activeEventId]);
 
-  const getModuleKeyFromView = (view) => {
-    if (view === "page-builder") return "event-details";
-    if (view === "invoices") return "invoicing";
-    return view;
-  };
-
-  // Auto-redirect team members if current view is not permitted for their role
-  useEffect(() => {
-    if (!effectivePermissions || effectivePermissions.isAdmin || effectivePermissions.isOwner) return;
-    if (isLoading) return;
-    
-    // Only apply to module dashboard views
-    const eventDashboardViews = [
-      "overview", "event-details", "page-builder", "calendar", "speakers", "opportunities", 
-      "organizations", "sponsors", "exhibitors", "influencers", "tickets", "attendees", 
-      "pending", "rsvp", "floor-plan", "logistics", "documents", "check-in", "forms", 
-      "communications", "certificates", "analytics", "my-team", "developers", "portal-settings", "invoicing", "invoices"
-    ];
-    if (!eventDashboardViews.includes(currentView)) return;
-
-    const modKey = getModuleKeyFromView(currentView);
-    if (!canViewModule(modKey, effectivePermissions.permissions)) {
-      // Find the first accessible module
-      const firstAllowedModule = EVENT_MODULES.find(m => canViewModule(m.id, effectivePermissions.permissions));
-      if (firstAllowedModule) {
-        setCurrentView(firstAllowedModule.id);
-      }
-    }
-  }, [currentView, effectivePermissions, isLoading]);
-
   const [isLoading, setIsLoading] = useState(() => {
     if (typeof window !== "undefined") {
       if (!navigator.onLine) return false;
@@ -486,6 +462,30 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
       setLogisticsOpen(true);
     }
   }, [currentView]);
+
+  // Auto-redirect team members if current view is not permitted for their role
+  useEffect(() => {
+    if (!effectivePermissions || effectivePermissions.isAdmin || effectivePermissions.isOwner) return;
+    if (isLoading) return;
+    
+    // Only apply to module dashboard views
+    const eventDashboardViews = [
+      "overview", "event-details", "page-builder", "calendar", "speakers", "opportunities", 
+      "organizations", "sponsors", "exhibitors", "influencers", "tickets", "attendees", 
+      "pending", "rsvp", "floor-plan", "logistics", "documents", "check-in", "forms", 
+      "communications", "certificates", "analytics", "my-team", "developers", "portal-settings", "invoicing", "invoices"
+    ];
+    if (!eventDashboardViews.includes(currentView)) return;
+
+    const modKey = getModuleKeyFromView(currentView);
+    if (!canViewModule(modKey, effectivePermissions.permissions)) {
+      // Find the first accessible module
+      const firstAllowedModule = EVENT_MODULES.find(m => canViewModule(m.id, effectivePermissions.permissions));
+      if (firstAllowedModule) {
+        setCurrentView(firstAllowedModule.id);
+      }
+    }
+  }, [currentView, effectivePermissions, isLoading]);
 
   // Check Local Auth Session and Supabase Auth State on mount
   useEffect(() => {
