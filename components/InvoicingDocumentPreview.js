@@ -2,7 +2,7 @@
 "use client";
 
 import React from "react";
-import { formatCurrency, calculateFiscalStamp } from "../lib/invoicingConstants";
+import { formatCurrency, calculateFiscalStamp, formatInvoicingDate } from "../lib/invoicingConstants";
 import { numberToAlgerianWords } from "../lib/numberToWords";
 
 /**
@@ -90,77 +90,75 @@ export default function InvoicingDocumentPreview({
       }}
     >
       <div className="space-y-6">
-        {/* Top Decorative Bar */}
-        <div className="h-1.5 w-full bg-blue-600 rounded-full mb-4" />
-
         {/* 1. Header: Logo (Left) & Document Title / Ref (Right) */}
-        <div className="flex items-start justify-between gap-4 pb-2">
+        <div className="flex items-start justify-between gap-4 pb-1">
           <div>
             {logo_url ? (
               <img 
                 src={logo_url} 
                 alt="Logo" 
-                className="h-10 sm:h-12 w-auto max-w-[200px] object-contain"
+                className="h-9 sm:h-10 w-auto max-w-[200px] object-contain"
               />
             ) : (
-              <div className="flex items-center gap-1.5">
-                <span className="text-2xl sm:text-3xl font-black tracking-tight text-blue-600 lowercase select-none">
-                  eventzone
-                </span>
-              </div>
+              <img 
+                src="https://i.imgur.com/jFDrQbM.png" 
+                alt="eventzone" 
+                style={{ height: '32px', width: 'auto', maxWidth: '170px' }} 
+                className="h-8 sm:h-9 w-auto object-contain"
+              />
             )}
           </div>
 
           <div className="text-right">
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900 uppercase tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 uppercase tracking-tight leading-none">
               {docTitle}
             </h1>
-            <p className="text-xs sm:text-sm font-bold text-slate-500 font-mono mt-0.5">
+            <p className="text-xs sm:text-sm font-bold text-slate-600 font-mono mt-1">
               {document_number || "EZ-26-0001"}
             </p>
           </div>
         </div>
 
         {/* 2. Metadata Pill Container (Date d'émission, Échéance, Référence) */}
-        <div className="grid grid-cols-3 bg-slate-50/90 border border-slate-200 rounded-xl px-4 py-2.5 text-center">
-          <div className="text-left sm:text-center border-r border-slate-200/70 pr-2">
-            <span className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-400">
+        <div className="grid grid-cols-3 gap-4 bg-slate-50/50 border border-slate-200/90 rounded-2xl px-6 py-3.5">
+          <div>
+            <span className="block text-[9.5px] font-bold uppercase tracking-wider text-slate-400">
               DATE D&apos;ÉMISSION
             </span>
-            <span className="text-xs font-black text-slate-800 font-mono mt-0.5 block">
-              {issue_date || "—"}
+            <span className="text-xs sm:text-sm font-black text-slate-900 font-mono mt-1 block">
+              {formatInvoicingDate(issue_date)}
             </span>
           </div>
-          <div className="border-r border-slate-200/70 px-2">
-            <span className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-400">
+          <div>
+            <span className="block text-[9.5px] font-bold uppercase tracking-wider text-slate-400">
               ÉCHÉANCE
             </span>
-            <span className="text-xs font-black text-slate-800 font-mono mt-0.5 block">
-              {due_date || "—"}
+            <span className="text-xs sm:text-sm font-black text-slate-900 font-mono mt-1 block">
+              {formatInvoicingDate(due_date)}
             </span>
           </div>
-          <div className="text-right sm:text-center pl-2">
-            <span className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-400">
+          <div>
+            <span className="block text-[9.5px] font-bold uppercase tracking-wider text-slate-400">
               RÉFÉRENCE
             </span>
-            <span className="text-xs font-black text-slate-800 font-mono mt-0.5 block truncate">
+            <span className="text-xs sm:text-sm font-black text-slate-900 font-mono mt-1 block truncate">
               {document_number || "—"}
             </span>
           </div>
         </div>
 
         {/* 3. Two Columns: Émetteur vs Destinataire */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 pt-2">
           {/* Émetteur */}
           <div className="space-y-1 text-xs">
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
               ÉMETTEUR
             </span>
-            <p className="font-extrabold text-sm text-slate-900 leading-tight">
+            <p className="font-black text-sm text-slate-900 leading-tight">
               {emitter_company_name || "SPASU Eventzone"}
             </p>
             {emitter_manager_name && (
-              <p className="text-slate-600 font-medium">{emitter_manager_name}</p>
+              <p className="text-slate-600 text-xs font-medium">{emitter_manager_name}</p>
             )}
             {emitter_address && (
               <p className="text-slate-500 whitespace-pre-line text-[11px] leading-relaxed">
@@ -169,34 +167,40 @@ export default function InvoicingDocumentPreview({
             )}
             <div className="pt-1 text-[11px] text-slate-500 space-y-0.5">
               {emitter_phone && <p>Tél: <span className="font-mono text-slate-700">{emitter_phone}</span></p>}
-              {emitter_email && <p className="text-blue-600 font-medium">{emitter_email}</p>}
+              {emitter_email && <p className="text-slate-600 font-medium">{emitter_email}</p>}
             </div>
           </div>
 
           {/* Destinataire */}
-          <div className="space-y-1 text-xs sm:pl-4 sm:border-l sm:border-slate-100">
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1">
+          <div className="space-y-1 text-xs">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
               DESTINATAIRE
             </span>
-            <p className="font-extrabold text-sm text-slate-900 leading-tight">
-              {client_name || "—"}
-            </p>
-            {client_contact_name && (
-              <p className="text-slate-600 font-medium">{client_contact_name}</p>
+            {client_name ? (
+              <>
+                <p className="font-black text-sm text-slate-900 leading-tight">
+                  {client_name}
+                </p>
+                {client_contact_name && (
+                  <p className="text-slate-600 text-xs font-medium">{client_contact_name}</p>
+                )}
+                {client_address && (
+                  <p className="text-slate-500 whitespace-pre-line text-[11px] leading-relaxed">
+                    {client_address}
+                  </p>
+                )}
+                <div className="pt-1 text-[11px] text-slate-500 space-y-0.5">
+                  {client_phone && <p>Tél: <span className="font-mono text-slate-700">{client_phone}</span></p>}
+                  {client_email && <p className="text-slate-600">{client_email}</p>}
+                  {client_nif && <p>NIF: <span className="font-mono text-slate-700">{client_nif}</span></p>}
+                  {client_rc && <p>RC: <span className="font-mono text-slate-700">{client_rc}</span></p>}
+                  {client_nis && <p>NIS: <span className="font-mono text-slate-700">{client_nis}</span></p>}
+                  {client_article_imposition && <p>Art. d&apos;Imp: <span className="font-mono text-slate-700">{client_article_imposition}</span></p>}
+                </div>
+              </>
+            ) : (
+              <p className="text-slate-900 font-black text-sm">—</p>
             )}
-            {client_address && (
-              <p className="text-slate-500 whitespace-pre-line text-[11px] leading-relaxed">
-                {client_address}
-              </p>
-            )}
-            <div className="pt-1 text-[11px] text-slate-500 space-y-0.5">
-              {client_phone && <p>Tél: <span className="font-mono text-slate-700">{client_phone}</span></p>}
-              {client_email && <p className="text-slate-600">{client_email}</p>}
-              {client_nif && <p>NIF: <span className="font-mono text-slate-700">{client_nif}</span></p>}
-              {client_rc && <p>RC: <span className="font-mono text-slate-700">{client_rc}</span></p>}
-              {client_nis && <p>NIS: <span className="font-mono text-slate-700">{client_nis}</span></p>}
-              {client_article_imposition && <p>Art. d&apos;Imp: <span className="font-mono text-slate-700">{client_article_imposition}</span></p>}
-            </div>
           </div>
         </div>
 
