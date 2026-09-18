@@ -308,7 +308,7 @@ export default function InvoicingEditor({
           <button
             onClick={handleSaveDocument}
             disabled={isSaving}
-            className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-lime-400 hover:bg-lime-500 text-slate-900 text-xs font-black shadow-sm transition-all cursor-pointer active:scale-95"
+            className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-all cursor-pointer active:scale-95"
           >
             {saveSuccess ? (
               <>
@@ -443,7 +443,7 @@ export default function InvoicingEditor({
                     onClick={() => handlePaymentDelaySelect(del.id, del.days)}
                     className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                       isSelected
-                        ? "bg-lime-400 text-slate-900 shadow-xs"
+                        ? "bg-blue-600 text-white shadow-xs"
                         : "bg-slate-100 text-slate-600 hover:bg-slate-200/70"
                     }`}
                   >
@@ -855,12 +855,12 @@ export default function InvoicingEditor({
             />
           </div>
 
-          {/* Bottom Save Action Button (lime green) */}
+          {/* Bottom Save Action Button (Eventzone blue) */}
           <div>
             <button
               onClick={handleSaveDocument}
               disabled={isSaving}
-              className="w-full py-3.5 rounded-2xl bg-lime-400 hover:bg-lime-500 active:scale-[0.99] text-slate-900 text-xs font-black shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+              className="w-full py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white text-xs font-bold shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2"
             >
               {saveSuccess ? (
                 <>
@@ -898,7 +898,7 @@ export default function InvoicingEditor({
               <button
                 type="button"
                 onClick={() => onDownloadPdf(doc)}
-                className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-lime-400 hover:bg-lime-500 text-slate-900 text-xs font-black transition-all cursor-pointer shadow-xs active:scale-95"
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
               >
                 <Download size={13} />
                 <span>Télécharger PDF</span>

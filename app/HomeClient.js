@@ -58,7 +58,6 @@ import RSVPView from "../components/RSVPView";
 import LogisticsView from "../components/LogisticsView";
 import DocumentsView from "../components/DocumentsView";
 import InvoicingView from "../components/InvoicingView";
-import UniversalTopBar from "../components/UniversalTopBar";
 import DevelopersView from "../components/DevelopersView";
 import PlatformAdminView from "../components/PlatformAdminView";
 import PublicRSVPModal from "../components/PublicRSVPModal";
@@ -3872,39 +3871,6 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
   }
 
   // ==========================================================================
-  // 0.95. DEDICATED INVOICING & QUOTES MODULE VIEW
-  // ==========================================================================
-  if (currentView === "invoicing" || currentView === "invoices") {
-    return (
-      <div className="min-h-screen bg-slate-100 flex flex-col font-sans">
-        <UniversalTopBar
-          currentUser={currentUser}
-          registrations={visitorRegistrations}
-          onGoToHome={() => setCurrentView("home")}
-          onOpenAuth={(mode) => {
-            setAuthModalInitialMode(mode || "signin");
-            setCurrentView("auth");
-          }}
-          onOpenProfile={() => setCurrentView("profile")}
-          onOpenPassesModal={() => setCurrentView("my-tickets")}
-          onOpenCreationWizard={() => setCurrentView("create-event")}
-          onOpenEventsHub={() => setCurrentView("events-hub")}
-          onOpenInvoicing={() => setCurrentView("invoicing")}
-          onSignOut={handleSignOut}
-        />
-        <main className="flex-1">
-          <InvoicingView
-            currentUser={currentUser}
-            activeEventId={activeEventId}
-            eventDetails={eventDetails}
-            onSwitchView={setCurrentView}
-          />
-        </main>
-      </div>
-    );
-  }
-
-  // ==========================================================================
   // 1. DEFAULT PUBLIC HOME PAGE (BROWSE & ROLLING HERO)
   // ==========================================================================
   if (currentView === "home") {
@@ -4106,7 +4072,12 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
         onSwitchToVisitor={() => setCurrentView("my-tickets")}
         onGoToHome={() => setCurrentView("home")}
         onOpenProfile={() => setCurrentView("profile")}
-        onOpenInvoicing={() => setCurrentView("invoicing")}
+        onOpenInvoicing={() => {
+          if (!activeEventId && userEvents.length > 0) {
+            setActiveEventStateId(userEvents[0]?.id);
+          }
+          setCurrentView("invoicing");
+        }}
         onOpenAuth={(mode) => {
           setAuthModalInitialMode(mode || "signin");
           setCurrentView("auth");
@@ -4626,10 +4597,10 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
             {/* Facturation & Devis Tab */}
             <button 
               onClick={() => setCurrentView("invoicing")}
-              className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "invoicing" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+              className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${["invoicing", "invoices"].includes(currentView) ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
             >
               <div className="flex items-center gap-2">
-                <Receipt size={14} className={`shrink-0 ${currentView === "invoicing" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
+                <Receipt size={14} className={`shrink-0 ${["invoicing", "invoices"].includes(currentView) ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
                 <span>{t("dash.invoicing", "Facturation & Devis")}</span>
               </div>
             </button>
@@ -5119,7 +5090,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
             />
           )}
 
-          {currentView === "invoicing" && (
+          {["invoicing", "invoices"].includes(currentView) && (
             <InvoicingView
               currentUser={currentUser}
               activeEventId={activeEventId}

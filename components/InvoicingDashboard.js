@@ -122,9 +122,9 @@ export default function InvoicingDashboard({
       {/* 2. Top 4 KPI Metric Cards (Image 1 reference) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* TOTAL ENCAISSÉ */}
-        <div className="bg-white border-2 border-lime-300 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all">
+        <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-xs hover:shadow-md transition-all">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-lime-100 flex items-center justify-center text-lime-700">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
               <TrendingUp size={20} className="stroke-[2.5]" />
             </div>
             <div>
@@ -231,15 +231,15 @@ export default function InvoicingDashboard({
               <Settings size={16} />
             </button>
 
-            {/* + Nouveau Document Button (lime green) */}
+            {/* + Nouveau Document Button (Eventzone blue) */}
             <div className="relative group">
               <button
                 onClick={() => onCreateNewDocument("facture")}
-                className="px-4 py-2.5 rounded-xl bg-lime-400 hover:bg-lime-500 text-slate-900 text-xs font-black shadow-sm flex items-center gap-2 transition-all cursor-pointer active:scale-95"
+                className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs flex items-center gap-2 transition-all cursor-pointer active:scale-95"
               >
                 <Plus size={15} className="stroke-[3]" />
                 <span>Nouveau document</span>
-                <ChevronDown size={13} className="text-slate-700" />
+                <ChevronDown size={13} className="text-blue-200" />
               </button>
 
               {/* Hover Dropdown to quickly create Devis or Proforma */}
@@ -299,7 +299,7 @@ export default function InvoicingDashboard({
                 onClick={() => setActiveFilter(tab.id)}
                 className={`px-3.5 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all cursor-pointer ${
                   activeFilter === tab.id
-                    ? "bg-lime-400 text-slate-900 shadow-xs"
+                    ? "bg-blue-600 text-white shadow-xs"
                     : "bg-slate-100/80 text-slate-600 hover:bg-slate-200/70"
                 }`}
               >

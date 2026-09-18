@@ -305,57 +305,55 @@ export default function InvoicingView({
   };
 
   return (
-    <div className="min-h-screen bg-slate-100/70 p-4 sm:p-8 font-sans">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Toast Notification Banner */}
-        {toastMessage && (
-          <div className="fixed top-20 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 text-xs font-bold animate-slide-in-right">
-            <Check size={16} className="text-lime-400" />
-            <span>{toastMessage}</span>
-          </div>
-        )}
+    <div className="space-y-6 max-w-7xl mx-auto font-sans pb-12">
+      {/* Toast Notification Banner */}
+      {toastMessage && (
+        <div className="fixed top-20 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 text-xs font-bold animate-slide-in-right">
+          <Check size={16} className="text-emerald-400" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
 
-        {/* View Switching */}
-        {viewMode === "dashboard" ? (
-          <InvoicingDashboard
-            invoices={invoices}
-            profiles={profiles}
-            selectedProfileId={selectedProfileId}
-            onSelectProfile={setSelectedProfileId}
-            onOpenSettings={() => setIsSettingsOpen(true)}
-            onCreateNewDocument={handleCreateNewDocument}
-            onEditDocument={handleEditDocument}
-            onDeleteDocument={handleDeleteDocument}
-            onDuplicateDocument={handleDuplicateDocument}
-            onConvertDocument={handleConvertDocument}
-            onStatusChange={handleStatusChange}
-            onCopyShareLink={handleCopyShareLink}
-            onDownloadPdf={handleDownloadPdf}
-          />
-        ) : (
-          <InvoicingEditor
-            initialDocument={editingDoc}
-            activeProfile={activeProfile}
-            savedClients={savedClients}
-            onBack={() => {
-              setViewMode("dashboard");
-              setEditingDoc(null);
-            }}
-            onSave={handleSaveDocument}
-            onCopyShareLink={handleCopyShareLink}
-            onDownloadPdf={handleDownloadPdf}
-          />
-        )}
-
-        {/* Profile Settings Modal */}
-        <InvoicingProfileSettingsModal
-          isOpen={isSettingsOpen}
-          onClose={() => setIsSettingsOpen(false)}
-          currentProfile={activeProfile}
-          onSaveProfile={handleSaveProfile}
-          userId={userId}
+      {/* View Switching */}
+      {viewMode === "dashboard" ? (
+        <InvoicingDashboard
+          invoices={invoices}
+          profiles={profiles}
+          selectedProfileId={selectedProfileId}
+          onSelectProfile={setSelectedProfileId}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          onCreateNewDocument={handleCreateNewDocument}
+          onEditDocument={handleEditDocument}
+          onDeleteDocument={handleDeleteDocument}
+          onDuplicateDocument={handleDuplicateDocument}
+          onConvertDocument={handleConvertDocument}
+          onStatusChange={handleStatusChange}
+          onCopyShareLink={handleCopyShareLink}
+          onDownloadPdf={handleDownloadPdf}
         />
-      </div>
+      ) : (
+        <InvoicingEditor
+          initialDocument={editingDoc}
+          activeProfile={activeProfile}
+          savedClients={savedClients}
+          onBack={() => {
+            setViewMode("dashboard");
+            setEditingDoc(null);
+          }}
+          onSave={handleSaveDocument}
+          onCopyShareLink={handleCopyShareLink}
+          onDownloadPdf={handleDownloadPdf}
+        />
+      )}
+
+      {/* Profile Settings Modal */}
+      <InvoicingProfileSettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        currentProfile={activeProfile}
+        onSaveProfile={handleSaveProfile}
+        userId={userId}
+      />
     </div>
   );
 }

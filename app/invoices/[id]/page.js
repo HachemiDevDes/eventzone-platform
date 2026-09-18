@@ -95,7 +95,7 @@ export default async function PublicInvoicePage({ params }) {
               href={pdfUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-5 py-2 rounded-xl bg-lime-400 hover:bg-lime-500 text-slate-900 text-xs font-black transition-all cursor-pointer shadow-xs flex items-center gap-2 active:scale-95"
+              className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all cursor-pointer shadow-xs flex items-center gap-2 active:scale-95"
             >
               <Download size={14} />
               <span>Télécharger PDF</span>

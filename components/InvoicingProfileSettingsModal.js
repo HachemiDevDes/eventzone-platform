@@ -727,11 +727,11 @@ export default function InvoicingProfileSettingsModal({
             <button
               type="submit"
               disabled={isSaving}
-              className="px-6 py-2.5 rounded-xl bg-lime-400 hover:bg-lime-500 active:scale-95 text-slate-900 text-xs font-black transition-all cursor-pointer shadow-sm flex items-center gap-2"
+              className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold transition-all cursor-pointer shadow-xs flex items-center gap-2"
             >
               {saveSuccess ? (
                 <>
-                  <CheckCircle2 size={16} className="text-slate-900" />
+                  <CheckCircle2 size={16} className="text-white" />
                   <span>Enregistré !</span>
                 </>
               ) : (
