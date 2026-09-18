@@ -296,11 +296,36 @@ export default function InvoicingView({
   };
 
   // 10. Download PDF
-  const handleDownloadPdf = (doc) => {
-    if (doc.id) {
-      window.open(`/api/invoices/${doc.id}/pdf`, "_blank");
-    } else {
-      window.print();
+  const handleDownloadPdf = async (docToDownload) => {
+    try {
+      showToast("Génération du PDF officiel...");
+      const res = await fetch("/api/invoices/pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(docToDownload),
+      });
+
+      if (!res.ok) throw new Error("Échec de génération du PDF");
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const docType = (docToDownload.document_type || "facture").toLowerCase();
+      const docNum = (docToDownload.document_number || "EZ").replace(/[^a-zA-Z0-9-_]/g, "_");
+      a.download = `${docType}_${docNum}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      showToast("Facture PDF téléchargée !");
+    } catch (err) {
+      console.error("Download PDF error:", err);
+      if (docToDownload.id) {
+        window.open(`/api/invoices/${docToDownload.id}/pdf`, "_blank");
+      } else {
+        showToast("Erreur lors du téléchargement du PDF.");
+      }
     }
   };
 

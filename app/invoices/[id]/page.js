@@ -93,8 +93,7 @@ export default async function PublicInvoicePage({ params }) {
           <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
             <a
               href={pdfUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+              download={`${invoice.document_type || "document"}_${invoice.document_number || "EZ"}.pdf`}
               className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all cursor-pointer shadow-xs flex items-center gap-2 active:scale-95"
             >
               <Download size={14} />

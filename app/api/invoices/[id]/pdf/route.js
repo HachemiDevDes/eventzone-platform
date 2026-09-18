@@ -35,11 +35,15 @@ export async function GET(request, { params }) {
 
     const filename = `${invoice.document_type || "document"}_${invoice.document_number || "EZ"}.pdf`;
 
+    const searchParams = request.nextUrl ? request.nextUrl.searchParams : new URL(request.url).searchParams;
+    const isInline = searchParams.get("view") === "inline";
+    const disposition = isInline ? "inline" : "attachment";
+
     return new NextResponse(pdfBuffer, {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename="${filename}"`,
+        "Content-Disposition": `${disposition}; filename="${filename}"`,
         "Cache-Control": "public, max-age=3600",
       },
     });

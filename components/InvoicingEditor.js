@@ -116,6 +116,7 @@ export default function InvoicingEditor({
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   // Recalculate financial totals whenever line items, discount, TVA, or stamp change
   useEffect(() => {
@@ -878,10 +879,10 @@ export default function InvoicingEditor({
         </div>
 
         {/* RIGHT COLUMN: Sticky Live A4 Preview (6 cols on lg) */}
-        <div className="lg:col-span-6 xl:col-span-6 sticky top-20 space-y-4">
-          <div className="flex items-center justify-between px-2">
+        <div className="lg:col-span-6 xl:col-span-6 sticky top-20 space-y-3">
+          <div className="flex items-center justify-between px-1">
             <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">
-              APERÇU DU DOCUMENT
+              APERÇU DU DOCUMENT (FORMAT A4)
             </span>
 
             <div className="flex items-center gap-2">
@@ -897,17 +898,26 @@ export default function InvoicingEditor({
 
               <button
                 type="button"
-                onClick={() => onDownloadPdf(doc)}
-                className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
+                disabled={isDownloading}
+                onClick={async () => {
+                  if (isDownloading) return;
+                  setIsDownloading(true);
+                  try {
+                    await onDownloadPdf(doc);
+                  } finally {
+                    setIsDownloading(false);
+                  }
+                }}
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-60"
               >
                 <Download size={13} />
-                <span>Télécharger PDF</span>
+                <span>{isDownloading ? "Téléchargement..." : "Télécharger PDF"}</span>
               </button>
             </div>
           </div>
 
-          {/* Live Document Preview Container */}
-          <div className="overflow-hidden border border-slate-200/90 rounded-3xl shadow-sm bg-slate-100/60 p-2 sm:p-4 max-h-[86vh] overflow-y-auto">
+          {/* Live Document Preview Workspace Canvas */}
+          <div className="overflow-y-auto max-h-[calc(100vh-140px)] border border-slate-200/90 rounded-3xl shadow-inner bg-slate-200/60 p-2 sm:p-5 flex justify-center">
             <InvoicingDocumentPreview document={doc} />
           </div>
         </div>

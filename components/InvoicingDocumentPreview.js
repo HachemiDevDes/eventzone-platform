@@ -81,7 +81,7 @@ export default function InvoicingDocumentPreview({
 
   return (
     <div 
-      className={`bg-white text-slate-900 mx-auto transition-all shadow-lg sm:shadow-xl rounded-2xl border border-slate-200/80 p-6 sm:p-10 font-sans max-w-[820px] min-h-[1050px] flex flex-col justify-between select-text ${isPrintMode ? 'shadow-none border-none p-0 max-w-none min-h-0' : ''} ${className}`}
+      className={`bg-white text-slate-900 mx-auto transition-all shadow-[0_4px_24px_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.04)] rounded-xs sm:rounded-sm border border-slate-200/90 p-8 sm:p-12 md:p-14 font-sans w-full max-w-[794px] min-h-[1123px] flex flex-col justify-between select-text ${isPrintMode ? 'shadow-none border-none p-0 max-w-none min-h-0' : ''} ${className}`}
       id="a4-invoice-render"
       style={{
         boxSizing: 'border-box',
