@@ -317,11 +317,11 @@ export default function TeamView({
         </div>
 
         <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-3.5">
-          <div className="w-11 h-11 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold shrink-0">
+          <div className="w-11 h-11 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0">
             <ShieldCheck size={20} />
           </div>
           <div>
-            <div className="text-xl font-black text-purple-700 leading-tight">
+            <div className="text-xl font-black text-blue-700 leading-tight">
               <bdi dir="ltr">{adminCount}</bdi>
             </div>
             <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">
@@ -494,10 +494,10 @@ export default function TeamView({
                       <td className="py-4 px-6">
                         <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold border ${
                           isMemberAdmin
-                            ? "bg-purple-50 text-purple-700 border-purple-200"
+                            ? "bg-blue-50 text-blue-700 border-blue-200"
                             : "bg-slate-100 text-slate-700 border-slate-200"
                         }`}>
-                          {isMemberAdmin && <Sparkles size={11} className="text-purple-600" />}
+                          {isMemberAdmin && <Sparkles size={11} className="text-blue-600" />}
                           <span>{member.role || t("team.roleStaff", "Staff")}</span>
                         </span>
                       </td>

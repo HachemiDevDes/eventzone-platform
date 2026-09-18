@@ -13,6 +13,7 @@ import {
 import { useLanguage } from "../lib/i18n";
 import { INDUSTRY_TRANSLATIONS } from "../lib/constants";
 import { OverviewSkeleton } from "./SkeletonLoaders";
+import { canViewModule, canEditModule } from "../lib/permissions";
 
 export default function Overview({ 
   eventDetails = {}, 
@@ -32,7 +33,8 @@ export default function Overview({
   isLoading = false,
   onSwitchView,
   onOpenModal,
-  onPreviewLandingPage
+  onPreviewLandingPage,
+  effectivePermissions = null
 }) {
   const { t, lang, isRTL } = useLanguage();
   const [chartMode, setChartMode] = useState("daily"); // "daily" | "cumulative"

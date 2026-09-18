@@ -69,7 +69,7 @@ import SearchableSelect from "../components/SearchableSelect";
 import OrganizerAttendeePortalSettings from "../components/OrganizerAttendeePortalSettings";
 import AttendeePortalView from "../components/AttendeePortalView";
 import ErrorBoundary from "../components/ErrorBoundary";
-import { getEffectivePermissions, canViewModule, canEditModule, getModulePermission } from "../lib/permissions";
+import { getEffectivePermissions, canViewModule, canEditModule, getModulePermission, EVENT_MODULES } from "../lib/permissions";
 import { LanguageProvider, useLanguage } from "../lib/i18n";
 
 import {
@@ -404,6 +404,36 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
   const effectivePermissions = useMemo(() => {
     return getEffectivePermissions(currentUser, eventDetails, team, simulatedMemberId, userEvents, activeEventId);
   }, [currentUser, eventDetails, team, simulatedMemberId, userEvents, activeEventId]);
+
+  const getModuleKeyFromView = (view) => {
+    if (view === "page-builder") return "event-details";
+    if (view === "invoices") return "invoicing";
+    return view;
+  };
+
+  // Auto-redirect team members if current view is not permitted for their role
+  useEffect(() => {
+    if (!effectivePermissions || effectivePermissions.isAdmin || effectivePermissions.isOwner) return;
+    if (isLoading) return;
+    
+    // Only apply to module dashboard views
+    const eventDashboardViews = [
+      "overview", "event-details", "page-builder", "calendar", "speakers", "opportunities", 
+      "organizations", "sponsors", "exhibitors", "influencers", "tickets", "attendees", 
+      "pending", "rsvp", "floor-plan", "logistics", "documents", "check-in", "forms", 
+      "communications", "certificates", "analytics", "my-team", "developers", "portal-settings", "invoicing", "invoices"
+    ];
+    if (!eventDashboardViews.includes(currentView)) return;
+
+    const modKey = getModuleKeyFromView(currentView);
+    if (!canViewModule(modKey, effectivePermissions.permissions)) {
+      // Find the first accessible module
+      const firstAllowedModule = EVENT_MODULES.find(m => canViewModule(m.id, effectivePermissions.permissions));
+      if (firstAllowedModule) {
+        setCurrentView(firstAllowedModule.id);
+      }
+    }
+  }, [currentView, effectivePermissions, isLoading]);
 
   const [isLoading, setIsLoading] = useState(() => {
     if (typeof window !== "undefined") {
@@ -4361,366 +4391,406 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
 
           {/* Navigation Links */}
           <nav className="flex flex-col gap-0.5">
-            <button 
-              onClick={() => setCurrentView("overview")}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "overview" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
-            >
-              <LayoutDashboard size={14} className={`shrink-0 ${currentView === "overview" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
-              <span>{t("dash.overview", "Overview")}</span>
-            </button>
+            {canViewModule("overview", effectivePermissions.permissions) && (
+              <button 
+                onClick={() => setCurrentView("overview")}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "overview" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+              >
+                <LayoutDashboard size={14} className={`shrink-0 ${currentView === "overview" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
+                <span>{t("dash.overview", "Overview")}</span>
+              </button>
+            )}
 
-            <button 
-              onClick={() => setCurrentView("event-details")}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${["event-details", "page-builder"].includes(currentView) ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
-            >
-              <FileText size={14} className={`shrink-0 ${["event-details", "page-builder"].includes(currentView) ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
-              <span>{t("dash.eventDetails", "Event Details")}</span>
-            </button>
+            {canViewModule("event-details", effectivePermissions.permissions) && (
+              <button 
+                onClick={() => setCurrentView("event-details")}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${["event-details", "page-builder"].includes(currentView) ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+              >
+                <FileText size={14} className={`shrink-0 ${["event-details", "page-builder"].includes(currentView) ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
+                <span>{t("dash.eventDetails", "Event Details")}</span>
+              </button>
+            )}
 
-            <button 
-              onClick={() => setCurrentView("calendar")}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "calendar" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
-            >
-              <Calendar size={14} className={`shrink-0 ${currentView === "calendar" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
-              <span>{t("dash.calendar", "Agenda")}</span>
-            </button>
+            {canViewModule("calendar", effectivePermissions.permissions) && (
+              <button 
+                onClick={() => setCurrentView("calendar")}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "calendar" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+              >
+                <Calendar size={14} className={`shrink-0 ${currentView === "calendar" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
+                <span>{t("dash.calendar", "Agenda")}</span>
+              </button>
+            )}
 
             {/* Standalone Opportunities Tab */}
-            <button 
-              onClick={() => setCurrentView("opportunities")}
-              className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "opportunities" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
-            >
-              <div className="flex items-center gap-2">
-                <TrendingUp size={14} className={`shrink-0 ${currentView === "opportunities" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
-                <span>{t("dash.opportunities", "Opportunities")}</span>
-              </div>
-              <span className={`text-[9px] font-extrabold py-0.5 px-2 rounded-full ${currentView === "opportunities" ? "bg-white/25 text-white" : "bg-slate-100 text-slate-500"}`}>{opportunities.filter(o => !o.isArchived).length}</span>
-            </button>
+            {canViewModule("opportunities", effectivePermissions.permissions) && (
+              <button 
+                onClick={() => setCurrentView("opportunities")}
+                className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "opportunities" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+              >
+                <div className="flex items-center gap-2">
+                  <TrendingUp size={14} className={`shrink-0 ${currentView === "opportunities" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
+                  <span>{t("dash.opportunities", "Opportunities")}</span>
+                </div>
+                <span className={`text-[9px] font-extrabold py-0.5 px-2 rounded-full ${currentView === "opportunities" ? "bg-white/25 text-white" : "bg-slate-100 text-slate-500"}`}>{opportunities.filter(o => !o.isArchived).length}</span>
+              </button>
+            )}
 
             {/* 1. Expandable Participants Submenu */}
-            <div className="flex flex-col">
-              <button 
-                onClick={() => setParticipantsOpen(!participantsOpen)}
-                className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${["attendees", "pending", "speakers"].includes(currentView) ? "text-blue-700 bg-blue-50/50 font-extrabold" : "text-slate-600 hover:bg-slate-50"}`}
-              >
-                <div className="flex items-center gap-2">
-                  <Users2 size={14} className={`shrink-0 ${["attendees", "pending", "speakers"].includes(currentView) ? "text-blue-600" : "text-slate-400 group-hover:text-blue-600"}`} />
-                  <span>{t("dash.participants", "Participants")}</span>
-                </div>
-                <ChevronDown size={11} className={`text-slate-400 transition-transform ${participantsOpen ? "rotate-180" : ""}`} />
-              </button>
+            {(canViewModule("attendees", effectivePermissions.permissions) ||
+              canViewModule("pending", effectivePermissions.permissions) ||
+              canViewModule("speakers", effectivePermissions.permissions)) && (
+              <div className="flex flex-col">
+                <button 
+                  onClick={() => setParticipantsOpen(!participantsOpen)}
+                  className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${["attendees", "pending", "speakers"].includes(currentView) ? "text-blue-700 bg-blue-50/50 font-extrabold" : "text-slate-600 hover:bg-slate-50"}`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Users2 size={14} className={`shrink-0 ${["attendees", "pending", "speakers"].includes(currentView) ? "text-blue-600" : "text-slate-400 group-hover:text-blue-600"}`} />
+                    <span>{t("dash.participants", "Participants")}</span>
+                  </div>
+                  <ChevronDown size={11} className={`text-slate-400 transition-transform ${participantsOpen ? "rotate-180" : ""}`} />
+                </button>
 
-              {participantsOpen && (
-                <div className="flex flex-col gap-0.5 pl-3 rtl:pr-3 rtl:pl-0 mt-1 border-l rtl:border-r rtl:border-l-0 border-slate-100 ml-4 rtl:mr-4 rtl:ml-0">
-                  <button 
-                    onClick={() => setCurrentView("attendees")}
-                    className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "attendees" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
-                  >
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <UserCheck size={12} className="shrink-0" />
-                      <span className="truncate">{t("dash.attendees", "All Attendees")}</span>
-                    </div>
-                    <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "attendees" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{attendees.length}</span>
-                  </button>
+                {participantsOpen && (
+                  <div className="flex flex-col gap-0.5 pl-3 rtl:pr-3 rtl:pl-0 mt-1 border-l rtl:border-r rtl:border-l-0 border-slate-100 ml-4 rtl:mr-4 rtl:ml-0">
+                    {canViewModule("attendees", effectivePermissions.permissions) && (
+                      <button 
+                        onClick={() => setCurrentView("attendees")}
+                        className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "attendees" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
+                      >
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <UserCheck size={12} className="shrink-0" />
+                          <span className="truncate">{t("dash.attendees", "All Attendees")}</span>
+                        </div>
+                        <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "attendees" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{attendees.length}</span>
+                      </button>
+                    )}
 
-                  <button 
-                    onClick={() => setCurrentView("pending")}
-                    className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "pending" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
-                  >
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <Clock size={12} className="shrink-0" />
-                      <span className="truncate">{t("dash.pending", "Pending")}</span>
-                    </div>
-                    <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "pending" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{pending.length}</span>
-                  </button>
+                    {canViewModule("pending", effectivePermissions.permissions) && (
+                      <button 
+                        onClick={() => setCurrentView("pending")}
+                        className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "pending" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
+                      >
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Clock size={12} className="shrink-0" />
+                          <span className="truncate">{t("dash.pending", "Pending")}</span>
+                        </div>
+                        <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "pending" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{pending.length}</span>
+                      </button>
+                    )}
 
-                  <button 
-                    onClick={() => setCurrentView("speakers")}
-                    className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "speakers" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
-                  >
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <Mic2 size={12} className="shrink-0" />
-                      <span className="truncate">{t("dash.speakers", "Speakers")}</span>
-                    </div>
-                    <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "speakers" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{getUniqueSpeakersCount()}</span>
-                  </button>
-                </div>
-              )}
-            </div>
+                    {canViewModule("speakers", effectivePermissions.permissions) && (
+                      <button 
+                        onClick={() => setCurrentView("speakers")}
+                        className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "speakers" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
+                      >
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Mic2 size={12} className="shrink-0" />
+                          <span className="truncate">{t("dash.speakers", "Speakers")}</span>
+                        </div>
+                        <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "speakers" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{getUniqueSpeakersCount()}</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* 2. Expandable Companies Submenu */}
-            <div className="flex flex-col">
+            {(canViewModule("organizations", effectivePermissions.permissions) ||
+              canViewModule("sponsors", effectivePermissions.permissions) ||
+              canViewModule("exhibitors", effectivePermissions.permissions)) && (
+              <div className="flex flex-col">
+                <button 
+                  onClick={() => setCompaniesOpen(!companiesOpen)}
+                  className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${["organizations", "sponsors", "exhibitors"].includes(currentView) ? "text-blue-700 bg-blue-50/50 font-extrabold" : "text-slate-600 hover:bg-slate-50"}`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Building2 size={14} className={`shrink-0 ${["organizations", "sponsors", "exhibitors"].includes(currentView) ? "text-blue-600" : "text-slate-400 group-hover:text-blue-600"}`} />
+                    <span>{t("dash.allCompanies", "Companies")}</span>
+                  </div>
+                  <ChevronDown size={11} className={`text-slate-400 transition-transform ${companiesOpen ? "rotate-180" : ""}`} />
+                </button>
+
+                {companiesOpen && (
+                  <div className="flex flex-col gap-0.5 pl-3 rtl:pr-3 rtl:pl-0 mt-1 border-l rtl:border-r rtl:border-l-0 border-slate-100 ml-4 rtl:mr-4 rtl:ml-0">
+                    {canViewModule("organizations", effectivePermissions.permissions) && (
+                      <button 
+                        onClick={() => setCurrentView("organizations")}
+                        className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "organizations" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
+                      >
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Building2 size={12} className="shrink-0" />
+                          <span className="truncate">{t("dash.organizations", "Organizations")}</span>
+                        </div>
+                        <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "organizations" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{organizations.length}</span>
+                      </button>
+                    )}
+
+                    {canViewModule("sponsors", effectivePermissions.permissions) && (
+                      <button 
+                        onClick={() => setCurrentView("sponsors")}
+                        className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "sponsors" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
+                      >
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Sparkles size={12} className="shrink-0" />
+                          <span className="truncate">{t("dash.sponsors", "Sponsors")}</span>
+                        </div>
+                        <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "sponsors" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{sponsors.length}</span>
+                      </button>
+                    )}
+
+                    {canViewModule("exhibitors", effectivePermissions.permissions) && (
+                      <button 
+                        onClick={() => setCurrentView("exhibitors")}
+                        className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "exhibitors" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
+                      >
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Store size={12} className="shrink-0" />
+                          <span className="truncate">{t("dash.exhibitors", "Exhibitors")}</span>
+                        </div>
+                        <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "exhibitors" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{exhibitors.length}</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {canViewModule("floor-plan", effectivePermissions.permissions) && (
               <button 
-                onClick={() => setCompaniesOpen(!companiesOpen)}
-                className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${["organizations", "sponsors", "exhibitors"].includes(currentView) ? "text-blue-700 bg-blue-50/50 font-extrabold" : "text-slate-600 hover:bg-slate-50"}`}
+                onClick={() => { setCurrentView("floor-plan"); setActiveFloorPlanId(null); }}
+                className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "floor-plan" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
               >
                 <div className="flex items-center gap-2">
-                  <Building2 size={14} className={`shrink-0 ${["organizations", "sponsors", "exhibitors"].includes(currentView) ? "text-blue-600" : "text-slate-400 group-hover:text-blue-600"}`} />
-                  <span>{t("dash.allCompanies", "Companies")}</span>
+                  <Layers size={14} className={`shrink-0 ${currentView === "floor-plan" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
+                  <span>{t("dash.floorPlan", "Floor Plans")}</span>
                 </div>
-                <ChevronDown size={11} className={`text-slate-400 transition-transform ${companiesOpen ? "rotate-180" : ""}`} />
+                <span className={`text-[9px] font-extrabold py-0.5 px-2 rounded-full ${currentView === "floor-plan" ? "bg-white/25 text-white" : "bg-slate-100 text-slate-500"}`}>{floorPlans.length}</span>
               </button>
+            )}
 
-              {companiesOpen && (
-                <div className="flex flex-col gap-0.5 pl-3 rtl:pr-3 rtl:pl-0 mt-1 border-l rtl:border-r rtl:border-l-0 border-slate-100 ml-4 rtl:mr-4 rtl:ml-0">
-                  <button 
-                    onClick={() => setCurrentView("organizations")}
-                    className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "organizations" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
-                  >
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <Building2 size={12} className="shrink-0" />
-                      <span className="truncate">{t("dash.organizations", "Organizations")}</span>
-                    </div>
-                    <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "organizations" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{organizations.length}</span>
-                  </button>
+            {canViewModule("tickets", effectivePermissions.permissions) && (
+              <button 
+                onClick={() => setCurrentView("tickets")}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "tickets" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+              >
+                <Ticket size={14} className={`shrink-0 ${currentView === "tickets" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
+                <span>{t("dash.tickets", "Tickets")}</span>
+              </button>
+            )}
 
-                  <button 
-                    onClick={() => setCurrentView("sponsors")}
-                    className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "sponsors" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
-                  >
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <Sparkles size={12} className="shrink-0" />
-                      <span className="truncate">{t("dash.sponsors", "Sponsors")}</span>
-                    </div>
-                    <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "sponsors" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{sponsors.length}</span>
-                  </button>
-
-                  <button 
-                    onClick={() => setCurrentView("exhibitors")}
-                    className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "exhibitors" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
-                  >
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <Store size={12} className="shrink-0" />
-                      <span className="truncate">{t("dash.exhibitors", "Exhibitors")}</span>
-                    </div>
-                    <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "exhibitors" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{exhibitors.length}</span>
-                  </button>
+            {canViewModule("portal-settings", effectivePermissions.permissions) && (
+              <button 
+                onClick={() => setCurrentView("portal-settings")}
+                className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "portal-settings" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+              >
+                <div className="flex items-center gap-2">
+                  <Globe size={14} className={`shrink-0 ${currentView === "portal-settings" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
+                  <span>{t("dash.attendeePortal", "Attendee Portal")}</span>
                 </div>
-              )}
-            </div>
+                <span className={`text-[8.5px] font-extrabold py-0.5 px-2 rounded-full uppercase tracking-wider ${
+                  currentView === "portal-settings" 
+                    ? "bg-white/25 text-white" 
+                    : (eventDetails?.portalStatus === "closed" ? "bg-rose-100 text-rose-700" : (eventDetails?.portalStatus === "scheduled" ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"))
+                }`}>
+                  {eventDetails?.portalStatus === "closed" ? t("common.closed", "Closed") : eventDetails?.portalStatus === "scheduled" ? t("common.scheduled", "Scheduled") : t("overview.open", "Open")}
+                </span>
+              </button>
+            )}
 
-            <button 
-              onClick={() => { setCurrentView("floor-plan"); setActiveFloorPlanId(null); }}
-              className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "floor-plan" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
-            >
-              <div className="flex items-center gap-2">
-                <Layers size={14} className={`shrink-0 ${currentView === "floor-plan" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
-                <span>{t("dash.floorPlan", "Floor Plans")}</span>
-              </div>
-              <span className={`text-[9px] font-extrabold py-0.5 px-2 rounded-full ${currentView === "floor-plan" ? "bg-white/25 text-white" : "bg-slate-100 text-slate-500"}`}>{floorPlans.length}</span>
-            </button>
+            {canViewModule("forms", effectivePermissions.permissions) && (
+              <button 
+                onClick={() => setCurrentView("forms")}
+                className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "forms" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+              >
+                <div className="flex items-center gap-2">
+                  <ClipboardList size={14} className={`shrink-0 ${currentView === "forms" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
+                  <span>{t("dash.forms", "Forms & Surveys")}</span>
+                </div>
+                <span className={`text-[9px] font-extrabold py-0.5 px-2 rounded-full ${currentView === "forms" ? "bg-white/25 text-white" : "bg-slate-100 text-slate-500"}`}>{forms.length}</span>
+              </button>
+            )}
 
-            <button 
-              onClick={() => setCurrentView("tickets")}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "tickets" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
-            >
-              <Ticket size={14} className={`shrink-0 ${currentView === "tickets" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
-              <span>{t("dash.tickets", "Tickets")}</span>
-            </button>
-
-            <button 
-              onClick={() => setCurrentView("portal-settings")}
-              className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "portal-settings" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
-            >
-              <div className="flex items-center gap-2">
-                <Globe size={14} className={`shrink-0 ${currentView === "portal-settings" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
-                <span>{t("dash.attendeePortal", "Attendee Portal")}</span>
-              </div>
-              <span className={`text-[8.5px] font-extrabold py-0.5 px-2 rounded-full uppercase tracking-wider ${
-                currentView === "portal-settings" 
-                  ? "bg-white/25 text-white" 
-                  : (eventDetails?.portalStatus === "closed" ? "bg-rose-100 text-rose-700" : (eventDetails?.portalStatus === "scheduled" ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"))
-              }`}>
-                {eventDetails?.portalStatus === "closed" ? t("common.closed", "Closed") : eventDetails?.portalStatus === "scheduled" ? t("common.scheduled", "Scheduled") : t("overview.open", "Open")}
-              </span>
-            </button>
-
-            <button 
-              onClick={() => setCurrentView("forms")}
-              className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "forms" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
-            >
-              <div className="flex items-center gap-2">
-                <ClipboardList size={14} className={`shrink-0 ${currentView === "forms" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
-                <span>{t("dash.forms", "Forms & Surveys")}</span>
-              </div>
-              <span className={`text-[9px] font-extrabold py-0.5 px-2 rounded-full ${currentView === "forms" ? "bg-white/25 text-white" : "bg-slate-100 text-slate-500"}`}>{forms.length}</span>
-            </button>
-
-            <button 
-              onClick={() => setCurrentView("rsvp")}
-              className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "rsvp" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
-            >
-              <div className="flex items-center gap-2">
-                <CheckCircle2 size={14} className={`shrink-0 ${currentView === "rsvp" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
-                <span>{t("dash.rsvp", "RSVP")}</span>
-              </div>
-              <span className={`text-[9px] font-extrabold py-0.5 px-2 rounded-full ${currentView === "rsvp" ? "bg-white/25 text-white" : "bg-slate-100 text-slate-500"}`}>{rsvps.length}</span>
-            </button>
+            {canViewModule("rsvp", effectivePermissions.permissions) && (
+              <button 
+                onClick={() => setCurrentView("rsvp")}
+                className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "rsvp" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+              >
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 size={14} className={`shrink-0 ${currentView === "rsvp" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
+                  <span>{t("dash.rsvp", "RSVP")}</span>
+                </div>
+                <span className={`text-[9px] font-extrabold py-0.5 px-2 rounded-full ${currentView === "rsvp" ? "bg-white/25 text-white" : "bg-slate-100 text-slate-500"}`}>{rsvps.length}</span>
+              </button>
+            )}
 
             {/* 3. Expandable Logistics Submenu */}
-            <div className="flex flex-col">
-              <button 
-                onClick={() => setLogisticsOpen(!logisticsOpen)}
-                className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "logistics" ? "text-blue-700 bg-blue-50/50 font-extrabold" : "text-slate-600 hover:bg-slate-50"}`}
-              >
-                <div className="flex items-center gap-2">
-                  <Boxes size={14} className={`shrink-0 ${currentView === "logistics" ? "text-blue-600" : "text-slate-400 group-hover:text-blue-600"}`} />
-                  <span>{t("dash.logistics", "Logistics")}</span>
-                </div>
-                <ChevronDown size={11} className={`text-slate-400 transition-transform ${logisticsOpen ? "rotate-180" : ""}`} />
-              </button>
+            {canViewModule("logistics", effectivePermissions.permissions) && (
+              <div className="flex flex-col">
+                <button 
+                  onClick={() => setLogisticsOpen(!logisticsOpen)}
+                  className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "logistics" ? "text-blue-700 bg-blue-50/50 font-extrabold" : "text-slate-600 hover:bg-slate-50"}`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Boxes size={14} className={`shrink-0 ${currentView === "logistics" ? "text-blue-600" : "text-slate-400 group-hover:text-blue-600"}`} />
+                    <span>{t("dash.logistics", "Logistics")}</span>
+                  </div>
+                  <ChevronDown size={11} className={`text-slate-400 transition-transform ${logisticsOpen ? "rotate-180" : ""}`} />
+                </button>
 
-              {logisticsOpen && (
-                <div className="flex flex-col gap-0.5 pl-3 rtl:pr-3 rtl:pl-0 mt-1 border-l rtl:border-r rtl:border-l-0 border-slate-100 ml-4 rtl:mr-4 rtl:ml-0">
-                  <button 
-                    onClick={() => { setCurrentView("logistics"); setLogisticsTab("inventory"); }}
-                    className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "logistics" && logisticsTab === "inventory" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
-                  >
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <Package size={12} className="shrink-0" />
-                      <span className="truncate">{t("logistics.tabInventory", "Inventory & Equipment")}</span>
-                    </div>
-                    <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "logistics" && logisticsTab === "inventory" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{logisticsData.inventory?.length || 0}</span>
-                  </button>
+                {logisticsOpen && (
+                  <div className="flex flex-col gap-0.5 pl-3 rtl:pr-3 rtl:pl-0 mt-1 border-l rtl:border-r rtl:border-l-0 border-slate-100 ml-4 rtl:mr-4 rtl:ml-0">
+                    <button 
+                      onClick={() => { setCurrentView("logistics"); setLogisticsTab("inventory"); }}
+                      className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "logistics" && logisticsTab === "inventory" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
+                    >
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <Package size={12} className="shrink-0" />
+                        <span className="truncate">{t("logistics.tabInventory", "Inventory & Equipment")}</span>
+                      </div>
+                      <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "logistics" && logisticsTab === "inventory" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{logisticsData.inventory?.length || 0}</span>
+                    </button>
 
-                  <button 
-                    onClick={() => { setCurrentView("logistics"); setLogisticsTab("vendors"); }}
-                    className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "logistics" && logisticsTab === "vendors" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
-                  >
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <Truck size={12} className="shrink-0" />
-                      <span className="truncate">{t("logistics.tabVendors", "Vendors & Deliveries")}</span>
-                    </div>
-                    <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "logistics" && logisticsTab === "vendors" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{logisticsData.vendors?.length || 0}</span>
-                  </button>
+                    <button 
+                      onClick={() => { setCurrentView("logistics"); setLogisticsTab("vendors"); }}
+                      className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "logistics" && logisticsTab === "vendors" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
+                    >
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <Truck size={12} className="shrink-0" />
+                        <span className="truncate">{t("logistics.tabVendors", "Vendors & Deliveries")}</span>
+                      </div>
+                      <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "logistics" && logisticsTab === "vendors" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{logisticsData.vendors?.length || 0}</span>
+                    </button>
 
-                  <button 
-                    onClick={() => { setCurrentView("logistics"); setLogisticsTab("travel"); }}
-                    className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "logistics" && logisticsTab === "travel" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
-                  >
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <Plane size={12} className="shrink-0" />
-                      <span className="truncate">{t("logistics.tabTravel", "VIP Travel & Lodging")}</span>
-                    </div>
-                    <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "logistics" && logisticsTab === "travel" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{logisticsData.travel?.length || 0}</span>
-                  </button>
+                    <button 
+                      onClick={() => { setCurrentView("logistics"); setLogisticsTab("travel"); }}
+                      className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "logistics" && logisticsTab === "travel" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
+                    >
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <Plane size={12} className="shrink-0" />
+                        <span className="truncate">{t("logistics.tabTravel", "VIP Travel & Lodging")}</span>
+                      </div>
+                      <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "logistics" && logisticsTab === "travel" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{logisticsData.travel?.length || 0}</span>
+                    </button>
 
-                  <button 
-                    onClick={() => { setCurrentView("logistics"); setLogisticsTab("runOfShow"); }}
-                    className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "logistics" && logisticsTab === "runOfShow" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
-                  >
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <Clock size={12} className="shrink-0" />
-                      <span className="truncate">{t("logistics.tabRunOfShow", "Run of Show & Schedule")}</span>
-                    </div>
-                    <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "logistics" && logisticsTab === "runOfShow" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{logisticsData.runOfShow?.length || 0}</span>
-                  </button>
+                    <button 
+                      onClick={() => { setCurrentView("logistics"); setLogisticsTab("runOfShow"); }}
+                      className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "logistics" && logisticsTab === "runOfShow" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
+                    >
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <Clock size={12} className="shrink-0" />
+                        <span className="truncate">{t("logistics.tabRunOfShow", "Run of Show & Schedule")}</span>
+                      </div>
+                      <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "logistics" && logisticsTab === "runOfShow" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{logisticsData.runOfShow?.length || 0}</span>
+                    </button>
 
-                  <button 
-                    onClick={() => { setCurrentView("logistics"); setLogisticsTab("checklists"); }}
-                    className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "logistics" && logisticsTab === "checklists" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
-                  >
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <ClipboardCheck size={12} className="shrink-0" />
-                      <span className="truncate">{t("logistics.tabChecklists", "Checklists & Issues")}</span>
-                    </div>
-                    <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "logistics" && logisticsTab === "checklists" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{logisticsData.checklists?.length || 0}</span>
-                  </button>
-                </div>
-              )}
-            </div>
+                    <button 
+                      onClick={() => { setCurrentView("logistics"); setLogisticsTab("checklists"); }}
+                      className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "logistics" && logisticsTab === "checklists" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
+                    >
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <ClipboardCheck size={12} className="shrink-0" />
+                        <span className="truncate">{t("logistics.tabChecklists", "Checklists & Issues")}</span>
+                      </div>
+                      <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "logistics" && logisticsTab === "checklists" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{logisticsData.checklists?.length || 0}</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Standalone Influencers Tab */}
-            <button 
-              onClick={() => setCurrentView("influencers")}
-              className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "influencers" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
-            >
-              <div className="flex items-center gap-2">
-                <Share2 size={14} className={`shrink-0 ${currentView === "influencers" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
-                <span>{t("dash.influencers", "Influencers")}</span>
-              </div>
-              <span className={`text-[9px] font-extrabold py-0.5 px-2 rounded-full ${currentView === "influencers" ? "bg-white/25 text-white" : "bg-slate-100 text-slate-500"}`}>{influencers.filter(i => !i.isArchived).length}</span>
-            </button>
-
-            {/* Documents Tab (Temporarily hidden to minimize cloud storage & egress) */}
-            {/*
-            <button 
-              onClick={() => setCurrentView("documents")}
-              className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "documents" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
-            >
-              <div className="flex items-center gap-2">
-                <Files size={14} className={`shrink-0 ${currentView === "documents" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
-                <span>{t("dash.documents", "Documents")}</span>
-              </div>
-              <span className={`text-[9px] font-extrabold py-0.5 px-2 rounded-full ${currentView === "documents" ? "bg-white/25 text-white" : "bg-slate-100 text-slate-500"}`}>
-                {documents.filter(d => !d.isArchived).length}
-              </span>
-            </button>
-            */}
+            {canViewModule("influencers", effectivePermissions.permissions) && (
+              <button 
+                onClick={() => setCurrentView("influencers")}
+                className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "influencers" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+              >
+                <div className="flex items-center gap-2">
+                  <Share2 size={14} className={`shrink-0 ${currentView === "influencers" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
+                  <span>{t("dash.influencers", "Influencers")}</span>
+                </div>
+                <span className={`text-[9px] font-extrabold py-0.5 px-2 rounded-full ${currentView === "influencers" ? "bg-white/25 text-white" : "bg-slate-100 text-slate-500"}`}>{influencers.filter(i => !i.isArchived).length}</span>
+              </button>
+            )}
 
             {/* Facturation & Devis Tab */}
-            <button 
-              onClick={() => setCurrentView("invoicing")}
-              className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${["invoicing", "invoices"].includes(currentView) ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
-            >
-              <div className="flex items-center gap-2">
-                <Receipt size={14} className={`shrink-0 ${["invoicing", "invoices"].includes(currentView) ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
-                <span>{t("dash.invoicing", "Facturation & Devis")}</span>
-              </div>
-            </button>
+            {canViewModule("invoicing", effectivePermissions.permissions) && (
+              <button 
+                onClick={() => setCurrentView("invoicing")}
+                className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${["invoicing", "invoices"].includes(currentView) ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+              >
+                <div className="flex items-center gap-2">
+                  <Receipt size={14} className={`shrink-0 ${["invoicing", "invoices"].includes(currentView) ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
+                  <span>{t("dash.invoicing", "Facturation & Devis")}</span>
+                </div>
+              </button>
+            )}
 
-            <button 
-              onClick={() => setCurrentView("check-in")}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "check-in" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
-            >
-              <QrCode size={14} className={`shrink-0 ${currentView === "check-in" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
-              <span>{t("dash.checkIn", "Check In")}</span>
-            </button>
+            {canViewModule("check-in", effectivePermissions.permissions) && (
+              <button 
+                onClick={() => setCurrentView("check-in")}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "check-in" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+              >
+                <QrCode size={14} className={`shrink-0 ${currentView === "check-in" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
+                <span>{t("dash.checkIn", "Check In")}</span>
+              </button>
+            )}
 
-            <button 
-              onClick={() => setCurrentView("my-team")}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "my-team" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
-            >
-              <ShieldCheck size={14} className={`shrink-0 ${currentView === "my-team" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
-              <span>{t("dash.myTeam", "My Team")}</span>
-            </button>
+            {canViewModule("my-team", effectivePermissions.permissions) && (
+              <button 
+                onClick={() => setCurrentView("my-team")}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "my-team" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+              >
+                <ShieldCheck size={14} className={`shrink-0 ${currentView === "my-team" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
+                <span>{t("dash.myTeam", "My Team")}</span>
+              </button>
+            )}
 
-            <button 
-              onClick={() => setCurrentView("analytics")}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "analytics" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
-            >
-              <BarChart3 size={14} className={`shrink-0 ${currentView === "analytics" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
-              <span>{t("dash.analytics", "Analytics")}</span>
-            </button>
+            {canViewModule("analytics", effectivePermissions.permissions) && (
+              <button 
+                onClick={() => setCurrentView("analytics")}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "analytics" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+              >
+                <BarChart3 size={14} className={`shrink-0 ${currentView === "analytics" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
+                <span>{t("dash.analytics", "Analytics")}</span>
+              </button>
+            )}
 
-            <button 
-              onClick={() => setCurrentView("communications")}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "communications" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
-            >
-              <Mail size={14} className={`shrink-0 ${currentView === "communications" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
-              <span>{t("dash.communications", "Communications")}</span>
-            </button>
+            {canViewModule("communications", effectivePermissions.permissions) && (
+              <button 
+                onClick={() => setCurrentView("communications")}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "communications" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+              >
+                <Mail size={14} className={`shrink-0 ${currentView === "communications" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
+                <span>{t("dash.communications", "Communications")}</span>
+              </button>
+            )}
 
-            <button 
-              onClick={() => setCurrentView("certificates")}
-              className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "certificates" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
-            >
-              <div className="flex items-center gap-2">
-                <Award size={14} className={`shrink-0 ${currentView === "certificates" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
-                <span>{t("dash.certificates", "Certificates")}</span>
-              </div>
-              <span className={`text-[9px] font-extrabold py-0.5 px-2 rounded-full ${currentView === "certificates" ? "bg-white/25 text-white" : "bg-slate-100 text-slate-500"}`}>
-                {attendees.length}
-              </span>
-            </button>
+            {canViewModule("certificates", effectivePermissions.permissions) && (
+              <button 
+                onClick={() => setCurrentView("certificates")}
+                className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "certificates" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+              >
+                <div className="flex items-center gap-2">
+                  <Award size={14} className={`shrink-0 ${currentView === "certificates" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
+                  <span>{t("dash.certificates", "Certificates")}</span>
+                </div>
+                <span className={`text-[9px] font-extrabold py-0.5 px-2 rounded-full ${currentView === "certificates" ? "bg-white/25 text-white" : "bg-slate-100 text-slate-500"}`}>
+                  {attendees.length}
+                </span>
+              </button>
+            )}
 
-            <button 
-              onClick={() => setCurrentView("developers")}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "developers" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
-            >
-              <Code2 size={14} className={`shrink-0 ${currentView === "developers" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
-              <span>{t("dash.developers", "Developers & API")}</span>
-            </button>
+            {canViewModule("developers", effectivePermissions.permissions) && (
+              <button 
+                onClick={() => setCurrentView("developers")}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "developers" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+              >
+                <Code2 size={14} className={`shrink-0 ${currentView === "developers" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
+                <span>{t("dash.developers", "Developers & API")}</span>
+              </button>
+            )}
 
             {!!(
               currentUser &&
@@ -4795,11 +4865,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
           {/* Top Banner when Current Module is in Read-Only Viewer Mode */}
           {!effectivePermissions.isAdmin &&
             !effectivePermissions.isOwner &&
-            !(currentUser?.role === "super_admin" && (currentUser?.isAdmin || currentUser?.isVerifiedAdmin)) &&
-            currentUser?.role !== "admin" &&
-            !currentUser?.isAdmin &&
-            !(currentUser?.role === "organizer" && !simulatedMemberId) &&
-            effectivePermissions.permissions[currentView] === "viewer" && (
+            effectivePermissions.permissions[getModuleKeyFromView(currentView)] === "viewer" && (
             <div className="mb-5 px-4 py-3 bg-sky-50 border border-sky-200/80 rounded-2xl flex items-center justify-between text-xs text-sky-800 font-semibold shadow-xs">
               <div className="flex items-center gap-2.5">
                 <Eye size={16} className="text-sky-600 shrink-0" />
@@ -4813,13 +4879,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
           {/* Access Restricted Screen if user has No Access to this module */}
           {!effectivePermissions.isAdmin &&
             !effectivePermissions.isOwner &&
-            !(currentUser?.role === "super_admin" && (currentUser?.isAdmin || currentUser?.isVerifiedAdmin)) &&
-            currentUser?.role !== "admin" &&
-            !currentUser?.isAdmin &&
-            !(currentUser?.role === "organizer" && !simulatedMemberId) &&
-            (!effectivePermissions.permissions[currentView] || effectivePermissions.permissions[currentView] === "none") &&
-            currentView !== "my-team" &&
-            currentView !== "overview" ? (
+            !canViewModule(getModuleKeyFromView(currentView), effectivePermissions.permissions) ? (
             <div className="flex flex-col items-center justify-center p-16 text-center bg-white rounded-3xl border border-slate-200 shadow-xs gap-4 max-w-lg mx-auto my-12">
               <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
                 <ShieldAlert size={32} />
@@ -4828,12 +4888,27 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               <p className="text-xs text-slate-500 max-w-md leading-relaxed">
                 {t("dash.accessRestrictedDesc", "You do not have permission to access this module. Please contact your event administrator to request access.")}
               </p>
-              <button 
-                onClick={() => setCurrentView("overview")} 
-                className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition-all cursor-pointer shadow-xs"
-              >
-                {t("dash.backToDashboard", "Back to Dashboard")}
-              </button>
+              {(() => {
+                const firstAllowed = EVENT_MODULES.find(m => canViewModule(m.id, effectivePermissions.permissions));
+                if (firstAllowed) {
+                  return (
+                    <button 
+                      onClick={() => setCurrentView(firstAllowed.id)} 
+                      className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition-all cursor-pointer shadow-xs"
+                    >
+                      {t("dash.goToModule", "Go to")} {firstAllowed.name}
+                    </button>
+                  );
+                }
+                return (
+                  <button 
+                    onClick={() => setCurrentView("events-hub")} 
+                    className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition-all cursor-pointer shadow-xs"
+                  >
+                    {t("dash.backToEventsHub", "Back to My Events")}
+                  </button>
+                );
+              })()}
             </div>
           ) : isLoading && !isEditingFloorPlan ? (
             (() => {
@@ -4897,7 +4972,13 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               rsvps={rsvps}
               rsvpSettings={rsvpSettings}
               team={team}
-              onSwitchView={setCurrentView}
+              effectivePermissions={effectivePermissions}
+              onSwitchView={(target) => {
+                const modKey = getModuleKeyFromView(target);
+                if (canViewModule(modKey, effectivePermissions.permissions)) {
+                  setCurrentView(target);
+                }
+              }}
               onOpenModal={handleOpenModal}
               onPreviewLandingPage={() => setCurrentView("event-landing")}
             />

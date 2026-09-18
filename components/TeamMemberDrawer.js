@@ -35,7 +35,13 @@ import {
   Loader2,
   Info,
   ChevronRight,
-  Trash2
+  Trash2,
+  Globe,
+  Receipt,
+  Share2,
+  Award,
+  Code2,
+  Files
 } from 'lucide-react';
 import { useLanguage } from '../lib/i18n';
 import { EVENT_MODULES, ROLE_PRESETS, MODULE_CATEGORIES, getPermissionSummary } from '../lib/permissions';
@@ -62,7 +68,13 @@ const ICON_COMPONENTS = {
   ClipboardList,
   Mail,
   BarChart3,
-  ShieldCheck
+  ShieldCheck,
+  Globe,
+  Receipt,
+  Share2,
+  Award,
+  Code2,
+  Files
 };
 
 const DEPARTMENT_LIST = [
