@@ -5,7 +5,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { 
   Globe, ChevronDown, User, Ticket, 
-  Building2, LogOut, Plus, Check, ShieldCheck, Receipt
+  Building2, LogOut, Plus, Check, ShieldCheck 
 } from "lucide-react";
 import { useLanguage } from "../lib/i18n";
 import { smoothScrollTo } from "../lib/smoothScroll";
@@ -20,7 +20,6 @@ export default function UniversalTopBar({
   onOpenPassesModal,
   onOpenCreationWizard,
   onOpenEventsHub,
-  onOpenInvoicing,
   onOpenAdminView,
   onSignOut,
   rightExtra = null,
@@ -251,22 +250,6 @@ export default function UniversalTopBar({
                 >
                   <Building2 size={15} className="text-slate-600 shrink-0" />
                   <span>{t("nav.eventManagerCenter", "Event Manager Center")}</span>
-                </button>
-
-                {/* 5. Invoicing & Quotes Module Button */}
-                <button
-                  onClick={() => {
-                    setProfileOpen(false);
-                    if (onOpenInvoicing) {
-                      onOpenInvoicing();
-                    } else if (typeof window !== "undefined") {
-                      window.location.href = "/invoices";
-                    }
-                  }}
-                  className="w-full text-start px-3 py-2.5 rounded-xl text-xs font-bold text-slate-800 hover:bg-slate-50 flex items-center gap-2.5 transition-colors cursor-pointer"
-                >
-                  <Receipt size={15} className="text-blue-600 shrink-0" />
-                  <span>{t("nav.invoicing", "Facturation & Devis")}</span>
                 </button>
 
                 <div className="h-px bg-slate-100 my-1" />

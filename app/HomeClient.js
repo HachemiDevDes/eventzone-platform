@@ -4072,12 +4072,6 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
         onSwitchToVisitor={() => setCurrentView("my-tickets")}
         onGoToHome={() => setCurrentView("home")}
         onOpenProfile={() => setCurrentView("profile")}
-        onOpenInvoicing={() => {
-          if (!activeEventId && userEvents.length > 0) {
-            setActiveEventStateId(userEvents[0]?.id);
-          }
-          setCurrentView("invoicing");
-        }}
         onOpenAuth={(mode) => {
           setAuthModalInitialMode(mode || "signin");
           setCurrentView("auth");
