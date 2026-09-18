@@ -58,6 +58,7 @@ import RSVPView from "../components/RSVPView";
 import LogisticsView from "../components/LogisticsView";
 import DocumentsView from "../components/DocumentsView";
 import InvoicingView from "../components/InvoicingView";
+import UniversalTopBar from "../components/UniversalTopBar";
 import DevelopersView from "../components/DevelopersView";
 import PlatformAdminView from "../components/PlatformAdminView";
 import PublicRSVPModal from "../components/PublicRSVPModal";
