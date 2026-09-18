@@ -5,7 +5,7 @@ import React, { useState } from "react";
 import { 
   Building2, Plus, Search, Calendar, MapPin, 
   Users, BarChart3, ArrowRight, ExternalLink, 
-  Archive, RotateCcw, Globe, Sparkles, LayoutDashboard, Layers, Filter, CheckCircle2, Home, ChevronDown, Check
+  Archive, RotateCcw, Globe, Sparkles, LayoutDashboard, Layers, Filter, CheckCircle2, Home, ChevronDown, Check, Receipt
 } from "lucide-react";
 import { useLanguage } from "../lib/i18n";
 import { truncateDescription } from "../lib/constants";
@@ -25,6 +25,7 @@ export default function OrganizerEventsHub({
   onGoToHome,
   onOpenProfile,
   onOpenAuth,
+  onOpenInvoicing,
   onSignOut,
   user
 }) {
@@ -63,6 +64,7 @@ export default function OrganizerEventsHub({
         onOpenPassesModal={onSwitchToVisitor}
         onOpenCreationWizard={onCreateEventClick}
         onOpenEventsHub={() => {}}
+        onOpenInvoicing={onOpenInvoicing}
         onSignOut={onSignOut}
       />
 
@@ -80,12 +82,22 @@ export default function OrganizerEventsHub({
               </p>
             </div>
 
-            <button
-              onClick={onCreateEventClick}
-              className="self-start sm:self-auto px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-xs font-bold shadow-lg shadow-blue-600/30 transition-all cursor-pointer"
-            >
-              {t("eventsHub.hostNewEvent", "Host New Event")}
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={onOpenInvoicing ? onOpenInvoicing : () => { if (typeof window !== 'undefined') window.location.href = "/invoices"; }}
+                className="self-start sm:self-auto px-4 py-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 rounded-2xl text-xs font-bold shadow-xs transition-all cursor-pointer flex items-center gap-2"
+              >
+                <Receipt size={15} className="text-blue-600" />
+                <span>Facturation & Devis</span>
+              </button>
+
+              <button
+                onClick={onCreateEventClick}
+                className="self-start sm:self-auto px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-xs font-bold shadow-lg shadow-blue-600/30 transition-all cursor-pointer"
+              >
+                {t("eventsHub.hostNewEvent", "Host New Event")}
+              </button>
+            </div>
           </div>
 
           {/* Metric Cards Row */}

@@ -10,7 +10,7 @@ import {
   Users2, UserCheck, BarChart3, X, Globe, Map, Sparkles, Upload, Mail,
   Building2, Plus, ArrowLeft, ArrowRight, Layers, LogOut, Compass, ExternalLink, ChevronRight, Home as HomeIcon, User,
   FileText, ClipboardList, QrCode, Store, Mic2, Check, TrendingUp, Share2, Boxes, Truck, Package, Files, Code2, Award, Eye,
-  Plane, ClipboardCheck
+  Plane, ClipboardCheck, Receipt
 } from "lucide-react";
 
 import MainHomePage from "../components/MainHomePage";
@@ -57,6 +57,7 @@ import FormsView from "../components/FormsView";
 import RSVPView from "../components/RSVPView";
 import LogisticsView from "../components/LogisticsView";
 import DocumentsView from "../components/DocumentsView";
+import InvoicingView from "../components/InvoicingView";
 import DevelopersView from "../components/DevelopersView";
 import PlatformAdminView from "../components/PlatformAdminView";
 import PublicRSVPModal from "../components/PublicRSVPModal";
@@ -288,7 +289,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
         "home", "auth", "profile", "my-tickets", "events-hub", "create-event", "event-landing", "register", "visitor-portal", "attendee-portal", "overview", "page-builder", "calendar", "event-details", 
         "attendees", "pending", "organizations", "sponsors", 
         "exhibitors", "speakers", "opportunities", "influencers", "tickets", "forms", "rsvp", "logistics", "documents", "check-in", 
-        "my-team", "developers", "analytics", "communications", "certificates", "floor-plan", "portal-settings", "admin"
+        "my-team", "developers", "analytics", "communications", "certificates", "floor-plan", "portal-settings", "admin", "invoicing", "invoices"
       ];
       if (viewParam && validViews.includes(viewParam)) {
         return viewParam;
@@ -2704,6 +2705,44 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
     }
   };
 
+  const handleSendTeamInvite = async (member, customNote = "") => {
+    if (!member || !member.email) {
+      throw new Error("No recipient email found for this team member.");
+    }
+    try {
+      const origin = typeof window !== "undefined" ? window.location.origin : (process.env.NEXT_PUBLIC_APP_URL || "https://eventzone.pro");
+      const inviteUrl = `${origin}/?eventId=${activeEventId}&inviteToken=${member.id}&teamEmail=${encodeURIComponent(member.email)}`;
+      
+      const res = await fetch("/api/email/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "team_invite",
+          to: member.email,
+          recipientName: member.name || "Team Member",
+          role: member.role || "Staff",
+          department: member.department || "",
+          permissions: member.permissions || {},
+          eventTitle: eventDetails?.title || eventDetails?.name || "Eventzone Event",
+          eventDate: eventDetails?.date || eventDetails?.start_date || "",
+          eventLocation: eventDetails?.venue || eventDetails?.location || "",
+          organizerName: currentUser?.fullName || currentUser?.name || "Eventzone Organizing Team",
+          message: customNote || member.notes || "",
+          inviteUrl,
+          eventId: activeEventId
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to send invitation email");
+      }
+      return true;
+    } catch (err) {
+      console.error("handleSendTeamInvite error:", err);
+      throw err;
+    }
+  };
+
   const handleSaveTeamMember = async (memberData) => {
     try {
       const saved = await upsertTeamMember(memberData, activeEventId);
@@ -2715,6 +2754,20 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
         return [...prev, saved];
       });
       broadcastRealtimeChange({ type: 'team', payload: saved });
+
+      // Automatically dispatch invitation email if requested
+      if (memberData.sendInviteEmail && saved.email) {
+        try {
+          await handleSendTeamInvite(saved, memberData.notes);
+          if (typeof window !== "undefined" && window.showToast) {
+            window.showToast(`Invitation email sent to ${saved.email}`, 'success');
+          }
+        } catch (emailErr) {
+          console.warn("Could not send team invite email:", emailErr);
+          alert(`Team member was saved, but the invitation email could not be delivered: ${emailErr.message}`);
+        }
+      }
+
       return saved;
     } catch (err) {
       console.error("Failed to save team member:", err);
@@ -3818,6 +3871,39 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
   }
 
   // ==========================================================================
+  // 0.95. DEDICATED INVOICING & QUOTES MODULE VIEW
+  // ==========================================================================
+  if (currentView === "invoicing" || currentView === "invoices") {
+    return (
+      <div className="min-h-screen bg-slate-100 flex flex-col font-sans">
+        <UniversalTopBar
+          currentUser={currentUser}
+          registrations={visitorRegistrations}
+          onGoToHome={() => setCurrentView("home")}
+          onOpenAuth={(mode) => {
+            setAuthModalInitialMode(mode || "signin");
+            setCurrentView("auth");
+          }}
+          onOpenProfile={() => setCurrentView("profile")}
+          onOpenPassesModal={() => setCurrentView("my-tickets")}
+          onOpenCreationWizard={() => setCurrentView("create-event")}
+          onOpenEventsHub={() => setCurrentView("events-hub")}
+          onOpenInvoicing={() => setCurrentView("invoicing")}
+          onSignOut={handleSignOut}
+        />
+        <main className="flex-1">
+          <InvoicingView
+            currentUser={currentUser}
+            activeEventId={activeEventId}
+            eventDetails={eventDetails}
+            onSwitchView={setCurrentView}
+          />
+        </main>
+      </div>
+    );
+  }
+
+  // ==========================================================================
   // 1. DEFAULT PUBLIC HOME PAGE (BROWSE & ROLLING HERO)
   // ==========================================================================
   if (currentView === "home") {
@@ -4019,6 +4105,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
         onSwitchToVisitor={() => setCurrentView("my-tickets")}
         onGoToHome={() => setCurrentView("home")}
         onOpenProfile={() => setCurrentView("profile")}
+        onOpenInvoicing={() => setCurrentView("invoicing")}
         onOpenAuth={(mode) => {
           setAuthModalInitialMode(mode || "signin");
           setCurrentView("auth");
@@ -4535,6 +4622,17 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
             </button>
             */}
 
+            {/* Facturation & Devis Tab */}
+            <button 
+              onClick={() => setCurrentView("invoicing")}
+              className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "invoicing" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+            >
+              <div className="flex items-center gap-2">
+                <Receipt size={14} className={`shrink-0 ${currentView === "invoicing" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
+                <span>{t("dash.invoicing", "Facturation & Devis")}</span>
+              </div>
+            </button>
+
             <button 
               onClick={() => setCurrentView("check-in")}
               className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "check-in" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
@@ -5020,6 +5118,15 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
             />
           )}
 
+          {currentView === "invoicing" && (
+            <InvoicingView
+              currentUser={currentUser}
+              activeEventId={activeEventId}
+              eventDetails={eventDetails}
+              onSwitchView={setCurrentView}
+            />
+          )}
+
           {currentView === "developers" && (
             <DevelopersView
               state={{
@@ -5097,6 +5204,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
                 currentUser,
                 simulatedMemberId,
                 onSimulateMember: setSimulatedMemberId,
+                onSendInviteEmail: handleSendTeamInvite,
                 effectivePermissions,
                 onSaveLogisticsItem: handleSaveLogisticsItem,
                 onDeleteLogisticsItem: handleDeleteLogisticsItem,
