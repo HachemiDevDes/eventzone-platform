@@ -29,6 +29,8 @@ export default function InvoicingEditor({
   initialDocument = null,
   activeProfile = null,
   savedClients = [],
+  organizations = [],
+  opportunities = [],
   onBack,
   onSave,
   onCopyShareLink,
@@ -87,6 +89,8 @@ export default function InvoicingEditor({
       client_phone: "",
       client_nif: "",
       client_rc: "",
+      client_nis: "",
+      client_article_imposition: "",
 
       // Line items
       line_items: [
@@ -117,6 +121,7 @@ export default function InvoicingEditor({
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [autofilledSource, setAutofilledSource] = useState(null);
 
   // Recalculate financial totals whenever line items, discount, TVA, or stamp change
   useEffect(() => {
@@ -220,9 +225,65 @@ export default function InvoicingEditor({
     });
   };
 
-  // Quick Client Selector Handler
-  const handleSelectClient = (clientId) => {
-    const found = savedClients.find(c => c.id === clientId);
+  // Quick Client / Organization / Prospect Selector Handler
+  const handleSelectClient = (selectedVal) => {
+    if (!selectedVal) return;
+
+    // 1. Organization selection
+    if (selectedVal.startsWith("org_")) {
+      const orgId = selectedVal.replace("org_", "");
+      const org = (organizations || []).find(o => String(o.id) === String(orgId));
+      if (org) {
+        setDoc(prev => ({
+          ...prev,
+          client_name: org.legalName || org.legal_name || org.name || "",
+          client_contact_name: org.contactPerson || org.contact || org.contactName || org.liaison_name || "",
+          client_address: org.legalAddress || org.legal_address || org.address || "",
+          client_email: org.invoicingEmail || org.invoicing_email || org.email || "",
+          client_phone: org.invoicingPhone || org.invoicing_phone || org.phone || "",
+          client_nif: org.nif || org.fiscalDetails?.nif || "",
+          client_rc: org.rc || org.fiscalDetails?.rc || "",
+          client_nis: org.nis || org.fiscalDetails?.nis || "",
+          client_article_imposition: org.articleImposition || org.article_imposition || org.fiscalDetails?.article_imposition || "",
+        }));
+        setAutofilledSource({
+          type: "org",
+          name: org.name || org.legalName || "Organisation",
+          hasFiscal: Boolean(org.nif || org.rc || org.nis || org.articleImposition || org.article_imposition),
+        });
+        return;
+      }
+    }
+
+    // 2. Prospect / Opportunity selection
+    if (selectedVal.startsWith("opp_")) {
+      const oppId = selectedVal.replace("opp_", "");
+      const opp = (opportunities || []).find(o => String(o.id) === String(oppId));
+      if (opp) {
+        setDoc(prev => ({
+          ...prev,
+          client_name: opp.legalName || opp.legal_name || opp.companyName || opp.name || "",
+          client_contact_name: opp.contactName || opp.contactPerson || "",
+          client_address: opp.legalAddress || opp.legal_address || "",
+          client_email: opp.invoicingEmail || opp.invoicing_email || opp.contactEmail || opp.email || "",
+          client_phone: opp.invoicingPhone || opp.invoicing_phone || opp.contactPhone || opp.phone || "",
+          client_nif: opp.nif || opp.fiscalDetails?.nif || "",
+          client_rc: opp.rc || opp.fiscalDetails?.rc || "",
+          client_nis: opp.nis || opp.fiscalDetails?.nis || "",
+          client_article_imposition: opp.articleImposition || opp.article_imposition || opp.fiscalDetails?.article_imposition || "",
+        }));
+        setAutofilledSource({
+          type: "opp",
+          name: opp.companyName || opp.name || "Prospect",
+          hasFiscal: Boolean(opp.nif || opp.rc || opp.nis || opp.articleImposition || opp.article_imposition),
+        });
+        return;
+      }
+    }
+
+    // 3. Saved Client selection
+    const cleanClientId = selectedVal.startsWith("client_") ? selectedVal.replace("client_", "") : selectedVal;
+    const found = (savedClients || []).find(c => String(c.id) === String(cleanClientId));
     if (found) {
       setDoc(prev => ({
         ...prev,
@@ -233,7 +294,14 @@ export default function InvoicingEditor({
         client_phone: found.phone || "",
         client_nif: found.nif || "",
         client_rc: found.rc || "",
+        client_nis: found.nis || "",
+        client_article_imposition: found.article_imposition || "",
       }));
+      setAutofilledSource({
+        type: "client",
+        name: found.company_name || "Client",
+        hasFiscal: Boolean(found.nif || found.rc || found.nis || found.article_imposition),
+      });
     }
   };
 
@@ -275,14 +343,34 @@ export default function InvoicingEditor({
     window.print();
   };
 
-  // Client options for SearchableSelect
+  // Aggregated Client, Organization & Prospect options for SearchableSelect
   const clientOptions = useMemo(() => {
-    return (savedClients || []).map(c => ({
-      value: c.id,
-      label: c.company_name,
-      description: c.contact_name || c.email,
+    const orgOptions = (organizations || []).map(o => {
+      const hasFiscal = Boolean(o.nif || o.rc || o.nis || o.articleImposition || o.article_imposition);
+      return {
+        value: `org_${o.id}`,
+        label: o.name || o.legalName || "Organisation sans nom",
+        description: `🏢 Organisation${o.legalName && o.legalName !== o.name ? ` (${o.legalName})` : ""}${hasFiscal ? " • Détails fiscaux ✓" : ""}`,
+      };
+    });
+
+    const oppOptions = (opportunities || []).map(o => {
+      const hasFiscal = Boolean(o.nif || o.rc || o.nis || o.articleImposition || o.article_imposition);
+      return {
+        value: `opp_${o.id}`,
+        label: o.companyName || o.name || "Prospect sans nom",
+        description: `🎯 Prospect${o.contactName ? ` • ${o.contactName}` : ""}${hasFiscal ? " • Détails fiscaux ✓" : ""}`,
+      };
+    });
+
+    const savedOptions = (savedClients || []).map(c => ({
+      value: `client_${c.id}`,
+      label: c.company_name || "Client",
+      description: `👤 Client${c.contact_name ? ` • ${c.contact_name}` : (c.email ? ` • ${c.email}` : "")}`,
     }));
-  }, [savedClients]);
+
+    return [...orgOptions, ...oppOptions, ...savedOptions];
+  }, [organizations, opportunities, savedClients]);
 
   return (
     <div className="space-y-6 animate-fade-in pb-12">
@@ -573,22 +661,47 @@ export default function InvoicingEditor({
 
           {/* Card 4: Client (Customer info) */}
           <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-xs space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
-                Client
-              </h3>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                  Client Destinataire
+                </h3>
+                <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                  Sélectionnez une organisation ou un prospect pour auto-remplir ses coordonnées fiscales.
+                </p>
+              </div>
 
               {clientOptions.length > 0 && (
-                <div className="w-56">
+                <div className="w-full sm:w-72 shrink-0">
                   <SearchableSelect
                     options={clientOptions}
                     value=""
                     onChange={handleSelectClient}
-                    placeholder="Sélectionner un client"
+                    placeholder="Choisir organisation / prospect..."
                   />
                 </div>
               )}
             </div>
+
+            {autofilledSource && (
+              <div className="flex items-center justify-between px-3.5 py-2.5 bg-emerald-50/90 border border-emerald-200/80 rounded-2xl text-xs text-emerald-900 animate-fade-in shadow-xs">
+                <div className="flex items-center gap-2 min-w-0">
+                  <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
+                  <span className="truncate">
+                    Auto-rempli depuis {autofilledSource.type === "org" ? "l'organisation" : autofilledSource.type === "opp" ? "le prospect" : "le client"}{" "}
+                    <strong className="font-bold text-emerald-950">{autofilledSource.name}</strong>
+                    {autofilledSource.hasFiscal ? " (détails fiscaux inclus)" : ""}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAutofilledSource(null)}
+                  className="text-emerald-700 hover:text-emerald-950 text-[11px] font-bold underline ml-2 shrink-0 cursor-pointer"
+                >
+                  Fermer
+                </button>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
@@ -680,6 +793,33 @@ export default function InvoicingEditor({
                   value={doc.client_rc || ""}
                   onChange={(e) => handleFieldChange("client_rc", e.target.value)}
                   placeholder="RC ou N° C.A.E"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono text-slate-900"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
+                  NIS
+                </label>
+                <input
+                  type="text"
+                  value={doc.client_nis || ""}
+                  onChange={(e) => handleFieldChange("client_nis", e.target.value)}
+                  placeholder="Numéro d'Identification Statistique"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono text-slate-900"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
+                  ARTICLE D&apos;IMPOSITION
+                </label>
+                <input
+                  type="text"
+                  value={doc.client_article_imposition || ""}
+                  onChange={(e) => handleFieldChange("client_article_imposition", e.target.value)}
+                  placeholder="Article d'imposition (AI)"
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono text-slate-900"
                 />
               </div>

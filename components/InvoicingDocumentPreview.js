@@ -42,6 +42,8 @@ export default function InvoicingDocumentPreview({
     client_email = "",
     client_nif = "",
     client_rc = "",
+    client_nis = "",
+    client_article_imposition = "",
 
     // Line items
     line_items = [],
@@ -192,6 +194,8 @@ export default function InvoicingDocumentPreview({
               {client_email && <p className="text-slate-600">{client_email}</p>}
               {client_nif && <p>NIF: <span className="font-mono text-slate-700">{client_nif}</span></p>}
               {client_rc && <p>RC: <span className="font-mono text-slate-700">{client_rc}</span></p>}
+              {client_nis && <p>NIS: <span className="font-mono text-slate-700">{client_nis}</span></p>}
+              {client_article_imposition && <p>Art. d&apos;Imp: <span className="font-mono text-slate-700">{client_article_imposition}</span></p>}
             </div>
           </div>
         </div>

@@ -7,7 +7,8 @@ import {
   Sparkles, Store, CheckCircle2, XCircle, ArrowRight, ArrowLeft, 
   MoreVertical, Calendar, Phone, Mail, FileText, ChevronRight,
   Layers, RotateCcw, Award, Trash2, Edit3, MessageSquare, 
-  PieChart, BarChart2, Check, Download, AlertCircle, Clock, Archive
+  PieChart, BarChart2, Check, Download, AlertCircle, Clock, Archive,
+  Receipt, CreditCard
 } from "lucide-react";
 import { useLanguage } from "../lib/i18n";
 import SearchableSelect from "./SearchableSelect";
@@ -1564,6 +1565,19 @@ function ProspectDrawer({
   const [notes, setNotes] = useState(opp?.notes || "");
   const [logo, setLogo] = useState(opp?.logo || opp?.logoUrl || "");
 
+  // Tab & Fiscal state
+  const [activeTab, setActiveTab] = useState("deal"); // 'deal' | 'fiscal'
+  const [legalName, setLegalName] = useState(opp?.legalName || opp?.legal_name || opp?.fiscalDetails?.legal_name || opp?.companyName || opp?.name || "");
+  const [legalAddress, setLegalAddress] = useState(opp?.legalAddress || opp?.legal_address || opp?.fiscalDetails?.legal_address || "");
+  const [nif, setNif] = useState(opp?.nif || opp?.fiscalDetails?.nif || "");
+  const [rc, setRc] = useState(opp?.rc || opp?.fiscalDetails?.rc || "");
+  const [nis, setNis] = useState(opp?.nis || opp?.fiscalDetails?.nis || "");
+  const [articleImposition, setArticleImposition] = useState(opp?.articleImposition || opp?.article_imposition || opp?.fiscalDetails?.article_imposition || "");
+  const [invoicingEmail, setInvoicingEmail] = useState(opp?.invoicingEmail || opp?.invoicing_email || opp?.fiscalDetails?.invoicing_email || opp?.contactEmail || "");
+  const [invoicingPhone, setInvoicingPhone] = useState(opp?.invoicingPhone || opp?.invoicing_phone || opp?.fiscalDetails?.invoicing_phone || opp?.contactPhone || "");
+  const [bankName, setBankName] = useState(opp?.bankName || opp?.bank_name || opp?.fiscalDetails?.bank_name || "");
+  const [rib, setRib] = useState(opp?.rib || opp?.fiscalDetails?.rib || "");
+
   // Activity Log
   const [activityList, setActivityList] = useState(opp?.activityLog || []);
   const [newActivityText, setNewActivityText] = useState("");
@@ -1612,7 +1626,36 @@ function ProspectDrawer({
       convertedSponsorId: opp?.convertedSponsorId,
       convertedExhibitorId: opp?.convertedExhibitorId,
       orgId: opp?.orgId,
-      lostReason: opp?.lostReason
+      lostReason: opp?.lostReason,
+      // Fiscal & Invoicing fields
+      nif: nif.trim(),
+      rc: rc.trim(),
+      nis: nis.trim(),
+      articleImposition: articleImposition.trim(),
+      article_imposition: articleImposition.trim(),
+      legalName: legalName.trim() || companyName.trim(),
+      legal_name: legalName.trim() || companyName.trim(),
+      legalAddress: legalAddress.trim(),
+      legal_address: legalAddress.trim(),
+      invoicingEmail: invoicingEmail.trim() || contactEmail.trim(),
+      invoicing_email: invoicingEmail.trim() || contactEmail.trim(),
+      invoicingPhone: invoicingPhone.trim() || contactPhone.trim(),
+      invoicing_phone: invoicingPhone.trim() || contactPhone.trim(),
+      bankName: bankName.trim(),
+      bank_name: bankName.trim(),
+      rib: rib.trim(),
+      fiscalDetails: {
+        nif: nif.trim(),
+        rc: rc.trim(),
+        nis: nis.trim(),
+        article_imposition: articleImposition.trim(),
+        legal_name: legalName.trim() || companyName.trim(),
+        legal_address: legalAddress.trim(),
+        invoicing_email: invoicingEmail.trim() || contactEmail.trim(),
+        invoicing_phone: invoicingPhone.trim() || contactPhone.trim(),
+        bank_name: bankName.trim(),
+        rib: rib.trim(),
+      }
     });
   };
 
@@ -1638,9 +1681,41 @@ function ProspectDrawer({
           </button>
         </header>
 
+        {/* Navigation Tabs */}
+        <div className="px-6 border-b border-slate-100 bg-white flex gap-6 shrink-0">
+          <button
+            type="button"
+            onClick={() => setActiveTab("deal")}
+            className={`py-3 text-xs font-bold transition-all border-b-2 whitespace-nowrap cursor-pointer ${
+              activeTab === "deal"
+                ? "border-blue-600 text-blue-600 font-extrabold"
+                : "border-transparent text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            Pipeline & Deal Info
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("fiscal")}
+            className={`py-3 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+              activeTab === "fiscal"
+                ? "border-blue-600 text-blue-600 font-extrabold"
+                : "border-transparent text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            <span>Fiscal Details</span>
+            {(nif || rc) && (
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            )}
+          </button>
+        </div>
+
         {/* Form Body */}
         <form id="prospect-form" onSubmit={handleSubmit} className="p-6 flex flex-col gap-6 flex-1">
-          {/* Quick Actions for Editing */}
+          {activeTab === "deal" && (
+            <>
+              {/* Quick Actions for Editing */}
           {isEditing && (
             <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-center justify-between flex-wrap gap-2">
               <span className="text-[10px] font-extrabold uppercase text-slate-400">Quick Conversions:</span>
@@ -1956,7 +2031,188 @@ function ProspectDrawer({
               )}
             </div>
           </div>
-        </form>
+        </>
+      )}
+
+      {activeTab === "fiscal" && (
+        <div className="flex flex-col gap-5">
+          {/* Informational Banner */}
+          <div className="p-4 bg-blue-50/80 border border-blue-200/80 rounded-2xl flex items-start gap-3">
+            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+              <Receipt size={16} />
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-blue-950">
+                Fiscal & Invoicing Profile
+              </h4>
+              <p className="text-[11px] text-blue-700 mt-0.5 leading-relaxed">
+                Save official tax and billing identifiers for this prospect. When creating quotes, proformas, or invoices in the Invoicing module, selecting this prospect will automatically auto-fill their billing information.
+              </p>
+            </div>
+          </div>
+
+          {/* 1. Legal Company Name & Registered Address */}
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                Legal Company Name / Raison Sociale
+              </label>
+              <input
+                type="text"
+                value={legalName}
+                onChange={(e) => setLegalName(e.target.value)}
+                placeholder={companyName || "e.g. SARL Algerie Telecom, Sonatrach SPA"}
+                className="px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600"
+              />
+              <span className="text-[10px] text-slate-400">
+                Defaults to prospect name if empty
+              </span>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                Legal Registered Address / Siège Social
+              </label>
+              <textarea
+                rows={2}
+                value={legalAddress}
+                onChange={(e) => setLegalAddress(e.target.value)}
+                placeholder="Full legal billing address, City, Wilaya..."
+                className="p-3 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 resize-none"
+              />
+            </div>
+          </div>
+
+          {/* 2. Fiscal Identifiers */}
+          <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-3">
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block">
+              Fiscal Identifiers (Algerian Standards)
+            </span>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">
+                  NIF (Identifiant Fiscal)
+                </label>
+                <input
+                  type="text"
+                  value={nif}
+                  onChange={(e) => setNif(e.target.value)}
+                  placeholder="002616124370413 (15 chiffres)"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none focus:border-blue-600"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">
+                  RC (Registre du Commerce)
+                </label>
+                <input
+                  type="text"
+                  value={rc}
+                  onChange={(e) => setRc(e.target.value)}
+                  placeholder="26B1243704-00/16"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none focus:border-blue-600"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">
+                  NIS (Numéro Statistique)
+                </label>
+                <input
+                  type="text"
+                  value={nis}
+                  onChange={(e) => setNis(e.target.value)}
+                  placeholder="002616124370413"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none focus:border-blue-600"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">
+                  Article d&apos;Imposition (AI)
+                </label>
+                <input
+                  type="text"
+                  value={articleImposition}
+                  onChange={(e) => setArticleImposition(e.target.value)}
+                  placeholder="1618480001"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none focus:border-blue-600"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Invoicing Contacts */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                Billing / Invoicing Email
+              </label>
+              <input
+                type="email"
+                value={invoicingEmail}
+                onChange={(e) => setInvoicingEmail(e.target.value)}
+                placeholder={contactEmail || "compta@client.com"}
+                className="px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600"
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                Billing / Invoicing Phone
+              </label>
+              <input
+                type="text"
+                value={invoicingPhone}
+                onChange={(e) => setInvoicingPhone(e.target.value)}
+                placeholder={contactPhone || "0550 12 34 56"}
+                className="px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-mono font-semibold focus:outline-none focus:border-blue-600"
+              />
+            </div>
+          </div>
+
+          {/* 4. Bank Information (Optional) */}
+          <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-3">
+            <div className="flex items-center gap-2">
+              <CreditCard size={14} className="text-slate-500" />
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">
+                Bank Coordinates (Optional)
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">
+                  Bank Name
+                </label>
+                <input
+                  type="text"
+                  value={bankName}
+                  onChange={(e) => setBankName(e.target.value)}
+                  placeholder="e.g. BNA, BEA, Société Générale"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 bg-white focus:outline-none focus:border-blue-600"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">
+                  RIB / IBAN
+                </label>
+                <input
+                  type="text"
+                  value={rib}
+                  onChange={(e) => setRib(e.target.value)}
+                  placeholder="002 00000 0000000000 00"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 bg-white focus:outline-none focus:border-blue-600"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </form>
 
         {/* Drawer Footer */}
         <footer className="p-6 border-t border-slate-150 bg-white sticky bottom-0 flex items-center justify-between gap-3">

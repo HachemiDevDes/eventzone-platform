@@ -5096,6 +5096,8 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               activeEventId={activeEventId}
               eventDetails={eventDetails}
               onSwitchView={setCurrentView}
+              organizations={organizations}
+              opportunities={opportunities}
             />
           )}
 

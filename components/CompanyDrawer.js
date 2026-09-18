@@ -28,7 +28,9 @@ import {
   Trash2,
   DollarSign,
   Ticket,
-  ChevronRight
+  ChevronRight,
+  Receipt,
+  CreditCard
 } from 'lucide-react';
 import { useLanguage } from '../lib/i18n';
 import SearchableSelect from './SearchableSelect';
@@ -199,6 +201,18 @@ export default function CompanyDrawer({
   const [orgNotes, setOrgNotes] = useState("");
   const [orgStatus, setOrgStatus] = useState("active");
   const [selectedLiaisonAttendeeId, setSelectedLiaisonAttendeeId] = useState("");
+
+  // Fiscal & Invoicing fields
+  const [orgLegalName, setOrgLegalName] = useState("");
+  const [orgLegalAddress, setOrgLegalAddress] = useState("");
+  const [orgNif, setOrgNif] = useState("");
+  const [orgRc, setOrgRc] = useState("");
+  const [orgNis, setOrgNis] = useState("");
+  const [orgArticleImposition, setOrgArticleImposition] = useState("");
+  const [orgInvoicingEmail, setOrgInvoicingEmail] = useState("");
+  const [orgInvoicingPhone, setOrgInvoicingPhone] = useState("");
+  const [orgBankName, setOrgBankName] = useState("");
+  const [orgRib, setOrgRib] = useState("");
 
   // Personnel management state
   const [selectedAttendeeIdToAssign, setSelectedAttendeeIdToAssign] = useState("");
@@ -665,6 +679,18 @@ export default function CompanyDrawer({
           setOrgNotes(item.notes || "");
           setOrgStatus(item.status || (item.isArchived ? "archived" : "active"));
 
+          // Fiscal & Billing details
+          setOrgNif(item.nif || item.fiscalDetails?.nif || "");
+          setOrgRc(item.rc || item.fiscalDetails?.rc || "");
+          setOrgNis(item.nis || item.fiscalDetails?.nis || "");
+          setOrgArticleImposition(item.articleImposition || item.article_imposition || item.fiscalDetails?.article_imposition || "");
+          setOrgLegalName(item.legalName || item.legal_name || item.fiscalDetails?.legal_name || item.name || "");
+          setOrgLegalAddress(item.legalAddress || item.legal_address || item.fiscalDetails?.legal_address || item.address || "");
+          setOrgInvoicingEmail(item.invoicingEmail || item.invoicing_email || item.fiscalDetails?.invoicing_email || item.email || item.contactEmail || "");
+          setOrgInvoicingPhone(item.invoicingPhone || item.invoicing_phone || item.fiscalDetails?.invoicing_phone || item.phone || item.contactPhone || "");
+          setOrgBankName(item.bankName || item.bank_name || item.fiscalDetails?.bank_name || "");
+          setOrgRib(item.rib || item.fiscalDetails?.rib || "");
+
           const matchedLiaisonId = findLiaisonAttendeeId(item.contact || item.contactPerson, item.email || item.contactEmail, item.phone || item.contactPhone);
           setSelectedLiaisonAttendeeId(matchedLiaisonId);
 
@@ -717,6 +743,16 @@ export default function CompanyDrawer({
           setOrgNotes("");
           setOrgStatus("active");
           setSelectedLiaisonAttendeeId("");
+          setOrgNif("");
+          setOrgRc("");
+          setOrgNis("");
+          setOrgArticleImposition("");
+          setOrgLegalName("");
+          setOrgLegalAddress("");
+          setOrgInvoicingEmail("");
+          setOrgInvoicingPhone("");
+          setOrgBankName("");
+          setOrgRib("");
           setAlsoCreateSponsor(false);
           setSponsorTier("silver");
           setSponsorAmount("");
@@ -1041,7 +1077,36 @@ export default function CompanyDrawer({
           contactPhone: orgContactPhone.trim(),
           notes: orgNotes.trim(),
           status: orgStatus,
-          isArchived: orgStatus === "archived"
+          isArchived: orgStatus === "archived",
+          // Fiscal & Billing details
+          nif: orgNif.trim(),
+          rc: orgRc.trim(),
+          nis: orgNis.trim(),
+          articleImposition: orgArticleImposition.trim(),
+          article_imposition: orgArticleImposition.trim(),
+          legalName: orgLegalName.trim() || orgName.trim(),
+          legal_name: orgLegalName.trim() || orgName.trim(),
+          legalAddress: orgLegalAddress.trim() || orgAddress.trim(),
+          legal_address: orgLegalAddress.trim() || orgAddress.trim(),
+          invoicingEmail: orgInvoicingEmail.trim() || orgContactEmail.trim(),
+          invoicing_email: orgInvoicingEmail.trim() || orgContactEmail.trim(),
+          invoicingPhone: orgInvoicingPhone.trim() || orgContactPhone.trim(),
+          invoicing_phone: orgInvoicingPhone.trim() || orgContactPhone.trim(),
+          bankName: orgBankName.trim(),
+          bank_name: orgBankName.trim(),
+          rib: orgRib.trim(),
+          fiscalDetails: {
+            nif: orgNif.trim(),
+            rc: orgRc.trim(),
+            nis: orgNis.trim(),
+            article_imposition: orgArticleImposition.trim(),
+            legal_name: orgLegalName.trim() || orgName.trim(),
+            legal_address: orgLegalAddress.trim() || orgAddress.trim(),
+            invoicing_email: orgInvoicingEmail.trim() || orgContactEmail.trim(),
+            invoicing_phone: orgInvoicingPhone.trim() || orgContactPhone.trim(),
+            bank_name: orgBankName.trim(),
+            rib: orgRib.trim(),
+          }
         };
 
         if (onSaveOrganization) {
@@ -1265,6 +1330,21 @@ export default function CompanyDrawer({
                 <span>{t("drawer.tabLiaison", "Contact Liaison")}</span>
                 {selectedLiaisonAttendee && (
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setOrgActiveTab("fiscal")}
+                className={`py-3 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                  orgActiveTab === "fiscal"
+                    ? "border-blue-600 text-blue-600 font-extrabold"
+                    : "border-transparent text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                <span>{t("drawer.tabFiscal", "Fiscal Details")}</span>
+                {(orgNif || orgRc) && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                 )}
               </button>
 
@@ -1773,6 +1853,200 @@ export default function CompanyDrawer({
                     placeholder={t("drawer.internalNotesPlaceholder", "Internal communication notes, billing details, contract references...")}
                     className="w-full p-3 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 resize-none"
                   />
+                </div>
+              </div>
+            )}
+
+            {/* ========================================================================= */}
+            {/* TAB: FISCAL & INVOICING DETAILS (Auto-fills Invoices in Invoicing Module) */}
+            {/* ========================================================================= */}
+            {orgActiveTab === "fiscal" && (
+              <div className="flex flex-col gap-5">
+                {/* Information Banner */}
+                <div className="p-4 bg-blue-50/80 border border-blue-200/80 rounded-2xl flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+                    <Receipt size={16} />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-blue-950">
+                      {t("drawer.fiscalBannerTitle", "Fiscal & Billing Information")}
+                    </h4>
+                    <p className="text-[11px] text-blue-700 mt-0.5 leading-relaxed">
+                      {t("drawer.fiscalBannerDesc", "These details will automatically auto-fill into quotes, proformas, and official invoices when you select this organization in the Invoicing module.")}
+                    </p>
+                  </div>
+                </div>
+
+                {/* 1. Legal Company Name & Address */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5 sm:col-span-2">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      {t("drawer.legalName", "Legal Company Name / Raison Sociale")}
+                    </label>
+                    <input
+                      type="text"
+                      value={orgLegalName}
+                      onChange={(e) => setOrgLegalName(e.target.value)}
+                      placeholder={orgName || "e.g. SARL Algerie Telecom, SPASU Eventzone"}
+                      className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
+                    />
+                    <span className="text-[10px] text-slate-400">
+                      {t("drawer.legalNameHint", "Defaults to brand name if left empty")}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5 sm:col-span-2">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      {t("drawer.legalAddress", "Legal Registered Address / Siège Social")}
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={orgLegalAddress}
+                      onChange={(e) => setOrgLegalAddress(e.target.value)}
+                      placeholder={orgAddress || "e.g. 12 Rue Didouche Mourad, Alger"}
+                      className="w-full p-3 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600 resize-none"
+                    />
+                  </div>
+                </div>
+
+                {/* 2. Fiscal Identifiers: NIF, RC, NIS, Article d'Imposition */}
+                <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600">
+                      {t("drawer.fiscalIdentifiers", "Fiscal Identifiers (Algerian Standards)")}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* NIF */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">
+                        NIF (Identifiant Fiscal)
+                      </label>
+                      <input
+                        type="text"
+                        value={orgNif}
+                        onChange={(e) => setOrgNif(e.target.value)}
+                        placeholder="002616124370413 (15 chiffres)"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none focus:border-blue-600"
+                      />
+                    </div>
+
+                    {/* RC */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">
+                        RC (Registre du Commerce)
+                      </label>
+                      <input
+                        type="text"
+                        value={orgRc}
+                        onChange={(e) => setOrgRc(e.target.value)}
+                        placeholder="26B1243704-00/16"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none focus:border-blue-600"
+                      />
+                    </div>
+
+                    {/* NIS */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">
+                        NIS (Numéro Statistique)
+                      </label>
+                      <input
+                        type="text"
+                        value={orgNis}
+                        onChange={(e) => setOrgNis(e.target.value)}
+                        placeholder="002616124370413"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none focus:border-blue-600"
+                      />
+                    </div>
+
+                    {/* Article d'Imposition */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">
+                        Article d&apos;Imposition (AI)
+                      </label>
+                      <input
+                        type="text"
+                        value={orgArticleImposition}
+                        onChange={(e) => setOrgArticleImposition(e.target.value)}
+                        placeholder="1618480001"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none focus:border-blue-600"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Invoicing Contact Details */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      {t("drawer.invoicingEmail", "Email de Facturation")}
+                    </label>
+                    <div className="relative">
+                      <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="email"
+                        value={orgInvoicingEmail}
+                        onChange={(e) => setOrgInvoicingEmail(e.target.value)}
+                        placeholder={orgContactEmail || "facturation@company.com"}
+                        className="w-full pl-9 pr-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      {t("drawer.invoicingPhone", "Téléphone Facturation")}
+                    </label>
+                    <div className="relative">
+                      <Phone size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="text"
+                        value={orgInvoicingPhone}
+                        onChange={(e) => setOrgInvoicingPhone(e.target.value)}
+                        placeholder={orgContactPhone || "0550 12 34 56"}
+                        className="w-full pl-9 pr-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-mono font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Bank Details (Optional) */}
+                <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-3">
+                  <div className="flex items-center gap-2">
+                    <CreditCard size={14} className="text-slate-500" />
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600">
+                      Coordonnées Bancaires (Optionnel)
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">
+                        Banque
+                      </label>
+                      <input
+                        type="text"
+                        value={orgBankName}
+                        onChange={(e) => setOrgBankName(e.target.value)}
+                        placeholder="e.g. BNA, BEA, CPA, Société Générale"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 bg-white focus:outline-none focus:border-blue-600"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">
+                        RIB / IBAN
+                      </label>
+                      <input
+                        type="text"
+                        value={orgRib}
+                        onChange={(e) => setOrgRib(e.target.value)}
+                        placeholder="002 00000 0000000000 00"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 bg-white focus:outline-none focus:border-blue-600"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

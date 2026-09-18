@@ -28,6 +28,8 @@ export default function InvoicingView({
   currentUser = null,
   activeEventId = null,
   eventDetails = null,
+  organizations = [],
+  opportunities = [],
   onSwitchView,
 }) {
   const [viewMode, setViewMode] = useState("dashboard"); // 'dashboard' | 'editor'
@@ -150,6 +152,8 @@ export default function InvoicingView({
       client_phone: "",
       client_nif: "",
       client_rc: "",
+      client_nis: "",
+      client_article_imposition: "",
 
       line_items: [
         { id: `item-${Date.now()}`, description: "", quantity: 1, unit_price: 0, total_ht: 0 }
@@ -214,6 +218,8 @@ export default function InvoicingView({
           phone: saved.client_phone,
           nif: saved.client_nif,
           rc: saved.client_rc,
+          nis: saved.client_nis,
+          article_imposition: saved.client_article_imposition,
         });
         if (newClient) setSavedClients(c => [newClient, ...c]);
       }
@@ -361,6 +367,8 @@ export default function InvoicingView({
           initialDocument={editingDoc}
           activeProfile={activeProfile}
           savedClients={savedClients}
+          organizations={organizations}
+          opportunities={opportunities}
           onBack={() => {
             setViewMode("dashboard");
             setEditingDoc(null);
