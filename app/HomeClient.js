@@ -5154,7 +5154,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
             />
           )}
 
-          {!["overview", "calendar", "page-builder", "event-details", "forms", "rsvp", "logistics", "documents", "developers", "portal-settings", "attendee-portal"].includes(currentView) && currentView !== "floor-plan" && (
+          {!["overview", "calendar", "page-builder", "event-details", "forms", "rsvp", "logistics", "documents", "developers", "portal-settings", "attendee-portal", "invoicing", "invoices"].includes(currentView) && currentView !== "floor-plan" && (
             <GenericTableView 
               viewName={currentView}
               state={{
