@@ -41,7 +41,8 @@ import {
 } from "lucide-react";
 import QRCode from "qrcode";
 import { useLanguage } from "../lib/i18n";
-import { logCommunication, fetchCommunications, bulkUpsertAttendees, updateEventCheckinGates } from "../lib/db";
+import { canEditModule } from "../lib/permissions";
+import { logCommunication, fetchCommunications, bulkUpsertAttendees, updateEventCheckinGates, archiveAttendee, restoreAttendee, permanentDeleteAttendee } from "../lib/db";
 import { useOfflineSync } from "../lib/offlineSync";
 import { safeLocalStorageGet } from "../lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
@@ -116,6 +117,7 @@ export default function GenericTableView({
           activeEventId={state.activeEventId || state.eventDetails?.id}
           eventDetails={state.eventDetails || {}}
           onRefreshData={state.onRefreshDocuments}
+          effectivePermissions={state.effectivePermissions}
         />
       );
     case "logistics":
@@ -134,6 +136,7 @@ export default function GenericTableView({
           eventDetails={state.eventDetails || {}}
           onSwitchView={onSwitchView}
           onRefreshData={state.onRefreshLogistics}
+          effectivePermissions={state.effectivePermissions}
         />
       );
     case "attendees":
@@ -213,6 +216,7 @@ function extractTicketFormCredentials(attendee) {
 function EventDetailsView({ state, onUpdateState, onUploadFile }) {
   const { t, lang, isRTL } = useLanguage();
   const { eventDetails } = state;
+  const canEdit = canEditModule("event-details", state?.effectivePermissions);
   const [title, setTitle] = useState(eventDetails.title);
   const [location, setLocation] = useState(eventDetails.location);
   const [type, setType] = useState(eventDetails.type || "Hybrid");
@@ -222,6 +226,7 @@ function EventDetailsView({ state, onUpdateState, onUploadFile }) {
   const [banner, setBanner] = useState(eventDetails.banner || "");
 
   const handleBannerUpload = async (e) => {
+    if (!canEdit) return;
     const file = e.target.files[0];
     if (!file) return;
 
@@ -241,6 +246,7 @@ function EventDetailsView({ state, onUpdateState, onUploadFile }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!canEdit) return;
     onUpdateState("eventDetails", {
       title, location, type, startDate, endDate, description, banner
     });
@@ -249,6 +255,13 @@ function EventDetailsView({ state, onUpdateState, onUploadFile }) {
 
   return (
     <div className="bg-white border border-slate-100 rounded-3xl p-8 w-full shadow-sm">
+      {!canEdit && (
+        <div className="mb-6 px-4 py-3 bg-amber-50 border border-amber-200 rounded-2xl text-xs font-semibold text-amber-800 flex items-center gap-2">
+          <Info size={16} className="text-amber-600 shrink-0" />
+          <span>{t("common.readOnlyViewerNotice", "You are viewing in read-only mode. Changes cannot be made.")}</span>
+        </div>
+      )}
+
       <div 
         className="w-full h-56 rounded-2xl bg-gradient-to-br from-indigo-600 to-rose-500 bg-cover bg-center relative overflow-hidden mb-8 shadow-sm flex items-end p-8"
         style={banner ? { backgroundImage: `url(${banner})` } : {}}
@@ -267,8 +280,9 @@ function EventDetailsView({ state, onUpdateState, onUploadFile }) {
             type="text" 
             value={title} 
             onChange={(e) => setTitle(e.target.value)}
+            disabled={!canEdit}
             required
-            className="px-4 py-3 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-50 text-sm font-semibold"
+            className="px-4 py-3 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-50 text-sm font-semibold disabled:bg-slate-50 disabled:text-slate-500"
           />
         </div>
 
@@ -279,7 +293,8 @@ function EventDetailsView({ state, onUpdateState, onUploadFile }) {
               type="text" 
               value={location} 
               onChange={(e) => setLocation(e.target.value)}
-              className="px-4 py-3 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-50 text-sm font-semibold"
+              disabled={!canEdit}
+              className="px-4 py-3 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-50 text-sm font-semibold disabled:bg-slate-50 disabled:text-slate-500"
             />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -293,6 +308,7 @@ function EventDetailsView({ state, onUpdateState, onUploadFile }) {
                 { value: "Virtual", label: "Virtual / Online Only" }
               ]}
               placeholder={t("createEvent.selectEventType", "Select event type...")}
+              disabled={!canEdit}
             />
           </div>
         </div>
@@ -304,7 +320,8 @@ function EventDetailsView({ state, onUpdateState, onUploadFile }) {
               type="date" 
               value={startDate} 
               onChange={(e) => setStartDate(e.target.value)}
-              className="px-4 py-3 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-50 text-sm font-semibold"
+              disabled={!canEdit}
+              className="px-4 py-3 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-50 text-sm font-semibold disabled:bg-slate-50 disabled:text-slate-500"
             />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -313,7 +330,8 @@ function EventDetailsView({ state, onUpdateState, onUploadFile }) {
               type="date" 
               value={endDate} 
               onChange={(e) => setEndDate(e.target.value)}
-              className="px-4 py-3 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-50 text-sm font-semibold"
+              disabled={!canEdit}
+              className="px-4 py-3 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-50 text-sm font-semibold disabled:bg-slate-50 disabled:text-slate-500"
             />
           </div>
         </div>
@@ -324,28 +342,33 @@ function EventDetailsView({ state, onUpdateState, onUploadFile }) {
             rows={4} 
             value={description} 
             onChange={(e) => setDescription(e.target.value)}
-            className="px-4 py-3 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-50 text-sm font-semibold resize-none"
+            disabled={!canEdit}
+            className="px-4 py-3 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-50 text-sm font-semibold resize-none disabled:bg-slate-50 disabled:text-slate-500"
           />
         </div>
 
-        <div className="flex flex-col gap-2">
-          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("createEvent.coverBanner", "Event Cover Banner")}</label>
-          <div className="border-2 border-dashed border-slate-200 rounded-2xl p-6 bg-slate-50 hover:bg-slate-100/55 transition-all text-center flex flex-col items-center gap-3">
-            <label className="flex items-center gap-2 text-xs font-semibold text-indigo-650 bg-white border border-slate-200 hover:border-indigo-150 py-2.5 px-4 rounded-xl cursor-pointer shadow-sm hover:shadow">
-              <Upload size={14} />
-              Upload Custom Banner
-              <input type="file" accept="image/*" onChange={handleBannerUpload} className="hidden" />
-            </label>
-            <span className="text-[10px] text-slate-400 font-semibold uppercase">Recommended size: 1200 x 400 pixels</span>
+        {canEdit && (
+          <div className="flex flex-col gap-2">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("createEvent.coverBanner", "Event Cover Banner")}</label>
+            <div className="border-2 border-dashed border-slate-200 rounded-2xl p-6 bg-slate-50 hover:bg-slate-100/55 transition-all text-center flex flex-col items-center gap-3">
+              <label className="flex items-center gap-2 text-xs font-semibold text-indigo-650 bg-white border border-slate-200 hover:border-indigo-150 py-2.5 px-4 rounded-xl cursor-pointer shadow-sm hover:shadow">
+                <Upload size={14} />
+                Upload Custom Banner
+                <input type="file" accept="image/*" onChange={handleBannerUpload} className="hidden" />
+              </label>
+              <span className="text-[10px] text-slate-400 font-semibold uppercase">Recommended size: 1200 x 400 pixels</span>
+            </div>
           </div>
-        </div>
+        )}
 
-        <button 
-          type="submit" 
-          className="bg-indigo-650 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-xl mt-4 max-w-[200px] hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 cursor-pointer text-sm"
-        >
-          Save Event Details
-        </button>
+        {canEdit && (
+          <button 
+            type="submit" 
+            className="bg-indigo-650 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-xl mt-4 max-w-[200px] hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 cursor-pointer text-sm"
+          >
+            Save Event Details
+          </button>
+        )}
       </form>
     </div>
   );
@@ -1063,6 +1086,7 @@ function SubmissionDetailsModal({ item, type = "attendee", forms = [], tickets =
 // 2. ALL ATTENDEES VIEW (Dynamic Form Columns + Ticket-Type Switcher)
 function AttendeesView({ state, onUpdateState, onOpenModal }) {
   const { t, lang, isRTL } = useLanguage();
+  const canEdit = canEditModule("attendees", state?.effectivePermissions);
   const { attendees = [], tickets = [], forms = [], organizations = [], sponsors = [], exhibitors = [] } = state;
   const activeEventId = state.activeEventId || state.eventDetails?.id;
   const {
@@ -1073,6 +1097,9 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
     syncNow,
     queueCheckin,
     queueBulkCheckin,
+    queueArchiveAttendee,
+    queueRestoreAttendee,
+    queueDeleteAttendee,
   } = useOfflineSync(activeEventId);
 
   const [search, setSearch] = useState("");
@@ -1354,24 +1381,99 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
     return filtered.filter((a, idx) => selectedIds.has(a.id || `att-${idx}`));
   }, [filtered, selectedIds]);
 
-  const handleArchive = (id) => {
-    if (confirm("Archive this attendee? Their registration record is preserved in archives.")) {
-      onUpdateState("attendees", attendees.map(a => a.id === id ? { ...a, status: 'archived', isArchived: true } : a));
+  const handleArchive = async (idOrItem) => {
+    if (!canEdit || !idOrItem) return;
+    const targetId = typeof idOrItem === 'object' ? idOrItem.id : idOrItem;
+    const targetEmail = typeof idOrItem === 'object' ? idOrItem.email : (attendees.find(a => a.id === targetId)?.email || (String(targetId).includes('@') ? targetId : null));
+
+    // 1. Instantly update UI state
+    const updated = attendees.map(a => {
+      const match = (targetId && a.id === targetId) || (targetEmail && a.email && a.email.toLowerCase() === targetEmail.toLowerCase());
+      if (match) {
+        return { ...a, status: 'archived', status_participation: 'archived', isArchived: true };
+      }
+      return a;
+    });
+    onUpdateState("attendees", updated);
+
+    // 2. Persist to DB
+    try {
+      if (archiveAttendee) {
+        await archiveAttendee(targetId, targetEmail, activeEventId);
+      }
+    } catch (err) {
+      console.warn("archiveAttendee error:", err);
+    }
+
+    // 3. Queue for offline sync
+    if (queueArchiveAttendee && targetId) {
+      queueArchiveAttendee(targetId, targetEmail);
     }
   };
 
-  const handleRestore = (id) => {
-    onUpdateState("attendees", attendees.map(a => (a.id === id || (a.email && a.email === id)) ? { ...a, status: 'registered', isArchived: false } : a));
+  const handleRestore = async (idOrItem) => {
+    if (!canEdit || !idOrItem) return;
+    const targetId = typeof idOrItem === 'object' ? idOrItem.id : idOrItem;
+    const targetEmail = typeof idOrItem === 'object' ? idOrItem.email : (attendees.find(a => a.id === targetId)?.email || (String(targetId).includes('@') ? targetId : null));
+
+    // 1. Instantly update UI state
+    const updated = attendees.map(a => {
+      const match = (targetId && a.id === targetId) || (targetEmail && a.email && a.email.toLowerCase() === targetEmail.toLowerCase());
+      if (match) {
+        return { ...a, status: 'registered', status_participation: 'registered', isArchived: false };
+      }
+      return a;
+    });
+    onUpdateState("attendees", updated);
+
+    // 2. Persist to DB
+    try {
+      if (restoreAttendee) {
+        await restoreAttendee(targetId, targetEmail, activeEventId);
+      }
+    } catch (err) {
+      console.warn("restoreAttendee error:", err);
+    }
+
+    // 3. Queue for offline sync
+    if (queueRestoreAttendee && targetId) {
+      queueRestoreAttendee(targetId, targetEmail);
+    }
   };
 
-  const handleDeleteAttendee = (id) => {
-    if (confirm("Permanently delete this archived attendee? This action cannot be undone.")) {
-      onUpdateState("attendees", attendees.filter(a => a.id !== id && (!a.email || a.email !== id)));
+  const handleDeleteAttendee = async (idOrItem) => {
+    if (!canEdit || !idOrItem) return;
+    if (!confirm("Permanently delete this archived attendee? This action cannot be undone.")) {
+      return;
+    }
+    const targetId = typeof idOrItem === 'object' ? idOrItem.id : idOrItem;
+    const targetEmail = typeof idOrItem === 'object' ? idOrItem.email : (attendees.find(a => a.id === targetId)?.email || (String(targetId).includes('@') ? targetId : null));
+
+    // 1. Instantly update UI state
+    const updated = attendees.filter(a => {
+      const match = (targetId && a.id === targetId) || (targetEmail && a.email && a.email.toLowerCase() === targetEmail.toLowerCase());
+      return !match;
+    });
+    onUpdateState("attendees", updated);
+
+    // 2. Persist to DB
+    try {
+      if (permanentDeleteAttendee) {
+        await permanentDeleteAttendee(targetId, targetEmail, activeEventId);
+      }
+    } catch (err) {
+      console.warn("permanentDeleteAttendee error:", err);
+    }
+
+    // 3. Queue for offline sync
+    if (queueDeleteAttendee && targetId) {
+      queueDeleteAttendee(targetId, targetEmail);
     }
   };
 
   // Toggle Check-in status directly from Attendees list
   const handleToggleCheckin = async (id) => {
+    if (!canEdit) return;
     const target = attendees.find(a => a.id === id);
     if (!target) return;
     const isCurrentlyChecked = Boolean(target.status === "checked-in" || target.status === "checked_in" || target.checkedIn || target.checked_in);
@@ -1398,6 +1500,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
   };
 
   const handleBulkCheckin = async (checkin = true) => {
+    if (!canEdit) return;
     const selectedKeys = new Set(selectedIds);
     const now = checkin ? new Date().toISOString() : null;
     const checkinTime = checkin ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null;
@@ -1425,6 +1528,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
   };
 
   const handleBulkPrintBadges = async () => {
+    if (!canEdit) return;
     if (!selectedAttendees.length) return;
     const badgeList = selectedAttendees.map(a => {
       const resolvedTier = getResolvedTicketName(a, tickets);
@@ -1462,49 +1566,88 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
     await printBulkA4BadgeDocuments(badgeList);
   };
 
-  const handleBulkArchive = () => {
-    if (confirm(`Archive ${selectedIds.size} ${t("table.selectedCount", "selected")} attendee(s)? Their registration records will be preserved in archives.`)) {
-      const selectedKeys = new Set(selectedIds);
-      const updated = attendees.map((a, idx) => {
-        const key = a.id || `att-${idx}`;
-        if (selectedKeys.has(key)) {
-          return { ...a, status: 'archived', isArchived: true };
-        }
-        return a;
-      });
-      onUpdateState("attendees", updated);
-      setSelectedIds(new Set());
-    }
-  };
-
-  const handleBulkRestore = () => {
+  const handleBulkArchive = async () => {
+    if (!canEdit) return;
+    const count = selectedIds.size;
+    if (!count) return;
     const selectedKeys = new Set(selectedIds);
+    const targetAttendees = attendees.filter((a, idx) => selectedKeys.has(a.id || `att-${idx}`));
+
     const updated = attendees.map((a, idx) => {
       const key = a.id || `att-${idx}`;
       if (selectedKeys.has(key)) {
-        return { ...a, status: 'registered', isArchived: false };
+        return { ...a, status: 'archived', status_participation: 'archived', isArchived: true };
       }
       return a;
     });
     onUpdateState("attendees", updated);
     setSelectedIds(new Set());
+
+    for (const att of targetAttendees) {
+      if (archiveAttendee) {
+        archiveAttendee(att.id, att.email, activeEventId).catch(e => console.warn(e));
+      }
+      if (queueArchiveAttendee && att.id) {
+        queueArchiveAttendee(att.id, att.email);
+      }
+    }
   };
 
-  const handleBulkDelete = () => {
-    if (confirm(`Permanently delete ${selectedIds.size} selected attendee(s)? This action cannot be undone.`)) {
+  const handleBulkRestore = async () => {
+    if (!canEdit) return;
+    const count = selectedIds.size;
+    if (!count) return;
+    const selectedKeys = new Set(selectedIds);
+    const targetAttendees = attendees.filter((a, idx) => selectedKeys.has(a.id || `att-${idx}`));
+
+    const updated = attendees.map((a, idx) => {
+      const key = a.id || `att-${idx}`;
+      if (selectedKeys.has(key)) {
+        return { ...a, status: 'registered', status_participation: 'registered', isArchived: false };
+      }
+      return a;
+    });
+    onUpdateState("attendees", updated);
+    setSelectedIds(new Set());
+
+    for (const att of targetAttendees) {
+      if (restoreAttendee) {
+        restoreAttendee(att.id, att.email, activeEventId).catch(e => console.warn(e));
+      }
+      if (queueRestoreAttendee && att.id) {
+        queueRestoreAttendee(att.id, att.email);
+      }
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!canEdit) return;
+    const count = selectedIds.size;
+    if (!count) return;
+    if (confirm(`Permanently delete ${count} selected attendee(s)? This action cannot be undone.`)) {
       const selectedKeys = new Set(selectedIds);
+      const targetAttendees = attendees.filter((a, idx) => selectedKeys.has(a.id || `att-${idx}`));
       const updated = attendees.filter((a, idx) => {
         const key = a.id || `att-${idx}`;
         return !selectedKeys.has(key);
       });
       onUpdateState("attendees", updated);
       setSelectedIds(new Set());
+
+      for (const att of targetAttendees) {
+        if (permanentDeleteAttendee) {
+          permanentDeleteAttendee(att.id, att.email, activeEventId).catch(e => console.warn(e));
+        }
+        if (queueDeleteAttendee && att.id) {
+          queueDeleteAttendee(att.id, att.email);
+        }
+      }
     }
   };
 
   // Direct 1-Click Print Badge Handler (Directly opens system print dialog with zero extra steps)
   const handleDirectPrintAttendeeBadge = (attendee) => {
-    if (!attendee) return;
+    if (!canEdit || !attendee) return;
 
     // Automatically check in the attendee when organizer prints badge
     const isCurrentlyChecked = Boolean(
@@ -1570,6 +1713,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
 
   // Bulk import attendees handler
   const handleImportAttendees = async (newAttendees) => {
+    if (!canEdit) return;
     try {
       const activeEventId = state.activeEventId || state.eventDetails?.id;
       const savedList = await bulkUpsertAttendees(newAttendees, activeEventId);
@@ -1583,6 +1727,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
 
   // Export as Excel (.xlsx)
   const handleExportExcel = () => {
+    if (!canEdit) return;
     setExportMenuOpen(false);
     try {
       exportAttendeesToExcel(filtered, dynamicCols, state.eventDetails);
@@ -1593,6 +1738,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
 
   // Export as Landscape PDF (.pdf)
   const handleExportPdf = async () => {
+    if (!canEdit) return;
     setExportMenuOpen(false);
     if (!filtered || filtered.length === 0) {
       alert("No attendees to export.");
@@ -1682,71 +1828,79 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
         </div>
 
         <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
-          {/* Export List Split Menu */}
-          <div className="relative" ref={exportMenuRef}>
-            <button
-              type="button"
-              onClick={() => setExportMenuOpen(prev => !prev)}
-              disabled={isExportingPdf}
-              className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 px-3.5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
-            >
-              {isExportingPdf ? (
-                <Loader2 size={14} className="animate-spin text-blue-600" />
-              ) : (
-                <Download size={14} className="text-slate-500" />
-              )}
-              <span>Export List</span>
-              <ChevronDown size={13} className="text-slate-400 ml-0.5" />
-            </button>
+          {canEdit ? (
+            <>
+              {/* Export List Split Menu */}
+              <div className="relative" ref={exportMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setExportMenuOpen(prev => !prev)}
+                  disabled={isExportingPdf}
+                  className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 px-3.5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
+                >
+                  {isExportingPdf ? (
+                    <Loader2 size={14} className="animate-spin text-blue-600" />
+                  ) : (
+                    <Download size={14} className="text-slate-500" />
+                  )}
+                  <span>Export List</span>
+                  <ChevronDown size={13} className="text-slate-400 ml-0.5" />
+                </button>
 
-            {exportMenuOpen && (
-              <div className="absolute right-0 mt-1.5 w-52 bg-white rounded-2xl shadow-xl border border-slate-100 py-1.5 z-40 animate-in fade-in zoom-in-95 duration-150">
-                <button
-                  type="button"
-                  onClick={handleExportExcel}
-                  className="w-full px-3.5 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 transition-colors cursor-pointer"
-                >
-                  <FileSpreadsheet size={15} className="text-emerald-600 shrink-0" />
-                  <div className="flex flex-col">
-                    <span className="font-bold text-slate-800">Export as Excel</span>
-                    <span className="text-[10px] text-slate-400 font-normal">Standard .xlsx file</span>
+                {exportMenuOpen && (
+                  <div className="absolute right-0 mt-1.5 w-52 bg-white rounded-2xl shadow-xl border border-slate-100 py-1.5 z-40 animate-in fade-in zoom-in-95 duration-150">
+                    <button
+                      type="button"
+                      onClick={handleExportExcel}
+                      className="w-full px-3.5 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 transition-colors cursor-pointer"
+                    >
+                      <FileSpreadsheet size={15} className="text-emerald-600 shrink-0" />
+                      <div className="flex flex-col">
+                        <span className="font-bold text-slate-800">Export as Excel</span>
+                        <span className="text-[10px] text-slate-400 font-normal">Standard .xlsx file</span>
+                      </div>
+                    </button>
+                    <div className="border-t border-slate-100 my-1" />
+                    <button
+                      type="button"
+                      onClick={handleExportPdf}
+                      className="w-full px-3.5 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 transition-colors cursor-pointer"
+                    >
+                      <FileText size={15} className="text-rose-600 shrink-0" />
+                      <div className="flex flex-col">
+                        <span className="font-bold text-slate-800">Export as PDF</span>
+                        <span className="text-[10px] text-slate-400 font-normal">Landscape A4 report</span>
+                      </div>
+                    </button>
                   </div>
-                </button>
-                <div className="border-t border-slate-100 my-1" />
-                <button
-                  type="button"
-                  onClick={handleExportPdf}
-                  className="w-full px-3.5 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 transition-colors cursor-pointer"
-                >
-                  <FileText size={15} className="text-rose-600 shrink-0" />
-                  <div className="flex flex-col">
-                    <span className="font-bold text-slate-800">Export as PDF</span>
-                    <span className="text-[10px] text-slate-400 font-normal">Landscape A4 report</span>
-                  </div>
-                </button>
+                )}
               </div>
-            )}
-          </div>
 
-          {/* Easy Upload Button */}
-          <button 
-            type="button"
-            onClick={() => setIsEasyUploadOpen(true)}
-            className="bg-white hover:bg-slate-50 text-blue-600 hover:text-blue-700 border border-blue-200/90 hover:border-blue-300 px-3.5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
-          >
-            <Upload size={14} />
-            <span>Easy Upload</span>
-          </button>
+              {/* Easy Upload Button */}
+              <button 
+                type="button"
+                onClick={() => setIsEasyUploadOpen(true)}
+                className="bg-white hover:bg-slate-50 text-blue-600 hover:text-blue-700 border border-blue-200/90 hover:border-blue-300 px-3.5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
+              >
+                <Upload size={14} />
+                <span>Easy Upload</span>
+              </button>
 
-          {/* Add Attendee Button */}
-          <button 
-            type="button"
-            onClick={() => onOpenModal("attendee")}
-            className="bg-indigo-650 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-          >
-            <Plus size={15} />
-            <span>{t("table.addAttendee", "Add Attendee")}</span>
-          </button>
+              {/* Add Attendee Button */}
+              <button 
+                type="button"
+                onClick={() => onOpenModal("attendee")}
+                className="bg-indigo-650 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+              >
+                <Plus size={15} />
+                <span>{t("table.addAttendee", "Add Attendee")}</span>
+              </button>
+            </>
+          ) : (
+            <span className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-500 font-bold text-xs border border-slate-200">
+              {t("common.readOnlyViewer", "Viewer Mode")}
+            </span>
+          )}
         </div>
       </header>
 
@@ -1807,29 +1961,31 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
           <table className="w-full border-collapse text-start text-xs font-medium text-slate-700">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-150 text-[10px] text-slate-400 font-bold uppercase tracking-wider select-none">
+                {canEdit && (
+                  <th
+                    style={{ [isRTL ? 'right' : 'left']: 0 }}
+                    className={`py-4 ${isRTL ? 'pr-5 pl-2' : 'pl-5 pr-2'} w-10 sticky bg-slate-50 z-20 ${isRTL ? 'shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]' : 'shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]'}`}
+                  >
+                    <div className="flex items-center justify-center">
+                      <input
+                        type="checkbox"
+                        checked={paginated.length > 0 && paginated.every((a, idx) => selectedIds.has(a.id || `att-${(currentPage - 1) * pageSize + idx}`))}
+                        ref={(el) => {
+                          if (el) {
+                            const isAllChecked = paginated.length > 0 && paginated.every((a, idx) => selectedIds.has(a.id || `att-${(currentPage - 1) * pageSize + idx}`));
+                            const hasSomeChecked = paginated.some((a, idx) => selectedIds.has(a.id || `att-${(currentPage - 1) * pageSize + idx}`));
+                            el.indeterminate = hasSomeChecked && !isAllChecked;
+                          }
+                        }}
+                        onChange={handleToggleSelectAll}
+                        className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer transition-colors"
+                        title="Select / Deselect all on this page"
+                      />
+                    </div>
+                  </th>
+                )}
                 <th
-                  style={{ [isRTL ? 'right' : 'left']: 0 }}
-                  className={`py-4 ${isRTL ? 'pr-5 pl-2' : 'pl-5 pr-2'} w-10 sticky bg-slate-50 z-20 ${isRTL ? 'shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]' : 'shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]'}`}
-                >
-                  <div className="flex items-center justify-center">
-                    <input
-                      type="checkbox"
-                      checked={paginated.length > 0 && paginated.every((a, idx) => selectedIds.has(a.id || `att-${(currentPage - 1) * pageSize + idx}`))}
-                      ref={(el) => {
-                        if (el) {
-                          const isAllChecked = paginated.length > 0 && paginated.every((a, idx) => selectedIds.has(a.id || `att-${(currentPage - 1) * pageSize + idx}`));
-                          const hasSomeChecked = paginated.some((a, idx) => selectedIds.has(a.id || `att-${(currentPage - 1) * pageSize + idx}`));
-                          el.indeterminate = hasSomeChecked && !isAllChecked;
-                        }
-                      }}
-                      onChange={handleToggleSelectAll}
-                      className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer transition-colors"
-                      title="Select / Deselect all on this page"
-                    />
-                  </div>
-                </th>
-                <th
-                  style={{ [isRTL ? 'right' : 'left']: 40 }}
+                  style={{ [isRTL ? 'right' : 'left']: canEdit ? 40 : 0 }}
                   className={`py-4 px-4 sticky bg-slate-50 z-10 min-w-[220px] sm:min-w-[260px] whitespace-nowrap ${isRTL ? 'shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]' : 'shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]'}`}
                 >
                   {t("table.attendee", "Attendee")}
@@ -1864,7 +2020,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
             <tbody className="divide-y divide-slate-100">
               {paginated.length === 0 ? (
                 <tr>
-                  <td colSpan={6 + (selectedTicketType === "all" || selectedTicketType === "archived" ? 1 : 0) + dynamicCols.length} className="text-center text-slate-450 py-14">
+                  <td colSpan={(canEdit ? 1 : 0) + 5 + (selectedTicketType === "all" || selectedTicketType === "archived" ? 1 : 0) + dynamicCols.length} className="text-center text-slate-450 py-14">
                     {selectedTicketType === "archived" 
                       ? t("table.noArchivedAttendees", "No archived attendees found.") 
                       : selectedTicketType !== "all" 
@@ -1887,22 +2043,24 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                       key={a.id ? `${a.id}-${globalIdx}` : `attendee-${globalIdx}`} 
                       className={`group hover:bg-slate-50 transition-colors duration-150 ${isSelected ? 'bg-indigo-50/50 hover:bg-indigo-50/70' : isArchived ? 'bg-slate-50/60 text-slate-600' : ''} ${isMenuActive ? 'relative z-40' : 'relative z-0'}`}
                     >
+                      {canEdit && (
+                        <td
+                          style={{ [isRTL ? 'right' : 'left']: 0 }}
+                          className={`py-4 ${isRTL ? 'pr-5 pl-2' : 'pl-5 pr-2'} w-10 sticky bg-white group-hover:bg-slate-50 z-20 ${isRTL ? 'shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]' : 'shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]'}`}
+                        >
+                          <div className="flex items-center justify-center">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleToggleSelectRow(attendeeKey)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer transition-colors"
+                            />
+                          </div>
+                        </td>
+                      )}
                       <td
-                        style={{ [isRTL ? 'right' : 'left']: 0 }}
-                        className={`py-4 ${isRTL ? 'pr-5 pl-2' : 'pl-5 pr-2'} w-10 sticky bg-white group-hover:bg-slate-50 z-20 ${isRTL ? 'shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]' : 'shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]'}`}
-                      >
-                        <div className="flex items-center justify-center">
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => handleToggleSelectRow(attendeeKey)}
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer transition-colors"
-                          />
-                        </div>
-                      </td>
-                      <td
-                        style={{ [isRTL ? 'right' : 'left']: 40 }}
+                        style={{ [isRTL ? 'right' : 'left']: canEdit ? 40 : 0 }}
                         className={`py-4 px-4 font-semibold flex items-center gap-3 sticky bg-white group-hover:bg-slate-50 z-10 min-w-[220px] sm:min-w-[260px] ${isRTL ? 'shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]' : 'shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]'}`}
                       >
                         <button 
@@ -2026,19 +2184,29 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                         className={`py-4 px-6 text-center whitespace-nowrap sticky bg-white group-hover:bg-slate-50 z-10 ${isRTL ? 'shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]' : 'shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]'}`}
                       >
                         <div className="relative inline-flex items-center justify-center">
-                          {/* 3 Points Action Trigger Button */}
-                          <button
-                            type="button"
-                            onClick={(e) => handleOpenActionsMenu(e, a, attendeeKey)}
-                            className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
-                              isMenuActive
-                                ? "bg-blue-50 text-blue-600 border border-blue-200 shadow-xs"
-                                : "text-slate-400 hover:text-slate-800 hover:bg-slate-100 border border-transparent hover:border-slate-200"
-                            }`}
-                            title={t("table.actions", "Actions")}
-                          >
-                            <MoreVertical size={16} />
-                          </button>
+                          {canEdit ? (
+                            <button
+                              type="button"
+                              onClick={(e) => handleOpenActionsMenu(e, a, attendeeKey)}
+                              className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+                                isMenuActive
+                                  ? "bg-blue-50 text-blue-600 border border-blue-200 shadow-xs"
+                                  : "text-slate-400 hover:text-slate-800 hover:bg-slate-100 border border-transparent hover:border-slate-200"
+                              }`}
+                              title={t("table.actions", "Actions")}
+                            >
+                              <MoreVertical size={16} />
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setSelectedSubmissionModal(a)}
+                              className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all cursor-pointer"
+                              title={t("table.viewDetails", "View Details")}
+                            >
+                              <Eye size={16} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -2207,7 +2375,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
 
       {/* Floating Bulk Action Bar (Light Mode) */}
       <AnimatePresence>
-        {selectedIds.size > 0 && (
+        {selectedIds.size > 0 && canEdit && (
           <motion.div
             initial={{ opacity: 0, y: 50, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -2441,7 +2609,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                     onClick={(e) => {
                       e.stopPropagation();
                       setActiveActionsMenu(null);
-                      handleArchive(a.id);
+                      handleArchive(a);
                     }}
                     className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer text-start group"
                   >
@@ -2457,7 +2625,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                     onClick={(e) => {
                       e.stopPropagation();
                       setActiveActionsMenu(null);
-                      handleRestore(a.id);
+                      handleRestore(a);
                     }}
                     className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer text-start group"
                   >
@@ -2487,7 +2655,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                     onClick={(e) => {
                       e.stopPropagation();
                       setActiveActionsMenu(null);
-                      handleDeleteAttendee(a.id);
+                      handleDeleteAttendee(a);
                     }}
                     className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer text-start group"
                   >
@@ -2504,7 +2672,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
 
       {/* Easy Upload Bulk Import Modal */}
       <EasyUploadModal
-        isOpen={isEasyUploadOpen}
+        isOpen={isEasyUploadOpen && canEdit}
         onClose={() => setIsEasyUploadOpen(false)}
         tickets={tickets}
         forms={forms}
@@ -2518,6 +2686,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
 // 3. PENDING REGISTRATIONS VIEW (Dynamic Form Columns + Ticket-Type Switcher)
 function PendingView({ state, onUpdateState }) {
   const { t, lang, isRTL } = useLanguage();
+  const canEdit = canEditModule("pending", state?.effectivePermissions);
   const { pending = [], attendees = [], tickets = [], forms = [] } = state;
   const [search, setSearch] = useState("");
   const [selectedTicketType, setSelectedTicketType] = useState("all");
@@ -2576,6 +2745,7 @@ function PendingView({ state, onUpdateState }) {
   }, [tickets, pending]);
 
   const handleDecline = (id) => {
+    if (!canEdit) return;
     if (confirm("Decline this registration request?")) {
       onUpdateState("pending", pending.filter(p => p.id !== id));
       if (selectedSubmissionModal?.id === id) {
@@ -2585,6 +2755,7 @@ function PendingView({ state, onUpdateState }) {
   };
 
   const handleApprove = (p) => {
+    if (!canEdit) return;
     const nameParts = (p.name || 'Guest Attendee').trim().split(' ');
     const userImg = getAttendeeDisplayImage(p);
     const answersData = p.answers || p.customAnswers || p.formAnswers || {};
@@ -2890,19 +3061,23 @@ function PendingView({ state, onUpdateState }) {
                           >
                             <Eye size={15} />
                           </button>
-                          <button 
-                            onClick={() => handleApprove(p)}
-                            className="bg-emerald-50 hover:bg-emerald-600 border border-emerald-200 hover:border-emerald-600 text-emerald-700 hover:text-white py-1.5 px-3 rounded-xl font-extrabold text-[11px] transition-all cursor-pointer shadow-sm hover:shadow flex items-center gap-1"
-                          >
-                            <Check size={12} className="stroke-[3]" />
-                            <span>Approve</span>
-                          </button>
-                          <button 
-                            onClick={() => handleDecline(p.id)}
-                            className="bg-rose-50 hover:bg-rose-600 border border-rose-200 hover:border-rose-600 text-rose-700 hover:text-white py-1.5 px-2.5 rounded-xl font-bold text-[11px] transition-all cursor-pointer shadow-sm"
-                          >
-                            Decline
-                          </button>
+                          {canEdit && (
+                            <>
+                              <button 
+                                onClick={() => handleApprove(p)}
+                                className="bg-emerald-50 hover:bg-emerald-600 border border-emerald-200 hover:border-emerald-600 text-emerald-700 hover:text-white py-1.5 px-3 rounded-xl font-extrabold text-[11px] transition-all cursor-pointer shadow-sm hover:shadow flex items-center gap-1"
+                              >
+                                <Check size={12} className="stroke-[3]" />
+                                <span>Approve</span>
+                              </button>
+                              <button 
+                                onClick={() => handleDecline(p.id)}
+                                className="bg-rose-50 hover:bg-rose-600 border border-rose-200 hover:border-rose-600 text-rose-700 hover:text-white py-1.5 px-2.5 rounded-xl font-bold text-[11px] transition-all cursor-pointer shadow-sm"
+                              >
+                                Decline
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -2932,8 +3107,8 @@ function PendingView({ state, onUpdateState }) {
           forms={forms}
           tickets={tickets}
           onClose={() => setSelectedSubmissionModal(null)}
-          onApprove={handleApprove}
-          onDecline={handleDecline}
+          onApprove={canEdit ? handleApprove : undefined}
+          onDecline={canEdit ? handleDecline : undefined}
         />
       )}
 
@@ -2951,6 +3126,7 @@ function PendingView({ state, onUpdateState }) {
 // 4. PARTNER ORGANIZATIONS VIEW
 function OrganizationsView({ state, onUpdateState, onOpenModal }) {
   const { t, lang, isRTL } = useLanguage();
+  const canEdit = canEditModule("organizations", state?.effectivePermissions);
   const { organizations = [], sponsors = [], exhibitors = [], attendees = [] } = state;
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedIndustry, setSelectedIndustry] = useState("all");
@@ -2958,16 +3134,19 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
   const [viewMode, setViewMode] = useState("grid"); // "grid" | "table"
 
   const handleArchive = (id) => {
+    if (!canEdit) return;
     if (confirm("Archive this organization? (Preserved in archives)")) {
       onUpdateState("organizations", organizations.map(o => o.id === id ? { ...o, isArchived: true, status: 'archived' } : o));
     }
   };
 
   const handleRestore = (id) => {
+    if (!canEdit) return;
     onUpdateState("organizations", organizations.map(o => o.id === id ? { ...o, isArchived: false, status: 'active' } : o));
   };
 
   const handleDeletePermanent = async (id) => {
+    if (!canEdit) return;
     if (confirm("Permanently delete this organization and all its linked sponsors/exhibitors? This action cannot be undone.")) {
       if (state.onDeleteOrganization) {
         await state.onDeleteOrganization(id);
@@ -3058,13 +3237,20 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
           </p>
         </div>
 
-        <button 
-          onClick={() => onOpenModal("org")}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-4 rounded-xl text-xs transition-all hover:shadow-md hover:-translate-y-0.5 flex items-center gap-2 cursor-pointer shadow-xs shadow-blue-100 shrink-0"
-        >
-          <Plus size={16} />
-          <span>{t("table.addCompany", "Add Organization")}</span>
-        </button>
+        {canEdit ? (
+          <button 
+            onClick={() => onOpenModal("org")}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-4 rounded-xl text-xs transition-all hover:shadow-md hover:-translate-y-0.5 flex items-center gap-2 cursor-pointer shadow-xs shadow-blue-100 shrink-0"
+          >
+            <Plus size={16} />
+            <span>{t("table.addCompany", "Add Organization")}</span>
+          </button>
+        ) : (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-500 text-xs font-bold shrink-0">
+            <Eye size={14} className="text-slate-400" />
+            <span>{t("table.viewerMode", "Viewer Mode (Read Only)")}</span>
+          </div>
+        )}
       </header>
 
       {/* 2. KPI Executive Stat Cards */}
@@ -3270,47 +3456,58 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
                     )}
 
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                      {!isArchived ? (
-                        <div className="flex items-center gap-1">
-                          <button 
-                            onClick={() => onOpenModal("org", o)}
-                            className="px-2.5 py-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                            title="Edit Organization"
-                          >
-                            Edit
-                          </button>
-                          <button 
-                            onClick={() => handleArchive(o.id)}
-                            className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                            title="Archive Organization"
-                          >
-                            <Archive size={13} />
-                          </button>
-                          <button 
-                            onClick={() => handleDeletePermanent(o.id)}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                            title="Permanently Delete Organization"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
+                      {canEdit ? (
+                        !isArchived ? (
+                          <div className="flex items-center gap-1">
+                            <button 
+                              onClick={() => onOpenModal("org", o)}
+                              className="px-2.5 py-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                              title="Edit Organization"
+                            >
+                              Edit
+                            </button>
+                            <button 
+                              onClick={() => handleArchive(o.id)}
+                              className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                              title="Archive Organization"
+                            >
+                              <Archive size={13} />
+                            </button>
+                            <button 
+                              onClick={() => handleDeletePermanent(o.id)}
+                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                              title="Permanently Delete Organization"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1">
+                            <button 
+                              onClick={() => handleRestore(o.id)}
+                              className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                              title="Restore"
+                            >
+                              <RotateCcw size={13} />
+                            </button>
+                            <button 
+                              onClick={() => handleDeletePermanent(o.id)}
+                              className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                              title="Permanently Delete"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        )
                       ) : (
-                        <div className="flex items-center gap-1">
-                          <button 
-                            onClick={() => handleRestore(o.id)}
-                            className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                            title="Restore"
-                          >
-                            <RotateCcw size={13} />
-                          </button>
-                          <button 
-                            onClick={() => handleDeletePermanent(o.id)}
-                            className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                            title="Permanently Delete"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
+                        <button 
+                          onClick={() => onOpenModal("org", o)}
+                          className="px-2.5 py-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                          title="View Details"
+                        >
+                          <Eye size={13} />
+                          <span>View</span>
+                        </button>
                       )}
                     </div>
                   </div>
@@ -3572,86 +3769,99 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
                       {/* Actions */}
                       <td className="py-4 px-6 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          {!isArchived && !isSponsor && (
-                            <button
-                              onClick={() => onOpenModal("sponsor", {
-                                orgId: o.id,
-                                name: o.name,
-                                logo: o.logo,
-                                image: o.logo,
-                                industry: o.industry,
-                                website: o.website,
-                                contact: o.contact
-                              })}
-                              className="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 text-[11px] font-bold transition-all cursor-pointer"
-                              title="Make Sponsor"
-                            >
-                              Make Sponsor
-                            </button>
-                          )}
+                          {canEdit ? (
+                            <>
+                              {!isArchived && !isSponsor && (
+                                <button
+                                  onClick={() => onOpenModal("sponsor", {
+                                    orgId: o.id,
+                                    name: o.name,
+                                    logo: o.logo,
+                                    image: o.logo,
+                                    industry: o.industry,
+                                    website: o.website,
+                                    contact: o.contact
+                                  })}
+                                  className="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 text-[11px] font-bold transition-all cursor-pointer"
+                                  title="Make Sponsor"
+                                >
+                                  Make Sponsor
+                                </button>
+                              )}
 
-                          {!isArchived && !isExhibitor && (
-                            <button
-                              onClick={() => onOpenModal("exhibitor", {
-                                orgId: o.id,
-                                name: o.name,
-                                logo: o.logo,
-                                industry: o.industry,
-                                email: o.email,
-                                phone: o.phone,
-                                contact: o.contact
-                              })}
-                              className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-[11px] font-bold transition-all cursor-pointer"
-                              title="Make Exhibitor"
-                            >
-                              Make Exhibitor
-                            </button>
-                          )}
+                              {!isArchived && !isExhibitor && (
+                                <button
+                                  onClick={() => onOpenModal("exhibitor", {
+                                    orgId: o.id,
+                                    name: o.name,
+                                    logo: o.logo,
+                                    industry: o.industry,
+                                    email: o.email,
+                                    phone: o.phone,
+                                    contact: o.contact
+                                  })}
+                                  className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-[11px] font-bold transition-all cursor-pointer"
+                                  title="Make Exhibitor"
+                                >
+                                  Make Exhibitor
+                                </button>
+                              )}
 
-                          {!isArchived && (
+                              {!isArchived && (
+                                <button
+                                  onClick={() => onOpenModal("org", o)}
+                                  className="px-2.5 py-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                                  title="Edit"
+                                >
+                                  Edit
+                                </button>
+                              )}
+
+                              {isArchived ? (
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => handleRestore(o.id)}
+                                    className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                                    title="Restore"
+                                  >
+                                    <RotateCcw size={13} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeletePermanent(o.id)}
+                                    className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                                    title="Permanently Delete Organization"
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => handleArchive(o.id)}
+                                    className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                                    title="Archive"
+                                  >
+                                    <Archive size={13} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeletePermanent(o.id)}
+                                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                                    title="Permanently Delete Organization"
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                </div>
+                              )}
+                            </>
+                          ) : (
                             <button
                               onClick={() => onOpenModal("org", o)}
-                              className="px-2.5 py-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                              title="Edit"
+                              className="px-2.5 py-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                              title="View Details"
                             >
-                              Edit
+                              <Eye size={13} />
+                              <span>View</span>
                             </button>
-                          )}
-
-                          {isArchived ? (
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => handleRestore(o.id)}
-                                className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                                title="Restore"
-                              >
-                                <RotateCcw size={13} />
-                              </button>
-                              <button
-                                onClick={() => handleDeletePermanent(o.id)}
-                                className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                                title="Permanently Delete Organization"
-                              >
-                                <Trash2 size={13} />
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => handleArchive(o.id)}
-                                className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                                title="Archive"
-                              >
-                                <Archive size={13} />
-                              </button>
-                              <button
-                                onClick={() => handleDeletePermanent(o.id)}
-                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                                title="Permanently Delete Organization"
-                              >
-                                <Trash2 size={13} />
-                              </button>
-                            </div>
                           )}
                         </div>
                       </td>
@@ -3672,21 +3882,25 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
 function SponsorsView({ state, onUpdateState, onOpenModal }) {
   const { t, lang, isRTL } = useLanguage();
   const { sponsors = [], organizations = [], attendees = [] } = state;
+  const canEdit = canEditModule("sponsors", state?.effectivePermissions);
   const [searchQuery, setSearchQuery] = useState("");
   const [tierFilter, setTierFilter] = useState("all");
   const [viewMode, setViewMode] = useState("grid"); // "grid" | "table"
 
   const handleArchive = (id) => {
+    if (!canEdit) return;
     if (confirm("Archive this sponsor? (Preserved in archives)")) {
       onUpdateState("sponsors", sponsors.map(s => s.id === id ? { ...s, isArchived: true, status: 'archived' } : s));
     }
   };
 
   const handleRestore = (id) => {
+    if (!canEdit) return;
     onUpdateState("sponsors", sponsors.map(s => s.id === id ? { ...s, isArchived: false, status: 'active' } : s));
   };
 
   const handleDeletePermanent = async (id) => {
+    if (!canEdit) return;
     if (confirm("Remove this sponsor from the event? (Organization profile will remain preserved).")) {
       if (state.onDeleteSponsor) {
         await state.onDeleteSponsor(id);
@@ -3736,6 +3950,7 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
   }, [DEFAULT_TIERS, tierNamesMap]);
 
   const handleStartEditTier = (tierKey, currentName) => {
+    if (!canEdit) return;
     setEditingTierKey(tierKey);
     setTempTierName(currentName);
   };
@@ -3746,6 +3961,7 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
   };
 
   const handleSaveTierName = (tierKey) => {
+    if (!canEdit) return;
     const trimmed = tempTierName.trim();
     if (!trimmed) return;
     const nextTierNames = {
@@ -3768,6 +3984,7 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
   };
 
   const handleResetTierName = (tierKey) => {
+    if (!canEdit) return;
     const defaultTier = DEFAULT_TIERS.find(t => t.key === tierKey);
     if (!defaultTier) return;
     const nextTierNames = { ...tierNamesMap };
@@ -3788,6 +4005,7 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
   };
 
   const handleOpenManageTiersModal = () => {
+    if (!canEdit) return;
     const initial = {};
     DEFAULT_TIERS.forEach(t => {
       initial[t.key] = tierNamesMap[t.key] || t.defaultName;
@@ -3797,6 +4015,7 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
   };
 
   const handleSaveAllTiersFromModal = () => {
+    if (!canEdit) return;
     const nextTierNames = { ...modalTierNames };
     if (typeof window !== "undefined") {
       try {
@@ -3813,6 +4032,7 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
   };
 
   const handleResetAllTiersToDefault = () => {
+    if (!canEdit) return;
     const initial = {};
     DEFAULT_TIERS.forEach(t => {
       initial[t.key] = t.defaultName;

@@ -75,7 +75,7 @@ import { LanguageProvider, useLanguage } from "../lib/i18n";
 import {
   fetchEventDetails, updateEventDetails, fetchEventBundle,
   fetchSessions, upsertSession, deleteSession, archiveSession,
-  fetchAttendees, upsertAttendee, deleteAttendee, archiveParticipant,
+  fetchAttendees, upsertAttendee, deleteAttendee, archiveParticipant, archiveAttendee, restoreAttendee, permanentDeleteAttendee,
   fetchPending, upsertPending, deletePending,
   fetchOrganizations, upsertOrganization, deleteOrganization,
   fetchSponsors, upsertSponsor, deleteSponsor,
@@ -2430,7 +2430,13 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
           for (const item of val) {
             const oldItem = attendees.find(i => String(i.id) === String(item.id));
             if (!oldItem || JSON.stringify(oldItem) !== JSON.stringify(item)) {
-              upsertAttendee(item, activeEventId).catch(e => console.error('Attendee upsert failed:', e));
+              if (item.status === 'archived' || item.isArchived) {
+                archiveAttendee(item.id, item.email, activeEventId).catch(e => console.error('Attendee archive failed:', e));
+              } else if (oldItem && (oldItem.status === 'archived' || oldItem.isArchived) && !item.isArchived && item.status !== 'archived') {
+                restoreAttendee(item.id, item.email, activeEventId).catch(e => console.error('Attendee restore failed:', e));
+              } else {
+                upsertAttendee(item, activeEventId).catch(e => console.error('Attendee upsert failed:', e));
+              }
             }
           }
         }

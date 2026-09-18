@@ -16,6 +16,7 @@ import { useLanguage } from "../lib/i18n";
 import SearchableSelect from "./SearchableSelect";
 import CountryPhoneInput from "./CountryPhoneInput";
 import TablePagination from "./TablePagination";
+import { canEditModule } from "../lib/permissions";
 
 export const SOCIAL_PLATFORMS = [
   { value: "Instagram", label: "Instagram", labelKey: "Instagram", badgeColor: "bg-pink-50 text-pink-700 border-pink-200" },
@@ -55,8 +56,11 @@ export default function InfluencersView({
     tickets = [],
     eventDetails = {},
     activeEventId,
-    currentUser
+    currentUser,
+    effectivePermissions
   } = state;
+
+  const canEdit = canEditModule("influencers", effectivePermissions);
 
   const currency = eventDetails?.currency || "DZD";
   const formatPrice = (amount) => {
@@ -376,6 +380,7 @@ export default function InfluencersView({
 
   // Open Drawer to Add Influencer
   const handleOpenAdd = () => {
+    if (!canEdit) return;
     setEditingInfluencer(null);
     setFormData({
       name: "",
@@ -404,6 +409,7 @@ export default function InfluencersView({
   // Open Drawer to Edit Influencer
   const handleOpenEdit = (inf, e) => {
     if (e) e.stopPropagation();
+    if (!canEdit) return;
     setEditingInfluencer(inf);
 
     let dType = "none";
@@ -469,6 +475,7 @@ export default function InfluencersView({
   // Save Influencer
   const handleSaveSubmit = (e) => {
     e.preventDefault();
+    if (!canEdit) return;
     const errors = {};
     if (!formData.name.trim()) errors.name = t("inf.nameRequired", "Influencer name is required");
 
@@ -522,6 +529,7 @@ export default function InfluencersView({
   // Toggle Status (Pause / Resume)
   const handleToggleStatus = (inf, e) => {
     if (e) e.stopPropagation();
+    if (!canEdit) return;
     const nextStatus = inf.status === "active" ? "paused" : "active";
     onUpdateState("influencers", (influencers || []).map(i => i.id === inf.id ? { ...i, status: nextStatus } : i));
   };
@@ -529,12 +537,14 @@ export default function InfluencersView({
   // Quick Payout Status update
   const handleUpdatePayoutStatus = (inf, newStatus, e) => {
     if (e) e.stopPropagation();
+    if (!canEdit) return;
     onUpdateState("influencers", (influencers || []).map(i => i.id === inf.id ? { ...i, payoutStatus: newStatus } : i));
   };
 
   // Archive Influencer
   const handleArchiveInfluencer = (id, e) => {
     if (e) e.stopPropagation();
+    if (!canEdit) return;
     if (confirm(t("inf.confirmArchive", "Are you sure you want to archive this influencer campaign? Attributed data will be preserved."))) {
       onUpdateState("influencers", (influencers || []).map(i => i.id === id ? { ...i, status: "archived", isArchived: true } : i));
     }
@@ -542,6 +552,7 @@ export default function InfluencersView({
 
   // Export CSV Report
   const handleExportCsv = () => {
+    if (!canEdit) return;
     if (filteredInfluencers.length === 0) return;
     const headers = [
       "Influencer Name",
@@ -624,24 +635,26 @@ export default function InfluencersView({
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <button
-            onClick={handleExportCsv}
-            disabled={filteredInfluencers.length === 0}
-            className="flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-2.5 px-4 rounded-xl text-xs transition-all shadow-xs disabled:opacity-50 cursor-pointer"
-          >
-            <Download size={14} className="text-slate-500" />
-            <span>{t("inf.exportCSV", "Export CSV")}</span>
-          </button>
+        {canEdit && (
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <button
+              onClick={handleExportCsv}
+              disabled={filteredInfluencers.length === 0}
+              className="flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-2.5 px-4 rounded-xl text-xs transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+            >
+              <Download size={14} className="text-slate-500" />
+              <span>{t("inf.exportCSV", "Export CSV")}</span>
+            </button>
 
-          <button
-            onClick={handleOpenAdd}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-4 rounded-xl text-xs transition-all shadow-sm hover:shadow cursor-pointer"
-          >
-            <Plus size={15} />
-            <span>{t("inf.addInfluencer", "Add Influencer")}</span>
-          </button>
-        </div>
+            <button
+              onClick={handleOpenAdd}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-4 rounded-xl text-xs transition-all shadow-sm hover:shadow cursor-pointer"
+            >
+              <Plus size={15} />
+              <span>{t("inf.addInfluencer", "Add Influencer")}</span>
+            </button>
+          </div>
+        )}
       </header>
 
       {/* 2. HERO SUMMARY METRIC CARDS */}
@@ -878,13 +891,15 @@ export default function InfluencersView({
               ? t("inf.adjustFiltersDesc", "Try adjusting your search terms or filter settings to view your campaigns.")
               : t("inf.emptyStateDesc", "Launch tracking referral links to partner with influencers, bloggers, and promoters.")}
           </p>
-          <button
-            onClick={handleOpenAdd}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-5 rounded-xl text-xs transition-all shadow-sm cursor-pointer"
-          >
-            <Plus size={15} />
-            <span>{t("inf.addInfluencer", "Add Influencer")}</span>
-          </button>
+          {canEdit && (
+            <button
+              onClick={handleOpenAdd}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-5 rounded-xl text-xs transition-all shadow-sm cursor-pointer"
+            >
+              <Plus size={15} />
+              <span>{t("inf.addInfluencer", "Add Influencer")}</span>
+            </button>
+          )}
         </div>
       ) : viewMode === "grid" ? (
         
@@ -1045,29 +1060,35 @@ export default function InfluencersView({
                   </button>
 
                   <div className="flex items-center gap-1">
-                    <button
-                      onClick={(e) => handleToggleStatus(inf, e)}
-                      className={`text-[10px] font-bold px-2 py-1 rounded-lg border transition-all cursor-pointer ${isPaused ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100" : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"}`}
-                      title={isPaused ? t("inf.clickToResume", "Click to Resume Campaign") : t("inf.clickToPause", "Click to Pause Campaign")}
-                    >
-                      {isPaused ? t("inf.resume", "Resume") : t("inf.pause", "Pause")}
-                    </button>
+                    {canEdit && (
+                      <button
+                        onClick={(e) => handleToggleStatus(inf, e)}
+                        className={`text-[10px] font-bold px-2 py-1 rounded-lg border transition-all cursor-pointer ${isPaused ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100" : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"}`}
+                        title={isPaused ? t("inf.clickToResume", "Click to Resume Campaign") : t("inf.clickToPause", "Click to Pause Campaign")}
+                      >
+                        {isPaused ? t("inf.resume", "Resume") : t("inf.pause", "Pause")}
+                      </button>
+                    )}
 
-                    <button
-                      onClick={(e) => handleOpenEdit(inf, e)}
-                      className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
-                      title={t("inf.edit", "Edit Influencer")}
-                    >
-                      <Edit3 size={13} />
-                    </button>
+                    {canEdit && (
+                      <button
+                        onClick={(e) => handleOpenEdit(inf, e)}
+                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                        title={t("inf.edit", "Edit Influencer")}
+                      >
+                        <Edit3 size={13} />
+                      </button>
+                    )}
 
-                    <button
-                      onClick={(e) => handleArchiveInfluencer(inf.id, e)}
-                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                      title={t("inf.archive", "Archive")}
-                    >
-                      <Trash2 size={13} />
-                    </button>
+                    {canEdit && (
+                      <button
+                        onClick={(e) => handleArchiveInfluencer(inf.id, e)}
+                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                        title={t("inf.archive", "Archive")}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -1171,15 +1192,25 @@ export default function InfluencersView({
                       </td>
 
                       <td className="py-3 px-3 text-center">
-                        <select
-                          value={inf.payoutStatus || "unpaid"}
-                          onChange={(e) => handleUpdatePayoutStatus(inf, e.target.value)}
-                          className="text-[10px] font-bold rounded-lg px-2 py-1 border bg-white cursor-pointer focus:outline-none"
-                        >
-                          <option value="unpaid">{t("inf.unpaid", "Unpaid")}</option>
-                          <option value="partial">{t("inf.partial", "Partial")}</option>
-                          <option value="paid">{t("inf.paid", "Paid")}</option>
-                        </select>
+                        {canEdit ? (
+                          <select
+                            value={inf.payoutStatus || "unpaid"}
+                            onChange={(e) => handleUpdatePayoutStatus(inf, e.target.value)}
+                            className="text-[10px] font-bold rounded-lg px-2 py-1 border bg-white cursor-pointer focus:outline-none"
+                          >
+                            <option value="unpaid">{t("inf.unpaid", "Unpaid")}</option>
+                            <option value="partial">{t("inf.partial", "Partial")}</option>
+                            <option value="paid">{t("inf.paid", "Paid")}</option>
+                          </select>
+                        ) : (
+                          <span className={`inline-block text-[10px] font-extrabold px-2 py-0.5 rounded-lg border ${
+                            inf.payoutStatus === "paid" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                            inf.payoutStatus === "partial" ? "bg-blue-50 text-blue-700 border-blue-200" :
+                            "bg-amber-50 text-amber-700 border-amber-200"
+                          }`}>
+                            {t(`inf.${inf.payoutStatus || "unpaid"}`, inf.payoutStatus || "Unpaid")}
+                          </span>
+                        )}
                       </td>
 
                       <td className="py-3 px-4 text-right">
@@ -1212,35 +1243,41 @@ export default function InfluencersView({
                           </button>
 
                           {/* Pause / Resume Button */}
-                          <button
-                            onClick={(e) => handleToggleStatus(inf, e)}
-                            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                              isPaused
-                                ? "text-emerald-600 hover:bg-emerald-50"
-                                : "text-amber-600 hover:bg-amber-50"
-                            }`}
-                            title={isPaused ? t("inf.clickToResume", "Click to Resume Campaign") : t("inf.clickToPause", "Click to Pause Campaign")}
-                          >
-                            {isPaused ? <Play size={13} /> : <Pause size={13} />}
-                          </button>
+                          {canEdit && (
+                            <button
+                              onClick={(e) => handleToggleStatus(inf, e)}
+                              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                                isPaused
+                                  ? "text-emerald-600 hover:bg-emerald-50"
+                                  : "text-amber-600 hover:bg-amber-50"
+                              }`}
+                              title={isPaused ? t("inf.clickToResume", "Click to Resume Campaign") : t("inf.clickToPause", "Click to Pause Campaign")}
+                            >
+                              {isPaused ? <Play size={13} /> : <Pause size={13} />}
+                            </button>
+                          )}
 
                           {/* Edit */}
-                          <button
-                            onClick={(e) => handleOpenEdit(inf, e)}
-                            className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
-                            title={t("inf.edit", "Edit Influencer")}
-                          >
-                            <Edit3 size={13} />
-                          </button>
+                          {canEdit && (
+                            <button
+                              onClick={(e) => handleOpenEdit(inf, e)}
+                              className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                              title={t("inf.edit", "Edit Influencer")}
+                            >
+                              <Edit3 size={13} />
+                            </button>
+                          )}
 
                           {/* Archive / Delete */}
-                          <button
-                            onClick={(e) => handleArchiveInfluencer(inf.id, e)}
-                            className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                            title={t("inf.archive", "Archive")}
-                          >
-                            <Trash2 size={13} />
-                          </button>
+                          {canEdit && (
+                            <button
+                              onClick={(e) => handleArchiveInfluencer(inf.id, e)}
+                              className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                              title={t("inf.archive", "Archive")}
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
                         </div>
                       </td>
 
@@ -1543,12 +1580,14 @@ export default function InfluencersView({
                 >
                   {t("inf.cancel", "Cancel")}
                 </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold shadow-sm hover:shadow transition-all cursor-pointer"
-                >
-                  {t("inf.save", "Save Influencer Campaign")}
-                </button>
+                {canEdit && (
+                  <button
+                    type="submit"
+                    className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold shadow-sm hover:shadow transition-all cursor-pointer"
+                  >
+                    {t("inf.save", "Save Influencer Campaign")}
+                  </button>
+                )}
               </div>
 
             </form>
