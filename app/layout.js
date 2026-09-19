@@ -21,13 +21,13 @@ const cairo = Cairo({
 export const metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://eventzone.pro"),
   title: {
-    default: "Eventzone - All-in-One Event Management Solution",
+    default: "Eventzone - All in One Event Management Platform",
     template: "%s | Eventzone",
   },
   description: "A premium event organizer platform to design floor layouts, manage schedules, and register for conferences & expos.",
   keywords: ["Eventzone", "events", "conferences", "summits", "expos", "tickets", "event management", "Algeria"],
   openGraph: {
-    title: "Eventzone - All-in-One Event Management Solution",
+    title: "Eventzone - All in One Event Management Platform",
     description: "A premium event organizer platform to design floor layouts, manage schedules, and register for conferences & expos.",
     url: "https://eventzone.pro",
     siteName: "Eventzone",
@@ -44,7 +44,7 @@ export const metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Eventzone - All-in-One Event Management Solution",
+    title: "Eventzone - All in One Event Management Platform",
     description: "A premium event organizer platform to design floor layouts, manage schedules, and register for conferences & expos.",
   },
   icons: {

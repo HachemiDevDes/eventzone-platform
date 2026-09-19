@@ -18,7 +18,7 @@ function parseToIso(dateStr, fallbackHour = 8) {
 }
 
 export const metadata = {
-  title: "Eventzone — Discover Events, Conferences & Expos | Event Platform",
+  title: "Eventzone - All in One Event Management Platform",
   description: "Discover leading conferences, summits, exhibitions, and professional events on Eventzone. Book tickets, explore interactive floor plans, and manage events seamlessly.",
   keywords: [
     "Eventzone",
@@ -37,7 +37,7 @@ export const metadata = {
     canonical: "https://eventzone.pro",
   },
   openGraph: {
-    title: "Eventzone — Discover Events, Conferences & Expos",
+    title: "Eventzone - All in One Event Management Platform",
     description: "Discover leading conferences, summits, exhibitions, and professional events on Eventzone. Book tickets, explore interactive floor plans, and manage events seamlessly.",
     url: "https://eventzone.pro",
     siteName: "Eventzone",
@@ -54,7 +54,7 @@ export const metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Eventzone — Discover Events, Conferences & Expos",
+    title: "Eventzone - All in One Event Management Platform",
     description: "Discover leading conferences, summits, exhibitions, and professional events on Eventzone. Book tickets, explore interactive floor plans, and manage events seamlessly.",
     images: ["/og-image.png"],
   },

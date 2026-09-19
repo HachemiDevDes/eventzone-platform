@@ -122,7 +122,7 @@ export default function Image() {
               color: "#ffffff",
             }}
           >
-            Discover Events, Conferences &amp; Expos
+            All in One Event Management Platform
           </div>
 
           <div
