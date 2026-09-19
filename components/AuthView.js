@@ -264,6 +264,26 @@ export default function AuthView({
           console.warn("Profile sync warning:", profileErr);
         }
 
+        // Notify super admin when a new organizer registers
+        if (dbRole === "organizer") {
+          try {
+            fetch("/api/email/admin-notify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                type: "organizer_joined",
+                organizer: {
+                  id: userId,
+                  fullName: fullName.trim(),
+                  email: email.trim(),
+                  role: "organizer",
+                  createdAt: new Date().toISOString(),
+                }
+              })
+            }).catch(e => console.warn("Admin notification dispatch notice:", e));
+          } catch (e) {}
+        }
+
         // 3. Handle Email Confirmation if required
         if (authData?.session === null && authUser && !authUser.confirmed_at) {
           const tempUserData = {
@@ -410,6 +430,23 @@ export default function AuthView({
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
             }, { onConflict: "id" });
+
+            if (dbRole === "organizer") {
+              fetch("/api/email/admin-notify", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  type: "organizer_joined",
+                  organizer: {
+                    id: userId,
+                    fullName: retrievedName,
+                    email: email.trim(),
+                    role: "organizer",
+                    createdAt: new Date().toISOString(),
+                  }
+                })
+              }).catch(() => {});
+            }
           } catch (e) {
             console.warn("Auto profile creation on login warning:", e);
           }

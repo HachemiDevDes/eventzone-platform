@@ -683,6 +683,24 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               updated_at: new Date().toISOString(),
             }, { onConflict: "id" }).select().maybeSingle();
             if (createdProf) profile = createdProf;
+            if (dbRole === "organizer") {
+              try {
+                fetch("/api/email/admin-notify", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    type: "organizer_joined",
+                    organizer: {
+                      id: userId,
+                      fullName: retrievedName,
+                      email: session.user.email,
+                      role: "organizer",
+                      createdAt: new Date().toISOString(),
+                    }
+                  })
+                }).catch(() => {});
+              } catch (e) {}
+            }
           } catch (upsertErr) {
             console.warn("Profile creation warning:", upsertErr);
           }
