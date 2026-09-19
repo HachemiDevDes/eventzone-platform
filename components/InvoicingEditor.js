@@ -298,167 +298,213 @@ export default function InvoicingEditor({
     return list;
   }, [invoices]);
 
+  // Aggregated, deduplicated Client, Organization, Sponsor & Prospect options for SearchableSelect
+  const { clientOptions, clientLookup } = useMemo(() => {
+    const map = new Map();
+
+    const getOrInit = (rawName) => {
+      const trimmed = (rawName || "").trim();
+      if (!trimmed) return null;
+      const key = trimmed.toLowerCase();
+      if (!map.has(key)) {
+        map.set(key, {
+          key: `company_${key}`,
+          label: trimmed,
+          legalName: "",
+          roles: new Set(),
+          contactName: "",
+          address: "",
+          email: "",
+          phone: "",
+          nif: "",
+          rc: "",
+          nis: "",
+          articleImposition: "",
+        });
+      }
+      return map.get(key);
+    };
+
+    // 1. Organizations (highest priority for fiscal data)
+    (allOrganizations || []).forEach(o => {
+      const name = o.name || o.legalName || o.legal_name || "";
+      const entry = getOrInit(name);
+      if (!entry) return;
+
+      entry.roles.add("Organisation");
+      if (o.legalName && o.legalName !== name) entry.legalName = o.legalName;
+      if (o.legal_name && o.legal_name !== name) entry.legalName = o.legal_name;
+
+      const fiscal = o.fiscalDetails || o.fiscal_details || {};
+      if (!entry.contactName) entry.contactName = o.contactPerson || o.contact || o.contactName || o.liaison_name || o.contact_person || "";
+      if (!entry.address) entry.address = o.legalAddress || o.legal_address || o.address || "";
+      if (!entry.email) entry.email = o.invoicingEmail || o.invoicing_email || o.email || o.contactEmail || "";
+      if (!entry.phone) entry.phone = o.invoicingPhone || o.invoicing_phone || o.phone || o.contactPhone || "";
+      if (!entry.nif) entry.nif = o.nif || fiscal.nif || "";
+      if (!entry.rc) entry.rc = o.rc || fiscal.rc || "";
+      if (!entry.nis) entry.nis = o.nis || fiscal.nis || "";
+      if (!entry.articleImposition) entry.articleImposition = o.articleImposition || o.article_imposition || fiscal.article_imposition || "";
+    });
+
+    // 2. Sponsors
+    (sponsors || []).forEach(sp => {
+      const name = sp.name || sp.company_name || "";
+      const entry = getOrInit(name);
+      if (!entry) return;
+
+      const tier = sp.tier ? `Sponsor (${sp.tier})` : "Sponsor";
+      entry.roles.add(tier);
+
+      const org = (allOrganizations || []).find(o => String(o.id) === String(sp.org_id || sp.orgId));
+      const fiscal = sp.fiscalDetails || sp.fiscal_details || org?.fiscalDetails || org?.fiscal_details || {};
+      if (!entry.contactName) entry.contactName = sp.contact || sp.contactPerson || sp.contactName || org?.contactPerson || org?.contact || "";
+      if (!entry.address) entry.address = sp.address || sp.legalAddress || org?.legalAddress || org?.address || "";
+      if (!entry.email) entry.email = sp.invoicingEmail || sp.email || sp.contactEmail || org?.invoicingEmail || org?.email || "";
+      if (!entry.phone) entry.phone = sp.invoicingPhone || sp.phone || sp.contactPhone || org?.invoicingPhone || org?.phone || "";
+      if (!entry.nif) entry.nif = sp.nif || fiscal.nif || org?.nif || "";
+      if (!entry.rc) entry.rc = sp.rc || fiscal.rc || org?.rc || "";
+      if (!entry.nis) entry.nis = sp.nis || fiscal.nis || org?.nis || "";
+      if (!entry.articleImposition) entry.articleImposition = sp.articleImposition || sp.article_imposition || fiscal.article_imposition || org?.articleImposition || org?.article_imposition || "";
+    });
+
+    // 3. Exhibitors
+    (exhibitors || []).forEach(ex => {
+      const name = ex.name || ex.company_name || "";
+      const entry = getOrInit(name);
+      if (!entry) return;
+
+      const stand = ex.boothNumber ? `Exposant (Stand ${ex.boothNumber})` : "Exposant";
+      entry.roles.add(stand);
+
+      const org = (allOrganizations || []).find(o => String(o.id) === String(ex.org_id || ex.orgId));
+      const fiscal = ex.fiscalDetails || ex.fiscal_details || org?.fiscalDetails || org?.fiscal_details || {};
+      if (!entry.contactName) entry.contactName = ex.contact || ex.contactPerson || ex.contactName || org?.contactPerson || org?.contact || "";
+      if (!entry.address) entry.address = ex.address || ex.legalAddress || org?.legalAddress || org?.address || "";
+      if (!entry.email) entry.email = ex.invoicingEmail || ex.email || ex.contactEmail || org?.invoicingEmail || org?.email || "";
+      if (!entry.phone) entry.phone = ex.invoicingPhone || ex.phone || ex.contactPhone || org?.invoicingPhone || org?.phone || "";
+      if (!entry.nif) entry.nif = ex.nif || fiscal.nif || org?.nif || "";
+      if (!entry.rc) entry.rc = ex.rc || fiscal.rc || org?.rc || "";
+      if (!entry.nis) entry.nis = ex.nis || fiscal.nis || org?.nis || "";
+      if (!entry.articleImposition) entry.articleImposition = ex.articleImposition || ex.article_imposition || fiscal.article_imposition || org?.articleImposition || org?.article_imposition || "";
+    });
+
+    // 4. CRM Prospects / Opportunities
+    (opportunities || []).forEach(opp => {
+      const name = opp.companyName || opp.name || "";
+      const entry = getOrInit(name);
+      if (!entry) return;
+
+      entry.roles.add("Prospect");
+      const fiscal = opp.fiscalDetails || opp.fiscal_details || {};
+      if (!entry.contactName) entry.contactName = opp.contactName || opp.contactPerson || "";
+      if (!entry.address) entry.address = opp.legalAddress || opp.legal_address || "";
+      if (!entry.email) entry.email = opp.invoicingEmail || opp.invoicing_email || opp.contactEmail || opp.email || "";
+      if (!entry.phone) entry.phone = opp.invoicingPhone || opp.invoicing_phone || opp.contactPhone || opp.phone || "";
+      if (!entry.nif) entry.nif = opp.nif || fiscal.nif || "";
+      if (!entry.rc) entry.rc = opp.rc || fiscal.rc || "";
+      if (!entry.nis) entry.nis = opp.nis || fiscal.nis || "";
+      if (!entry.articleImposition) entry.articleImposition = opp.articleImposition || opp.article_imposition || fiscal.article_imposition || "";
+    });
+
+    // 5. Saved Address Book Clients
+    (savedClients || []).forEach(c => {
+      const name = c.company_name || c.name || "";
+      const entry = getOrInit(name);
+      if (!entry) return;
+
+      entry.roles.add("Client enregistré");
+      if (!entry.contactName) entry.contactName = c.contact_name || "";
+      if (!entry.address) entry.address = c.address || "";
+      if (!entry.email) entry.email = c.email || "";
+      if (!entry.phone) entry.phone = c.phone || "";
+      if (!entry.nif) entry.nif = c.nif || "";
+      if (!entry.rc) entry.rc = c.rc || "";
+      if (!entry.nis) entry.nis = c.nis || "";
+      if (!entry.articleImposition) entry.articleImposition = c.article_imposition || "";
+    });
+
+    // 6. Past Invoiced Clients
+    (pastInvoicedClients || []).forEach(c => {
+      const name = c.company_name || "";
+      const entry = getOrInit(name);
+      if (!entry) return;
+
+      entry.roles.add("Client précédent");
+      if (!entry.nif) entry.nif = c.nif || "";
+      if (!entry.rc) entry.rc = c.rc || "";
+      if (!entry.nis) entry.nis = c.nis || "";
+    });
+
+    // Build unique options array and lookup map
+    const options = [];
+    const lookup = {};
+
+    Array.from(map.values()).forEach(entry => {
+      const hasFiscal = Boolean(entry.nif || entry.rc || entry.nis || entry.articleImposition);
+      const rolesArray = Array.from(entry.roles);
+      const rolesText = rolesArray.join(" • ") || "Organisation";
+
+      const descParts = [];
+      if (rolesText) descParts.push(rolesText);
+      if (entry.legalName) descParts.push(`(${entry.legalName})`);
+      if (hasFiscal) descParts.push("Fiscalité disponible");
+
+      const description = descParts.join(" • ");
+
+      const optionItem = {
+        value: entry.key,
+        label: entry.label,
+        description,
+      };
+
+      options.push(optionItem);
+      lookup[entry.key] = {
+        client_name: entry.label,
+        client_contact_name: entry.contactName,
+        client_address: entry.address,
+        client_email: entry.email,
+        client_phone: entry.phone,
+        client_nif: entry.nif,
+        client_rc: entry.rc,
+        client_nis: entry.nis,
+        client_article_imposition: entry.articleImposition,
+        rolesText,
+        hasFiscal,
+      };
+    });
+
+    // Sort alphabetically by company name
+    options.sort((a, b) => a.label.localeCompare(b.label, "fr", { sensitivity: "base" }));
+
+    return { clientOptions: options, clientLookup: lookup };
+  }, [allOrganizations, sponsors, exhibitors, opportunities, savedClients, pastInvoicedClients]);
+
   // Quick Client / Organization / Prospect Selector Handler
   const handleSelectClient = (selectedVal) => {
+    setSelectedClientKey(selectedVal);
     if (!selectedVal) {
-      setSelectedClientKey("");
+      setAutofilledSource(null);
       return;
     }
-    setSelectedClientKey(selectedVal);
 
-    // 1. Organization selection
-    if (selectedVal.startsWith("org_")) {
-      const orgId = selectedVal.replace("org_", "");
-      const org = allOrganizations.find(o => String(o.id) === String(orgId));
-      if (org) {
-        const fiscal = org.fiscalDetails || org.fiscal_details || {};
-        const nif = org.nif || fiscal.nif || "";
-        const rc = org.rc || fiscal.rc || "";
-        const nis = org.nis || fiscal.nis || "";
-        const ai = org.articleImposition || org.article_imposition || fiscal.article_imposition || "";
-
-        setDoc(prev => ({
-          ...prev,
-          client_name: org.legalName || org.legal_name || org.name || "",
-          client_contact_name: org.contactPerson || org.contact || org.contactName || org.liaison_name || org.contact_person || "",
-          client_address: org.legalAddress || org.legal_address || org.address || "",
-          client_email: org.invoicingEmail || org.invoicing_email || org.email || org.contactEmail || "",
-          client_phone: org.invoicingPhone || org.invoicing_phone || org.phone || org.contactPhone || "",
-          client_nif: nif,
-          client_rc: rc,
-          client_nis: nis,
-          client_article_imposition: ai,
-        }));
-        setAutofilledSource({
-          type: "org",
-          name: org.name || org.legalName || "Organisation",
-          hasFiscal: Boolean(nif || rc || nis || ai),
-        });
-        return;
-      }
-    }
-
-    // 2. Sponsor selection
-    if (selectedVal.startsWith("sponsor_")) {
-      const spId = selectedVal.replace("sponsor_", "");
-      const sp = (sponsors || []).find(s => String(s.id) === String(spId));
-      if (sp) {
-        const org = allOrganizations.find(o => String(o.id) === String(sp.org_id || sp.orgId));
-        const fiscal = sp.fiscalDetails || sp.fiscal_details || org?.fiscalDetails || org?.fiscal_details || {};
-        const nif = sp.nif || fiscal.nif || org?.nif || "";
-        const rc = sp.rc || fiscal.rc || org?.rc || "";
-        const nis = sp.nis || fiscal.nis || org?.nis || "";
-        const ai = sp.articleImposition || sp.article_imposition || fiscal.article_imposition || org?.articleImposition || org?.article_imposition || "";
-
-        setDoc(prev => ({
-          ...prev,
-          client_name: sp.name || sp.company_name || sp.legalName || org?.legalName || org?.name || "",
-          client_contact_name: sp.contact || sp.contactPerson || sp.contactName || org?.contactPerson || org?.contact || "",
-          client_address: sp.address || sp.legalAddress || org?.legalAddress || org?.address || "",
-          client_email: sp.invoicingEmail || sp.email || sp.contactEmail || org?.invoicingEmail || org?.email || "",
-          client_phone: sp.invoicingPhone || sp.phone || sp.contactPhone || org?.invoicingPhone || org?.phone || "",
-          client_nif: nif,
-          client_rc: rc,
-          client_nis: nis,
-          client_article_imposition: ai,
-        }));
-        setAutofilledSource({
-          type: "sponsor",
-          name: sp.name || "Sponsor",
-          hasFiscal: Boolean(nif || rc || nis || ai),
-        });
-        return;
-      }
-    }
-
-    // 3. Exhibitor selection
-    if (selectedVal.startsWith("exhibitor_")) {
-      const exId = selectedVal.replace("exhibitor_", "");
-      const ex = (exhibitors || []).find(e => String(e.id) === String(exId));
-      if (ex) {
-        const org = allOrganizations.find(o => String(o.id) === String(ex.org_id || ex.orgId));
-        const fiscal = ex.fiscalDetails || ex.fiscal_details || org?.fiscalDetails || org?.fiscal_details || {};
-        const nif = ex.nif || fiscal.nif || org?.nif || "";
-        const rc = ex.rc || fiscal.rc || org?.rc || "";
-        const nis = ex.nis || fiscal.nis || org?.nis || "";
-        const ai = ex.articleImposition || ex.article_imposition || fiscal.article_imposition || org?.articleImposition || org?.article_imposition || "";
-
-        setDoc(prev => ({
-          ...prev,
-          client_name: ex.name || ex.company_name || ex.legalName || org?.legalName || org?.name || "",
-          client_contact_name: ex.contact || ex.contactPerson || ex.contactName || org?.contactPerson || org?.contact || "",
-          client_address: ex.address || ex.legalAddress || org?.legalAddress || org?.address || "",
-          client_email: ex.invoicingEmail || ex.email || ex.contactEmail || org?.invoicingEmail || org?.email || "",
-          client_phone: ex.invoicingPhone || ex.phone || ex.contactPhone || org?.invoicingPhone || org?.phone || "",
-          client_nif: nif,
-          client_rc: rc,
-          client_nis: nis,
-          client_article_imposition: ai,
-        }));
-        setAutofilledSource({
-          type: "exhibitor",
-          name: ex.name || "Exposant",
-          hasFiscal: Boolean(nif || rc || nis || ai),
-        });
-        return;
-      }
-    }
-
-    // 4. Prospect / Opportunity selection
-    if (selectedVal.startsWith("opp_")) {
-      const oppId = selectedVal.replace("opp_", "");
-      const opp = (opportunities || []).find(o => String(o.id) === String(oppId));
-      if (opp) {
-        const fiscal = opp.fiscalDetails || opp.fiscal_details || {};
-        const nif = opp.nif || fiscal.nif || "";
-        const rc = opp.rc || fiscal.rc || "";
-        const nis = opp.nis || fiscal.nis || "";
-        const ai = opp.articleImposition || opp.article_imposition || fiscal.article_imposition || "";
-
-        setDoc(prev => ({
-          ...prev,
-          client_name: opp.legalName || opp.legal_name || opp.companyName || opp.name || "",
-          client_contact_name: opp.contactName || opp.contactPerson || "",
-          client_address: opp.legalAddress || opp.legal_address || "",
-          client_email: opp.invoicingEmail || opp.invoicing_email || opp.contactEmail || opp.email || "",
-          client_phone: opp.invoicingPhone || opp.invoicing_phone || opp.contactPhone || opp.phone || "",
-          client_nif: nif,
-          client_rc: rc,
-          client_nis: nis,
-          client_article_imposition: ai,
-        }));
-        setAutofilledSource({
-          type: "opp",
-          name: opp.companyName || opp.name || "Prospect",
-          hasFiscal: Boolean(nif || rc || nis || ai),
-        });
-        return;
-      }
-    }
-
-    // 5. Saved Client or Past Invoiced Client selection
-    const cleanClientId = selectedVal.startsWith("client_") ? selectedVal.replace("client_", "") : selectedVal;
-    const foundSaved = (savedClients || []).find(c => String(c.id) === String(cleanClientId));
-    const foundPast = pastInvoicedClients.find(c => String(c.id) === String(selectedVal));
-    const found = foundSaved || foundPast;
-
-    if (found) {
+    const selected = clientLookup[selectedVal];
+    if (selected) {
       setDoc(prev => ({
         ...prev,
-        client_name: found.company_name || found.name || "",
-        client_contact_name: found.contact_name || "",
-        client_address: found.address || "",
-        client_email: found.email || "",
-        client_phone: found.phone || "",
-        client_nif: found.nif || "",
-        client_rc: found.rc || "",
-        client_nis: found.nis || "",
-        client_article_imposition: found.article_imposition || "",
+        client_name: selected.client_name || prev.client_name || "",
+        client_contact_name: selected.client_contact_name || prev.client_contact_name || "",
+        client_address: selected.client_address || prev.client_address || "",
+        client_email: selected.client_email || prev.client_email || "",
+        client_phone: selected.client_phone || prev.client_phone || "",
+        client_nif: selected.client_nif || prev.client_nif || "",
+        client_rc: selected.client_rc || prev.client_rc || "",
+        client_nis: selected.client_nis || prev.client_nis || "",
+        client_article_imposition: selected.client_article_imposition || prev.client_article_imposition || "",
       }));
       setAutofilledSource({
         type: "client",
-        name: found.company_name || found.name || "Client",
-        hasFiscal: Boolean(found.nif || found.rc || found.nis || found.article_imposition),
+        name: selected.client_name,
+        hasFiscal: selected.hasFiscal,
       });
     }
   };
@@ -501,83 +547,7 @@ export default function InvoicingEditor({
     window.print();
   };
 
-  // Aggregated Client, Organization & Prospect options for SearchableSelect
-  const clientOptions = useMemo(() => {
-    const options = [];
 
-    // 1. Organizations
-    allOrganizations.forEach(o => {
-      const name = o.name || o.legalName || o.legal_name || "";
-      if (!name) return;
-      const fiscal = o.fiscalDetails || o.fiscal_details || {};
-      const hasFiscal = Boolean(o.nif || o.rc || o.nis || o.articleImposition || o.article_imposition || fiscal.nif || fiscal.rc);
-      options.push({
-        value: `org_${o.id}`,
-        label: name,
-        description: `🏢 Organisation${o.legalName && o.legalName !== name ? ` (${o.legalName})` : ""}${hasFiscal ? " • Fiscalité ✓" : ""}`,
-      });
-    });
-
-    // 2. Sponsors
-    (sponsors || []).forEach(sp => {
-      const name = sp.name || sp.company_name || "";
-      if (!name) return;
-      options.push({
-        value: `sponsor_${sp.id}`,
-        label: name,
-        description: `⭐ Sponsor (${sp.tier || "Partenaire"})`,
-      });
-    });
-
-    // 3. Exhibitors
-    (exhibitors || []).forEach(ex => {
-      const name = ex.name || ex.company_name || "";
-      if (!name) return;
-      options.push({
-        value: `exhibitor_${ex.id}`,
-        label: name,
-        description: `🎪 Exposant${ex.boothNumber ? ` • Stand ${ex.boothNumber}` : ""}`,
-      });
-    });
-
-    // 4. CRM Prospects / Opportunities
-    (opportunities || []).forEach(opp => {
-      const name = opp.companyName || opp.name || "";
-      if (!name) return;
-      const fiscal = opp.fiscalDetails || opp.fiscal_details || {};
-      const hasFiscal = Boolean(opp.nif || opp.rc || opp.nis || fiscal.nif || fiscal.rc);
-      options.push({
-        value: `opp_${opp.id}`,
-        label: name,
-        description: `🎯 Prospect${opp.contactName ? ` • ${opp.contactName}` : ""}${hasFiscal ? " • Fiscalité ✓" : ""}`,
-      });
-    });
-
-    // 5. Saved Address Book Clients
-    (savedClients || []).forEach(c => {
-      const name = c.company_name || c.name || "";
-      if (!name) return;
-      const hasFiscal = Boolean(c.nif || c.rc || c.nis || c.article_imposition);
-      options.push({
-        value: `client_${c.id}`,
-        label: name,
-        description: `👤 Client enregistré${hasFiscal ? " • Fiscalité ✓" : ""}`,
-      });
-    });
-
-    // 6. Past Invoiced Clients
-    pastInvoicedClients.forEach(c => {
-      if (options.some(opt => opt.label.toLowerCase() === c.company_name.toLowerCase())) return;
-      const hasFiscal = Boolean(c.nif || c.rc || c.nis);
-      options.push({
-        value: c.id,
-        label: c.company_name,
-        description: `📋 Client précédent${hasFiscal ? " • Fiscalité ✓" : ""}`,
-      });
-    });
-
-    return options;
-  }, [allOrganizations, sponsors, exhibitors, opportunities, savedClients, pastInvoicedClients]);
 
   return (
     <div className="space-y-6 animate-fade-in pb-12">
@@ -899,9 +869,8 @@ export default function InvoicingEditor({
             {/* Quick Organisation / Client Selector */}
             <div className="p-3.5 bg-slate-50/80 border border-slate-200/90 rounded-2xl space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-[10px] font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                  <Building2 size={13} className="text-blue-600" />
-                  <span>CHOISIR UNE ORGANISATION / PARTENAIRE (IMPORT FISCAL AUTOMATIQUE)</span>
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-700">
+                  CHOISIR UNE ORGANISATION / PARTENAIRE (IMPORT FISCAL AUTOMATIQUE)
                 </label>
                 {selectedClientKey && (
                   <button
@@ -937,7 +906,7 @@ export default function InvoicingEditor({
                   <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
                   <span className="truncate">
                     Coordonnées et informations fiscales importées depuis <strong>{autofilledSource.name}</strong>
-                    {autofilledSource.hasFiscal ? " (NIF, RC, NIS, AI inclus ✓)" : " (fiche sans NIF/RC)"}
+                    {autofilledSource.hasFiscal ? " (NIF, RC, NIS, AI inclus)" : " (fiche sans NIF/RC)"}
                   </span>
                 </div>
                 <button
