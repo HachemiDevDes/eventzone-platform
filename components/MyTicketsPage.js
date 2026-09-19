@@ -256,6 +256,9 @@ export default function MyTicketsPage({
           /* Tickets Grid */
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {filteredRegistrations.map(reg => {
+              const matchedEvent = (events || []).find(e => String(e.id) === String(reg.eventId));
+              const rawPortalStatus = matchedEvent?.portalStatus || matchedEvent?.portal_status || matchedEvent?.portalSettings?.portal_status || matchedEvent?.portal_settings?.portal_status || "open";
+              const isPortalClosed = String(rawPortalStatus).toLowerCase().trim() === "closed";
               const isVip = (reg.ticketType || "").toLowerCase().includes("vip");
               const isPending = reg.status === "pending" || Boolean(reg.requiresApproval);
               const qrUrl = qrCodeUrls[reg.id];
@@ -446,13 +449,24 @@ export default function MyTicketsPage({
 
                       {/* Right Action Buttons: Portal + About */}
                       <div className="flex items-center gap-2 sm:gap-1.5 flex-1 sm:flex-initial justify-end">
-                        <button
-                          onClick={() => onOpenAttendeePortal && onOpenAttendeePortal(reg.eventId)}
-                          className="flex-1 sm:flex-initial py-1.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-full text-xs font-bold transition-all cursor-pointer flex items-center justify-center shadow-2xs hover:shadow active:scale-[0.98]"
-                          title="Access Interactive Attendee Portal"
-                        >
-                          <span>Portal</span>
-                        </button>
+                        {isPortalClosed ? (
+                          <button
+                            onClick={() => onOpenAttendeePortal && onOpenAttendeePortal(reg.eventId)}
+                            className="flex-1 sm:flex-initial py-1.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 border border-slate-200/90 active:scale-[0.98]"
+                            title="Portal is currently closed by the organizer"
+                          >
+                            <Lock size={12} className="text-slate-500 stroke-[2.2]" />
+                            <span>Portal (Closed)</span>
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => onOpenAttendeePortal && onOpenAttendeePortal(reg.eventId)}
+                            className="flex-1 sm:flex-initial py-1.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-full text-xs font-bold transition-all cursor-pointer flex items-center justify-center shadow-2xs hover:shadow active:scale-[0.98]"
+                            title="Access Interactive Attendee Portal"
+                          >
+                            <span>Portal</span>
+                          </button>
+                        )}
                         <button
                           onClick={() => onViewLivePage && onViewLivePage(reg.eventId)}
                           className="py-1.5 px-3 bg-transparent hover:bg-slate-200/70 text-slate-600 hover:text-slate-900 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center justify-center active:scale-[0.98]"

@@ -1633,6 +1633,10 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
           safeLocalStorageSet(`eventzone_cache_attendees_${activeEventId}`, next);
           return next;
         });
+      } else if (type === "EVENT_UPDATED" && payload) {
+        setEventDetails(prev => ({ ...(prev || {}), ...payload }));
+        setPublicEvents(prev => prev.map(e => (String(e.id) === String(payload.id || activeEventId) ? { ...e, ...payload } : e)));
+        setUserEvents(prev => prev.map(e => (String(e.id) === String(payload.id || activeEventId) ? { ...e, ...payload } : e)));
       }
     });
 
@@ -1641,6 +1645,14 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
     try {
       eventChannel = supabase
         .channel(`event-live-sync-${activeEventId}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'events', filter: `id=eq.${activeEventId}` }, async () => {
+          const updatedEv = await fetchEventDetails(activeEventId);
+          if (updatedEv) {
+            setEventDetails(prev => ({ ...(prev || {}), ...updatedEv }));
+            setPublicEvents(prev => prev.map(e => String(e.id) === String(activeEventId) ? { ...e, ...updatedEv } : e));
+            setUserEvents(prev => prev.map(e => String(e.id) === String(activeEventId) ? { ...e, ...updatedEv } : e));
+          }
+        })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'forms', filter: `event_id=eq.${activeEventId}` }, async () => {
           const updatedForms = await fetchForms(activeEventId);
           if (updatedForms) setForms(updatedForms);
@@ -2512,12 +2524,12 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
             sanitizedVal = { ...val, capacity: currentUser.maxAttendees };
           }
         }
-        setEventDetails(sanitizedVal);
-        if (sanitizedVal) {
-          safeLocalStorageSet(`eventzone_cached_event_${activeEventId}`, sanitizedVal);
+        setEventDetails(prev => ({ ...(prev || {}), ...(sanitizedVal || {}) }));
+        if (sanitizedVal && activeEventId) {
+          safeLocalStorageSet(`eventzone_cached_event_${activeEventId}`, { ...(eventDetails || {}), ...sanitizedVal });
         }
-        setPublicEvents(prev => prev.map(e => (activeEventId ? (e.id === activeEventId ? { ...e, ...sanitizedVal } : e) : e)));
-        setUserEvents(prev => prev.map(e => (activeEventId ? (e.id === activeEventId ? { ...e, ...sanitizedVal } : e) : e)));
+        setPublicEvents(prev => prev.map(e => (activeEventId ? (String(e.id) === String(activeEventId) ? { ...e, ...sanitizedVal } : e) : e)));
+        setUserEvents(prev => prev.map(e => (activeEventId ? (String(e.id) === String(activeEventId) ? { ...e, ...sanitizedVal } : e) : e)));
         updateEventDetails(sanitizedVal, activeEventId).catch(console.error);
         break;
       case "sessions":
@@ -4066,10 +4078,11 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
   // 0.9. DEDICATED FULL-PAGE MY TICKETS & DIGITAL PASSES VIEW
   // ==========================================================================
   if (currentView === "my-tickets") {
+    const allKnownEvents = [...publicEvents, ...userEvents.filter(u => !publicEvents.some(p => String(p.id) === String(u.id)))];
     return (
       <MyTicketsPage
         registrations={visitorRegistrations}
-        events={publicEvents}
+        events={allKnownEvents}
         tickets={tickets}
         currentUser={currentUser}
         onGoToHome={() => setCurrentView("home")}
@@ -4099,6 +4112,10 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
         }}
         onOpenAttendeePortal={(eventId) => {
           setActiveEventStateId(eventId);
+          const target = publicEvents.find(e => String(e.id) === String(eventId)) || userEvents.find(e => String(e.id) === String(eventId));
+          if (target) {
+            setEventDetails(target);
+          }
           setCurrentView("attendee-portal");
         }}
       />
@@ -4231,7 +4248,8 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
   // ==========================================================================
   if (currentView === "attendee-portal") {
     const rawPortal = publicEvents.find(e => String(e.id) === String(activeEventId)) || userEvents.find(e => String(e.id) === String(activeEventId)) || null;
-    const portalEventDetails = (eventDetails && eventDetails.title)
+    const isMatchingActiveEvent = eventDetails && (!activeEventId || String(eventDetails.id) === String(activeEventId));
+    const portalEventDetails = isMatchingActiveEvent
       ? { ...(rawPortal || {}), ...eventDetails }
       : (rawPortal || eventDetails || {});
 
@@ -4340,9 +4358,10 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
   // 3. VISITOR PORTAL
   // ==========================================================================
   if (currentView === "visitor-portal") {
+    const allKnownEvents = [...publicEvents, ...userEvents.filter(u => !publicEvents.some(p => String(p.id) === String(u.id)))];
     return (
       <VisitorPortal
-        events={publicEvents}
+        events={allKnownEvents}
         registrations={visitorRegistrations}
         onRegisterForEvent={handleVisitorRegister}
         onViewFloorPlan={(eventId) => {
@@ -4356,6 +4375,10 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
         }}
         onOpenAttendeePortal={(eventId) => {
           setActiveEventStateId(eventId);
+          const target = publicEvents.find(e => String(e.id) === String(eventId)) || userEvents.find(e => String(e.id) === String(eventId));
+          if (target) {
+            setEventDetails(target);
+          }
           setCurrentView("attendee-portal");
         }}
         onSwitchToOrganizer={() => setCurrentView("events-hub")}

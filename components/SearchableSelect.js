@@ -189,30 +189,18 @@ export default function SearchableSelect({
   return (
     <div
       ref={containerRef}
-      className={`relative w-full text-start font-sans select-none ${isOpen ? "z-50" : ""} ${className}`}
+      className={`relative w-full min-w-0 text-start font-sans select-none ${isOpen ? "z-50" : ""} ${className}`}
       onKeyDown={handleKeyDown}
     >
-      {/* Hidden input for HTML form validation if required */}
-      {required && (
-        <input
-          type="text"
-          name={name}
-          id={id}
-          value={value || ""}
-          required={required}
-          onChange={() => {}}
-          className="sr-only"
-          tabIndex={-1}
-          aria-hidden="true"
-        />
-      )}
+      {/* Hidden input for form submission */}
+      {name && <input type="hidden" name={name} value={value ?? ""} id={id || name} required={required} />}
 
       {/* Trigger Button */}
       <button
         type="button"
         disabled={disabled}
         onClick={() => !disabled && setIsOpen((prev) => !prev)}
-        className={`w-full flex items-center justify-between px-3.5 py-2.5 bg-white border rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-2xs text-start ${
+        className={`w-full min-w-0 flex items-center justify-between px-3 py-2 bg-white border rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-2xs text-start ${
           disabled
             ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
             : error
@@ -224,11 +212,11 @@ export default function SearchableSelect({
         aria-haspopup="listbox"
         aria-expanded={isOpen}
       >
-        <div className="flex items-center gap-2 truncate pe-1">
+        <div className="flex items-center gap-1.5 min-w-0 truncate pe-1 flex-1">
           {selectedOption?.icon && (
             <span className="shrink-0 text-slate-500">{selectedOption.icon}</span>
           )}
-          <span className={`truncate ${selectedOption ? "font-bold text-slate-900" : "text-slate-400 font-normal"}`}>
+          <span className={`truncate block ${selectedOption ? "font-bold text-slate-900" : "text-slate-400 font-normal"}`}>
             {selectedOption ? selectedOption.label : effectivePlaceholder}
           </span>
           {selectedOption?.badge && (
@@ -238,7 +226,7 @@ export default function SearchableSelect({
           )}
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0 ms-2">
+        <div className="flex items-center gap-1 shrink-0 ms-1">
           {isClearable && selectedOption && !disabled && (
             <span
               role="button"

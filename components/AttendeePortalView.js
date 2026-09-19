@@ -10,7 +10,7 @@ import {
   MessageSquare, UserCheck, ShieldCheck, Lock, Unlock, Eye,
   Compass, Megaphone, Store, Mic, Tag, ChevronDown, ChevronRight,
   Info, AlertCircle, Heart, Smartphone, RefreshCw, LogIn, UserPlus,
-  Send, MessageCircle, Smile, User
+  Send, MessageCircle, Smile, User, Loader2
 } from "lucide-react";
 import QRCode from "qrcode";
 import { useLanguage } from "../lib/i18n";
@@ -102,9 +102,15 @@ export default function AttendeePortalView({
 
   const isVerifiedAttendee = Boolean(matchingAttendee || isOrganizerOrAdmin);
 
+  // Organizer preview toggle (allows organizers to preview the closed screen as visitors see it)
+  const [organizerPreviewAsVisitor, setOrganizerPreviewAsVisitor] = useState(false);
+  const effectiveIsOrganizerOrAdmin = isOrganizerOrAdmin && !organizerPreviewAsVisitor;
+
   // Portal Status & Scheduled Countdown
-  const portalStatus = eventDetails.portalStatus || eventDetails.portal_status || "open";
-  const portalOpenTimeStr = eventDetails.portalOpenTime || eventDetails.portal_open_time;
+  const rawPortalStatus = eventDetails.portalStatus || eventDetails.portal_status || eventDetails.portalSettings?.portal_status || eventDetails.portal_settings?.portal_status || eventDetails.portalSettings?.portalStatus || "open";
+  const portalStatus = String(rawPortalStatus || "open").toLowerCase().trim();
+  const portalOpenTimeStr = eventDetails.portalOpenTime || eventDetails.portal_open_time || eventDetails.portalSettings?.portal_open_time || eventDetails.portal_settings?.portal_open_time || eventDetails.portalSettings?.portalOpenTime;
+  const portalMessage = eventDetails.portalMessage || eventDetails.portal_message || eventDetails.portalSettings?.portal_message || eventDetails.portal_settings?.portal_message || "";
 
   const [countdown, setCountdown] = useState({
     days: 0,
@@ -143,7 +149,7 @@ export default function AttendeePortalView({
   }, [portalStatus, portalOpenTimeStr]);
 
   const isScheduledInFuture = portalStatus === "scheduled" && !countdown.isExpired;
-  const isPortalClosedForAttendee = (portalStatus === "closed" || isScheduledInFuture) && !isOrganizerOrAdmin;
+  const isPortalClosedForAttendee = (portalStatus === "closed" || isScheduledInFuture) && !effectiveIsOrganizerOrAdmin;
 
   // ─────────────────────────────────────────────
   // 2. STATE: AGENDA & PERSONAL SCHEDULE
@@ -538,9 +544,24 @@ export default function AttendeePortalView({
   // ─────────────────────────────────────────────
 
   // 1. GATE: Portal is Closed
-  if (portalStatus === "closed" && !isOrganizerOrAdmin) {
+  if (portalStatus === "closed" && !effectiveIsOrganizerOrAdmin) {
     return (
       <div className="min-h-screen bg-slate-950 text-white flex flex-col font-sans selection:bg-rose-600 selection:text-white">
+        {isOrganizerOrAdmin && (
+          <div className="w-full bg-rose-950/95 border-b border-rose-500/30 px-4 py-2.5 text-xs text-rose-200 flex items-center justify-between sticky top-0 z-50 backdrop-blur-md">
+            <div className="flex items-center gap-2">
+              <Eye size={14} className="text-rose-400 shrink-0" />
+              <span><strong>Organizer Preview Mode:</strong> Viewing the "Portal Closed" screen exactly as visitors and delegates see it.</span>
+            </div>
+            <button
+              onClick={() => setOrganizerPreviewAsVisitor(false)}
+              className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white rounded-lg font-bold text-xs cursor-pointer transition-all"
+            >
+              Exit Visitor Preview
+            </button>
+          </div>
+        )}
+
         <UniversalTopBar
           currentUser={currentUser}
           onGoToHome={onGoToHome}
@@ -567,14 +588,14 @@ export default function AttendeePortalView({
           </div>
 
           {/* Organizer Custom Note */}
-          {eventDetails.portalMessage && (
+          {(portalNoticeMessage || eventDetails.portalMessage || eventDetails.portal_message) && (
             <div className="p-5 bg-white/5 border border-white/10 rounded-2xl max-w-lg w-full text-start text-xs space-y-2 backdrop-blur-md">
               <div className="flex items-center gap-2 text-rose-300 font-bold">
                 <Megaphone size={14} />
                 <span>{t("portal.noticeFromOrganizer", "Notice from Event Organizer")}</span>
               </div>
               <p className="text-slate-300 leading-relaxed font-medium">
-                {eventDetails.portalMessage}
+                {portalNoticeMessage || eventDetails.portalMessage || eventDetails.portal_message}
               </p>
             </div>
           )}
@@ -603,11 +624,26 @@ export default function AttendeePortalView({
   }
 
   // 2. GATE: Scheduled Opening Countdown
-  if (isScheduledInFuture && !isOrganizerOrAdmin) {
+  if (isScheduledInFuture && !effectiveIsOrganizerOrAdmin) {
     return (
       <div className="min-h-screen bg-slate-950 text-white flex flex-col font-sans selection:bg-indigo-600 selection:text-white relative overflow-hidden">
         {/* Background Ambient Glow */}
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
+
+        {isOrganizerOrAdmin && (
+          <div className="w-full bg-indigo-950/95 border-b border-indigo-500/30 px-4 py-2.5 text-xs text-indigo-200 flex items-center justify-between sticky top-0 z-50 backdrop-blur-md">
+            <div className="flex items-center gap-2">
+              <Eye size={14} className="text-indigo-400 shrink-0" />
+              <span><strong>Organizer Preview Mode:</strong> Viewing the "Portal Countdown" screen exactly as visitors and delegates see it.</span>
+            </div>
+            <button
+              onClick={() => setOrganizerPreviewAsVisitor(false)}
+              className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white rounded-lg font-bold text-xs cursor-pointer transition-all"
+            >
+              Exit Visitor Preview
+            </button>
+          </div>
+        )}
 
         <UniversalTopBar
           currentUser={currentUser}
@@ -844,6 +880,64 @@ export default function AttendeePortalView({
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans text-slate-900 selection:bg-blue-600 selection:text-white">
       
+      {/* Organizer Notice Banner when portal is closed to visitors */}
+      {isOrganizerOrAdmin && portalStatus === "closed" && (
+        <div className="bg-rose-950 text-rose-100 border-b border-rose-800/80 px-4 py-2.5 text-xs flex flex-wrap items-center justify-between gap-3 sticky top-0 z-50 backdrop-blur-md">
+          <div className="flex items-center gap-2 font-medium">
+            <Lock size={14} className="text-rose-400 shrink-0 stroke-[2.2]" />
+            <span>
+              <strong>Organizer Preview Notice:</strong> This attendee portal is currently <strong>CLOSED</strong> to visitors and delegates. You can access it because of your organizer privileges.
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setOrganizerPreviewAsVisitor(true)}
+              className="px-3 py-1 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-lg text-xs transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+            >
+              <Eye size={13} />
+              <span>Preview Visitor Screen</span>
+            </button>
+            {onOpenEventsHub && (
+              <button
+                onClick={onOpenEventsHub}
+                className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white font-medium rounded-lg text-xs transition cursor-pointer"
+              >
+                Portal Settings
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Organizer Notice Banner when portal is scheduled for the future */}
+      {isOrganizerOrAdmin && isScheduledInFuture && (
+        <div className="bg-indigo-950 text-indigo-100 border-b border-indigo-800/80 px-4 py-2.5 text-xs flex flex-wrap items-center justify-between gap-3 sticky top-0 z-50 backdrop-blur-md">
+          <div className="flex items-center gap-2 font-medium">
+            <Clock size={14} className="text-indigo-400 shrink-0 stroke-[2.2]" />
+            <span>
+              <strong>Organizer Preview Notice:</strong> This attendee portal is currently <strong>SCHEDULED</strong> to unlock in the future. Visitors currently see a live countdown.
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setOrganizerPreviewAsVisitor(true)}
+              className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+            >
+              <Eye size={13} />
+              <span>Preview Countdown</span>
+            </button>
+            {onOpenEventsHub && (
+              <button
+                onClick={onOpenEventsHub}
+                className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white font-medium rounded-lg text-xs transition cursor-pointer"
+              >
+                Portal Settings
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Universal Top Bar */}
       <UniversalTopBar
         currentUser={currentUser}

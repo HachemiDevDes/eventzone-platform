@@ -1343,7 +1343,7 @@ export default function CertificatesView({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         {/* LEFT COLUMN: Editor Tabs & Customization Panels (5 cols) */}
-        <div className="lg:col-span-5 bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-xs space-y-5 lg:max-h-[calc(100vh-140px)] lg:overflow-y-auto custom-scrollbar">
+        <div className="lg:col-span-5 bg-white rounded-3xl p-4 sm:p-5 border border-slate-200 shadow-xs space-y-4 lg:max-h-[calc(100vh-140px)] lg:overflow-y-auto overflow-x-hidden min-w-0 w-full custom-scrollbar">
           
           {!canEdit && (
             <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-2 text-xs text-amber-800 font-semibold">
@@ -1352,18 +1352,18 @@ export default function CertificatesView({
             </div>
           )}
 
-          <fieldset disabled={!canEdit} className="space-y-5">
+          <fieldset disabled={!canEdit} className="space-y-4 min-w-0 w-full">
           {/* Sub-Tabs: Content | Styling | Signatures | Templates */}
-          <div className="flex items-center border-b border-slate-200 overflow-x-auto -mx-5 -mt-5 px-3 sm:-mx-6 sm:-mt-6 sm:px-4 pt-1">
+          <div className="grid grid-cols-4 border-b border-slate-200 -mx-4 -mt-4 sm:-mx-5 sm:-mt-5 pt-1 text-center bg-slate-50/50 rounded-t-3xl overflow-hidden">
             <button
               onClick={() => setEditorTab("content")}
-              className={`relative flex items-center px-4 py-3 font-bold text-xs transition-all cursor-pointer !rounded-none ${
+              className={`relative flex items-center justify-center py-2.5 px-1 font-bold text-xs transition-all cursor-pointer truncate ${
                 editorTab === "content"
-                  ? "text-blue-600 font-black bg-transparent"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                  ? "text-blue-600 font-black bg-white"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/60"
               }`}
             >
-              <span>{t("cert.tabContent", "Content & Text")}</span>
+              <span className="truncate">{t("cert.tabContent", "Content & Text")}</span>
               {editorTab === "content" && (
                 <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-blue-600" />
               )}
@@ -1371,13 +1371,13 @@ export default function CertificatesView({
 
             <button
               onClick={() => setEditorTab("styling")}
-              className={`relative flex items-center px-4 py-3 font-bold text-xs transition-all cursor-pointer !rounded-none ${
+              className={`relative flex items-center justify-center py-2.5 px-1 font-bold text-xs transition-all cursor-pointer truncate ${
                 editorTab === "styling"
-                  ? "text-blue-600 font-black bg-transparent"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                  ? "text-blue-600 font-black bg-white"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/60"
               }`}
             >
-              <span>{t("cert.tabStyling", "Styling & Theme")}</span>
+              <span className="truncate">{t("cert.tabStyling", "Styling & Theme")}</span>
               {editorTab === "styling" && (
                 <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-blue-600" />
               )}
@@ -1385,13 +1385,13 @@ export default function CertificatesView({
 
             <button
               onClick={() => setEditorTab("signatures")}
-              className={`relative flex items-center px-4 py-3 font-bold text-xs transition-all cursor-pointer !rounded-none ${
+              className={`relative flex items-center justify-center py-2.5 px-1 font-bold text-xs transition-all cursor-pointer truncate ${
                 editorTab === "signatures"
-                  ? "text-blue-600 font-black bg-transparent"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                  ? "text-blue-600 font-black bg-white"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/60"
               }`}
             >
-              <span>{t("cert.tabSignatures", "Signatures")}</span>
+              <span className="truncate">{t("cert.tabSignatures", "Signatures")}</span>
               {editorTab === "signatures" && (
                 <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-blue-600" />
               )}
@@ -1399,13 +1399,13 @@ export default function CertificatesView({
 
             <button
               onClick={() => setEditorTab("templates")}
-              className={`relative flex items-center px-4 py-3 font-bold text-xs transition-all cursor-pointer !rounded-none ${
+              className={`relative flex items-center justify-center py-2.5 px-1 font-bold text-xs transition-all cursor-pointer truncate ${
                 editorTab === "templates"
-                  ? "text-blue-600 font-black bg-transparent"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                  ? "text-blue-600 font-black bg-white"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/60"
               }`}
             >
-              <span>{t("cert.tabTemplates", "Templates")}</span>
+              <span className="truncate">{t("cert.tabTemplates", "Templates")}</span>
               {editorTab === "templates" && (
                 <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-blue-600" />
               )}
@@ -1534,8 +1534,8 @@ export default function CertificatesView({
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2.5">
-                          <div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 min-w-0">
+                          <div className="min-w-0">
                             <label className="block text-[10.5px] font-bold text-slate-700 mb-1">{t("cert.fontFamily", "Font Family")}</label>
                             <SearchableSelect
                               value={activeTemplate.titleFontFamily || "cinzel"}
@@ -1545,7 +1545,7 @@ export default function CertificatesView({
                             />
                           </div>
 
-                          <div>
+                          <div className="min-w-0">
                             <label className="block text-[10.5px] font-bold text-slate-700 mb-1">{t("cert.fontWeight", "Font Weight")}</label>
                             <SearchableSelect
                               value={activeTemplate.titleFontWeight || "black"}
@@ -1556,8 +1556,8 @@ export default function CertificatesView({
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2.5 pt-2 border-t border-slate-200/60">
-                          <div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 border-t border-slate-200/60 min-w-0">
+                          <div className="min-w-0">
                             <div className="flex justify-between items-center mb-1">
                               <label className="text-[10.5px] font-bold text-slate-700">{t("cert.fontSize", "Font Size")}</label>
                               <div className="flex items-center gap-1">
@@ -1586,7 +1586,7 @@ export default function CertificatesView({
                             />
                           </div>
 
-                          <div>
+                          <div className="min-w-0">
                             <div className="flex justify-between items-center mb-1">
                               <label className="text-[10.5px] font-bold text-slate-700">{t("cert.letterSpacing", "Letter Spacing")}</label>
                               <span className="text-[9.5px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
@@ -1651,8 +1651,8 @@ export default function CertificatesView({
                         </span>
 
                         {/* Dual X & Y Sliders */}
-                        <div className="grid grid-cols-2 gap-2.5">
-                          <div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 min-w-0">
+                          <div className="min-w-0">
                             <div className="flex justify-between items-center mb-1">
                               <label className="text-[10.5px] font-bold text-slate-700">{t("cert.xHorizontal", "X (Horizontal)")}</label>
                               <span className="text-[9.5px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{activeTemplate.titleX !== undefined ? activeTemplate.titleX : 50}%</span>
@@ -1668,7 +1668,7 @@ export default function CertificatesView({
                             />
                           </div>
 
-                          <div>
+                          <div className="min-w-0">
                             <div className="flex justify-between items-center mb-1">
                               <label className="text-[10.5px] font-bold text-slate-700">{t("cert.yVertical", "Y (Vertical)")}</label>
                               <span className="text-[9.5px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{activeTemplate.titleY !== undefined ? activeTemplate.titleY : 18}%</span>
@@ -1811,8 +1811,8 @@ export default function CertificatesView({
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2.5">
-                          <div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 min-w-0">
+                          <div className="min-w-0">
                             <label className="block text-[10.5px] font-bold text-slate-700 mb-1">{t("cert.fontFamily", "Font Family")}</label>
                             <SearchableSelect
                               value={activeTemplate.subtitleFontFamily || "sans"}
@@ -1822,7 +1822,7 @@ export default function CertificatesView({
                             />
                           </div>
 
-                          <div>
+                          <div className="min-w-0">
                             <label className="block text-[10.5px] font-bold text-slate-700 mb-1">{t("cert.fontWeight", "Font Weight")}</label>
                             <SearchableSelect
                               value={activeTemplate.subtitleFontWeight || "bold"}
@@ -1833,8 +1833,8 @@ export default function CertificatesView({
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2.5 pt-2 border-t border-slate-200/60">
-                          <div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 border-t border-slate-200/60 min-w-0">
+                          <div className="min-w-0">
                             <div className="flex justify-between items-center mb-1">
                               <label className="text-[10.5px] font-bold text-slate-700">{t("cert.fontSize", "Font Size")}</label>
                               <div className="flex items-center gap-1">
@@ -1861,7 +1861,7 @@ export default function CertificatesView({
                             />
                           </div>
 
-                          <div>
+                          <div className="min-w-0">
                             <div className="flex justify-between items-center mb-1">
                               <label className="text-[10.5px] font-bold text-slate-700">{t("cert.letterSpacing", "Letter Spacing")}</label>
                               <span className="text-[9.5px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
@@ -1926,8 +1926,8 @@ export default function CertificatesView({
                         </span>
 
                         {/* Dual X & Y Sliders */}
-                        <div className="grid grid-cols-2 gap-2.5">
-                          <div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 min-w-0">
+                          <div className="min-w-0">
                             <div className="flex justify-between items-center mb-1">
                               <label className="text-[10.5px] font-bold text-slate-700">{t("cert.xHorizontal", "X (Horizontal)")}</label>
                               <span className="text-[9.5px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{activeTemplate.subtitleX !== undefined ? activeTemplate.subtitleX : 50}%</span>
@@ -1943,7 +1943,7 @@ export default function CertificatesView({
                             />
                           </div>
 
-                          <div>
+                          <div className="min-w-0">
                             <div className="flex justify-between items-center mb-1">
                               <label className="text-[10.5px] font-bold text-slate-700">{t("cert.yVertical", "Y (Vertical)")}</label>
                               <span className="text-[9.5px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{activeTemplate.subtitleY !== undefined ? activeTemplate.subtitleY : 26}%</span>
@@ -2098,8 +2098,8 @@ export default function CertificatesView({
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2.5">
-                          <div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 min-w-0">
+                          <div className="min-w-0">
                             <label className="block text-[10.5px] font-bold text-slate-700 mb-1">{t("cert.fontFamily", "Font Family")}</label>
                             <SearchableSelect
                               value={activeTemplate.bodyFontFamily || "sans"}
@@ -2109,7 +2109,7 @@ export default function CertificatesView({
                             />
                           </div>
 
-                          <div>
+                          <div className="min-w-0">
                             <label className="block text-[10.5px] font-bold text-slate-700 mb-1">{t("cert.fontWeight", "Font Weight")}</label>
                             <SearchableSelect
                               value={activeTemplate.bodyFontWeight || "normal"}
@@ -2120,8 +2120,8 @@ export default function CertificatesView({
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2.5 pt-2 border-t border-slate-200/60">
-                          <div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 border-t border-slate-200/60 min-w-0">
+                          <div className="min-w-0">
                             <div className="flex justify-between items-center mb-1">
                               <label className="text-[10.5px] font-bold text-slate-700">{t("cert.fontSize", "Font Size")}</label>
                               <div className="flex items-center gap-1">
@@ -2148,7 +2148,7 @@ export default function CertificatesView({
                             />
                           </div>
 
-                          <div>
+                          <div className="min-w-0">
                             <div className="flex justify-between items-center mb-1">
                               <label className="text-[10.5px] font-bold text-slate-700">{t("cert.letterSpacing", "Letter Spacing")}</label>
                               <span className="text-[9.5px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
@@ -2213,8 +2213,8 @@ export default function CertificatesView({
                         </span>
 
                         {/* Dual X & Y Sliders */}
-                        <div className="grid grid-cols-2 gap-2.5">
-                          <div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 min-w-0">
+                          <div className="min-w-0">
                             <div className="flex justify-between items-center mb-1">
                               <label className="text-[10.5px] font-bold text-slate-700">{t("cert.xHorizontal", "X (Horizontal)")}</label>
                               <span className="text-[9.5px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{activeTemplate.bodyX !== undefined ? activeTemplate.bodyX : 50}%</span>
@@ -2230,7 +2230,7 @@ export default function CertificatesView({
                             />
                           </div>
 
-                          <div>
+                          <div className="min-w-0">
                             <div className="flex justify-between items-center mb-1">
                               <label className="text-[10.5px] font-bold text-slate-700">{t("cert.yVertical", "Y (Vertical)")}</label>
                               <span className="text-[9.5px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{activeTemplate.bodyY !== undefined ? activeTemplate.bodyY : 64}%</span>
@@ -2248,8 +2248,8 @@ export default function CertificatesView({
                         </div>
 
                         {/* Opacity & Paragraph Alignment */}
-                        <div className="grid grid-cols-2 gap-2.5 pt-1">
-                          <div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 min-w-0">
+                          <div className="min-w-0">
                             <div className="flex justify-between items-center mb-1">
                               <label className="text-[10.5px] font-bold text-slate-700">{t("cert.opacity", "Opacity")}</label>
                               <span className="text-[9.5px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{Math.round((activeTemplate.bodyOpacity !== undefined ? activeTemplate.bodyOpacity : 1) * 100)}%</span>
@@ -2265,7 +2265,7 @@ export default function CertificatesView({
                             />
                           </div>
 
-                          <div>
+                          <div className="min-w-0">
                             <label className="block text-[10.5px] font-bold text-slate-700 mb-1">{t("cert.paragraphAlignment", "Paragraph Alignment")}</label>
                             <SearchableSelect
                               value={activeTemplate.bodyTextAlign || "center"}
@@ -2303,27 +2303,27 @@ export default function CertificatesView({
                 </div>
 
                 {/* Improved Dual Action Add Element Buttons */}
-                <div className="grid grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 min-w-0">
                   <button
                     type="button"
                     onClick={handleAddCustomTextElement}
-                    className="flex items-center justify-center gap-2 px-3.5 py-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 text-blue-700 border border-blue-200/80 rounded-2xl text-xs font-bold transition-all hover:shadow-xs active:scale-98 cursor-pointer group"
+                    className="flex items-center justify-center gap-2 px-3.5 py-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 text-blue-700 border border-blue-200/80 rounded-2xl text-xs font-bold transition-all hover:shadow-xs active:scale-98 cursor-pointer group min-w-0"
                   >
-                    <div className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-2xs group-hover:scale-105 transition-transform">
+                    <div className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-2xs group-hover:scale-105 transition-transform shrink-0">
                       <Type size={13} />
                     </div>
-                    <span>+ {t("cert.addCustomText", "Add Custom Text")}</span>
+                    <span className="truncate">+ {t("cert.addCustomText", "Add Custom Text")}</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={handleAddCustomImageElement}
-                    className="flex items-center justify-center gap-2 px-3.5 py-2.5 bg-gradient-to-r from-purple-50 to-fuchsia-50 hover:from-purple-100 hover:to-fuchsia-100 text-purple-700 border border-purple-200/80 rounded-2xl text-xs font-bold transition-all hover:shadow-xs active:scale-98 cursor-pointer group"
+                    className="flex items-center justify-center gap-2 px-3.5 py-2.5 bg-gradient-to-r from-purple-50 to-fuchsia-50 hover:from-purple-100 hover:to-fuchsia-100 text-purple-700 border border-purple-200/80 rounded-2xl text-xs font-bold transition-all hover:shadow-xs active:scale-98 cursor-pointer group min-w-0"
                   >
-                    <div className="w-6 h-6 rounded-lg bg-purple-600 text-white flex items-center justify-center shadow-2xs group-hover:scale-105 transition-transform">
+                    <div className="w-6 h-6 rounded-lg bg-purple-600 text-white flex items-center justify-center shadow-2xs group-hover:scale-105 transition-transform shrink-0">
                       <ImageIcon size={13} />
                     </div>
-                    <span>+ {t("cert.addImageLogo", "Add Image / Logo")}</span>
+                    <span className="truncate">+ {t("cert.addImageLogo", "Add Image / Logo")}</span>
                   </button>
                 </div>
 
@@ -2484,8 +2484,8 @@ export default function CertificatesView({
                                   </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-2.5">
-                                  <div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 min-w-0">
+                                  <div className="min-w-0">
                                     <label className="block text-[10.5px] font-bold text-slate-700 mb-1">{t("cert.fontFamily", "Font Family")}</label>
                                     <SearchableSelect
                                       value={el.fontFamily || "cinzel"}
@@ -2495,7 +2495,7 @@ export default function CertificatesView({
                                     />
                                   </div>
 
-                                  <div>
+                                  <div className="min-w-0">
                                     <label className="block text-[10.5px] font-bold text-slate-700 mb-1">{t("cert.fontWeight", "Font Weight")}</label>
                                     <SearchableSelect
                                       value={el.fontWeight || "bold"}
@@ -2506,8 +2506,8 @@ export default function CertificatesView({
                                   </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-2.5 pt-2 border-t border-slate-200/60">
-                                  <div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 border-t border-slate-200/60 min-w-0">
+                                  <div className="min-w-0">
                                     <div className="flex justify-between items-center mb-1">
                                       <label className="text-[10.5px] font-bold text-slate-700">{t("cert.fontSize", "Font Size")}</label>
                                       <span className="text-[9.5px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{el.fontSize || 10}pt</span>
@@ -2523,7 +2523,7 @@ export default function CertificatesView({
                                     />
                                   </div>
 
-                                  <div>
+                                  <div className="min-w-0">
                                     <div className="flex justify-between items-center mb-1">
                                       <label className="text-[10.5px] font-bold text-slate-700">{t("cert.letterSpacing", "Letter Spacing")}</label>
                                       <span className="text-[9.5px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
@@ -2601,8 +2601,8 @@ export default function CertificatesView({
                                   <span>{t("cert.imageDimensionsShape", "Image Dimensions & Shape")}</span>
                                 </span>
 
-                                <div className="grid grid-cols-2 gap-2.5">
-                                  <div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 min-w-0">
+                                  <div className="min-w-0">
                                     <div className="flex justify-between items-center mb-1">
                                       <label className="text-[10.5px] font-bold text-slate-700">{t("cert.imageSize", "Image Size")}</label>
                                       <span className="text-[9.5px] font-mono font-bold text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded">{el.width || 55}px</span>
@@ -2618,7 +2618,7 @@ export default function CertificatesView({
                                     />
                                   </div>
 
-                                  <div>
+                                  <div className="min-w-0">
                                     <label className="block text-[10.5px] font-bold text-slate-700 mb-1">{t("cert.shapeCrop", "Shape Crop")}</label>
                                     <SearchableSelect
                                       value={el.borderRadius || "none"}
@@ -2644,8 +2644,8 @@ export default function CertificatesView({
                             </span>
 
                             {/* Dual X & Y Sliders */}
-                            <div className="grid grid-cols-2 gap-2.5">
-                              <div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 min-w-0">
+                              <div className="min-w-0">
                                 <div className="flex justify-between items-center mb-1">
                                   <label className="text-[10.5px] font-bold text-slate-700">{t("cert.xHorizontal", "X (Horizontal)")}</label>
                                   <span className="text-[9.5px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{el.x || 50}%</span>
@@ -2661,7 +2661,7 @@ export default function CertificatesView({
                                 />
                               </div>
 
-                              <div>
+                              <div className="min-w-0">
                                 <div className="flex justify-between items-center mb-1">
                                   <label className="text-[10.5px] font-bold text-slate-700">{t("cert.yVertical", "Y (Vertical)")}</label>
                                   <span className="text-[9.5px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{el.y || 50}%</span>
@@ -2897,8 +2897,8 @@ export default function CertificatesView({
                       )}
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 min-w-0">
+                      <div className="min-w-0">
                         <label className="block text-[10px] font-bold text-slate-600 mb-1">{t("cert.signerNameLabel", "Name")}</label>
                         <input
                           type="text"
@@ -2908,7 +2908,7 @@ export default function CertificatesView({
                           className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900"
                         />
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <label className="block text-[10px] font-bold text-slate-600 mb-1">{t("cert.signerTitleLabel", "Title")}</label>
                         <input
                           type="text"

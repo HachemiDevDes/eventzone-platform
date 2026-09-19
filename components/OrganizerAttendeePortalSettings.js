@@ -123,6 +123,16 @@ export default function OrganizerAttendeePortalSettings({
     setIsSaving(true);
     setSaveSuccess(false);
 
+    const resolvedSettings = {
+      ...portalSettings,
+      portal_status: portalStatus,
+      portalStatus: portalStatus,
+      portal_open_time: portalStatus === "scheduled" && portalOpenTime ? new Date(portalOpenTime).toISOString() : null,
+      portalOpenTime: portalStatus === "scheduled" && portalOpenTime ? new Date(portalOpenTime).toISOString() : null,
+      portal_message: portalMessage,
+      portalMessage: portalMessage
+    };
+
     const payload = {
       portalStatus,
       portal_status: portalStatus,
@@ -130,14 +140,14 @@ export default function OrganizerAttendeePortalSettings({
       portal_open_time: portalStatus === "scheduled" && portalOpenTime ? new Date(portalOpenTime).toISOString() : null,
       portalMessage,
       portal_message: portalMessage,
-      portalSettings,
-      portal_settings: portalSettings
+      portalSettings: resolvedSettings,
+      portal_settings: resolvedSettings
     };
 
     try {
       const eid = eventDetails.id || activeEventId;
       if (eid) {
-        await updateEventDetails(eid, payload);
+        await updateEventDetails(payload, eid);
       }
       if (onUpdateEventDetails) {
         onUpdateEventDetails(payload);
