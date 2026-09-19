@@ -1340,10 +1340,18 @@ export default function EventPublicLandingPage({
         {/* Center: In-Page Navigation Quick Links */}
         <nav className="hidden lg:flex items-center justify-center gap-7 text-xs font-bold text-slate-600 absolute left-1/2 -translate-x-1/2">
           <a href="#about" onClick={handleScrollTo("#about")} className="hover:text-blue-600 transition-colors cursor-pointer">{t("event.about", "About")}</a>
-          <a href="#speakers" onClick={handleScrollTo("#speakers")} className="hover:text-blue-600 transition-colors cursor-pointer">{t("event.speakers", "Speakers")}</a>
-          <a href="#schedule" onClick={handleScrollTo("#schedule")} className="hover:text-blue-600 transition-colors cursor-pointer">{t("event.agenda", "Agenda")}</a>
-          <a href="#exhibitors" onClick={handleScrollTo("#exhibitors")} className="hover:text-blue-600 transition-colors cursor-pointer">{t("event.exhibitors", "Exhibitors & Sponsors")}</a>
-          <a href="#tickets" onClick={handleScrollTo("#tickets")} className="hover:text-blue-600 transition-colors cursor-pointer">{t("event.tickets", "Tickets")}</a>
+          {eventSpeakers.length > 0 && (
+            <a href="#speakers" onClick={handleScrollTo("#speakers")} className="hover:text-blue-600 transition-colors cursor-pointer">{t("event.speakers", "Speakers")}</a>
+          )}
+          {eventSessions.length > 0 && (
+            <a href="#schedule" onClick={handleScrollTo("#schedule")} className="hover:text-blue-600 transition-colors cursor-pointer">{t("event.agenda", "Agenda")}</a>
+          )}
+          {(eventExhibitors.length > 0 || eventSponsors.length > 0) && (
+            <a href="#exhibitors" onClick={handleScrollTo("#exhibitors")} className="hover:text-blue-600 transition-colors cursor-pointer">{t("event.exhibitors", "Exhibitors & Sponsors")}</a>
+          )}
+          {eventTickets.length > 0 && (
+            <a href="#tickets" onClick={handleScrollTo("#tickets")} className="hover:text-blue-600 transition-colors cursor-pointer">{t("event.tickets", "Tickets")}</a>
+          )}
         </nav>
 
         {/* Right: Language Selector, Share, Feedback & Get Tickets Buttons */}
@@ -1660,29 +1668,43 @@ export default function EventPublicLandingPage({
       {/* ==================================================================== */}
       {/* 3. METRIC STATS STRIP                                                */}
       {/* ==================================================================== */}
-      {/* ==================================================================== */}
       {/* 3. METRIC STATS STRIP                                                */}
       {/* ==================================================================== */}
-      <section className="bg-white border-b border-slate-200 py-8">
-        <div className="max-w-6xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-          <div className="space-y-1">
-            <span className="text-2xl sm:text-3xl font-extrabold text-slate-900"><bdi dir="ltr">{(eventDetails?.capacity || 0).toLocaleString()}</bdi></span>
-            <span className="text-xs text-slate-500 font-semibold block">{t("event.expectedDelegates", "Expected Delegates")}</span>
+      {Boolean(
+        (eventDetails?.capacity && Number(eventDetails.capacity) > 0) ||
+        eventSpeakers.length > 0 ||
+        eventExhibitors.length > 0 ||
+        eventSessions.length > 0
+      ) && (
+        <section className="bg-white border-b border-slate-200 py-8">
+          <div className="max-w-6xl mx-auto px-6 flex flex-wrap items-center justify-around gap-6 text-center">
+            {Boolean(eventDetails?.capacity && Number(eventDetails.capacity) > 0) && (
+              <div className="space-y-1 min-w-[130px] flex-1">
+                <span className="text-2xl sm:text-3xl font-extrabold text-slate-900"><bdi dir="ltr">{Number(eventDetails.capacity).toLocaleString()}</bdi></span>
+                <span className="text-xs text-slate-500 font-semibold block">{t("event.expectedDelegates", "Expected Delegates")}</span>
+              </div>
+            )}
+            {eventSpeakers.length > 0 && (
+              <div className="space-y-1 min-w-[130px] flex-1">
+                <span className="text-2xl sm:text-3xl font-extrabold text-blue-600"><bdi dir="ltr">{eventSpeakers.length.toLocaleString()}</bdi></span>
+                <span className="text-xs text-slate-500 font-semibold block">{t("event.keynoteSpeakers", "Keynote Speakers")}</span>
+              </div>
+            )}
+            {eventExhibitors.length > 0 && (
+              <div className="space-y-1 min-w-[130px] flex-1">
+                <span className="text-2xl sm:text-3xl font-extrabold text-slate-900"><bdi dir="ltr">{eventExhibitors.length.toLocaleString()}</bdi></span>
+                <span className="text-xs text-slate-500 font-semibold block">{t("event.exhibitorBooths", "Exhibitor Booths")}</span>
+              </div>
+            )}
+            {eventSessions.length > 0 && (
+              <div className="space-y-1 min-w-[130px] flex-1">
+                <span className="text-2xl sm:text-3xl font-extrabold text-blue-600"><bdi dir="ltr">{eventSessions.length.toLocaleString()}</bdi></span>
+                <span className="text-xs text-slate-500 font-semibold block">{t("event.curatedSessions", "Curated Sessions")}</span>
+              </div>
+            )}
           </div>
-          <div className="space-y-1">
-            <span className="text-2xl sm:text-3xl font-extrabold text-blue-600"><bdi dir="ltr">{eventSpeakers.length.toLocaleString()}</bdi></span>
-            <span className="text-xs text-slate-500 font-semibold block">{t("event.keynoteSpeakers", "Keynote Speakers")}</span>
-          </div>
-          <div className="space-y-1">
-            <span className="text-2xl sm:text-3xl font-extrabold text-slate-900"><bdi dir="ltr">{eventExhibitors.length.toLocaleString()}</bdi></span>
-            <span className="text-xs text-slate-500 font-semibold block">{t("event.exhibitorBooths", "Exhibitor Booths")}</span>
-          </div>
-          <div className="space-y-1">
-            <span className="text-2xl sm:text-3xl font-extrabold text-blue-600"><bdi dir="ltr">{eventSessions.length.toLocaleString()}</bdi></span>
-            <span className="text-xs text-slate-500 font-semibold block">{t("event.curatedSessions", "Curated Sessions")}</span>
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ==================================================================== */}
       {/* 4. ABOUT THE EVENT                                                   */}
@@ -1828,23 +1850,18 @@ export default function EventPublicLandingPage({
       {/* ==================================================================== */}
       {/* 5. FEATURED SPEAKERS & PRESENTERS                                     */}
       {/* ==================================================================== */}
-      <section id="speakers" className="py-16 bg-white border-y border-slate-200">
-        <div className="max-w-6xl mx-auto px-6 sm:px-8 space-y-10">
-          <div className="text-start rtl:text-right text-left space-y-3">
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-              {t("event.featuredSpeakers", "Featured Speakers & Keynotes")}
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-500 font-normal">
-              {t("event.featuredSpeakersSubtitle", "Learn directly from leaders steering innovations and market strategies.")}
-            </p>
-          </div>
-
-          {eventSpeakers.length === 0 ? (
-            <div className="text-center py-12 bg-slate-50 border border-slate-200/80 rounded-3xl text-slate-400 space-y-2 max-w-xl mx-auto">
-              <Users size={32} className="mx-auto opacity-40 text-slate-400" />
-              <p className="text-xs font-semibold">{t("event.speakersSoon", "Keynote speakers will be announced soon.")}</p>
+      {eventSpeakers.length > 0 && (
+        <section id="speakers" className="py-16 bg-white border-y border-slate-200">
+          <div className="max-w-6xl mx-auto px-6 sm:px-8 space-y-10">
+            <div className="text-start rtl:text-right text-left space-y-3">
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+                {t("event.featuredSpeakers", "Featured Speakers & Keynotes")}
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-500 font-normal">
+                {t("event.featuredSpeakersSubtitle", "Learn directly from leaders steering innovations and market strategies.")}
+              </p>
             </div>
-          ) : (
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {eventSpeakers.map((speaker, idx) => (
                 <div 
@@ -1872,51 +1889,46 @@ export default function EventPublicLandingPage({
                 </div>
               ))}
             </div>
-          )}
-        </div>
-      </section>
+          </div>
+        </section>
+      )}
 
       {/* ==================================================================== */}
       {/* 6. INTERACTIVE AGENDA & SCHEDULE SESSIONS                            */}
       {/* ==================================================================== */}
-      <section id="schedule" className="py-20 max-w-6xl mx-auto px-6 sm:px-8 w-full space-y-12">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 text-start rtl:text-right text-left">
-          <div className="space-y-3">
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-              {t("event.curatedAgenda", "Curated Agenda & Sessions")}
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-500 font-normal">
-              {t("event.curatedAgendaSubtitle", "Explore keynote lectures, breakout technical panels, and networking tracks.")}
-            </p>
+      {eventSessions.length > 0 && (
+        <section id="schedule" className="py-20 max-w-6xl mx-auto px-6 sm:px-8 w-full space-y-12">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 text-start rtl:text-right text-left">
+            <div className="space-y-3">
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+                {t("event.curatedAgenda", "Curated Agenda & Sessions")}
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-500 font-normal">
+                {t("event.curatedAgendaSubtitle", "Explore keynote lectures, breakout technical panels, and networking tracks.")}
+              </p>
+            </div>
+
+            {/* Day Filters */}
+            {startDate && (
+              <div className="flex items-center bg-white p-1 rounded-2xl border border-slate-200 shadow-xs">
+                {["All", startDate, endDate].filter((v, i, a) => v && a.indexOf(v) === i).map((day, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedDay(day)}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      selectedDay === day ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    {day === "All" ? t("event.allDays", "All Days") : (idx === 1 ? t("event.day1", "Day 1") : (idx === 2 ? t("event.day2", "Day 2") : t("event.dayNum", `Day ${idx}`).replace("{num}", idx)))}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Day Filters */}
-          {startDate && (
-            <div className="flex items-center bg-white p-1 rounded-2xl border border-slate-200 shadow-xs">
-              {["All", startDate, endDate].filter((v, i, a) => v && a.indexOf(v) === i).map((day, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setSelectedDay(day)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    selectedDay === day ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  {day === "All" ? t("event.allDays", "All Days") : (idx === 1 ? t("event.day1", "Day 1") : (idx === 2 ? t("event.day2", "Day 2") : t("event.dayNum", `Day ${idx}`).replace("{num}", idx)))}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Sessions List */}
-        <div className="space-y-4">
-          {eventSessions.length === 0 ? (
-            <div className="text-center py-12 bg-white border border-slate-200/80 rounded-3xl text-slate-400 space-y-2 max-w-xl mx-auto">
-              <Calendar size={32} className="mx-auto opacity-40 text-slate-400" />
-              <p className="text-xs font-semibold">{t("event.agendaSoon", "Agenda schedule will be published soon by the organizers.")}</p>
-            </div>
-          ) : (
-            eventSessions
+          {/* Sessions List */}
+          <div className="space-y-4">
+            {eventSessions
               .filter(s => selectedDay === "All" || s.date === selectedDay)
               .map((session, idx) => {
                 const isBookmarked = bookmarkedSessions.has(session.id);
@@ -2043,10 +2055,10 @@ export default function EventPublicLandingPage({
                     </div>
                   </div>
                 );
-              })
-          )}
-        </div>
-      </section>
+              })}
+          </div>
+        </section>
+      )}
 
       {/* ==================================================================== */}
       {/* 8. EXHIBITORS SHOWCASE                                               */}
