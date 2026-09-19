@@ -24,6 +24,7 @@ import { PRESET_SMART_FIELDS, getFormSections, getPresetFieldLabel, getPresetFie
 import { getLocalizedIndustry } from "../lib/constants";
 import { FormsSkeleton } from "./SkeletonLoaders";
 import { useLanguage } from "../lib/i18n";
+import { canEditModule } from "../lib/permissions";
 
 // Available field types in the toolbox
 const FIELD_TYPES = [
@@ -222,9 +223,11 @@ export default function FormsView({
   onArchiveForm,
   onRestoreForm,
   onSubmitResponse,
-  activeEventTitle = "Eventzone Conference"
+  activeEventTitle = "Eventzone Conference",
+  effectivePermissions = null
 }) {
   const { t, lang, isRTL } = useLanguage();
+  const canEdit = canEditModule("forms", effectivePermissions);
   // Mode: "hub" (list) | "builder" (edit/create) | "responses" (view submissions)
   const [viewMode, setViewMode] = useState("hub");
   const [activeFormId, setActiveFormId] = useState(null);
@@ -393,6 +396,7 @@ export default function FormsView({
 
   // Real-time automatic background synchronization of form changes
   useEffect(() => {
+    if (!canEdit) return;
     if (!editingForm) return;
     const currentJson = JSON.stringify(editingForm);
     if (lastSavedJsonRef.current === currentJson) return;
@@ -409,7 +413,7 @@ export default function FormsView({
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
-  }, [editingForm]);
+  }, [editingForm, canEdit]);
 
   // Submissions for active form
   const activeSubmissions = useMemo(() => {
@@ -481,6 +485,7 @@ function generateUuid() {
 
   // Handle Opening Builder with Blank or Existing Form
   const handleOpenCreateBlank = () => {
+    if (!canEdit) return;
     const newForm = {
       id: generateUuid(),
       title: "New Custom Form",
@@ -522,6 +527,7 @@ function generateUuid() {
   };
 
   const handleDuplicateForm = (form) => {
+    if (!canEdit) return;
     const cloned = {
       ...JSON.parse(JSON.stringify(form)),
       id: generateUuid(),
@@ -533,7 +539,7 @@ function generateUuid() {
 
 
   const handleBackToHub = () => {
-    if (editingForm && onSaveForm) {
+    if (canEdit && editingForm && onSaveForm) {
       onSaveForm(editingForm);
     }
     setViewMode("hub");
@@ -542,13 +548,13 @@ function generateUuid() {
   };
 
   const handleSaveCurrentForm = () => {
-    if (!editingForm) return;
+    if (!canEdit || !editingForm) return;
     if (onSaveForm) onSaveForm(editingForm);
   };
 
   // Field Editor Operations
   const handleAddField = (type) => {
-    if (!editingForm) return;
+    if (!canEdit || !editingForm) return;
     const typeDef = FIELD_TYPES.find(t => t.type === type) || FIELD_TYPES[0];
     const isSection = type === "section";
     const existingSectionsCount = (editingForm.fields || []).filter(f => f.type === "section").length;
@@ -574,7 +580,7 @@ function generateUuid() {
   };
 
   const handleAppendPresetField = (preset) => {
-    if (!editingForm) return;
+    if (!canEdit || !editingForm) return;
     const newField = {
       id: `f_${preset.id.replace('preset_', '')}_${Date.now()}`,
       type: preset.type,
@@ -594,6 +600,7 @@ function generateUuid() {
   };
 
   const handleUpdateField = (fieldId, updates) => {
+    if (!canEdit) return;
     setEditingForm(prev => ({
       ...prev,
       fields: (prev.fields || []).map(f => {
@@ -610,6 +617,7 @@ function generateUuid() {
   };
 
   const handleDeleteField = (fieldId) => {
+    if (!canEdit) return;
     setEditingForm(prev => {
       const fieldToDelete = (prev.fields || []).find(f => f.id === fieldId);
       if (fieldToDelete?.isLocked || ["f_core_name", "f_core_email", "f_core_phone"].includes(fieldId)) {
@@ -623,7 +631,7 @@ function generateUuid() {
   };
 
   const handleMoveField = (index, direction) => {
-    if (!editingForm) return;
+    if (!canEdit || !editingForm) return;
     const fields = [...(editingForm.fields || [])];
     const targetIdx = index + direction;
     if (targetIdx < 0 || targetIdx >= fields.length) return;
@@ -634,6 +642,7 @@ function generateUuid() {
   };
 
   const handleAddOption = (fieldId) => {
+    if (!canEdit) return;
     setEditingForm(prev => ({
       ...prev,
       fields: (prev.fields || []).map(f => {
@@ -648,6 +657,7 @@ function generateUuid() {
   };
 
   const handleUpdateOption = (fieldId, optIndex, value) => {
+    if (!canEdit) return;
     setEditingForm(prev => ({
       ...prev,
       fields: (prev.fields || []).map(f => {
@@ -660,6 +670,7 @@ function generateUuid() {
   };
 
   const handleDeleteOption = (fieldId, optIndex) => {
+    if (!canEdit) return;
     setEditingForm(prev => ({
       ...prev,
       fields: (prev.fields || []).map(f => {
@@ -700,6 +711,7 @@ function generateUuid() {
 
   // Export Submissions to CSV
   const handleExportCSV = () => {
+    if (!canEdit) return;
     if (!editingForm || activeSubmissions.length === 0) {
       alert(t("forms.noSubmissionsToExport", "No submissions available to export yet."));
       return;
@@ -846,10 +858,21 @@ function generateUuid() {
                 <input
                   type="text"
                   value={editingForm.title}
+                  disabled={!canEdit}
                   onChange={(e) => setEditingForm(prev => ({ ...prev, title: e.target.value }))}
-                  className="text-lg sm:text-xl font-bold text-slate-900 bg-transparent hover:bg-slate-100/80 focus:bg-white focus:ring-2 focus:ring-blue-500 rounded-xl px-2 py-0.5 outline-none transition-all"
+                  className={`text-lg sm:text-xl font-bold text-slate-900 bg-transparent rounded-xl px-2 py-0.5 outline-none transition-all ${
+                    canEdit 
+                      ? "hover:bg-slate-100/80 focus:bg-white focus:ring-2 focus:ring-blue-500" 
+                      : "cursor-default opacity-80"
+                  }`}
                   placeholder={t("forms.untitledForm", "Untitled Form")}
                 />
+                {!canEdit && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                    <Eye size={12} />
+                    Viewer Mode
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium px-2">
                 <span><bdi dir="ltr">{editingForm.fields?.length || 0}</bdi> {t("forms.questionsLabel", "Questions")}</span>
@@ -936,98 +959,108 @@ function generateUuid() {
         {/* SUB-TAB 1: QUESTIONS BUILDER (Toolbox + Canvas)                      */}
         {/* =================================================================== */}
         {builderTab === "fields" && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            {/* Left Column: Toolbox to Add Fields */}
-            <div className="lg:col-span-4 bg-white border border-slate-200 rounded-3xl p-6 shadow-xs flex flex-col gap-5 sticky top-28">
-              <div>
-                <h3 className="text-sm font-bold text-slate-900">
-                  {t("forms.questionElementsTitle", "Question Elements")}
-                </h3>
-                <p className="text-xs text-slate-500 mt-1">
-                  {t("forms.questionElementsSubtitle", "Click any element to append it to your form.")}
-                </p>
+          <div className="flex flex-col gap-6 w-full">
+            {!canEdit && (
+              <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl text-xs font-medium text-amber-800 flex items-center gap-2.5">
+                <Eye size={16} className="shrink-0 text-amber-600" />
+                <span>You are viewing this form in read-only mode. Adding questions, modifying fields, or altering settings is disabled.</span>
               </div>
-
-              {/* Pre-made Fields & Smart Suggestions */}
-              <div className="flex flex-col gap-2.5 bg-gradient-to-b from-blue-50/80 to-indigo-50/40 p-3.5 rounded-2xl border border-blue-200/80 shadow-2xs">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-extrabold uppercase text-blue-800 tracking-wider">
-                    {t("forms.premadeSmartFields", "Pre-Made Smart Fields")}
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 gap-1.5">
-                  {PRESET_SMART_FIELDS.map(preset => {
-                    const PresetIcon = preset.icon;
-                    return (
-                      <button
-                        key={preset.id}
-                        type="button"
-                        onClick={() => handleAppendPresetField(preset)}
-                        className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white border border-blue-100/90 hover:border-blue-400 hover:bg-blue-50/50 hover:shadow-xs text-start rtl:text-right text-left transition-all group cursor-pointer"
-                      >
-                        <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                          {PresetIcon && <PresetIcon size={14} />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-xs font-bold text-slate-800 group-hover:text-blue-600 truncate transition-colors">
-                              {getPresetFieldLabel(preset, t)}
-                            </span>
-                            {preset.showsOnBadge && (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200/80 text-[9px] font-extrabold tracking-wide uppercase shadow-2xs">
-                                <Award size={9} className="text-amber-600 shrink-0" />
-                                <span>{t("forms.showsOnBadgeBadge", "Shows on Badge")}</span>
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-[10px] text-slate-400 truncate mt-0.5">
-                            {getPresetFieldDescription(preset, t)}
-                          </div>
-                        </div>
-                        <Plus size={13} className="text-blue-400 group-hover:text-blue-700 transition-colors shrink-0" />
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Standard Grouped Field Types */}
-              {["Standard", "Files & Docs", "Choices", "Feedback", "Layout"].map(cat => (
-                <div key={cat} className="flex flex-col gap-2">
-                  <span className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">
-                    {getCategoryLabel(cat, t)}
-                  </span>
-                  <div className="grid grid-cols-1 gap-2">
-                    {FIELD_TYPES.filter(t => t.category === cat).map(ft => {
-                      const IconComponent = ft.icon;
-                      return (
-                        <button
-                          key={ft.type}
-                          onClick={() => handleAddField(ft.type)}
-                          className="flex items-center gap-3 p-3 rounded-2xl border border-slate-100 hover:border-blue-300 hover:bg-blue-50/40 text-start rtl:text-right text-left transition-all group cursor-pointer shadow-2xs hover:shadow-xs"
-                        >
-                          <div className="w-8 h-8 rounded-xl bg-slate-50 border border-slate-200/70 flex items-center justify-center text-slate-500 group-hover:text-blue-600 group-hover:bg-blue-50 group-hover:border-blue-200 transition-all shrink-0">
-                            {IconComponent && <IconComponent size={15} />}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-xs font-bold text-slate-800 group-hover:text-blue-600 transition-colors">
-                              {getFieldTypeLabel(ft, t)}
-                            </div>
-                            <div className="text-[10px] text-slate-400 truncate mt-0.5">
-                              {getFieldTypeDescription(ft, t)}
-                            </div>
-                          </div>
-                          <Plus size={14} className="text-slate-300 group-hover:text-blue-600 transition-colors shrink-0" />
-                        </button>
-                      );
-                    })}
+            )}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              {/* Left Column: Toolbox to Add Fields */}
+              {canEdit && (
+                <div className="lg:col-span-4 bg-white border border-slate-200 rounded-3xl p-6 shadow-xs flex flex-col gap-5 sticky top-28">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">
+                      {t("forms.questionElementsTitle", "Question Elements")}
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-1">
+                      {t("forms.questionElementsSubtitle", "Click any element to append it to your form.")}
+                    </p>
                   </div>
-                </div>
-              ))}
-            </div>
 
-            {/* Right Column: Questions Canvas */}
-            <div className="lg:col-span-8 flex flex-col gap-4">
+                  {/* Pre-made Fields & Smart Suggestions */}
+                  <div className="flex flex-col gap-2.5 bg-gradient-to-b from-blue-50/80 to-indigo-50/40 p-3.5 rounded-2xl border border-blue-200/80 shadow-2xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-extrabold uppercase text-blue-800 tracking-wider">
+                        {t("forms.premadeSmartFields", "Pre-Made Smart Fields")}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 gap-1.5">
+                      {PRESET_SMART_FIELDS.map(preset => {
+                        const PresetIcon = preset.icon;
+                        return (
+                          <button
+                            key={preset.id}
+                            type="button"
+                            onClick={() => handleAppendPresetField(preset)}
+                            className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white border border-blue-100/90 hover:border-blue-400 hover:bg-blue-50/50 hover:shadow-xs text-start rtl:text-right text-left transition-all group cursor-pointer"
+                          >
+                            <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                              {PresetIcon && <PresetIcon size={14} />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-xs font-bold text-slate-800 group-hover:text-blue-600 truncate transition-colors">
+                                  {getPresetFieldLabel(preset, t)}
+                                </span>
+                                {preset.showsOnBadge && (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200/80 text-[9px] font-extrabold tracking-wide uppercase shadow-2xs">
+                                    <Award size={9} className="text-amber-600 shrink-0" />
+                                    <span>{t("forms.showsOnBadgeBadge", "Shows on Badge")}</span>
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-[10px] text-slate-400 truncate mt-0.5">
+                                {getPresetFieldDescription(preset, t)}
+                              </div>
+                            </div>
+                            <Plus size={13} className="text-blue-400 group-hover:text-blue-700 transition-colors shrink-0" />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Standard Grouped Field Types */}
+                  {["Standard", "Files & Docs", "Choices", "Feedback", "Layout"].map(cat => (
+                    <div key={cat} className="flex flex-col gap-2">
+                      <span className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">
+                        {getCategoryLabel(cat, t)}
+                      </span>
+                      <div className="grid grid-cols-1 gap-2">
+                        {FIELD_TYPES.filter(t => t.category === cat).map(ft => {
+                          const IconComponent = ft.icon;
+                          return (
+                            <button
+                              key={ft.type}
+                              onClick={() => handleAddField(ft.type)}
+                              className="flex items-center gap-3 p-3 rounded-2xl border border-slate-100 hover:border-blue-300 hover:bg-blue-50/40 text-start rtl:text-right text-left transition-all group cursor-pointer shadow-2xs hover:shadow-xs"
+                            >
+                              <div className="w-8 h-8 rounded-xl bg-slate-50 border border-slate-200/70 flex items-center justify-center text-slate-500 group-hover:text-blue-600 group-hover:bg-blue-50 group-hover:border-blue-200 transition-all shrink-0">
+                                {IconComponent && <IconComponent size={15} />}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-xs font-bold text-slate-800 group-hover:text-blue-600 transition-colors">
+                                  {getFieldTypeLabel(ft, t)}
+                                </div>
+                                <div className="text-[10px] text-slate-400 truncate mt-0.5">
+                                  {getFieldTypeDescription(ft, t)}
+                                </div>
+                              </div>
+                              <Plus size={14} className="text-slate-300 group-hover:text-blue-600 transition-colors shrink-0" />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Right Column: Questions Canvas */}
+              <div className={`${canEdit ? "lg:col-span-8" : "lg:col-span-12"} flex flex-col gap-4`}>
+                <fieldset disabled={!canEdit} className="contents">
               {/* Form Description & Instructions Card */}
               <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-xs flex flex-col gap-2 relative">
                 <div className="flex items-center justify-between px-1">
@@ -1131,33 +1164,37 @@ function generateUuid() {
                           </div>
 
                           <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
-                            <button
-                              type="button"
-                              onClick={() => handleMoveField(index, -1)}
-                              disabled={index === 0}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-white/80 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
-                              title={t("forms.moveUp", "Move Up")}
-                            >
-                              <ArrowUp size={13} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleMoveField(index, 1)}
-                              disabled={index === editingForm.fields.length - 1}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-white/80 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
-                              title={t("forms.moveDown", "Move Down")}
-                            >
-                              <ArrowDown size={13} />
-                            </button>
-                            <div className="h-4 w-px bg-blue-200 mx-1" />
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteField(field.id)}
-                              className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 cursor-pointer font-bold text-xs transition-colors"
-                              title={t("forms.deleteSectionHeader", "Delete Section Header")}
-                            >
-                              <Trash2 size={14} />
-                            </button>
+                            {canEdit && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleMoveField(index, -1)}
+                                  disabled={index === 0}
+                                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-white/80 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
+                                  title={t("forms.moveUp", "Move Up")}
+                                >
+                                  <ArrowUp size={13} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleMoveField(index, 1)}
+                                  disabled={index === editingForm.fields.length - 1}
+                                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-white/80 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
+                                  title={t("forms.moveDown", "Move Down")}
+                                >
+                                  <ArrowDown size={13} />
+                                </button>
+                                <div className="h-4 w-px bg-blue-200 mx-1" />
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteField(field.id)}
+                                  className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 cursor-pointer font-bold text-xs transition-colors"
+                                  title={t("forms.deleteSectionHeader", "Delete Section Header")}
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </>
+                            )}
                             <button
                               type="button"
                               onClick={() => toggleFieldCollapse(field.id)}
@@ -1192,33 +1229,37 @@ function generateUuid() {
                           </div>
 
                           <div className="flex items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() => handleMoveField(index, -1)}
-                              disabled={index === 0}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-white/80 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
-                              title={t("forms.moveUp", "Move Up")}
-                            >
-                              <ArrowUp size={13} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleMoveField(index, 1)}
-                              disabled={index === editingForm.fields.length - 1}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-white/80 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
-                              title={t("forms.moveDown", "Move Down")}
-                            >
-                              <ArrowDown size={13} />
-                            </button>
-                            <div className="h-4 w-px bg-blue-200 mx-1" />
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteField(field.id)}
-                              className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 cursor-pointer font-bold text-xs transition-colors"
-                              title={t("forms.deleteSectionHeader", "Delete Section Header")}
-                            >
-                              <Trash2 size={14} />
-                            </button>
+                            {canEdit && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleMoveField(index, -1)}
+                                  disabled={index === 0}
+                                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-white/80 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
+                                  title={t("forms.moveUp", "Move Up")}
+                                >
+                                  <ArrowUp size={13} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleMoveField(index, 1)}
+                                  disabled={index === editingForm.fields.length - 1}
+                                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-white/80 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
+                                  title={t("forms.moveDown", "Move Down")}
+                                >
+                                  <ArrowDown size={13} />
+                                </button>
+                                <div className="h-4 w-px bg-blue-200 mx-1" />
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteField(field.id)}
+                                  className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 cursor-pointer font-bold text-xs transition-colors"
+                                  title={t("forms.deleteSectionHeader", "Delete Section Header")}
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </>
+                            )}
                             <button
                               type="button"
                               onClick={() => toggleFieldCollapse(field.id)}
@@ -1314,43 +1355,49 @@ function generateUuid() {
 
                         {/* Right: Reorder Buttons, Delete, Expand */}
                         <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
-                          <button
-                            type="button"
-                            onClick={() => handleMoveField(index, -1)}
-                            disabled={index === 0}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
-                            title={t("forms.moveUp", "Move Up")}
-                          >
-                            <ArrowUp size={13} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleMoveField(index, 1)}
-                            disabled={index === editingForm.fields.length - 1}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
-                            title={t("forms.moveDown", "Move Down")}
-                          >
-                            <ArrowDown size={13} />
-                          </button>
+                          {canEdit && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleMoveField(index, -1)}
+                                disabled={index === 0}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
+                                title={t("forms.moveUp", "Move Up")}
+                              >
+                                <ArrowUp size={13} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleMoveField(index, 1)}
+                                disabled={index === editingForm.fields.length - 1}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
+                                title={t("forms.moveDown", "Move Down")}
+                              >
+                                <ArrowDown size={13} />
+                              </button>
 
-                          <div className="h-4 w-px bg-slate-200 mx-1" />
+                              <div className="h-4 w-px bg-slate-200 mx-1" />
 
-                          {isLockedField ? (
+                              {!isLockedField && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteField(field.id)}
+                                  className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 cursor-pointer font-bold text-xs transition-colors"
+                                  title={t("forms.deleteQuestion", "Delete Question")}
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              )}
+                            </>
+                          )}
+
+                          {isLockedField && (
                             <span
                               className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-400 px-1.5 py-1 select-none"
                               title={t("forms.coreMandatoryReq", "Core mandatory requirement for all submissions")}
                             >
                               <Lock size={12} className="text-blue-500" />
                             </span>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteField(field.id)}
-                              className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 cursor-pointer font-bold text-xs transition-colors"
-                              title={t("forms.deleteQuestion", "Delete Question")}
-                            >
-                              <Trash2 size={14} />
-                            </button>
                           )}
 
                           <button
@@ -1402,30 +1449,45 @@ function generateUuid() {
                         </div>
 
                         <div className="flex items-center gap-1">
-                          {/* Reorder Buttons */}
-                          <button
-                            type="button"
-                            onClick={() => handleMoveField(index, -1)}
-                            disabled={index === 0}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
-                            title={t("forms.moveUp", "Move Up")}
-                          >
-                            <ArrowUp size={13} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleMoveField(index, 1)}
-                            disabled={index === editingForm.fields.length - 1}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
-                            title={t("forms.moveDown", "Move Down")}
-                          >
-                            <ArrowDown size={13} />
-                          </button>
+                          {canEdit && (
+                            <>
+                              {/* Reorder Buttons */}
+                              <button
+                                type="button"
+                                onClick={() => handleMoveField(index, -1)}
+                                disabled={index === 0}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
+                                title={t("forms.moveUp", "Move Up")}
+                              >
+                                <ArrowUp size={13} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleMoveField(index, 1)}
+                                disabled={index === editingForm.fields.length - 1}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
+                                title={t("forms.moveDown", "Move Down")}
+                              >
+                                <ArrowDown size={13} />
+                              </button>
 
-                          <div className="h-4 w-px bg-slate-200 mx-1" />
+                              <div className="h-4 w-px bg-slate-200 mx-1" />
 
-                          {/* Delete Field / Locked State */}
-                          {isLockedField ? (
+                              {/* Delete Field / Locked State */}
+                              {!isLockedField && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteField(field.id)}
+                                  className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 cursor-pointer font-bold text-xs transition-colors"
+                                  title={t("forms.deleteQuestion", "Delete Question")}
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              )}
+                            </>
+                          )}
+
+                          {isLockedField && (
                             <span
                               className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-400 px-2 py-1 select-none"
                               title={t("forms.coreMandatoryReq", "Core mandatory requirement for all submissions")}
@@ -1433,15 +1495,6 @@ function generateUuid() {
                               <Lock size={12} className="text-blue-500" />
                               <span>{t("forms.lockedBadge", "Locked")}</span>
                             </span>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteField(field.id)}
-                              className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 cursor-pointer font-bold text-xs transition-colors"
-                              title={t("forms.deleteQuestion", "Delete Question")}
-                            >
-                              <Trash2 size={14} />
-                            </button>
                           )}
 
                           <button
@@ -1487,7 +1540,7 @@ function generateUuid() {
                                   onChange={(e) => handleUpdateOption(field.id, optIdx, e.target.value)}
                                   className="flex-1 px-3 py-1.5 bg-white border border-slate-200 focus:border-blue-600 rounded-lg text-xs font-semibold text-slate-800 outline-none"
                                 />
-                                {(field.options || []).length > 1 && (
+                                {(field.options || []).length > 1 && canEdit && (
                                   <button
                                     onClick={() => handleDeleteOption(field.id, optIdx)}
                                     className="px-1.5 py-0.5 text-slate-400 hover:text-rose-600 font-bold text-sm rounded-md hover:bg-slate-100"
@@ -1498,12 +1551,14 @@ function generateUuid() {
                               </div>
                             ))}
                           </div>
-                          <button
-                            onClick={() => handleAddOption(field.id)}
-                            className="self-start text-xs font-bold text-blue-600 hover:text-blue-700 mt-1 cursor-pointer"
-                          >
-                            {t("forms.addAnotherChoice", "Add Another Choice")}
-                          </button>
+                          {canEdit && (
+                            <button
+                              onClick={() => handleAddOption(field.id)}
+                              className="self-start text-xs font-bold text-blue-600 hover:text-blue-700 mt-1 cursor-pointer"
+                            >
+                              {t("forms.addAnotherChoice", "Add Another Choice")}
+                            </button>
+                          )}
                         </div>
                       )}
 
@@ -1660,6 +1715,8 @@ function generateUuid() {
                   );
                 })
               )}
+                </fieldset>
+              </div>
             </div>
           </div>
         )}
@@ -1669,6 +1726,13 @@ function generateUuid() {
         {/* =================================================================== */}
         {builderTab === "settings" && (
           <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-xs flex flex-col gap-6 max-w-3xl mx-auto">
+            {!canEdit && (
+              <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl text-xs font-medium text-amber-800 flex items-center gap-2.5">
+                <Eye size={16} className="shrink-0 text-amber-600" />
+                <span>You are viewing this form in read-only mode. Modifying settings is disabled.</span>
+              </div>
+            )}
+            <fieldset disabled={!canEdit} className="contents">
             <div>
               <h3 className="text-lg font-bold text-slate-900">{t("forms.settingsModalTitle", "Form Configuration & Target")}</h3>
               <p className="text-xs text-slate-500 mt-0.5">
@@ -1782,6 +1846,7 @@ function generateUuid() {
                 className="rounded text-blue-600 focus:ring-blue-500 h-5 w-5 cursor-pointer"
               />
             </div>
+            </fieldset>
           </div>
         )}
 
@@ -2298,15 +2363,17 @@ function generateUuid() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleExportCSV}
-                  disabled={activeSubmissions.length === 0}
-                  className="px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-50 text-slate-800 rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
-                >
-                  {t("forms.exportCsv", "Export CSV")}
-                </button>
-              </div>
+              {canEdit && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleExportCSV}
+                    disabled={activeSubmissions.length === 0}
+                    className="px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-50 text-slate-800 rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                  >
+                    {t("forms.exportCsv", "Export CSV")}
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Ratings & Choice Analytics Cards */}
@@ -2493,7 +2560,7 @@ function generateUuid() {
                                 )}
                               </div>
                             </div>
-                            {val.url && (
+                            {val.url && canEdit && (
                               <a
                                 href={val.url}
                                 download={val.name || "document"}
@@ -2545,12 +2612,20 @@ function generateUuid() {
         </div>
 
         <div className="flex items-center gap-2.5">
-          <button
-            onClick={handleOpenCreateBlank}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs shadow-md shadow-blue-600/20 transition-all cursor-pointer"
-          >
-            {t("forms.createForm", "Create Form")}
-          </button>
+          {!canEdit && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 border border-amber-500/20">
+              <Eye size={13} />
+              Viewer Mode (Read-Only)
+            </span>
+          )}
+          {canEdit && (
+            <button
+              onClick={handleOpenCreateBlank}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs shadow-md shadow-blue-600/20 transition-all cursor-pointer"
+            >
+              {t("forms.createForm", "Create Form")}
+            </button>
+          )}
         </div>
       </header>
 
@@ -2688,7 +2763,7 @@ function generateUuid() {
                 : t("forms.noFormsFoundDesc", "Create a custom form to start collecting responses.")}
             </p>
           </div>
-          {selectedStatus !== "Archived" && (
+          {selectedStatus !== "Archived" && canEdit && (
             <button
               onClick={handleOpenCreateBlank}
               className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-md shadow-blue-600/20 cursor-pointer transition-all"
@@ -2753,10 +2828,10 @@ function generateUuid() {
                   <button
                     onClick={() => handleEditForm(form)}
                     className="p-2 bg-blue-50 hover:bg-blue-100/80 text-blue-600 rounded-xl transition-all cursor-pointer flex items-center justify-center"
-                    title={t("forms.editForm", "Edit Form")}
-                    aria-label={t("forms.editForm", "Edit Form")}
+                    title={canEdit ? t("forms.editForm", "Edit Form") : t("forms.viewForm", "View Form")}
+                    aria-label={canEdit ? t("forms.editForm", "Edit Form") : t("forms.viewForm", "View Form")}
                   >
-                    <Pencil size={15} />
+                    {canEdit ? <Pencil size={15} /> : <Eye size={15} />}
                   </button>
 
                   <button
@@ -2779,7 +2854,7 @@ function generateUuid() {
                     </button>
                   )}
 
-                  {!isArchived && (
+                  {!isArchived && canEdit && (
                     <button
                       onClick={() => handleDuplicateForm(form)}
                       className="p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer flex items-center justify-center"
@@ -2791,46 +2866,50 @@ function generateUuid() {
                   )}
 
                   {isArchived ? (
-                    <div className="flex items-center gap-1">
+                    canEdit && (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => {
+                            if (onSaveForm) onSaveForm({ ...form, status: "active", isArchived: false });
+                            else if (onRestoreForm) onRestoreForm(form.id);
+                          }}
+                          className="p-2 rounded-xl text-emerald-600 hover:bg-emerald-50 transition-colors cursor-pointer flex items-center justify-center"
+                          title={t("forms.restoreForm", "Restore Form")}
+                          aria-label={t("forms.restoreForm", "Restore Form")}
+                        >
+                          <RotateCcw size={15} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm(t("forms.confirmPermanentDelete", "Permanently delete form \"{title}\" and all associated responses? This action cannot be undone.").replace("{title}", form.title))) {
+                              if (onPermanentDeleteForm) onPermanentDeleteForm(form.id);
+                              else if (onDeleteForm) onDeleteForm(form.id);
+                            }
+                          }}
+                          className="p-2 rounded-xl text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition-colors cursor-pointer flex items-center justify-center"
+                          title={t("forms.deletePermanently", "Delete Form Permanently")}
+                          aria-label={t("forms.deletePermanently", "Delete Form Permanently")}
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    )
+                  ) : (
+                    canEdit && (
                       <button
                         onClick={() => {
-                          if (onSaveForm) onSaveForm({ ...form, status: "active", isArchived: false });
-                          else if (onRestoreForm) onRestoreForm(form.id);
-                        }}
-                        className="p-2 rounded-xl text-emerald-600 hover:bg-emerald-50 transition-colors cursor-pointer flex items-center justify-center"
-                        title={t("forms.restoreForm", "Restore Form")}
-                        aria-label={t("forms.restoreForm", "Restore Form")}
-                      >
-                        <RotateCcw size={15} />
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (confirm(t("forms.confirmPermanentDelete", "Permanently delete form \"{title}\" and all associated responses? This action cannot be undone.").replace("{title}", form.title))) {
-                            if (onPermanentDeleteForm) onPermanentDeleteForm(form.id);
+                          if (confirm(t("forms.confirmArchive", "Archive \"{title}\"? (Form and submission records safely preserved in archives)").replace("{title}", form.title))) {
+                            if (onArchiveForm) onArchiveForm(form.id);
                             else if (onDeleteForm) onDeleteForm(form.id);
                           }
                         }}
-                        className="p-2 rounded-xl text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition-colors cursor-pointer flex items-center justify-center"
-                        title={t("forms.deletePermanently", "Delete Form Permanently")}
-                        aria-label={t("forms.deletePermanently", "Delete Form Permanently")}
+                        className="p-2 rounded-xl text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors cursor-pointer flex items-center justify-center"
+                        title={t("forms.archiveForm", "Archive Form")}
+                        aria-label={t("forms.archiveForm", "Archive Form")}
                       >
-                        <Trash2 size={15} />
+                        <Archive size={15} />
                       </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        if (confirm(t("forms.confirmArchive", "Archive \"{title}\"? (Form and submission records safely preserved in archives)").replace("{title}", form.title))) {
-                          if (onArchiveForm) onArchiveForm(form.id);
-                          else if (onDeleteForm) onDeleteForm(form.id);
-                        }
-                      }}
-                      className="p-2 rounded-xl text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors cursor-pointer flex items-center justify-center"
-                      title={t("forms.archiveForm", "Archive Form")}
-                      aria-label={t("forms.archiveForm", "Archive Form")}
-                    >
-                      <Archive size={15} />
-                    </button>
+                    )
                   )}
                 </div>
               </div>

@@ -22,7 +22,8 @@ import {
   Loader2,
   Users,
   Star,
-  Sparkle
+  Sparkle,
+  Eye
 } from "lucide-react";
 import A4BadgeSheet from "./A4BadgeSheet";
 import SearchableSelect from "./SearchableSelect";
@@ -113,7 +114,8 @@ export default function TicketDrawer({
   onUploadFile,
   activeEventId,
   eventTitle = "Eventzone Summit",
-  onSwitchView
+  onSwitchView,
+  isReadOnly = false
 }) {
   const { t, isRTL } = useLanguage();
   // Navigation Tabs
@@ -217,6 +219,7 @@ export default function TicketDrawer({
 
   // Add & Remove Perks
   const handleAddPerk = (perkText) => {
+    if (isReadOnly) return;
     const trimmed = perkText.trim();
     if (trimmed && !features.includes(trimmed)) {
       setFeatures([...features, trimmed]);
@@ -225,11 +228,13 @@ export default function TicketDrawer({
   };
 
   const handleRemovePerk = (index) => {
+    if (isReadOnly) return;
     setFeatures(features.filter((_, i) => i !== index));
   };
 
   // Artwork Upload Handler (PNG and JPEG only)
   const handleFileUpload = async (e) => {
+    if (isReadOnly) return;
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -267,6 +272,7 @@ export default function TicketDrawer({
   // Save Handler
   const handleSave = async (e) => {
     e?.preventDefault();
+    if (isReadOnly) return;
     if (!name.trim()) {
       alert("Please provide a name for this ticket tier.");
       setActiveTab("general");
@@ -324,9 +330,21 @@ export default function TicketDrawer({
         {/* Clean Header: No top icon, no subheadline */}
         <header className="px-8 py-5 border-b border-slate-200 flex items-center justify-between bg-white select-none">
           <div className="flex items-center gap-3">
-            <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
-              {ticket ? t("tickets.editTier", "Edit Ticket Tier") : t("tickets.createTier", "Create Ticket Tier")}
+            <h2 className="text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+              {isReadOnly ? (
+                <>
+                  <Eye size={20} className="text-amber-600 shrink-0" />
+                  <span>{t("tickets.viewTier", "View Ticket Tier")}</span>
+                </>
+              ) : (
+                ticket ? t("tickets.editTier", "Edit Ticket Tier") : t("tickets.createTier", "Create Ticket Tier")
+              )}
             </h2>
+            {isReadOnly && (
+              <span className="text-[11px] font-bold tracking-wide uppercase px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                Viewer Mode (Read-Only)
+              </span>
+            )}
             <span className={`text-[11px] font-bold tracking-wide uppercase px-2.5 py-0.5 rounded-full ${
               status === "Active" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-slate-100 text-slate-600 border border-slate-200"
             }`}>
@@ -399,6 +417,7 @@ export default function TicketDrawer({
 
         {/* Main Form Content Area */}
         <div className="flex-1 overflow-y-auto px-8 py-6 flex flex-col gap-6">
+          <fieldset disabled={isReadOnly} className="contents">
 
           {/* ══════════════════════════════════════════════════════════════════
               TAB 1: DETAILS & PRICING
@@ -733,59 +752,63 @@ export default function TicketDrawer({
                 </div>
 
                 {/* Perk Input */}
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={newPerkInput}
-                    onChange={(e) => setNewPerkInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleAddPerk(newPerkInput);
-                      }
-                    }}
-                    placeholder={t("tickets.perkInputPlaceholder", "Type a custom perk (e.g. VIP Lounge Access) and press Enter")}
-                    className="flex-1 px-4 py-2.5 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 bg-white"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleAddPerk(newPerkInput)}
-                    className="bg-slate-900 hover:bg-black text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
-                  >
-                    <Plus size={14} /> {t("tickets.addPerk", "Add Perk")}
-                  </button>
-                </div>
+                {!isReadOnly && (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={newPerkInput}
+                      onChange={(e) => setNewPerkInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleAddPerk(newPerkInput);
+                        }
+                      }}
+                      placeholder={t("tickets.perkInputPlaceholder", "Type a custom perk (e.g. VIP Lounge Access) and press Enter")}
+                      className="flex-1 px-4 py-2.5 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 bg-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleAddPerk(newPerkInput)}
+                      className="bg-slate-900 hover:bg-black text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
+                    >
+                      <Plus size={14} /> {t("tickets.addPerk", "Add Perk")}
+                    </button>
+                  </div>
+                )}
 
                 {/* Rich Suggested Perks Bank */}
-                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 flex flex-col gap-2">
-                  <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
-                    {t("tickets.suggestedPerksLabel", "Suggested Perks (Click to add)")}
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {SUGGESTED_PERKS_MAP.map((item) => {
-                      const translatedPerk = t(item.key, item.fallback);
-                      const isAdded = features.includes(translatedPerk) || features.includes(item.fallback);
-                      return (
-                        <button
-                          type="button"
-                          key={item.id}
-                          disabled={isAdded}
-                          onClick={() => handleAddPerk(translatedPerk)}
-                          className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-all ${
-                            isAdded
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-200 opacity-60 cursor-default"
-                              : "bg-white text-slate-700 border-slate-250 hover:bg-slate-100 hover:border-slate-300 cursor-pointer"
-                          }`}
-                        >
-                          {isAdded ? "✓ " : "+ "} {translatedPerk}
-                        </button>
-                      );
-                    })}
+                {!isReadOnly && (
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 flex flex-col gap-2">
+                    <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                      {t("tickets.suggestedPerksLabel", "Suggested Perks (Click to add)")}
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {SUGGESTED_PERKS_MAP.map((item) => {
+                        const translatedPerk = t(item.key, item.fallback);
+                        const isAdded = features.includes(translatedPerk) || features.includes(item.fallback);
+                        return (
+                          <button
+                            type="button"
+                            key={item.id}
+                            disabled={isAdded}
+                            onClick={() => handleAddPerk(translatedPerk)}
+                            className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-all ${
+                              isAdded
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200 opacity-60 cursor-default"
+                                : "bg-white text-slate-700 border-slate-250 hover:bg-slate-100 hover:border-slate-300 cursor-pointer"
+                            }`}
+                          >
+                            {isAdded ? "✓ " : "+ "} {translatedPerk}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Active Perks List */}
-                {features.length > 0 && (
+                {features.length > 0 ? (
                   <div className="flex flex-wrap gap-2 mt-1">
                     {features.map((feat, idx) => (
                       <span
@@ -794,17 +817,23 @@ export default function TicketDrawer({
                       >
                         <Check size={13} className="text-blue-600" />
                         <span>{feat}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemovePerk(idx)}
-                          className="text-blue-400 hover:text-rose-600 transition-colors ml-1 cursor-pointer"
-                        >
-                          <X size={13} />
-                        </button>
+                        {!isReadOnly && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemovePerk(idx)}
+                            className="text-blue-400 hover:text-rose-600 transition-colors ml-1 cursor-pointer"
+                          >
+                            <X size={13} />
+                          </button>
+                        )}
                       </span>
                     ))}
                   </div>
-                )}
+                ) : isReadOnly ? (
+                  <p className="text-xs text-slate-400 italic">
+                    {t("tickets.noPerksConfigured", "No perks configured for this tier.")}
+                  </p>
+                ) : null}
               </div>
 
             </div>
@@ -1031,7 +1060,7 @@ export default function TicketDrawer({
                         <>{t("tickets.uploadA4ArtworkDesc", "Full-page background (210 x 297 mm). Top-left and top-right cards will overlay dynamically.")}</>
                       </div>
                     </div>
-                    {badgeUrl && (
+                    {badgeUrl && !isReadOnly && (
                       <button
                         type="button"
                         onClick={() => setBadgeUrl("")}
@@ -1070,14 +1099,20 @@ export default function TicketDrawer({
                         <p className="text-[11px] text-slate-500 mt-0.5">
                           {t("tickets.fullPageBackgroundApplied", "Full-page background applied to badge sheet")}
                         </p>
-                        <button
-                          type="button"
-                          onClick={() => fileInputRef.current?.click()}
-                          className="mt-1.5 text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
-                        >
-                          <Upload size={12} /> {t("tickets.replaceTemplate", "Replace Template")}
-                        </button>
+                        {!isReadOnly && (
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="mt-1.5 text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
+                          >
+                            <Upload size={12} /> {t("tickets.replaceTemplate", "Replace Template")}
+                          </button>
+                        )}
                       </div>
+                    </div>
+                  ) : isReadOnly ? (
+                    <div className="rounded-xl border border-dashed border-slate-200 p-4 bg-slate-50/60 text-center text-xs text-slate-400">
+                      {t("tickets.noCustomArtworkSet", "No custom A4 background artwork set")}
                     </div>
                   ) : (
                     <div
@@ -1224,6 +1259,7 @@ export default function TicketDrawer({
 
             </div>
           )}
+          </fieldset>
         </div>
 
         {/* Clean Sticky Footer */}
@@ -1233,7 +1269,7 @@ export default function TicketDrawer({
             onClick={onClose}
             className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold text-xs transition-colors cursor-pointer"
           >
-            {t("common.cancel", "Cancel")}
+            {isReadOnly ? t("common.close", "Close") : t("common.cancel", "Cancel")}
           </button>
 
           <div className="flex items-center gap-2.5">
@@ -1250,22 +1286,24 @@ export default function TicketDrawer({
               </button>
             ) : null}
 
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={isSaving}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-2.5 rounded-xl text-xs shadow-sm hover:shadow transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
-            >
-              {isSaving ? (
-                <>
-                  <Loader2 size={14} className="animate-spin" /> {t("common.saving", "Saving...")}
-                </>
-              ) : (
-                <>
-                  <Check size={14} /> {ticket ? t("common.saveChanges", "Save Changes") : t("tickets.createTier", "Create Ticket Tier")}
-                </>
-              )}
-            </button>
+            {!isReadOnly && (
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={isSaving}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-2.5 rounded-xl text-xs shadow-sm hover:shadow transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" /> {t("common.saving", "Saving...")}
+                  </>
+                ) : (
+                  <>
+                    <Check size={14} /> {ticket ? t("common.saveChanges", "Save Changes") : t("tickets.createTier", "Create Ticket Tier")}
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </footer>
 

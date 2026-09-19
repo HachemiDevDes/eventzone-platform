@@ -22,6 +22,7 @@ import {
   deleteCustomEmailTemplate
 } from "../lib/db";
 import { useLanguage } from "../lib/i18n";
+import { canEditModule } from "../lib/permissions";
 
 // Preset 10+ Pre-Built Templates
 const PRESET_TEMPLATES = [
@@ -640,6 +641,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
 
   const activeEventId = explicitEventId || eventDetails?.id || "default";
   const { t, lang, isRTL } = useLanguage();
+  const canEdit = canEditModule("communications", state?.effectivePermissions);
 
   // Top Tabs: "compose" | "history" | "templates" | "triggers"
   const [activeTab, setActiveTab] = useState("compose");
@@ -1118,6 +1120,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
 
   // 4. Send Test Email
   const handleSendTestEmail = async () => {
+    if (!canEdit) return;
     if (!testEmailAddress || !testEmailAddress.includes("@")) {
       showToast("error", "Please enter a valid test email address.");
       return;
@@ -1172,6 +1175,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
 
   // 5. Send Real Broadcast Announcement
   const handleSendBroadcast = async () => {
+    if (!canEdit) return;
     if (targetRecipients.length === 0) {
       showToast("error", "No recipients match your current group and filter criteria.");
       return;
@@ -1243,6 +1247,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
 
   // 6. Delete Past Broadcast
   const handleDeleteBroadcast = async (commId) => {
+    if (!canEdit) return;
     if (!window.confirm("Are you sure you want to delete this broadcast record and its tracking logs?")) return;
     try {
       await deleteCommunication(commId);
@@ -1293,6 +1298,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
 
   // 9. {t("comm.modalSaveTemplateTitle", "Save as Custom Template")}
   const handleSaveAsTemplate = async () => {
+    if (!canEdit) return;
     if (!newTemplateName.trim()) {
       showToast("error", "Please specify a name for this template.");
       return;
@@ -1329,6 +1335,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
 
   // 10. Delete Custom Template
   const handleDeleteCustomTemplate = async (templateId) => {
+    if (!canEdit) return;
     if (!window.confirm("Are you sure you want to delete this custom template?")) return;
     try {
       await deleteCustomEmailTemplate(templateId);
@@ -1401,6 +1408,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
 
   // 13. Save Edited Template / Trigger
   const handleSaveEditedTemplate = async () => {
+    if (!canEdit) return;
     if (!editModalSubject.trim() || !editModalBody.trim()) {
       showToast("error", "Subject line and email body cannot be blank.");
       return;
@@ -1453,6 +1461,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
 
   // 14. Reset Trigger to Default Template
   const handleResetTrigger = async (triggerId) => {
+    if (!canEdit) return;
     if (!window.confirm("Reset this automated trigger back to the system default template?")) return;
     try {
       const existing = customTemplates.find(
@@ -1515,6 +1524,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
 
   // 16. Test Send from Edit Modal
   const handleSendTestFromEditor = async () => {
+    if (!canEdit) return;
     if (!testEmailAddress || !testEmailAddress.includes("@")) {
       showToast("error", "Please provide a valid test email recipient.");
       return;
@@ -1572,6 +1582,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
 
   // 17. Export Tracking CSV
   const handleExportTrackingCsv = () => {
+    if (!canEdit) return;
     if (!recipientLogs || recipientLogs.length === 0) return;
     const headers = ["Recipient Email", "Recipient Name", "Role", "Status", "Open Count", "First Opened At", "Last Opened At", "User Agent"];
     const rows = recipientLogs.map(log => [
@@ -1597,6 +1608,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
 
   // 12. Simulate Recipient Open (for Testing & Local Development)
   const handleSimulateOpen = async (log) => {
+    if (!canEdit) return;
     if (!selectedHistoryItem || !log) return;
     try {
       const url = `/api/email/track?cid=${selectedHistoryItem.id}&rid=${log.id}&em=${encodeURIComponent(log.recipient_email)}`;
@@ -1613,6 +1625,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
 
   // 13. Simulate All Unopened Recipient Opens
   const handleSimulateAllOpens = async () => {
+    if (!canEdit) return;
     if (!selectedHistoryItem || !recipientLogs.length) return;
     try {
       const unopened = recipientLogs.filter(l => !(l.open_count > 0 || l.status === "opened" || l.opened_at));
@@ -1693,6 +1706,12 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
 
         {/* Global Metric Badges */}
         <div className="flex items-center gap-2.5 flex-wrap">
+          {!canEdit && (
+            <span className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 font-bold text-xs border border-slate-200/80 flex items-center gap-1.5 shadow-xs">
+              <Eye size={13} className="text-slate-500" />
+              <span>Viewer Mode</span>
+            </span>
+          )}
           <div className="bg-white border border-slate-200 rounded-2xl px-3.5 py-2 flex items-center gap-2.5 shadow-xs">
             <Send size={15} className="text-blue-600" />
             <div className="flex flex-col">
@@ -1813,6 +1832,13 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-7 items-start">
           {/* Left Form Builder Pane (7 cols) */}
           <div className="lg:col-span-7 flex flex-col gap-6">
+            {!canEdit && (
+              <div className="p-4 bg-amber-50/90 border border-amber-200 rounded-2xl flex items-center gap-3 text-xs text-amber-800 font-semibold shadow-xs">
+                <AlertCircle size={17} className="text-amber-600 shrink-0" />
+                <span>Viewer Mode: You have read-only access to communications. Composing, sending, editing, and template changes are disabled.</span>
+              </div>
+            )}
+            <fieldset disabled={!canEdit} className="contents">
             {/* 1. Audience Segmentation Card */}
             <div className="bg-white border border-slate-250/70 rounded-3xl p-6 shadow-sm flex flex-col gap-4.5">
               <div className="flex items-center justify-between">
@@ -1953,14 +1979,16 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsSaveTemplateModalOpen(true)}
-                    className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-[11px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-                  >
-                    <Plus size={13} />
-                    <span>{t("comm.saveAsTemplate", "Save as Template")}</span>
-                  </button>
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => setIsSaveTemplateModalOpen(true)}
+                      className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-[11px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Plus size={13} />
+                      <span>{t("comm.saveAsTemplate", "Save as Template")}</span>
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => setActiveTab("templates")}
@@ -2351,28 +2379,31 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                 </label>
               </div>
             </div>
+            </fieldset>
 
             {/* Bottom Actions Bar */}
-            <div className="flex items-center justify-between gap-3 bg-white border border-slate-250/70 rounded-3xl p-5 shadow-sm">
-              <button
-                type="button"
-                onClick={() => setIsTestModalOpen(true)}
-                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all cursor-pointer"
-              >
-                <Mail size={14} />
-                <span>{t("comm.sendTestPreviewToMe", "Send Test Preview to Me")}</span>
-              </button>
+            {canEdit && (
+              <div className="flex items-center justify-between gap-3 bg-white border border-slate-250/70 rounded-3xl p-5 shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => setIsTestModalOpen(true)}
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all cursor-pointer"
+                >
+                  <Mail size={14} />
+                  <span>{t("comm.sendTestPreviewToMe", "Send Test Preview to Me")}</span>
+                </button>
 
-              <button
-                type="button"
-                disabled={isSending || targetRecipients.length === 0 || !subject.trim() || !body.trim()}
-                onClick={() => setIsConfirmModalOpen(true)}
-                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs font-black shadow-lg shadow-blue-600/25 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:pointer-events-none disabled:transform-none"
-              >
-                <Send size={15} />
-                <span>{t("comm.dispatchBroadcastBtn", "Dispatch Broadcast ({count} Recipients)").replace("{count}", targetRecipients.length)}</span> <span>{isRTL ? "←" : "→"}</span>
-              </button>
-            </div>
+                <button
+                  type="button"
+                  disabled={isSending || targetRecipients.length === 0 || !subject.trim() || !body.trim()}
+                  onClick={() => setIsConfirmModalOpen(true)}
+                  className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs font-black shadow-lg shadow-blue-600/25 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:pointer-events-none disabled:transform-none"
+                >
+                  <Send size={15} />
+                  <span>{t("comm.dispatchBroadcastBtn", "Dispatch Broadcast ({count} Recipients)").replace("{count}", targetRecipients.length)}</span> <span>{isRTL ? "←" : "→"}</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Right Live Email Simulator Pane (5 cols) */}
@@ -2794,23 +2825,27 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                           <span>{t("comm.viewAnalyticsBtn", "View Analytics")}</span>
                         </button>
 
-                        <button
-                          type="button"
-                          onClick={() => handleCloneBroadcast(item)}
-                          className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-colors cursor-pointer"
-                          title={t("comm.cloneIntoCompose", "Clone into Compose Builder")}
-                        >
-                          <RotateCcw size={14} />
-                        </button>
+                        {canEdit && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleCloneBroadcast(item)}
+                              className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-colors cursor-pointer"
+                              title={t("comm.cloneIntoCompose", "Clone into Compose Builder")}
+                            >
+                              <RotateCcw size={14} />
+                            </button>
 
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteBroadcast(item.id)}
-                          className="p-2 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-400 rounded-xl transition-colors cursor-pointer"
-                          title={t("comm.deleteBroadcast", "Delete Broadcast")}
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteBroadcast(item.id)}
+                              className="p-2 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-400 rounded-xl transition-colors cursor-pointer"
+                              title={t("comm.deleteBroadcast", "Delete Broadcast")}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -2839,24 +2874,26 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={() => handleOpenEditor({
-                  id: null,
-                  title: "My Custom Template",
-                  name: "My Custom Template",
-                  category: "custom",
-                  subject: "Announcement regarding {{eventTitle}}",
-                  preheader: "Important updates and announcements for {{eventTitle}}.",
-                  body: `Hello {{name}},\n\nWrite your announcement here...\n\nBest regards,\n{{organizerName}}`,
-                  includeQr: false,
-                  buttonConfig: {}
-                }, false)}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs hover:shadow transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 self-start sm:self-auto"
-              >
-                <Plus size={14} />
-                <span>{t("comm.createNewTemplate", "Create New Template")}</span>
-              </button>
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={() => handleOpenEditor({
+                    id: null,
+                    title: "My Custom Template",
+                    name: "My Custom Template",
+                    category: "custom",
+                    subject: "Announcement regarding {{eventTitle}}",
+                    preheader: "Important updates and announcements for {{eventTitle}}.",
+                    body: `Hello {{name}},\n\nWrite your announcement here...\n\nBest regards,\n{{organizerName}}`,
+                    includeQr: false,
+                    buttonConfig: {}
+                  }, false)}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs hover:shadow transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 self-start sm:self-auto"
+                >
+                  <Plus size={14} />
+                  <span>{t("comm.createNewTemplate", "Create New Template")}</span>
+                </button>
+              )}
             </div>
 
             {/* Bottom row: Category Filter Pills */}
@@ -2945,7 +2982,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                     </div>
 
                     <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-100">
-                      {isCustom && (
+                      {isCustom && canEdit && (
                         <button
                           type="button"
                           onClick={() => handleDeleteCustomTemplate(tmpl.id)}
@@ -2960,9 +2997,9 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                         type="button"
                         onClick={() => handleOpenEditor(tmpl, false)}
                         className="p-2 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-slate-700 rounded-xl transition-colors cursor-pointer"
-                        title="Customize & Edit Template"
+                        title={canEdit ? "Customize & Edit Template" : "View Template"}
                       >
-                        <Edit3 size={14} />
+                        {canEdit ? <Edit3 size={14} /> : <Eye size={14} />}
                       </button>
 
                       <button
@@ -3064,7 +3101,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                   </div>
 
                   <div className="flex items-center justify-between pt-3 border-t border-slate-100 gap-2">
-                    {config.isCustomized ? (
+                    {config.isCustomized && canEdit ? (
                       <button
                         type="button"
                         onClick={() => handleResetTrigger(triggerDef.id)}
@@ -3081,8 +3118,8 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                       onClick={() => handleOpenEditor(triggerDef, true)}
                       className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs hover:shadow transition-all cursor-pointer flex items-center gap-1.5"
                     >
-                      <Edit3 size={13} />
-                      <span>{t("comm.customizeTriggerTemplate", "Customize Template")}</span> <span>{isRTL ? "←" : "→"}</span>
+                      {canEdit ? <Edit3 size={13} /> : <Eye size={13} />}
+                      <span>{canEdit ? t("comm.customizeTriggerTemplate", "Customize Template") : t("comm.viewTriggerTemplate", "View Template")}</span> <span>{isRTL ? "←" : "→"}</span>
                     </button>
                   </div>
                 </div>
@@ -3543,16 +3580,18 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                   />
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleExportTrackingCsv}
-                    className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <Download size={13} />
-                    <span>{t("comm.exportCsv", "Export CSV")}</span>
-                  </button>
-                </div>
+                {canEdit && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleExportTrackingCsv}
+                      className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Download size={13} />
+                      <span>{t("comm.exportCsv", "Export CSV")}</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Tracking Notice */}
@@ -3675,15 +3714,27 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
               <div className="flex items-center justify-between pb-4 border-b border-slate-100 shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-                    <Edit3 size={20} />
+                    {canEdit ? <Edit3 size={20} /> : <Eye size={20} />}
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
                       <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
-                        {editingTemplateData?.isTrigger
-                          ? t("comm.customizeTriggerHeader", "Customize Trigger: {title}").replace("{title}", editingTemplateData.title)
-                          : t("comm.editTemplateHeader", "Edit Template: {name}").replace("{name}", editModalName || "Custom Template")}
+                        {canEdit ? (
+                          editingTemplateData?.isTrigger
+                            ? t("comm.customizeTriggerHeader", "Customize Trigger: {title}").replace("{title}", editingTemplateData.title)
+                            : t("comm.editTemplateHeader", "Edit Template: {name}").replace("{name}", editModalName || "Custom Template")
+                        ) : (
+                          editingTemplateData?.isTrigger
+                            ? t("comm.viewTriggerHeader", "View Trigger: {title}").replace("{title}", editingTemplateData.title)
+                            : t("comm.viewTemplateHeader", "View Template: {name}").replace("{name}", editModalName || "Custom Template")
+                        )}
                       </h3>
+                      {!canEdit && (
+                        <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold text-[10px] border border-slate-200/80 flex items-center gap-1 shadow-xs">
+                          <Eye size={11} className="text-slate-500" />
+                          <span>Viewer Mode</span>
+                        </span>
+                      )}
                       {editingTemplateData?.isTrigger && (
                         <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
                           {t("comm.automatedTriggerBadge", "Automated Trigger")}
@@ -3711,6 +3762,13 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 overflow-y-auto min-h-0 pr-1">
                 {/* Left Form Controls (7 cols) */}
                 <div className="lg:col-span-7 flex flex-col gap-5">
+                  {!canEdit && (
+                    <div className="p-3 bg-amber-50/90 border border-amber-200 rounded-2xl flex items-center gap-2.5 text-xs text-amber-800 font-semibold shadow-xs">
+                      <AlertCircle size={16} className="text-amber-600 shrink-0" />
+                      <span>Viewer Mode: This template is opened in read-only mode. Changes cannot be saved.</span>
+                    </div>
+                  )}
+                  <fieldset disabled={!canEdit} className="contents">
                   {/* Template Title & Category (if library template) */}
                   {!editingTemplateData?.isTrigger && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -3944,6 +4002,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                       )}
                     </div>
                   </div>
+                  </fieldset>
                 </div>
 
                 {/* Right Live Responsive Email Simulator (5 cols) */}
@@ -4083,7 +4142,7 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
               {/* Modal Footer Actions */}
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t border-slate-100 shrink-0">
                 <div className="flex items-center gap-2">
-                  {editingTemplateData?.isTrigger && editingTemplateData?.isCustomized && (
+                  {canEdit && editingTemplateData?.isTrigger && editingTemplateData?.isCustomized && (
                     <button
                       type="button"
                       onClick={async () => {
@@ -4097,15 +4156,17 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                     </button>
                   )}
 
-                  <button
-                    type="button"
-                    onClick={handleSendTestFromEditor}
-                    disabled={isTestSendingEditTemplate}
-                    className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
-                  >
-                    <Send size={13} />
-                    <span>{isTestSendingEditTemplate ? t("comm.sendingTestEmail", "Sending Test...") : t("comm.sendTestPreview", "Send Test Preview")}</span>
-                  </button>
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={handleSendTestFromEditor}
+                      disabled={isTestSendingEditTemplate}
+                      className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <Send size={13} />
+                      <span>{isTestSendingEditTemplate ? t("comm.sendingTestEmail", "Sending Test...") : t("comm.sendTestPreview", "Send Test Preview")}</span>
+                    </button>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -4114,27 +4175,29 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                     onClick={() => setIsEditingTemplateModalOpen(false)}
                     className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl text-xs font-bold transition-colors cursor-pointer"
                   >
-                    {t("common.cancel", "Cancel")}
+                    {canEdit ? t("common.cancel", "Cancel") : t("common.close", "Close")}
                   </button>
 
-                  <button
-                    type="button"
-                    disabled={isSavingEditTemplate || !editModalSubject.trim() || !editModalBody.trim()}
-                    onClick={handleSaveEditedTemplate}
-                    className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-600/20 hover:shadow-lg transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                  >
-                    {isSavingEditTemplate ? (
-                      <>
-                        <RefreshCw size={13} className="animate-spin" />
-                        <span>{t("comm.savingChanges", "Saving Changes...")}</span>
-                      </>
-                    ) : (
-                      <>
-                        <Check size={14} />
-                        <span>{t("comm.saveApplyTemplate", "Save & Apply Template")}</span>
-                      </>
-                    )}
-                  </button>
+                  {canEdit && (
+                    <button
+                      type="button"
+                      disabled={isSavingEditTemplate || !editModalSubject.trim() || !editModalBody.trim()}
+                      onClick={handleSaveEditedTemplate}
+                      className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-600/20 hover:shadow-lg transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      {isSavingEditTemplate ? (
+                        <>
+                          <RefreshCw size={13} className="animate-spin" />
+                          <span>{t("comm.savingChanges", "Saving Changes...")}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Check size={14} />
+                          <span>{t("comm.saveApplyTemplate", "Save & Apply Template")}</span>
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
             </motion.div>

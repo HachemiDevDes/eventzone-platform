@@ -27,7 +27,8 @@ import {
   AlertCircle,
   Trash2,
   Maximize2,
-  Edit3
+  Edit3,
+  Eye
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { useLanguage } from '../lib/i18n';
@@ -53,7 +54,8 @@ export default function AttendeeDrawer({
   eventDetails = {},
   organizations = [],
   sponsors = [],
-  exhibitors = []
+  exhibitors = [],
+  isReadOnly = false
 }) {
   const { t, isRTL } = useLanguage();
 
@@ -428,6 +430,7 @@ export default function AttendeeDrawer({
   // Form Save validation & submit
   const handleSave = async (e) => {
     if (e) e.preventDefault();
+    if (isReadOnly) return;
     const newErrors = {};
 
     const cleanName = (name || answers.f_core_name || '').trim();
@@ -525,6 +528,7 @@ export default function AttendeeDrawer({
   };
 
   const handlePrintBadge = () => {
+    if (isReadOnly) return;
     const matchedTicket = currentTicket || {};
     const templateUrl = matchedTicket.badgeUrl || eventDetails?.badgeUrl || '';
     const badgeSettings = matchedTicket.badgeSettings || eventDetails?.badgeSettings || {};
@@ -582,9 +586,21 @@ export default function AttendeeDrawer({
         <header className="px-8 py-5 border-b border-slate-200 flex items-center justify-between bg-white select-none">
           <div>
             <div className="flex items-center gap-2.5">
-              <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
-                {attendee ? t("drawer.editAttendee", "Edit Attendee") : t("table.addAttendee", "Add New Attendee")}
+              <h2 className="text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                {isReadOnly ? (
+                  <>
+                    <Eye size={20} className="text-amber-600 shrink-0" />
+                    <span>{t("drawer.viewAttendee", "View Attendee Details")}</span>
+                  </>
+                ) : (
+                  attendee ? t("drawer.editAttendee", "Edit Attendee") : t("table.addAttendee", "Add New Attendee")
+                )}
               </h2>
+              {isReadOnly && (
+                <span className="text-[10px] font-extrabold tracking-wider uppercase px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                  Viewer Mode (Read-Only)
+                </span>
+              )}
               <span className={`text-[10px] font-extrabold tracking-wider uppercase px-2.5 py-0.5 rounded-full ${
                 status === 'checked-in'
                   ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
@@ -596,9 +612,11 @@ export default function AttendeeDrawer({
               </span>
             </div>
             <p className="text-xs text-slate-500 font-medium mt-0.5">
-              {attendee 
-                ? `Editing registration record and form answers for ${name || 'attendee'}.`
-                : t("drawer.addAttendeeSubtitle", "Manually register an attendee and complete their ticket-specific intake form.")}
+              {isReadOnly
+                ? `Viewing registration record and form answers for ${name || 'attendee'}.`
+                : attendee 
+                  ? `Editing registration record and form answers for ${name || 'attendee'}.`
+                  : t("drawer.addAttendeeSubtitle", "Manually register an attendee and complete their ticket-specific intake form.")}
             </p>
           </div>
 
@@ -645,6 +663,7 @@ export default function AttendeeDrawer({
         </div>
 
         <div className="flex-1 overflow-y-auto px-8 py-6 flex flex-col gap-6">
+          <fieldset disabled={isReadOnly} className="contents">
 
           {activeTab === 'form' && (
             <div className="flex flex-col gap-6 animate-fade-in">
@@ -1114,19 +1133,35 @@ export default function AttendeeDrawer({
                   <span>Attendee Badge Photo</span>
                 </label>
 
-                <FormImageUploader
-                  value={avatar}
-                  onChange={(imgUrl) => {
-                    setAvatar(imgUrl);
-                    handleAnswerChange('avatar', imgUrl);
-                    handleAnswerChange('f_core_avatar', imgUrl);
-                  }}
-                  label="Upload Attendee Portrait"
-                  placeholder="Upload high-res badge photo for lanyard printing"
-                  preset="badge"
-                  folder="badges"
-                  eventId={activeEventId}
-                />
+                {isReadOnly ? (
+                  avatar ? (
+                    <div className="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl">
+                      <img src={avatar} alt="Attendee Portrait" className="w-16 h-16 rounded-full object-cover border border-slate-200" />
+                      <div>
+                        <div className="text-xs font-bold text-slate-900">{name || 'Attendee'}</div>
+                        <div className="text-[11px] text-slate-500">Portrait on file for badge</div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-4 rounded-xl border border-dashed border-slate-200 bg-white text-center text-xs text-slate-400">
+                      No attendee badge photo uploaded.
+                    </div>
+                  )
+                ) : (
+                  <FormImageUploader
+                    value={avatar}
+                    onChange={(imgUrl) => {
+                      setAvatar(imgUrl);
+                      handleAnswerChange('avatar', imgUrl);
+                      handleAnswerChange('f_core_avatar', imgUrl);
+                    }}
+                    label="Upload Attendee Portrait"
+                    placeholder="Upload high-res badge photo for lanyard printing"
+                    preset="badge"
+                    folder="badges"
+                    eventId={activeEventId}
+                  />
+                )}
               </div>
 
               <div className="bg-slate-50/90 border border-slate-250 rounded-2xl p-5 flex flex-col gap-3 shadow-2xs">
@@ -1200,14 +1235,16 @@ export default function AttendeeDrawer({
                     This QR code can be scanned at registration desks and door kiosks to instantly verify and check in <strong className="text-slate-800">{name || 'the attendee'}</strong>.
                   </p>
 
-                  <button
-                    type="button"
-                    onClick={handlePrintBadge}
-                    className="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-2xs"
-                  >
-                    <Printer size={14} />
-                    <span>Print Official A4 4-Fold Badge</span>
-                  </button>
+                  {!isReadOnly && (
+                    <button
+                      type="button"
+                      onClick={handlePrintBadge}
+                      className="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-2xs"
+                    >
+                      <Printer size={14} />
+                      <span>Print Official A4 4-Fold Badge</span>
+                    </button>
+                  )}
                 </div>
 
                 <div className="p-3 bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col items-center shrink-0">
@@ -1226,7 +1263,7 @@ export default function AttendeeDrawer({
 
             </div>
           )}
-
+          </fieldset>
         </div>
 
         <footer className="px-8 py-4 border-t border-slate-200 bg-white flex items-center justify-between select-none shrink-0">
@@ -1235,7 +1272,7 @@ export default function AttendeeDrawer({
             onClick={onClose}
             className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold text-xs transition-colors cursor-pointer"
           >
-            Cancel
+            {isReadOnly ? t("common.close", "Close") : t("common.cancel", "Cancel")}
           </button>
 
           <div className="flex items-center gap-2.5">
@@ -1258,24 +1295,26 @@ export default function AttendeeDrawer({
               </button>
             )}
 
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={isSaving}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-2.5 rounded-xl text-xs shadow-sm hover:shadow transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
-            >
-              {isSaving ? (
-                <>
-                  <Loader2 size={14} className="animate-spin" />
-                  <span>{t("common.saving", "Saving...")}</span>
-                </>
-              ) : (
-                <>
-                  <Check size={14} />
-                  <span>{attendee ? t("drawer.updateAttendee", "Update Attendee") : t("drawer.registerAttendee", "Register Attendee")}</span>
-                </>
-              )}
-            </button>
+            {!isReadOnly && (
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={isSaving}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-2.5 rounded-xl text-xs shadow-sm hover:shadow transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    <span>{t("common.saving", "Saving...")}</span>
+                  </>
+                ) : (
+                  <>
+                    <Check size={14} />
+                    <span>{attendee ? t("drawer.updateAttendee", "Update Attendee") : t("drawer.registerAttendee", "Register Attendee")}</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </footer>
 

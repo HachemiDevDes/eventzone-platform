@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import { Calendar, Archive, RotateCcw, Camera, Upload, Check, Loader2, X, Trash2, Users, Plus, UserPlus } from "lucide-react";
+import { Calendar, Archive, RotateCcw, Camera, Upload, Check, Loader2, X, Trash2, Users, Plus, UserPlus, Eye } from "lucide-react";
 import CustomDatePicker from "./CustomDatePicker";
 import CustomTimePicker from "./CustomTimePicker";
 import SearchableSelect from "./SearchableSelect";
@@ -9,16 +9,19 @@ import { generateUuid } from "../lib/db";
 import { CalendarSkeleton } from "./SkeletonLoaders";
 import { uploadMedia } from "@/lib/storage";
 import { useLanguage } from "../lib/i18n";
+import { canEditModule } from "../lib/permissions";
 
 export default function CalendarView({
   sessions = [],
   attendees = [],
   isLoading = false,
+  effectivePermissions = null,
   onSaveSessions,
   onClearAllSessions,
   onUploadFile
 }) {
   const { t, lang } = useLanguage();
+  const canEdit = canEditModule("calendar", effectivePermissions);
   // Database states
   const [editingSessionId, setEditingSessionId] = useState(null);
   const [activeFilter, setActiveFilter] = useState("all");
@@ -152,7 +155,7 @@ export default function CalendarView({
 
   // Add an existing speaker from event directory to current session
   const handleAddExistingSpeaker = (speaker) => {
-    if (!speaker || !speaker.name) return;
+    if (!canEdit || !speaker || !speaker.name) return;
     const exists = speakersList.some(s => s.name.trim().toLowerCase() === speaker.name.trim().toLowerCase());
     if (exists) {
       alert(`"${speaker.name}" is already in this session's speaker list.`);
@@ -169,7 +172,7 @@ export default function CalendarView({
 
   // Add an existing moderator from event directory to current session
   const handleAddExistingModerator = (moderator) => {
-    if (!moderator || !moderator.name) return;
+    if (!canEdit || !moderator || !moderator.name) return;
     const exists = moderatorsList.some(m => m.name.trim().toLowerCase() === moderator.name.trim().toLowerCase());
     if (exists) {
       alert(`"${moderator.name}" is already in this session's moderator list.`);
@@ -186,6 +189,7 @@ export default function CalendarView({
 
   // Resilient Image / Photo Uploader
   const handleImageUpload = async (e, type) => {
+    if (!canEdit) return;
     let event = e;
     let targetType = type;
     // In case arguments were passed as (type, e)
@@ -247,6 +251,7 @@ export default function CalendarView({
 
   // Inline Photo Update for existing speaker / moderator in the list
   const handleUpdateExistingPersonPhoto = async (id, type, e) => {
+    if (!canEdit) return;
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -288,6 +293,7 @@ export default function CalendarView({
 
   // Add person to list
   const addPerson = (type) => {
+    if (!canEdit) return;
     if (type === "speaker") {
       if (!speakerName.trim()) return;
       const newSpeaker = {
@@ -312,6 +318,7 @@ export default function CalendarView({
   };
 
   const removePerson = (id, type) => {
+    if (!canEdit) return;
     if (type === "speaker") {
       setSpeakersList(speakersList.filter(s => s.id !== id));
     } else {
@@ -321,6 +328,7 @@ export default function CalendarView({
 
   // Add logo to list
   const addLogo = () => {
+    if (!canEdit) return;
     if (!logoImg) return;
     const newLogo = {
       id: Date.now(),
@@ -333,12 +341,14 @@ export default function CalendarView({
   };
 
   const removeLogo = (id) => {
+    if (!canEdit) return;
     setLogosList(logosList.filter(l => l.id !== id));
   };
 
   // Form Submit
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!canEdit) return;
 
     if (!title.trim()) {
       alert("Please enter a session title.");
@@ -416,6 +426,7 @@ export default function CalendarView({
   };
 
   const handleArchive = (id) => {
+    if (!canEdit) return;
     if (confirm("Archive this session? (Preserved in archives)")) {
       onSaveSessions(sessions.map(s => s.id === id ? { ...s, status: "archived", isArchived: true } : s));
       if (editingSessionId === id) resetForm();
@@ -423,10 +434,12 @@ export default function CalendarView({
   };
 
   const handleRestore = (id) => {
+    if (!canEdit) return;
     onSaveSessions(sessions.map(s => s.id === id ? { ...s, status: "published", isArchived: false } : s));
   };
 
   const handleDeletePermanent = (id) => {
+    if (!canEdit) return;
     if (confirm("Permanently delete this session from the calendar? This action cannot be undone.")) {
       onSaveSessions(sessions.filter(s => s.id !== id));
       if (editingSessionId === id) resetForm();
@@ -502,454 +515,492 @@ export default function CalendarView({
         className="bg-white border-r border-slate-200 p-6 sm:p-7 flex flex-col gap-5 overflow-y-auto shrink-0 select-none"
         style={{ width: `${sidebarWidth}px` }}
       >
-        {/* Dynamic Title: switches between Create a Session and Edit a Session */}
+        {/* Viewer Mode Alert Banner */}
+        {!canEdit && (
+          <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-2xl text-amber-800 text-xs font-semibold">
+            <Eye size={16} className="shrink-0 text-amber-600" />
+            <span>{t("calendar.viewerNotice", "Viewer Mode: Read-only access. You cannot create, edit, or delete sessions.")}</span>
+          </div>
+        )}
+
+        {/* Dynamic Title: switches between Create a Session, Edit a Session, and View Session */}
         <div className="flex flex-col gap-1 pb-2 border-b border-slate-100">
           <h2 className="text-2xl font-bold text-slate-900">
-            {editingSessionId ? t("calendar.editSession", "Edit a Session") : t("calendar.createSession", "Create a Session")}
+            {!canEdit 
+              ? (editingSessionId ? t("calendar.viewSession", "View Session Details") : t("calendar.sessionDetails", "Session Details"))
+              : (editingSessionId ? t("calendar.editSession", "Edit a Session") : t("calendar.createSession", "Create a Session"))}
           </h2>
           <p className="text-sm text-slate-500">
-            {editingSessionId 
-              ? t("calendar.editSessionDesc", "Edit the details below to update this session.") 
-              : t("calendar.createSessionDesc", "Fill in the details to schedule a new event session.")}
+            {!canEdit
+              ? t("calendar.viewerSessionDesc", "Inspect session information, speakers, moderators, and partner details.")
+              : (editingSessionId 
+                  ? t("calendar.editSessionDesc", "Edit the details below to update this session.") 
+                  : t("calendar.createSessionDesc", "Fill in the details to schedule a new event session."))}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          {/* Session Title */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              * {t("calendar.sessionTitle", "Session Title")}
-            </label>
-            <input 
-              type="text" 
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder={t("calendar.titlePlaceholder", "e.g. Opening Keynote")} 
-              required
-              className="px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:bg-white focus:border-blue-600 text-xs font-semibold"
-            />
-          </div>
-
-          {/* Date */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              * {t("calendar.date", "Date")}
-            </label>
-            <CustomDatePicker
-              value={date}
-              onChange={setDate}
-              placeholder={t("calendar.selectDatePlaceholder", "Select session date")}
-            />
-          </div>
-
-          {/* Start and End Times */}
-          <div className="grid grid-cols-2 gap-3">
+          <fieldset disabled={!canEdit} className="contents">
+            {/* Session Title */}
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                * {t("calendar.startTime", "Start Time")}
+                * {t("calendar.sessionTitle", "Session Title")}
               </label>
-              <CustomTimePicker
-                value={startTime}
-                onChange={setStartTime}
-                placeholder={t("calendar.startTimePlaceholder", "Start time")}
-                align="left"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                * {t("calendar.endTime", "End Time")}
-              </label>
-              <CustomTimePicker
-                value={endTime}
-                onChange={setEndTime}
-                placeholder={t("calendar.endTimePlaceholder", "End time")}
-                align="right"
-              />
-            </div>
-          </div>
-
-          {/* Speakers */}
-          <div className="flex flex-col gap-2 pt-1 border-t border-slate-100">
-            <div className="flex items-center justify-between">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                {t("calendar.speakers", "Speakers")}
-              </label>
-
-              <div className="flex items-center gap-2">
-                {speakerImg && speakerMode === "manual" && (
-                  <button
-                    type="button"
-                    onClick={() => setSpeakerImg("")}
-                    className="text-[10px] text-rose-500 hover:text-rose-700 font-semibold cursor-pointer"
-                  >
-                    {t("calendar.clearPhoto", "Clear Photo")}
-                  </button>
-                )}
-
-                {allEventSpeakers.length > 0 && (
-                  <div className="flex items-center bg-slate-100 p-0.5 rounded-lg text-[10px] font-bold">
-                    <button
-                      type="button"
-                      onClick={() => setSpeakerMode("list")}
-                      className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
-                        speakerMode === "list" ? "bg-white text-blue-700 shadow-2xs font-extrabold" : "text-slate-500 hover:text-slate-800"
-                      }`}
-                    >
-                      {t("calendar.fromList", "From List")}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSpeakerMode("manual")}
-                      className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
-                        speakerMode === "manual" ? "bg-white text-blue-700 shadow-2xs font-extrabold" : "text-slate-500 hover:text-slate-800"
-                      }`}
-                    >
-                      {t("calendar.newSpeaker", "New Speaker")}
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* From List Selector */}
-            {speakerMode === "list" && allEventSpeakers.length > 0 ? (
-              <div className="flex gap-2 items-center">
-                <div className="flex-1">
-                  <SearchableSelect
-                    value={selectedSpeakerFromList}
-                    onChange={(val) => {
-                      setSelectedSpeakerFromList(val);
-                      const found = allEventSpeakers.find(s => s.name === val);
-                      if (found) handleAddExistingSpeaker(found);
-                    }}
-                    options={allEventSpeakers.map(s => ({
-                      value: s.name,
-                      label: s.name,
-                      icon: s.image ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={s.image} className="w-5 h-5 rounded-full object-cover border border-slate-200" alt="" />
-                      ) : (
-                        <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-bold text-[9px] flex items-center justify-center">
-                          {s.name.charAt(0).toUpperCase()}
-                        </div>
-                      ),
-                      badge: speakersList.some(item => item.name.toLowerCase() === s.name.toLowerCase()) ? "Added" : undefined,
-                      description: "Event Speaker"
-                    }))}
-                    placeholder="-- Select speaker from list --"
-                    searchPlaceholder="Search event speakers..."
-                    buttonClassName="py-2 text-xs"
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!selectedSpeakerFromList) {
-                      alert("Please select a speaker from the dropdown.");
-                      return;
-                    }
-                    const found = allEventSpeakers.find(s => s.name === selectedSpeakerFromList);
-                    if (found) handleAddExistingSpeaker(found);
-                  }}
-                  className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer flex items-center gap-1"
-                >
-                  <Plus size={13} />
-                  {t("common.add", "Add")}
-                </button>
-              </div>
-            ) : (
-              /* Manual Input */
-              <div className="flex gap-2 items-center">
-                <input 
-                  type="text" 
-                  value={speakerName}
-                  onChange={(e) => setSpeakerName(e.target.value)}
-                  placeholder={t("calendar.speakerName", "Speaker Name")}
-                  className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-600"
-                />
-                <label className={`px-3 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-all shrink-0 flex items-center gap-1.5 ${
-                  speakerImg 
-                    ? "border-blue-300 bg-blue-50 text-blue-700 ring-2 ring-blue-100" 
-                    : "border-slate-200 bg-white hover:bg-slate-50 text-slate-600"
-                }`}>
-                  {isUploadingSpeaker ? (
-                    <Loader2 size={13} className="animate-spin text-blue-600" />
-                  ) : speakerImg ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={speakerImg} className="w-4 h-4 rounded-full object-cover border border-blue-200" alt="Preview" />
-                  ) : (
-                    <Camera size={13} />
-                  )}
-                  <span>{isUploadingSpeaker ? t("common.uploading", "Uploading...") : speakerImg ? t("calendar.photoAttached", "Photo Attached") : t("calendar.photo", "Photo")}</span>
-                  <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, "speaker")} className="hidden" />
-                </label>
-                <button 
-                  type="button" 
-                  onClick={() => addPerson("speaker")}
-                  className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer"
-                >
-                  {t("common.add", "Add")}
-                </button>
-              </div>
-            )}
-
-            {/* Current Session Speakers List */}
-            {speakersList.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                {speakersList.map(s => (
-                  <div key={s.id} className="group relative flex items-center gap-1.5 pl-1 pr-2 py-1 bg-slate-50 hover:bg-blue-50/60 border border-slate-200 hover:border-blue-200 rounded-full text-[11px] font-bold text-slate-700 transition-colors">
-                    {/* Clickable Avatar to Replace Photo */}
-                    <label className="relative cursor-pointer" title="Click to change photo">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={s.image} className="w-5 h-5 rounded-full object-cover border border-slate-200 group-hover:border-blue-400 transition-colors" alt="" />
-                      <span className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Camera size={9} className="text-white" />
-                      </span>
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        onChange={(e) => handleUpdateExistingPersonPhoto(s.id, "speaker", e)} 
-                        className="hidden" 
-                      />
-                    </label>
-                    <span className="truncate max-w-[110px]">{s.name}</span>
-                    <button type="button" onClick={() => removePerson(s.id, "speaker")} className="text-slate-400 hover:text-rose-600 font-bold ml-0.5 cursor-pointer" title="Remove speaker">×</button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Moderators */}
-          <div className="flex flex-col gap-2 pt-1 border-t border-slate-100">
-            <div className="flex items-center justify-between">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                {t("calendar.moderators", "Moderators")}
-              </label>
-
-              <div className="flex items-center gap-2">
-                {moderatorImg && moderatorMode === "manual" && (
-                  <button
-                    type="button"
-                    onClick={() => setModeratorImg("")}
-                    className="text-[10px] text-rose-500 hover:text-rose-700 font-semibold cursor-pointer"
-                  >
-                    Clear Photo
-                  </button>
-                )}
-
-                {(allEventModerators.length > 0 || allEventSpeakers.length > 0) && (
-                  <div className="flex items-center bg-slate-100 p-0.5 rounded-lg text-[10px] font-bold">
-                    <button
-                      type="button"
-                      onClick={() => setModeratorMode("list")}
-                      className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
-                        moderatorMode === "list" ? "bg-white text-indigo-700 shadow-2xs font-extrabold" : "text-slate-500 hover:text-slate-800"
-                      }`}
-                    >
-                      From List
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setModeratorMode("manual")}
-                      className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
-                        moderatorMode === "manual" ? "bg-white text-indigo-700 shadow-2xs font-extrabold" : "text-slate-500 hover:text-slate-800"
-                      }`}
-                    >
-                      {t("calendar.newModerator", "New Moderator")}
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* From List Selector */}
-            {moderatorMode === "list" && (allEventModerators.length > 0 || allEventSpeakers.length > 0) ? (
-              <div className="flex gap-2 items-center">
-                <div className="flex-1">
-                  <SearchableSelect
-                    value={selectedModeratorFromList}
-                    onChange={(val) => {
-                      setSelectedModeratorFromList(val);
-                      const list = allEventModerators.length > 0 ? allEventModerators : allEventSpeakers;
-                      const found = list.find(m => m.name === val);
-                      if (found) handleAddExistingModerator(found);
-                    }}
-                    options={(allEventModerators.length > 0 ? allEventModerators : allEventSpeakers).map(m => ({
-                      value: m.name,
-                      label: m.name,
-                      icon: m.image ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={m.image} className="w-5 h-5 rounded-full object-cover border border-slate-200" alt="" />
-                      ) : (
-                        <div className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 font-bold text-[9px] flex items-center justify-center">
-                          {m.name.charAt(0).toUpperCase()}
-                        </div>
-                      ),
-                      badge: moderatorsList.some(item => item.name.toLowerCase() === m.name.toLowerCase()) ? "Added" : undefined,
-                      description: "Event Moderator / Speaker"
-                    }))}
-                    placeholder="-- Select moderator from list --"
-                    searchPlaceholder="Search event moderators..."
-                    buttonClassName="py-2 text-xs"
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!selectedModeratorFromList) {
-                      alert("Please select a moderator from the dropdown.");
-                      return;
-                    }
-                    const list = allEventModerators.length > 0 ? allEventModerators : allEventSpeakers;
-                    const found = list.find(m => m.name === selectedModeratorFromList);
-                    if (found) handleAddExistingModerator(found);
-                  }}
-                  className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer flex items-center gap-1"
-                >
-                  <Plus size={13} />
-                  Add
-                </button>
-              </div>
-            ) : (
-              /* Manual Input */
-              <div className="flex gap-2 items-center">
-                <input 
-                  type="text" 
-                  value={moderatorName}
-                  onChange={(e) => setModeratorName(e.target.value)}
-                  placeholder={t("calendar.moderatorName", "Moderator Name")}
-                  className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-600"
-                />
-                <label className={`px-3 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-all shrink-0 flex items-center gap-1.5 ${
-                  moderatorImg 
-                    ? "border-indigo-300 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-100" 
-                    : "border-slate-200 bg-white hover:bg-slate-50 text-slate-600"
-                }`}>
-                  {isUploadingModerator ? (
-                    <Loader2 size={13} className="animate-spin text-indigo-600" />
-                  ) : moderatorImg ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={moderatorImg} className="w-4 h-4 rounded-full object-cover border border-indigo-200" alt="Preview" />
-                  ) : (
-                    <Camera size={13} />
-                  )}
-                  <span>{isUploadingModerator ? t("common.uploading", "Uploading...") : moderatorImg ? t("calendar.photoAttached", "Photo Attached") : t("calendar.photo", "Photo")}</span>
-                  <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, "moderator")} className="hidden" />
-                </label>
-                <button 
-                  type="button" 
-                  onClick={() => addPerson("moderator")}
-                  className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer"
-                >
-                  Add
-                </button>
-              </div>
-            )}
-
-            {/* Current Session Moderators List */}
-            {moderatorsList.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                {moderatorsList.map(m => (
-                  <div key={m.id} className="group relative flex items-center gap-1.5 pl-1 pr-2 py-1 bg-slate-50 hover:bg-indigo-50/60 border border-slate-200 hover:border-indigo-200 rounded-full text-[11px] font-bold text-slate-700 transition-colors">
-                    <label className="relative cursor-pointer" title="Click to change photo">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={m.image} className="w-5 h-5 rounded-full object-cover border border-slate-200 group-hover:border-indigo-400 transition-colors" alt="" />
-                      <span className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Camera size={9} className="text-white" />
-                      </span>
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        onChange={(e) => handleUpdateExistingPersonPhoto(m.id, "moderator", e)} 
-                        className="hidden" 
-                      />
-                    </label>
-                    <span className="truncate max-w-[110px]">{m.name}</span>
-                    <button type="button" onClick={() => removePerson(m.id, "moderator")} className="text-slate-400 hover:text-rose-600 font-bold ml-0.5 cursor-pointer" title="Remove moderator">×</button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Logos & Partners */}
-          <div className="flex flex-col gap-2 pt-1 border-t border-slate-100">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              {t("calendar.logosPartners", "Logos & Partners")}
-            </label>
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col gap-2.5">
               <input 
                 type="text" 
-                value={logoLabel}
-                onChange={(e) => setLogoLabel(e.target.value)}
-                placeholder={t("calendar.labelPlaceholder", "Label (e.g. Sponsor, Co-Host)")}
-                className="w-full px-3 py-2 border border-slate-200 bg-white rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-600"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder={t("calendar.titlePlaceholder", "e.g. Opening Keynote")} 
+                required
+                className="px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:bg-white focus:border-blue-600 text-xs font-semibold disabled:opacity-75 disabled:bg-slate-100"
               />
+            </div>
 
-              <div className="flex items-center gap-2">
-                <label className={`flex-1 px-3 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-all text-center truncate flex items-center justify-center gap-1.5 ${
-                  logoImg ? "border-blue-300 bg-blue-50 text-blue-700" : "border-slate-200 bg-white hover:bg-slate-50 text-slate-600"
-                }`}>
-                  {isUploadingLogo ? (
-                    <Loader2 size={13} className="animate-spin text-blue-600" />
-                  ) : logoImg ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={logoImg} className="h-4 w-auto object-contain max-w-[50px]" alt="" />
-                  ) : (
-                    <Upload size={13} />
-                  )}
-                  <span>{isUploadingLogo ? t("common.uploading", "Uploading...") : logoImg ? t("calendar.photoAttached", "Logo Attached") : t("calendar.uploadLogoImage", "Upload Logo Image")}</span>
-                  <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, "logo")} className="hidden" />
+            {/* Date */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                * {t("calendar.date", "Date")}
+              </label>
+              <CustomDatePicker
+                value={date}
+                onChange={setDate}
+                placeholder={t("calendar.selectDatePlaceholder", "Select session date")}
+              />
+            </div>
+
+            {/* Start and End Times */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  * {t("calendar.startTime", "Start Time")}
                 </label>
-
-                <button 
-                  type="button" 
-                  onClick={addLogo}
-                  className="px-3.5 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all shadow-xs shrink-0 cursor-pointer"
-                >
-                  Add
-                </button>
+                <CustomTimePicker
+                  value={startTime}
+                  onChange={setStartTime}
+                  placeholder={t("calendar.startTimePlaceholder", "Start time")}
+                  align="left"
+                />
               </div>
 
-              {logosList.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 pt-2 border-t border-slate-200/80">
-                  {logosList.map(l => (
-                    <div key={l.id} className="flex items-center gap-1.5 pl-1.5 pr-2 py-1 bg-white border border-slate-200 rounded-xl text-[10px] font-semibold text-slate-700 shadow-2xs">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={l.image} className="h-4 object-contain max-w-[60px]" alt="" />
-                      <span className="text-[9px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded truncate max-w-[80px]">{l.label}</span>
-                      <button type="button" onClick={() => removeLogo(l.id)} className="text-slate-400 hover:text-rose-500 ml-1 font-bold text-xs">×</button>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  * {t("calendar.endTime", "End Time")}
+                </label>
+                <CustomTimePicker
+                  value={endTime}
+                  onChange={setEndTime}
+                  placeholder={t("calendar.endTimePlaceholder", "End time")}
+                  align="right"
+                />
+              </div>
+            </div>
+
+            {/* Speakers */}
+            <div className="flex flex-col gap-2 pt-1 border-t border-slate-100">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  {t("calendar.speakers", "Speakers")}
+                </label>
+
+                {canEdit && (
+                  <div className="flex items-center gap-2">
+                    {speakerImg && speakerMode === "manual" && (
+                      <button
+                        type="button"
+                        onClick={() => setSpeakerImg("")}
+                        className="text-[10px] text-rose-500 hover:text-rose-700 font-semibold cursor-pointer"
+                      >
+                        {t("calendar.clearPhoto", "Clear Photo")}
+                      </button>
+                    )}
+
+                    {allEventSpeakers.length > 0 && (
+                      <div className="flex items-center bg-slate-100 p-0.5 rounded-lg text-[10px] font-bold">
+                        <button
+                          type="button"
+                          onClick={() => setSpeakerMode("list")}
+                          className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+                            speakerMode === "list" ? "bg-white text-blue-700 shadow-2xs font-extrabold" : "text-slate-500 hover:text-slate-800"
+                          }`}
+                        >
+                          {t("calendar.fromList", "From List")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSpeakerMode("manual")}
+                          className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+                            speakerMode === "manual" ? "bg-white text-blue-700 shadow-2xs font-extrabold" : "text-slate-500 hover:text-slate-800"
+                          }`}
+                        >
+                          {t("calendar.newSpeaker", "New Speaker")}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* From List Selector */}
+              {canEdit && speakerMode === "list" && allEventSpeakers.length > 0 ? (
+                <div className="flex gap-2 items-center">
+                  <div className="flex-1">
+                    <SearchableSelect
+                      value={selectedSpeakerFromList}
+                      disabled={!canEdit}
+                      onChange={(val) => {
+                        setSelectedSpeakerFromList(val);
+                        const found = allEventSpeakers.find(s => s.name === val);
+                        if (found) handleAddExistingSpeaker(found);
+                      }}
+                      options={allEventSpeakers.map(s => ({
+                        value: s.name,
+                        label: s.name,
+                        icon: s.image ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={s.image} className="w-5 h-5 rounded-full object-cover border border-slate-200" alt="" />
+                        ) : (
+                          <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-bold text-[9px] flex items-center justify-center">
+                            {s.name.charAt(0).toUpperCase()}
+                          </div>
+                        ),
+                        badge: speakersList.some(item => item.name.toLowerCase() === s.name.toLowerCase()) ? "Added" : undefined,
+                        description: "Event Speaker"
+                      }))}
+                      placeholder="-- Select speaker from list --"
+                      searchPlaceholder="Search event speakers..."
+                      buttonClassName="py-2 text-xs"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!selectedSpeakerFromList) {
+                        alert("Please select a speaker from the dropdown.");
+                        return;
+                      }
+                      const found = allEventSpeakers.find(s => s.name === selectedSpeakerFromList);
+                      if (found) handleAddExistingSpeaker(found);
+                    }}
+                    className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer flex items-center gap-1"
+                  >
+                    <Plus size={13} />
+                    {t("common.add", "Add")}
+                  </button>
+                </div>
+              ) : canEdit ? (
+                /* Manual Input */
+                <div className="flex gap-2 items-center">
+                  <input 
+                    type="text" 
+                    value={speakerName}
+                    onChange={(e) => setSpeakerName(e.target.value)}
+                    placeholder={t("calendar.speakerName", "Speaker Name")}
+                    className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-600"
+                  />
+                  <label className={`px-3 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-all shrink-0 flex items-center gap-1.5 ${
+                    speakerImg 
+                      ? "border-blue-300 bg-blue-50 text-blue-700 ring-2 ring-blue-100" 
+                      : "border-slate-200 bg-white hover:bg-slate-50 text-slate-600"
+                  }`}>
+                    {isUploadingSpeaker ? (
+                      <Loader2 size={13} className="animate-spin text-blue-600" />
+                    ) : speakerImg ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={speakerImg} className="w-4 h-4 rounded-full object-cover border border-blue-200" alt="Preview" />
+                    ) : (
+                      <Camera size={13} />
+                    )}
+                    <span>{isUploadingSpeaker ? t("common.uploading", "Uploading...") : speakerImg ? t("calendar.photoAttached", "Photo Attached") : t("calendar.photo", "Photo")}</span>
+                    <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, "speaker")} className="hidden" />
+                  </label>
+                  <button 
+                    type="button" 
+                    onClick={() => addPerson("speaker")}
+                    className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer"
+                  >
+                    {t("common.add", "Add")}
+                  </button>
+                </div>
+              ) : null}
+
+              {/* Current Session Speakers List */}
+              {speakersList.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {speakersList.map(s => (
+                    <div key={s.id} className="group relative flex items-center gap-1.5 pl-1 pr-2 py-1 bg-slate-50 hover:bg-blue-50/60 border border-slate-200 hover:border-blue-200 rounded-full text-[11px] font-bold text-slate-700 transition-colors">
+                      {/* Clickable Avatar to Replace Photo */}
+                      <label className={`relative ${canEdit ? "cursor-pointer" : "cursor-default"}`} title={canEdit ? "Click to change photo" : ""}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={s.image} className="w-5 h-5 rounded-full object-cover border border-slate-200 group-hover:border-blue-400 transition-colors" alt="" />
+                        {canEdit && (
+                          <>
+                            <span className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Camera size={9} className="text-white" />
+                            </span>
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              onChange={(e) => handleUpdateExistingPersonPhoto(s.id, "speaker", e)} 
+                              className="hidden" 
+                            />
+                          </>
+                        )}
+                      </label>
+                      <span className="truncate max-w-[110px]">{s.name}</span>
+                      {canEdit && (
+                        <button type="button" onClick={() => removePerson(s.id, "speaker")} className="text-slate-400 hover:text-rose-600 font-bold ml-0.5 cursor-pointer" title="Remove speaker">×</button>
+                      )}
                     </div>
                   ))}
                 </div>
               )}
             </div>
-          </div>
 
-          {/* Description */}
-          <div className="flex flex-col gap-1.5 pt-1 border-t border-slate-100">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              {t("calendar.description", "Description")}
-            </label>
-            <textarea 
-              rows={3} 
-              value={description} 
-              onChange={(e) => setDescription(e.target.value)} 
-              placeholder={t("calendar.descPlaceholder", "Tell us about this session...")} 
-              className="px-3.5 py-2.5 border border-slate-200 bg-slate-50 focus:bg-white rounded-xl text-slate-800 focus:outline-none focus:border-blue-600 text-xs resize-none font-medium"
-            />
-          </div>
+            {/* Moderators */}
+            <div className="flex flex-col gap-2 pt-1 border-t border-slate-100">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  {t("calendar.moderators", "Moderators")}
+                </label>
+
+                {canEdit && (
+                  <div className="flex items-center gap-2">
+                    {moderatorImg && moderatorMode === "manual" && (
+                      <button
+                        type="button"
+                        onClick={() => setModeratorImg("")}
+                        className="text-[10px] text-rose-500 hover:text-rose-700 font-semibold cursor-pointer"
+                      >
+                        Clear Photo
+                      </button>
+                    )}
+
+                    {(allEventModerators.length > 0 || allEventSpeakers.length > 0) && (
+                      <div className="flex items-center bg-slate-100 p-0.5 rounded-lg text-[10px] font-bold">
+                        <button
+                          type="button"
+                          onClick={() => setModeratorMode("list")}
+                          className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+                            moderatorMode === "list" ? "bg-white text-indigo-700 shadow-2xs font-extrabold" : "text-slate-500 hover:text-slate-800"
+                          }`}
+                        >
+                          From List
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setModeratorMode("manual")}
+                          className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+                            moderatorMode === "manual" ? "bg-white text-indigo-700 shadow-2xs font-extrabold" : "text-slate-500 hover:text-slate-800"
+                          }`}
+                        >
+                          {t("calendar.newModerator", "New Moderator")}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* From List Selector */}
+              {canEdit && moderatorMode === "list" && (allEventModerators.length > 0 || allEventSpeakers.length > 0) ? (
+                <div className="flex gap-2 items-center">
+                  <div className="flex-1">
+                    <SearchableSelect
+                      value={selectedModeratorFromList}
+                      disabled={!canEdit}
+                      onChange={(val) => {
+                        setSelectedModeratorFromList(val);
+                        const list = allEventModerators.length > 0 ? allEventModerators : allEventSpeakers;
+                        const found = list.find(m => m.name === val);
+                        if (found) handleAddExistingModerator(found);
+                      }}
+                      options={(allEventModerators.length > 0 ? allEventModerators : allEventSpeakers).map(m => ({
+                        value: m.name,
+                        label: m.name,
+                        icon: m.image ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={m.image} className="w-5 h-5 rounded-full object-cover border border-slate-200" alt="" />
+                        ) : (
+                          <div className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 font-bold text-[9px] flex items-center justify-center">
+                            {m.name.charAt(0).toUpperCase()}
+                          </div>
+                        ),
+                        badge: moderatorsList.some(item => item.name.toLowerCase() === m.name.toLowerCase()) ? "Added" : undefined,
+                        description: "Event Moderator / Speaker"
+                      }))}
+                      placeholder="-- Select moderator from list --"
+                      searchPlaceholder="Search event moderators..."
+                      buttonClassName="py-2 text-xs"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!selectedModeratorFromList) {
+                        alert("Please select a moderator from the dropdown.");
+                        return;
+                      }
+                      const list = allEventModerators.length > 0 ? allEventModerators : allEventSpeakers;
+                      const found = list.find(m => m.name === selectedModeratorFromList);
+                      if (found) handleAddExistingModerator(found);
+                    }}
+                    className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer flex items-center gap-1"
+                  >
+                    <Plus size={13} />
+                    Add
+                  </button>
+                </div>
+              ) : canEdit ? (
+                /* Manual Input */
+                <div className="flex gap-2 items-center">
+                  <input 
+                    type="text" 
+                    value={moderatorName}
+                    onChange={(e) => setModeratorName(e.target.value)}
+                    placeholder={t("calendar.moderatorName", "Moderator Name")}
+                    className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-600"
+                  />
+                  <label className={`px-3 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-all shrink-0 flex items-center gap-1.5 ${
+                    moderatorImg 
+                      ? "border-indigo-300 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-100" 
+                      : "border-slate-200 bg-white hover:bg-slate-50 text-slate-600"
+                  }`}>
+                    {isUploadingModerator ? (
+                      <Loader2 size={13} className="animate-spin text-indigo-600" />
+                    ) : moderatorImg ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={moderatorImg} className="w-4 h-4 rounded-full object-cover border border-indigo-200" alt="Preview" />
+                    ) : (
+                      <Camera size={13} />
+                    )}
+                    <span>{isUploadingModerator ? t("common.uploading", "Uploading...") : moderatorImg ? t("calendar.photoAttached", "Photo Attached") : t("calendar.photo", "Photo")}</span>
+                    <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, "moderator")} className="hidden" />
+                  </label>
+                  <button 
+                    type="button" 
+                    onClick={() => addPerson("moderator")}
+                    className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer"
+                  >
+                    Add
+                  </button>
+                </div>
+              ) : null}
+
+              {/* Current Session Moderators List */}
+              {moderatorsList.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {moderatorsList.map(m => (
+                    <div key={m.id} className="group relative flex items-center gap-1.5 pl-1 pr-2 py-1 bg-slate-50 hover:bg-indigo-50/60 border border-slate-200 hover:border-indigo-200 rounded-full text-[11px] font-bold text-slate-700 transition-colors">
+                      <label className={`relative ${canEdit ? "cursor-pointer" : "cursor-default"}`} title={canEdit ? "Click to change photo" : ""}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={m.image} className="w-5 h-5 rounded-full object-cover border border-slate-200 group-hover:border-indigo-400 transition-colors" alt="" />
+                        {canEdit && (
+                          <>
+                            <span className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Camera size={9} className="text-white" />
+                            </span>
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              onChange={(e) => handleUpdateExistingPersonPhoto(m.id, "moderator", e)} 
+                              className="hidden" 
+                            />
+                          </>
+                        )}
+                      </label>
+                      <span className="truncate max-w-[110px]">{m.name}</span>
+                      {canEdit && (
+                        <button type="button" onClick={() => removePerson(m.id, "moderator")} className="text-slate-400 hover:text-rose-600 font-bold ml-0.5 cursor-pointer" title="Remove moderator">×</button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Logos & Partners */}
+            <div className="flex flex-col gap-2 pt-1 border-t border-slate-100">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                {t("calendar.logosPartners", "Logos & Partners")}
+              </label>
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col gap-2.5">
+                <input 
+                  type="text" 
+                  value={logoLabel}
+                  onChange={(e) => setLogoLabel(e.target.value)}
+                  placeholder={t("calendar.labelPlaceholder", "Label (e.g. Sponsor, Co-Host)")}
+                  className="w-full px-3 py-2 border border-slate-200 bg-white rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-600 disabled:opacity-75 disabled:bg-slate-100"
+                />
+
+                {canEdit && (
+                  <div className="flex items-center gap-2">
+                    <label className={`flex-1 px-3 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-all text-center truncate flex items-center justify-center gap-1.5 ${
+                      logoImg ? "border-blue-300 bg-blue-50 text-blue-700" : "border-slate-200 bg-white hover:bg-slate-50 text-slate-600"
+                    }`}>
+                      {isUploadingLogo ? (
+                        <Loader2 size={13} className="animate-spin text-blue-600" />
+                      ) : logoImg ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={logoImg} className="h-4 w-auto object-contain max-w-[50px]" alt="" />
+                      ) : (
+                        <Upload size={13} />
+                      )}
+                      <span>{isUploadingLogo ? t("common.uploading", "Uploading...") : logoImg ? t("calendar.photoAttached", "Logo Attached") : t("calendar.uploadLogoImage", "Upload Logo Image")}</span>
+                      <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, "logo")} className="hidden" />
+                    </label>
+
+                    <button 
+                      type="button" 
+                      onClick={addLogo}
+                      className="px-3.5 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all shadow-xs shrink-0 cursor-pointer"
+                    >
+                      Add
+                    </button>
+                  </div>
+                )}
+
+                {logosList.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pt-2 border-t border-slate-200/80">
+                    {logosList.map(l => (
+                      <div key={l.id} className="flex items-center gap-1.5 pl-1.5 pr-2 py-1 bg-white border border-slate-200 rounded-xl text-[10px] font-semibold text-slate-700 shadow-2xs">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={l.image} className="h-4 object-contain max-w-[60px]" alt="" />
+                        <span className="text-[9px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded truncate max-w-[80px]">{l.label}</span>
+                        {canEdit && (
+                          <button type="button" onClick={() => removeLogo(l.id)} className="text-slate-400 hover:text-rose-500 ml-1 font-bold text-xs cursor-pointer">×</button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="flex flex-col gap-1.5 pt-1 border-t border-slate-100">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                {t("calendar.description", "Description")}
+              </label>
+              <textarea 
+                rows={3} 
+                value={description} 
+                onChange={(e) => setDescription(e.target.value)} 
+                placeholder={t("calendar.descPlaceholder", "Tell us about this session...")} 
+                className="px-3.5 py-2.5 border border-slate-200 bg-slate-50 focus:bg-white rounded-xl text-slate-800 focus:outline-none focus:border-blue-600 text-xs resize-none font-medium disabled:opacity-75 disabled:bg-slate-100"
+              />
+            </div>
+          </fieldset>
 
           {/* Form Action Buttons */}
           <div className="flex flex-col gap-2 pt-2 border-t border-slate-100">
-            <button 
-              type="submit" 
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-xl font-bold text-xs transition-all shadow-md shadow-blue-600/20 cursor-pointer"
-            >
-              {editingSessionId ? t("calendar.updateSession", "Update Session") : t("calendar.createSession", "Create Session")}
-            </button>
+            {canEdit && (
+              <button 
+                type="submit" 
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-xl font-bold text-xs transition-all shadow-md shadow-blue-600/20 cursor-pointer"
+              >
+                {editingSessionId ? t("calendar.updateSession", "Update Session") : t("calendar.createSession", "Create Session")}
+              </button>
+            )}
 
             {editingSessionId && (
               <button 
@@ -957,7 +1008,7 @@ export default function CalendarView({
                 onClick={resetForm}
                 className="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 py-2.5 px-4 rounded-xl font-bold text-xs transition-all cursor-pointer"
               >
-                {t("calendar.cancelEdit", "Cancel Edit")}
+                {canEdit ? t("calendar.cancelEdit", "Cancel Edit") : t("common.close", "Close Details")}
               </button>
             )}
           </div>
@@ -989,7 +1040,7 @@ export default function CalendarView({
             </p>
           </div>
 
-          {sessions.length > 0 && (
+          {sessions.length > 0 && canEdit && (
             <button 
               type="button"
               onClick={onClearAllSessions}
@@ -1087,49 +1138,52 @@ export default function CalendarView({
                           )}
                         </div>
 
-                        <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className={`flex items-center gap-1.5 ${!canEdit ? "opacity-100" : "opacity-0 group-hover:opacity-100 transition-opacity"}`}>
                           {!isArchivedSession && (
                             <button 
                               type="button"
                               onClick={() => startEdit(session)}
-                              className="px-2.5 py-1 bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 rounded-lg text-xs font-bold transition-colors cursor-pointer"
-                              title="Edit Session"
+                              className="px-2.5 py-1 bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
+                              title={canEdit ? "Edit Session" : "View Session"}
                             >
-                              {t("common.edit", "Edit")}
+                              {!canEdit && <Eye size={12} />}
+                              <span>{canEdit ? t("common.edit", "Edit") : t("common.view", "View")}</span>
                             </button>
                           )}
 
-                          {isArchivedSession ? (
-                            <div className="flex items-center gap-1">
+                          {canEdit && (
+                            isArchivedSession ? (
+                              <div className="flex items-center gap-1">
+                                <button 
+                                  type="button"
+                                  onClick={() => handleRestore(session.id)}
+                                  className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
+                                  title="Restore Session"
+                                >
+                                  <RotateCcw size={12} />
+                                  <span>{t("common.restore", "Restore")}</span>
+                                </button>
+                                <button 
+                                  type="button"
+                                  onClick={() => handleDeletePermanent(session.id)}
+                                  className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
+                                  title="Delete Session Permanently"
+                                >
+                                  <Trash2 size={12} />
+                                  <span>{t("common.delete", "Delete")}</span>
+                                </button>
+                              </div>
+                            ) : (
                               <button 
                                 type="button"
-                                onClick={() => handleRestore(session.id)}
-                                className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
-                                title="Restore Session"
+                                onClick={() => handleArchive(session.id)}
+                                className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
+                                title="Archive Session (Data preserved)"
                               >
-                                <RotateCcw size={12} />
-                                <span>{t("common.restore", "Restore")}</span>
+                                <Archive size={11} />
+                                <span>{t("common.archive", "Archive")}</span>
                               </button>
-                              <button 
-                                type="button"
-                                onClick={() => handleDeletePermanent(session.id)}
-                                className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
-                                title="Delete Session Permanently"
-                              >
-                                <Trash2 size={12} />
-                                <span>{t("common.delete", "Delete")}</span>
-                              </button>
-                            </div>
-                          ) : (
-                            <button 
-                              type="button"
-                              onClick={() => handleArchive(session.id)}
-                              className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
-                              title="Archive Session (Data preserved)"
-                            >
-                              <Archive size={11} />
-                              <span>{t("common.archive", "Archive")}</span>
-                            </button>
+                            )
                           )}
                         </div>
                       </div>

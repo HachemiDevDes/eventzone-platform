@@ -3238,6 +3238,7 @@ export default function CertificatesView({
             </div>
           )}
 
+          </fieldset>
         </div>
 
         {/* RIGHT COLUMN: Live Canvas Preview & Recipient Switcher (7 cols) */}
@@ -3275,24 +3276,28 @@ export default function CertificatesView({
             </div>
 
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => handleOpenEmailModal(currentPreviewRecipient)}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 font-bold text-xs transition-all cursor-pointer shadow-2xs"
-                title={t("cert.sendEmailTooltip", "Send Certificate via Email")}
-              >
-                <Mail size={13} />
-                <span>{t("cert.emailCertificateBtn", "Email Certificate")}</span>
-              </button>
+              {canEdit && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenEmailModal(currentPreviewRecipient)}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 font-bold text-xs transition-all cursor-pointer shadow-2xs"
+                    title={t("cert.sendEmailTooltip", "Send Certificate via Email")}
+                  >
+                    <Mail size={13} />
+                    <span>{t("cert.emailCertificateBtn", "Email Certificate")}</span>
+                  </button>
 
-              <button
-                type="button"
-                onClick={() => handlePrintSingle(currentPreviewRecipient)}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold text-xs transition-all cursor-pointer shadow-2xs border border-blue-200/60"
-              >
-                <Printer size={13} />
-                <span>{t("cert.printCertificateBtn", "Print Certificate")}</span>
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => handlePrintSingle(currentPreviewRecipient)}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold text-xs transition-all cursor-pointer shadow-2xs border border-blue-200/60"
+                  >
+                    <Printer size={13} />
+                    <span>{t("cert.printCertificateBtn", "Print Certificate")}</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
@@ -3459,21 +3464,25 @@ export default function CertificatesView({
                             <Eye size={14} />
                           </button>
 
-                          <button
-                            onClick={() => handleOpenEmailModal(rec)}
-                            className="p-1.5 rounded-lg border border-slate-200 hover:bg-blue-50 text-slate-600 hover:text-blue-600 transition-all cursor-pointer"
-                            title={t("cert.sendEmailTooltip", "Send Certificate via Email")}
-                          >
-                            <Mail size={14} />
-                          </button>
+                          {canEdit && (
+                            <>
+                              <button
+                                onClick={() => handleOpenEmailModal(rec)}
+                                className="p-1.5 rounded-lg border border-slate-200 hover:bg-blue-50 text-slate-600 hover:text-blue-600 transition-all cursor-pointer"
+                                title={t("cert.sendEmailTooltip", "Send Certificate via Email")}
+                              >
+                                <Mail size={14} />
+                              </button>
 
-                          <button
-                            onClick={() => handlePrintSingle(rec)}
-                            className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 transition-all cursor-pointer"
-                            title={t("cert.printCertificateBtn", "Print Certificate")}
-                          >
-                            <Printer size={14} />
-                          </button>
+                              <button
+                                onClick={() => handlePrintSingle(rec)}
+                                className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 transition-all cursor-pointer"
+                                title={t("cert.printCertificateBtn", "Print Certificate")}
+                              >
+                                <Printer size={14} />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>

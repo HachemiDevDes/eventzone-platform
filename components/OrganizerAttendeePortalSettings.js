@@ -14,6 +14,7 @@ import QRCode from "qrcode";
 import { useLanguage } from "../lib/i18n";
 import SearchableSelect from "./SearchableSelect";
 import { updateEventDetails } from "../lib/db";
+import { canEditModule } from "../lib/permissions";
 
 export default function OrganizerAttendeePortalSettings({
   eventDetails = {},
@@ -27,9 +28,11 @@ export default function OrganizerAttendeePortalSettings({
   onUpdateEventDetails,
   onSendBroadcastEmail,
   onPreviewAttendeePortal,
-  currentUser
+  currentUser,
+  effectivePermissions = null
 }) {
   const { t, isRTL } = useLanguage();
+  const canEdit = canEditModule("portal-settings", effectivePermissions);
   const [activeTab, setActiveTab] = useState("availability"); // "availability" | "modules" | "share" | "broadcast" | "delegates"
   const [searchQuery, setSearchQuery] = useState("");
   const [copiedLink, setCopiedLink] = useState(false);
@@ -116,6 +119,7 @@ export default function OrganizerAttendeePortalSettings({
 
   // Save Settings to Database & Parent State
   const handleSaveSettings = async () => {
+    if (!canEdit) return;
     setIsSaving(true);
     setSaveSuccess(false);
 
@@ -156,6 +160,7 @@ export default function OrganizerAttendeePortalSettings({
   };
 
   const handleDownloadQr = () => {
+    if (!canEdit) return;
     if (!portalQrUrl) return;
     const a = document.createElement("a");
     a.href = portalQrUrl;
@@ -167,6 +172,7 @@ export default function OrganizerAttendeePortalSettings({
 
   const handleDispatchBroadcast = async (e) => {
     e.preventDefault();
+    if (!canEdit) return;
     setIsBroadcasting(true);
     setBroadcastDone(false);
 
@@ -220,6 +226,13 @@ export default function OrganizerAttendeePortalSettings({
         </div>
 
         <div className="flex items-center flex-wrap gap-2.5">
+          {!canEdit && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 shadow-2xs">
+              <Eye size={14} />
+              <span>Viewer Mode (Read-Only)</span>
+            </span>
+          )}
+
           <button
             onClick={onPreviewAttendeePortal}
             className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl text-xs sm:text-sm transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
@@ -230,20 +243,22 @@ export default function OrganizerAttendeePortalSettings({
             <ArrowUpRight size={13} className="text-slate-400" />
           </button>
 
-          <button
-            onClick={handleSaveSettings}
-            disabled={isSaving}
-            className="bg-indigo-650 hover:bg-indigo-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs sm:text-sm shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
-          >
-            {isSaving ? (
-              <RefreshCw size={14} className="animate-spin" />
-            ) : saveSuccess ? (
-              <Check size={14} className="text-emerald-300" />
-            ) : (
-              <Save size={15} />
-            )}
-            <span>{isSaving ? t("common.saving", "Saving...") : saveSuccess ? t("portalSettings.settingsSaved", "Settings Saved!") : t("portalSettings.saveSettings", "Save Portal Settings")}</span>
-          </button>
+          {canEdit && (
+            <button
+              onClick={handleSaveSettings}
+              disabled={isSaving}
+              className="bg-indigo-650 hover:bg-indigo-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs sm:text-sm shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+            >
+              {isSaving ? (
+                <RefreshCw size={14} className="animate-spin" />
+              ) : saveSuccess ? (
+                <Check size={14} className="text-emerald-300" />
+              ) : (
+                <Save size={15} />
+              )}
+              <span>{isSaving ? t("common.saving", "Saving...") : saveSuccess ? t("portalSettings.settingsSaved", "Settings Saved!") : t("portalSettings.saveSettings", "Save Portal Settings")}</span>
+            </button>
+          )}
         </div>
       </header>
 
@@ -445,7 +460,7 @@ export default function OrganizerAttendeePortalSettings({
       {/* SUBTAB 1: AVAILABILITY & ACCESS                                      */}
       {/* ==================================================================== */}
       {activeTab === "availability" && (
-        <div className="space-y-6 animate-fade-in">
+        <fieldset disabled={!canEdit} className="space-y-6 animate-fade-in block border-0 p-0 m-0">
           
           {/* Status Selection Cards */}
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
@@ -458,8 +473,10 @@ export default function OrganizerAttendeePortalSettings({
               
               {/* Option 1: Open */}
               <div
-                onClick={() => setPortalStatus("open")}
-                className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between space-y-3 relative ${
+                onClick={canEdit ? () => setPortalStatus("open") : undefined}
+                className={`p-5 rounded-2xl border-2 transition-all flex flex-col justify-between space-y-3 relative ${
+                  canEdit ? "cursor-pointer" : "cursor-default"
+                } ${
                   portalStatus === "open"
                     ? "border-emerald-500 bg-emerald-50/40 shadow-xs"
                     : "border-slate-200 bg-white hover:border-slate-300"
@@ -488,8 +505,10 @@ export default function OrganizerAttendeePortalSettings({
 
               {/* Option 2: Scheduled */}
               <div
-                onClick={() => setPortalStatus("scheduled")}
-                className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between space-y-3 relative ${
+                onClick={canEdit ? () => setPortalStatus("scheduled") : undefined}
+                className={`p-5 rounded-2xl border-2 transition-all flex flex-col justify-between space-y-3 relative ${
+                  canEdit ? "cursor-pointer" : "cursor-default"
+                } ${
                   portalStatus === "scheduled"
                     ? "border-amber-500 bg-amber-50/40 shadow-xs"
                     : "border-slate-200 bg-white hover:border-slate-300"
@@ -518,8 +537,10 @@ export default function OrganizerAttendeePortalSettings({
 
               {/* Option 3: Closed */}
               <div
-                onClick={() => setPortalStatus("closed")}
-                className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between space-y-3 relative ${
+                onClick={canEdit ? () => setPortalStatus("closed") : undefined}
+                className={`p-5 rounded-2xl border-2 transition-all flex flex-col justify-between space-y-3 relative ${
+                  canEdit ? "cursor-pointer" : "cursor-default"
+                } ${
                   portalStatus === "closed"
                     ? "border-rose-500 bg-rose-50/40 shadow-xs"
                     : "border-slate-200 bg-white hover:border-slate-300"
@@ -583,14 +604,14 @@ export default function OrganizerAttendeePortalSettings({
             />
           </div>
 
-        </div>
+        </fieldset>
       )}
 
       {/* ==================================================================== */}
       {/* SUBTAB 2: FEATURE MODULES & TOGGLES                                  */}
       {/* ==================================================================== */}
       {activeTab === "modules" && (
-        <div className="space-y-6 animate-fade-in">
+        <fieldset disabled={!canEdit} className="space-y-6 animate-fade-in block border-0 p-0 m-0">
           
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
             <div>
@@ -705,7 +726,7 @@ export default function OrganizerAttendeePortalSettings({
             </div>
           </div>
 
-        </div>
+        </fieldset>
       )}
 
       {/* ==================================================================== */}
@@ -772,15 +793,17 @@ export default function OrganizerAttendeePortalSettings({
               )}
             </div>
 
-            <div>
-              <button
-                onClick={handleDownloadQr}
-                className="px-5 py-2.5 bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 rounded-xl text-xs font-bold transition-all shadow-xs inline-flex items-center gap-2 cursor-pointer"
-              >
-                <Download size={14} />
-                <span>{t("portalSettings.downloadQr", "Download High-Res QR Image")}</span>
-              </button>
-            </div>
+            {canEdit && (
+              <div>
+                <button
+                  onClick={handleDownloadQr}
+                  className="px-5 py-2.5 bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 rounded-xl text-xs font-bold transition-all shadow-xs inline-flex items-center gap-2 cursor-pointer"
+                >
+                  <Download size={14} />
+                  <span>{t("portalSettings.downloadQr", "Download High-Res QR Image")}</span>
+                </button>
+              </div>
+            )}
           </div>
 
         </div>
@@ -802,6 +825,7 @@ export default function OrganizerAttendeePortalSettings({
           </div>
 
           <form onSubmit={handleDispatchBroadcast} className="space-y-4 pt-1">
+            <fieldset disabled={!canEdit} className="space-y-4 block border-0 p-0 m-0">
             <div>
               <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
                 {t("portalSettings.emailSubjectLabel", "Email Subject Line")}
@@ -840,27 +864,34 @@ export default function OrganizerAttendeePortalSettings({
               </div>
             </div>
 
-            <div className="pt-2">
-              <button
-                type="submit"
-                disabled={isBroadcasting || attendees.length === 0}
-                className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-xs font-bold shadow-md shadow-blue-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-              >
-                {isBroadcasting ? (
-                  <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                ) : broadcastDone ? (
-                  <>
-                    <CheckCircle2 size={16} className="text-emerald-300" />
-                    <span>{t("portalSettings.broadcastSuccess", "Broadcast Sent Successfully!")}</span>
-                  </>
-                ) : (
-                  <>
-                    <Send size={15} />
-                    <span>{t("portalSettings.sendBroadcastBtn", "Send Portal Access Email to {count} Attendees", { count: attendees.length })}</span>
-                  </>
-                )}
-              </button>
-            </div>
+            {canEdit ? (
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={isBroadcasting || attendees.length === 0}
+                  className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-xs font-bold shadow-md shadow-blue-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isBroadcasting ? (
+                    <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                  ) : broadcastDone ? (
+                    <>
+                      <CheckCircle2 size={16} className="text-emerald-300" />
+                      <span>{t("portalSettings.broadcastSuccess", "Broadcast Sent Successfully!")}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send size={15} />
+                      <span>{t("portalSettings.sendBroadcastBtn", "Send Portal Access Email to {count} Attendees", { count: attendees.length })}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            ) : (
+              <div className="p-3 bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold rounded-xl text-center">
+                Broadcasting email invitations is restricted in Viewer Mode.
+              </div>
+            )}
+            </fieldset>
           </form>
         </div>
       )}

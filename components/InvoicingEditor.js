@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { 
   ArrowLeft, Save, Share2, Download, Plus, Trash2, 
   GripVertical, Check, Upload, Copy, FileText, 
-  Calendar, CheckCircle2, AlertCircle, Printer
+  Calendar, CheckCircle2, AlertCircle, Printer, Eye
 } from "lucide-react";
 import SearchableSelect from "./SearchableSelect";
 import InvoicingDocumentPreview from "./InvoicingDocumentPreview";
@@ -35,6 +35,7 @@ export default function InvoicingEditor({
   onSave,
   onCopyShareLink,
   onDownloadPdf,
+  canEdit = true,
 }) {
   const [doc, setDoc] = useState(() => {
     if (initialDocument) return initialDocument;
@@ -385,6 +386,13 @@ export default function InvoicingEditor({
         </button>
 
         <div className="flex items-center gap-2.5">
+          {!canEdit && (
+            <span className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 font-bold text-xs border border-slate-200/80 flex items-center gap-1.5 shadow-xs">
+              <Eye size={13} className="text-slate-500" />
+              <span>Viewer Mode</span>
+            </span>
+          )}
+
           <button
             onClick={() => onCopyShareLink(doc)}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
@@ -394,23 +402,25 @@ export default function InvoicingEditor({
             <span>Copier le lien</span>
           </button>
 
-          <button
-            onClick={handleSaveDocument}
-            disabled={isSaving}
-            className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-all cursor-pointer active:scale-95"
-          >
-            {saveSuccess ? (
-              <>
-                <CheckCircle2 size={14} />
-                <span>Enregistré !</span>
-              </>
-            ) : (
-              <>
-                <Save size={14} />
-                <span>{isSaving ? "Enregistrement..." : "Enregistrer"}</span>
-              </>
-            )}
-          </button>
+          {canEdit && (
+            <button
+              onClick={handleSaveDocument}
+              disabled={isSaving}
+              className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-all cursor-pointer active:scale-95"
+            >
+              {saveSuccess ? (
+                <>
+                  <CheckCircle2 size={14} />
+                  <span>Enregistré !</span>
+                </>
+              ) : (
+                <>
+                  <Save size={14} />
+                  <span>{isSaving ? "Enregistrement..." : "Enregistrer"}</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
@@ -418,6 +428,14 @@ export default function InvoicingEditor({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* LEFT COLUMN: Form Configuration (7 cols on lg) */}
         <div className="lg:col-span-6 xl:col-span-6 space-y-6">
+          {!canEdit && (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3 text-amber-800 text-xs font-medium">
+              <AlertCircle size={16} className="text-amber-600 shrink-0" />
+              <span>Vous êtes en mode consultation. La modification, l'ajout et l'enregistrement sont désactivés pour votre rôle.</span>
+            </div>
+          )}
+
+          <fieldset disabled={!canEdit} className="contents">
           {/* Card 1: Configuration du document */}
           <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-xs space-y-4">
             <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
@@ -497,22 +515,24 @@ export default function InvoicingEditor({
               </div>
 
               {/* Logo Upload */}
-              <div>
-                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
-                  LOGO
-                </label>
-                <label className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs font-bold text-slate-700 cursor-pointer transition-colors">
-                  <Upload size={13} />
-                  <span>{isUploadingLogo ? "Upload..." : "Changer"}</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleLogoUpload}
-                    disabled={isUploadingLogo}
-                    className="hidden"
-                  />
-                </label>
-              </div>
+              {canEdit && (
+                <div>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
+                    LOGO
+                  </label>
+                  <label className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs font-bold text-slate-700 cursor-pointer transition-colors">
+                    <Upload size={13} />
+                    <span>{isUploadingLogo ? "Upload..." : "Changer"}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoUpload}
+                      disabled={isUploadingLogo}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+              )}
             </div>
           </div>
 
@@ -997,25 +1017,28 @@ export default function InvoicingEditor({
           </div>
 
           {/* Bottom Save Action Button (Eventzone blue) */}
-          <div>
-            <button
-              onClick={handleSaveDocument}
-              disabled={isSaving}
-              className="w-full py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white text-xs font-bold shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2"
-            >
-              {saveSuccess ? (
-                <>
-                  <CheckCircle2 size={16} />
-                  <span>Document enregistré !</span>
-                </>
-              ) : (
-                <>
-                  <Save size={16} />
-                  <span>{isSaving ? "Enregistrement en cours..." : "Enregistrer le document"}</span>
-                </>
-              )}
-            </button>
-          </div>
+          {canEdit && (
+            <div>
+              <button
+                onClick={handleSaveDocument}
+                disabled={isSaving}
+                className="w-full py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white text-xs font-bold shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                {saveSuccess ? (
+                  <>
+                    <CheckCircle2 size={16} />
+                    <span>Document enregistré !</span>
+                  </>
+                ) : (
+                  <>
+                    <Save size={16} />
+                    <span>{isSaving ? "Enregistrement en cours..." : "Enregistrer le document"}</span>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+          </fieldset>
         </div>
 
         {/* RIGHT COLUMN: Sticky Live A4 Preview (6 cols on lg) */}
@@ -1026,44 +1049,50 @@ export default function InvoicingEditor({
             </span>
 
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleSaveDocument}
-                disabled={isSaving}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition-colors cursor-pointer shadow-xs disabled:opacity-50"
-                title="Enregistrer"
-              >
-                {saveSuccess ? <CheckCircle2 size={13} className="text-emerald-600" /> : <Save size={13} />}
-                <span>{saveSuccess ? "Enregistré" : isSaving ? "..." : "Enregistrer"}</span>
-              </button>
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={handleSaveDocument}
+                  disabled={isSaving}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+                  title="Enregistrer"
+                >
+                  {saveSuccess ? <CheckCircle2 size={13} className="text-emerald-600" /> : <Save size={13} />}
+                  <span>{saveSuccess ? "Enregistré" : isSaving ? "..." : "Enregistrer"}</span>
+                </button>
+              )}
 
-              <button
-                type="button"
-                onClick={handlePrintDocument}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition-colors cursor-pointer shadow-xs"
-                title="Imprimer"
-              >
-                <Printer size={13} />
-                <span>Imprimer</span>
-              </button>
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={handlePrintDocument}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition-colors cursor-pointer shadow-xs"
+                  title="Imprimer"
+                >
+                  <Printer size={13} />
+                  <span>Imprimer</span>
+                </button>
+              )}
 
-              <button
-                type="button"
-                disabled={isDownloading}
-                onClick={async () => {
-                  if (isDownloading) return;
-                  setIsDownloading(true);
-                  try {
-                    await onDownloadPdf(doc);
-                  } finally {
-                    setIsDownloading(false);
-                  }
-                }}
-                className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-60"
-              >
-                <Download size={13} />
-                <span>{isDownloading ? "Téléchargement..." : "Télécharger PDF"}</span>
-              </button>
+              {canEdit && (
+                <button
+                  type="button"
+                  disabled={isDownloading}
+                  onClick={async () => {
+                    if (isDownloading) return;
+                    setIsDownloading(true);
+                    try {
+                      await onDownloadPdf(doc);
+                    } finally {
+                      setIsDownloading(false);
+                    }
+                  }}
+                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-60"
+                >
+                  <Download size={13} />
+                  <span>{isDownloading ? "Téléchargement..." : "Télécharger PDF"}</span>
+                </button>
+              )}
             </div>
           </div>
 

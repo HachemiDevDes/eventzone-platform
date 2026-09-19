@@ -36,6 +36,7 @@ export default function InvoicingDashboard({
   onStatusChange,
   onCopyShareLink,
   onDownloadPdf,
+  canEdit = true,
 }) {
   const { t, isRTL } = useLanguage();
   const [activeTab, setActiveTab] = useState("all"); // 'all' | 'facture' | 'devis' | 'proforma'
@@ -223,83 +224,96 @@ export default function InvoicingDashboard({
         </div>
 
         <div className="flex items-center flex-wrap gap-2.5">
+          {!canEdit && (
+            <span className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 font-bold text-xs border border-slate-200/80 flex items-center gap-1.5 shadow-xs">
+              <Eye size={13} className="text-slate-500" />
+              <span>Viewer Mode</span>
+            </span>
+          )}
+
           {/* Export Manifest CSV */}
-          <button
-            onClick={handleExportCSV}
-            className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl text-xs sm:text-sm transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
-            title={t("invoicing.exportCsv", "Exporter en CSV")}
-          >
-            <Download size={14} />
-            <span>{t("invoicing.exportCsv", "Exporter (CSV)")}</span>
-          </button>
+          {canEdit && (
+            <button
+              onClick={handleExportCSV}
+              className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl text-xs sm:text-sm transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+              title={t("invoicing.exportCsv", "Exporter en CSV")}
+            >
+              <Download size={14} />
+              <span>{t("invoicing.exportCsv", "Exporter (CSV)")}</span>
+            </button>
+          )}
 
           {/* Profile Settings Modal Trigger */}
-          <button
-            onClick={onOpenSettings}
-            className="p-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-colors cursor-pointer bg-white shadow-xs"
-            title={t("invoicing.fiscalSettings", "Paramètres fiscaux & profil")}
-          >
-            <Settings size={16} />
-          </button>
+          {canEdit && (
+            <button
+              onClick={onOpenSettings}
+              className="p-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-colors cursor-pointer bg-white shadow-xs"
+              title={t("invoicing.fiscalSettings", "Paramètres fiscaux & profil")}
+            >
+              <Settings size={16} />
+            </button>
+          )}
 
           {/* Primary Create Button with dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setIsNewDocMenuOpen(!isNewDocMenuOpen)}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs sm:text-sm shadow-sm transition-all flex items-center gap-2 cursor-pointer active:scale-95"
-            >
-              <Plus size={16} />
-              <span>
-                {activeTab === "facture" && t("invoicing.newFacture", "Nouvelle facture")}
-                {activeTab === "devis" && t("invoicing.newDevis", "Nouveau devis")}
-                {activeTab === "proforma" && t("invoicing.newProforma", "Nouvelle proforma")}
-                {activeTab === "all" && t("invoicing.newDoc", "Nouveau document")}
-              </span>
-              <ChevronDown size={13} className="opacity-80" />
-            </button>
+          {canEdit && (
+            <div className="relative">
+              <button
+                onClick={() => setIsNewDocMenuOpen(!isNewDocMenuOpen)}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs sm:text-sm shadow-sm transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+              >
+                <Plus size={16} />
+                <span>
+                  {activeTab === "facture" && t("invoicing.newFacture", "Nouvelle facture")}
+                  {activeTab === "devis" && t("invoicing.newDevis", "Nouveau devis")}
+                  {activeTab === "proforma" && t("invoicing.newProforma", "Nouvelle proforma")}
+                  {activeTab === "all" && t("invoicing.newDoc", "Nouveau document")}
+                </span>
+                <ChevronDown size={13} className="opacity-80" />
+              </button>
 
-            {/* Click Dropdown Menu */}
-            {isNewDocMenuOpen && (
-              <>
-                <div 
-                  className="fixed inset-0 z-20"
-                  onClick={() => setIsNewDocMenuOpen(false)}
-                />
-                <div className="absolute end-0 top-full mt-1.5 w-48 bg-white border border-slate-200 rounded-2xl shadow-xl p-1.5 z-30 animate-scale-up">
-                  <button
-                    onClick={() => {
-                      onCreateNewDocument("facture");
-                      setIsNewDocMenuOpen(false);
-                    }}
-                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2 transition-colors cursor-pointer"
-                  >
-                    <FileText size={14} className="text-blue-600" />
-                    <span>{t("invoicing.invoice", "Facture")}</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      onCreateNewDocument("devis");
-                      setIsNewDocMenuOpen(false);
-                    }}
-                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:bg-amber-50 hover:text-amber-700 flex items-center gap-2 transition-colors cursor-pointer"
-                  >
-                    <FileCheck size={14} className="text-amber-600" />
-                    <span>{t("invoicing.quote", "Devis")}</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      onCreateNewDocument("proforma");
-                      setIsNewDocMenuOpen(false);
-                    }}
-                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:bg-purple-50 hover:text-purple-700 flex items-center gap-2 transition-colors cursor-pointer"
-                  >
-                    <FileSpreadsheet size={14} className="text-purple-600" />
-                    <span>{t("invoicing.proforma", "Facture Proforma")}</span>
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+              {/* Click Dropdown Menu */}
+              {isNewDocMenuOpen && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-20"
+                    onClick={() => setIsNewDocMenuOpen(false)}
+                  />
+                  <div className="absolute end-0 top-full mt-1.5 w-48 bg-white border border-slate-200 rounded-2xl shadow-xl p-1.5 z-30 animate-scale-up">
+                    <button
+                      onClick={() => {
+                        onCreateNewDocument("facture");
+                        setIsNewDocMenuOpen(false);
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2 transition-colors cursor-pointer"
+                    >
+                      <FileText size={14} className="text-blue-600" />
+                      <span>{t("invoicing.invoice", "Facture")}</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        onCreateNewDocument("devis");
+                        setIsNewDocMenuOpen(false);
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:bg-amber-50 hover:text-amber-700 flex items-center gap-2 transition-colors cursor-pointer"
+                    >
+                      <FileCheck size={14} className="text-amber-600" />
+                      <span>{t("invoicing.quote", "Devis")}</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        onCreateNewDocument("proforma");
+                        setIsNewDocMenuOpen(false);
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:bg-purple-50 hover:text-purple-700 flex items-center gap-2 transition-colors cursor-pointer"
+                    >
+                      <FileSpreadsheet size={14} className="text-purple-600" />
+                      <span>{t("invoicing.proforma", "Facture Proforma")}</span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </header>
 
@@ -548,19 +562,21 @@ export default function InvoicingDashboard({
           <p className="text-xs text-slate-500 max-w-sm mx-auto">
             {t("invoicing.emptyDesc", "Générez des devis certifiés, émettez vos factures conformes et suivez vos encaissements en temps réel.")}
           </p>
-          <button
-            onClick={() => onCreateNewDocument(activeTab === "all" ? "facture" : activeTab)}
-            className="px-4 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-700 transition-colors inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
-          >
-            <Plus size={14} />
-            <span>
-              {activeTab === "devis"
-                ? t("invoicing.createFirstQuote", "Créer un devis")
-                : activeTab === "proforma"
-                ? t("invoicing.createFirstProforma", "Créer une proforma")
-                : t("invoicing.createFirstInvoice", "Créer une facture")}
-            </span>
-          </button>
+          {canEdit && (
+            <button
+              onClick={() => onCreateNewDocument(activeTab === "all" ? "facture" : activeTab)}
+              className="px-4 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-700 transition-colors inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
+            >
+              <Plus size={14} />
+              <span>
+                {activeTab === "devis"
+                  ? t("invoicing.createFirstQuote", "Créer un devis")
+                  : activeTab === "proforma"
+                  ? t("invoicing.createFirstProforma", "Créer une proforma")
+                  : t("invoicing.createFirstInvoice", "Créer une facture")}
+              </span>
+            </button>
+          )}
         </div>
       ) : (
         <div className="bg-white rounded-3xl border border-slate-150 shadow-xs overflow-hidden">
@@ -666,48 +682,54 @@ export default function InvoicingDashboard({
                         )}
                       </td>
 
-                      {/* STATUT (Dropdown button) */}
+                      {/* STATUT (Dropdown button or Read-Only Badge) */}
                       <td className="px-4 py-3.5 whitespace-nowrap text-center relative">
-                        <div className="relative inline-block text-left">
-                          <button
-                            type="button"
-                            onClick={() => setOpenStatusMenuId(isMenuOpen ? null : inv.id)}
-                            className="px-3 py-1 rounded-xl text-[11px] font-bold border border-slate-200 bg-white hover:bg-slate-50 text-slate-800 flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
-                          >
-                            <span>{statusObj.label}</span>
-                            <ChevronDown size={12} className="text-slate-400" />
-                          </button>
+                        {canEdit ? (
+                          <div className="relative inline-block text-left">
+                            <button
+                              type="button"
+                              onClick={() => setOpenStatusMenuId(isMenuOpen ? null : inv.id)}
+                              className="px-3 py-1 rounded-xl text-[11px] font-bold border border-slate-200 bg-white hover:bg-slate-50 text-slate-800 flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+                            >
+                              <span>{statusObj.label}</span>
+                              <ChevronDown size={12} className="text-slate-400" />
+                            </button>
 
-                          {/* Status Dropdown Popover */}
-                          {isMenuOpen && (
-                            <>
-                              <div
-                                className="fixed inset-0 z-20"
-                                onClick={() => setOpenStatusMenuId(null)}
-                              />
-                              <div className="absolute right-0 top-full mt-1 w-36 bg-white border border-slate-200 rounded-xl shadow-xl p-1 z-30 animate-scale-up">
-                                {DOCUMENT_STATUSES.map((st) => (
-                                  <button
-                                    key={st.id}
-                                    type="button"
-                                    onClick={() => {
-                                      if (onStatusChange) onStatusChange(inv.id, st.id);
-                                      setOpenStatusMenuId(null);
-                                    }}
-                                    className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
-                                      inv.status === st.id
-                                        ? "bg-blue-600 text-white font-bold"
-                                        : "text-slate-700 hover:bg-slate-50"
-                                    }`}
-                                  >
-                                    <span>{st.label}</span>
-                                    {inv.status === st.id && <Check size={12} />}
-                                  </button>
-                                ))}
-                              </div>
-                            </>
-                          )}
-                        </div>
+                            {/* Status Dropdown Popover */}
+                            {isMenuOpen && (
+                              <>
+                                <div
+                                  className="fixed inset-0 z-20"
+                                  onClick={() => setOpenStatusMenuId(null)}
+                                />
+                                <div className="absolute right-0 top-full mt-1 w-36 bg-white border border-slate-200 rounded-xl shadow-xl p-1 z-30 animate-scale-up">
+                                  {DOCUMENT_STATUSES.map((st) => (
+                                    <button
+                                      key={st.id}
+                                      type="button"
+                                      onClick={() => {
+                                        if (onStatusChange) onStatusChange(inv.id, st.id);
+                                        setOpenStatusMenuId(null);
+                                      }}
+                                      className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
+                                        inv.status === st.id
+                                          ? "bg-blue-600 text-white font-bold"
+                                          : "text-slate-700 hover:bg-slate-50"
+                                      }`}
+                                    >
+                                      <span>{st.label}</span>
+                                      {inv.status === st.id && <Check size={12} />}
+                                    </button>
+                                  ))}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="px-3 py-1 rounded-xl text-[11px] font-bold border border-slate-200 bg-slate-50 text-slate-700 inline-block shadow-2xs">
+                            {statusObj.label}
+                          </span>
+                        )}
                       </td>
 
                       {/* ACTIONS */}
@@ -723,7 +745,7 @@ export default function InvoicingDashboard({
                           </button>
 
                           {/* Convert (if quote/proforma -> invoice) */}
-                          {inv.document_type !== "facture" && (
+                          {canEdit && inv.document_type !== "facture" && (
                             <button
                               onClick={() => onConvertDocument && onConvertDocument(inv.id)}
                               className="p-1.5 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
@@ -734,40 +756,46 @@ export default function InvoicingDashboard({
                           )}
 
                           {/* Download PDF */}
-                          <button
-                            onClick={() => onDownloadPdf && onDownloadPdf(inv)}
-                            className="p-1.5 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
-                            title={t("invoicing.downloadPdf", "Télécharger PDF")}
-                          >
-                            <Download size={14} />
-                          </button>
+                          {canEdit && (
+                            <button
+                              onClick={() => onDownloadPdf && onDownloadPdf(inv)}
+                              className="p-1.5 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+                              title={t("invoicing.downloadPdf", "Télécharger PDF")}
+                            >
+                              <Download size={14} />
+                            </button>
+                          )}
 
-                          {/* Edit (Pencil) */}
+                          {/* Edit / View */}
                           <button
                             onClick={() => onEditDocument && onEditDocument(inv)}
                             className="p-1.5 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
-                            title={t("common.edit", "Modifier")}
+                            title={canEdit ? t("common.edit", "Modifier") : t("common.view", "Consulter")}
                           >
-                            <Pencil size={14} />
+                            {canEdit ? <Pencil size={14} /> : <Eye size={14} />}
                           </button>
 
                           {/* Duplicate */}
-                          <button
-                            onClick={() => onDuplicateDocument && onDuplicateDocument(inv.id)}
-                            className="p-1.5 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-                            title={t("common.duplicate", "Dupliquer")}
-                          >
-                            <Copy size={14} />
-                          </button>
+                          {canEdit && (
+                            <button
+                              onClick={() => onDuplicateDocument && onDuplicateDocument(inv.id)}
+                              className="p-1.5 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                              title={t("common.duplicate", "Dupliquer")}
+                            >
+                              <Copy size={14} />
+                            </button>
+                          )}
 
                           {/* Delete */}
-                          <button
-                            onClick={() => onDeleteDocument && onDeleteDocument(inv.id)}
-                            className="p-1.5 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                            title={t("common.delete", "Supprimer")}
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                          {canEdit && (
+                            <button
+                              onClick={() => onDeleteDocument && onDeleteDocument(inv.id)}
+                              className="p-1.5 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                              title={t("common.delete", "Supprimer")}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

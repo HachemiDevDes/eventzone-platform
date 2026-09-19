@@ -24,6 +24,7 @@ import { supabase } from "../lib/supabase";
 import { uploadMedia } from "../lib/storage";
 import QRCode from "qrcode";
 import { useLanguage } from "../lib/i18n";
+import { canEditModule } from "../lib/permissions";
 
 const getSidesStatus = (openSides) => {
   if (!openSides) {
@@ -496,9 +497,13 @@ export default function FloorPlanModifier({
   saveStatus = "saved",
   initialPreviewMode = false,
   initialFloors = [],
-  onSaveFloors
+  onSaveFloors,
+  isReadOnly = false,
+  effectivePermissions = null
 }) {
   const { t, lang, isRTL } = useLanguage();
+  const canEdit = !isReadOnly && canEditModule("floor-plan", effectivePermissions);
+  const effectivePreviewMode = !canEdit || initialPreviewMode;
 
   const localizedFilterOptions = useMemo(() => [
     { value: "all", label: t("floor.filter_all", "Show All Locations"), icon: Globe, iconColor: "text-indigo-500" },
@@ -560,9 +565,9 @@ export default function FloorPlanModifier({
   const [arrayColumnGap, setArrayColumnGap] = useState(2.0);
   const [arrayRowGap, setArrayRowGap] = useState(2.0);
   const [showArrayModal, setShowArrayModal] = useState(false);
-  const [toolMode, setToolMode] = useState(initialPreviewMode ? "preview" : "select");
+  const [toolMode, setToolMode] = useState(effectivePreviewMode ? "preview" : "select");
 
-  const [isPreviewMode, setIsPreviewMode] = useState(initialPreviewMode || false);
+  const [isPreviewMode, setIsPreviewMode] = useState(effectivePreviewMode || false);
   const [previewSearchQuery, setPreviewSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [previewFilter, setPreviewFilter] = useState("all");
@@ -817,10 +822,10 @@ export default function FloorPlanModifier({
     setTempName(planName);
   }, [planName]);
 
-  // Sync initialPreviewMode prop to internal preview state when URL changes
+  // Sync effectivePreviewMode to internal preview state when permissions or URL changes
   useEffect(() => {
-    setIsPreviewMode(initialPreviewMode);
-    if (initialPreviewMode) {
+    setIsPreviewMode(effectivePreviewMode);
+    if (effectivePreviewMode) {
       setToolMode("preview");
       setSelectedIds([]);
       setPreviewSearchQuery("");
@@ -828,7 +833,7 @@ export default function FloorPlanModifier({
     } else {
       setToolMode("select");
     }
-  }, [initialPreviewMode]);
+  }, [effectivePreviewMode]);
 
   // Handle responsive device mode preview detection on mount / resize
   useEffect(() => {
@@ -1008,6 +1013,7 @@ export default function FloorPlanModifier({
 
   // Helper to sync local editor states into the floors array and save
   const syncAndSaveFloors = (currentElements = elements, currentBlueprintOverride = null, targetFloors = floors) => {
+    if (!canEdit) return;
     const nextBlueprint = currentBlueprintOverride ? {
       url: currentBlueprintOverride.url !== undefined ? currentBlueprintOverride.url : blueprintUrl,
       name: currentBlueprintOverride.name !== undefined ? currentBlueprintOverride.name : blueprintName,
@@ -1078,6 +1084,7 @@ export default function FloorPlanModifier({
 
   // Push new layout/blueprint modification state to history stack
   const commitHistoryState = (newElements, newBlueprintOverride = null) => {
+    if (!canEdit) return;
     const nextBlueprint = newBlueprintOverride ? {
       url: newBlueprintOverride.url !== undefined ? newBlueprintOverride.url : blueprintUrl,
       name: newBlueprintOverride.name !== undefined ? newBlueprintOverride.name : blueprintName,
@@ -1468,6 +1475,7 @@ export default function FloorPlanModifier({
 
   // Background blueprint image uploader
   const handleBlueprintUpload = async (e) => {
+    if (!canEdit) return;
     const file = e.target.files[0];
     if (!file) return;
 
@@ -3597,7 +3605,7 @@ export default function FloorPlanModifier({
         {/* Top row */}
         <div className="flex items-center justify-between w-full gap-3 select-none">
           <div className="flex items-center gap-2.5 min-w-0">
-            {onBack && !initialPreviewMode && (
+            {onBack && (
               <button
                 onClick={handleBackClick}
                 className="text-slate-400 hover:text-indigo-650 transition-colors duration-150 cursor-pointer p-1.5 flex items-center justify-center shrink-0"
@@ -3630,7 +3638,7 @@ export default function FloorPlanModifier({
                 <Search size={15} />
               </button>
             )}
-            {!initialPreviewMode && isPreviewMode && (
+            {!initialPreviewMode && canEdit && isPreviewMode && (
               <button 
                 onClick={() => {
                   setIsPreviewMode(false);
@@ -3639,11 +3647,10 @@ export default function FloorPlanModifier({
                   setPreviewFilter("all");
                   setSelectedIds([]);
                 }}
-                className="px-3 py-2 bg-slate-900 text-white rounded-xl font-bold text-[10px] flex items-center gap-1.5 shadow-md active:scale-95 transition-all cursor-pointer"
-                title="Back to Editor"
+                className="h-9 px-3 rounded-xl bg-indigo-650 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
               >
-                <EyeOff size={12} />
-                <span>Exit</span>
+                <EyeOff size={13} />
+                <span>Exit Preview</span>
               </button>
             )}
           </div>
@@ -3692,11 +3699,12 @@ export default function FloorPlanModifier({
   };
 
   return (
-    <div className="flex flex-col flex-1 bg-slate-50 select-none h-screen w-full border-none rounded-none shadow-none overflow-hidden min-h-0">
-      <header className={`border-b border-slate-200 flex shrink-0 transition-all ${
+    <div className={`relative flex flex-col w-full h-[calc(100vh-4rem)] bg-slate-100 overflow-hidden font-sans select-none ${isRTL ? "font-cairo" : ""}`}>
+      {/* Top Header Toolbar */}
+      <header className={`border-b border-slate-200 flex transition-all ${
         isPreviewMode && previewDeviceMode === "mobile" && !isDesktopViewport
           ? "fixed top-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md flex-col justify-center px-5 pt-5 pb-3 h-auto gap-3 items-stretch shadow-sm"
-          : initialPreviewMode 
+          : (initialPreviewMode || !canEdit)
             ? "sticky top-0 z-50 bg-white flex-col justify-center px-6 pt-6 pb-4 h-auto gap-2 items-start" 
             : "sticky top-0 z-50 h-16 bg-white items-center justify-between px-8"
       }`}>
@@ -3705,7 +3713,7 @@ export default function FloorPlanModifier({
         ) : (
           <>
             <div className="flex items-center gap-3">
-              {onBack && !initialPreviewMode && (
+              {onBack && (
                 <button
                   onClick={handleBackClick}
                   className="text-slate-400 hover:text-indigo-650 transition-colors duration-150 cursor-pointer p-1.5 flex items-center justify-center"
@@ -3742,13 +3750,19 @@ export default function FloorPlanModifier({
                 ) : (
                   <div className="flex items-center gap-2.5">
                     <h2 
-                      onDoubleClick={!initialPreviewMode ? () => setIsEditingName(true) : undefined}
-                      className={`text-md font-bold text-slate-800 leading-tight ${!initialPreviewMode ? "cursor-pointer hover:text-indigo-650" : ""} transition-colors select-text`}
-                      title={!initialPreviewMode ? "Double-click to rename" : undefined}
+                      onDoubleClick={canEdit && !initialPreviewMode ? () => setIsEditingName(true) : undefined}
+                      className={`text-md font-bold text-slate-800 leading-tight ${canEdit && !initialPreviewMode ? "cursor-pointer hover:text-indigo-650" : ""} transition-colors select-text`}
+                      title={canEdit && !initialPreviewMode ? "Double-click to rename" : undefined}
                     >
                       {planName}
                     </h2>
-                    {saveStatus && !initialPreviewMode && (
+                    {!canEdit && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                        <Eye size={12} />
+                        Viewer Mode (Read-Only)
+                      </span>
+                    )}
+                    {saveStatus && canEdit && !initialPreviewMode && (
                       <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 transition-all ${
                         saveStatus === "saving" 
                           ? "bg-amber-50 text-amber-600 border border-amber-100" 
@@ -3815,12 +3829,12 @@ export default function FloorPlanModifier({
                 </div>
               )}
 
-              {!initialPreviewMode && (
+              {!initialPreviewMode && canEdit && (
                 <div className="w-px h-6 bg-slate-200 mx-2"></div>
               )}
 
               {/* History Controls */}
-              {!initialPreviewMode && (
+              {!initialPreviewMode && canEdit && (
                 <>
                   <button 
                     onClick={handleUndo} 
@@ -3841,7 +3855,7 @@ export default function FloorPlanModifier({
                 </>
               )}
               
-              {selectedIds.length > 0 && !initialPreviewMode && (
+              {selectedIds.length > 0 && !initialPreviewMode && canEdit && (
                 <>
                   <button
                     type="button"
@@ -3888,7 +3902,7 @@ export default function FloorPlanModifier({
               )}
 
               {/* Export & Send Floor Plan Buttons */}
-              {!initialPreviewMode && (
+              {!initialPreviewMode && canEdit && (
                 <div className="flex items-center gap-1.5">
                   <button
                     onClick={() => {
@@ -3943,7 +3957,7 @@ export default function FloorPlanModifier({
               )}
 
               {/* Preview Map & Save & Reset */}
-              {!initialPreviewMode && (
+              {!initialPreviewMode && canEdit && (
                 <button 
                   onClick={() => {
                     setIsPreviewMode(prev => {
@@ -4556,7 +4570,7 @@ export default function FloorPlanModifier({
 
           {/* Floating Back to Editor Button (Top Right Overlay) */}
           <AnimatePresence>
-            {isPreviewMode && !initialPreviewMode && (
+            {isPreviewMode && !initialPreviewMode && canEdit && (
               <motion.button
                 initial={{ y: -50, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}

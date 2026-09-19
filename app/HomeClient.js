@@ -2527,6 +2527,20 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
   const handleModalSubmit = async (e) => {
     e.preventDefault();
 
+    const modalModuleMap = {
+      attendee: "attendees",
+      org: "organizations",
+      sponsor: "sponsors",
+      exhibitor: "exhibitors",
+      ticket: "tickets",
+      team: "my-team"
+    };
+    const targetModule = modalModuleMap[activeModalType];
+    if (targetModule && !canEditModule(targetModule, effectivePermissions)) {
+      closeModal();
+      return;
+    }
+
     if (editingItem) {
       switch (activeModalType) {
         case "attendee": {
@@ -3702,6 +3716,18 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
   };
 
   const handleOpenModal = (type, item = null) => {
+    const modalModuleMap = {
+      attendee: "attendees",
+      org: "organizations",
+      sponsor: "sponsors",
+      exhibitor: "exhibitors",
+      ticket: "tickets",
+      team: "my-team"
+    };
+    const targetModule = modalModuleMap[type];
+    if (!item && targetModule && !canEditModule(targetModule, effectivePermissions)) {
+      return;
+    }
     setActiveModalType(type);
     if (item) {
       setEditingItem(item);
@@ -4994,6 +5020,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
             <CalendarView 
               sessions={sessions}
               attendees={attendees}
+              effectivePermissions={effectivePermissions}
               onSaveSessions={(newSessions) => {
                 syncArrayToDb(sessions, newSessions, upsertSession, deleteSession);
                 setSessions(newSessions);
@@ -5011,6 +5038,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
           {currentView === "floor-plan" && !isEditingFloorPlan && (
             <FloorPlanGallery
               floorPlans={floorPlans}
+              effectivePermissions={effectivePermissions}
               onEdit={(id) => setActiveFloorPlanId(id)}
               onCreateNew={handleCreateFloorPlan}
               onDuplicate={handleDuplicateFloorPlan}
@@ -5094,13 +5122,16 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               onRename={(newName) => handleRenameFloorPlan(activeFloorPlanId, newName)}
               onUploadFile={uploadFileToBucket}
               saveStatus={saveStatus}
-              initialPreviewMode={initialPreviewMode}
+              initialPreviewMode={initialPreviewMode || !canEditModule("floor-plan", effectivePermissions)}
+              isReadOnly={!canEditModule("floor-plan", effectivePermissions)}
+              effectivePermissions={effectivePermissions}
             />
           )}
 
           {(currentView === "page-builder" || currentView === "event-details") && (
             <EventDetailsView 
               eventDetails={eventDetails}
+              effectivePermissions={effectivePermissions}
               onUpdateEventDetails={(val) => handleUpdateState("eventDetails", val)}
               sessions={sessions}
               sponsors={sponsors}
@@ -5122,6 +5153,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               forms={forms}
               submissions={formSubmissions}
               tickets={tickets}
+              effectivePermissions={effectivePermissions}
               onSaveForm={async (form) => {
                 try {
                   const saved = await upsertForm(form, activeEventId);
@@ -5169,6 +5201,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               rsvpSettings={rsvpSettings}
               eventDetails={eventDetails}
               activeEventId={activeEventId}
+              effectivePermissions={effectivePermissions}
               onSaveRSVPSettings={async (newSettings) => {
                 const saved = await upsertRSVPSettings(newSettings, activeEventId);
                 setRsvpSettings(saved);
@@ -5251,6 +5284,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               onSwitchView={setCurrentView}
               organizations={organizations}
               opportunities={opportunities}
+              effectivePermissions={effectivePermissions}
             />
           )}
 
@@ -5262,7 +5296,8 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
                 pending,
                 tickets,
                 currentUser,
-                activeEventId
+                activeEventId,
+                effectivePermissions
               }}
               onSwitchView={setCurrentView}
               onOpenModal={handleOpenModal}
@@ -5279,6 +5314,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               floorPlans={floorPlans}
               documents={documents}
               activeEventId={activeEventId}
+              effectivePermissions={effectivePermissions}
               onUpdateEventDetails={(val) => handleUpdateState("eventDetails", val)}
               onSendBroadcastEmail={async ({ subject, message, portalUrl, recipientCount }) => {
                 if (activeEventId) {
@@ -5374,6 +5410,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
         activeEventId={activeEventId}
         eventTitle={eventDetails?.title || "Eventzone Summit"}
         onSwitchView={setCurrentView}
+        isReadOnly={!canEditModule("tickets", effectivePermissions)}
       />
 
       {/* Attendee Drawer Slide-Over (Dynamic Ticket-Form Intake) */}
@@ -5392,6 +5429,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
         organizations={organizations}
         sponsors={sponsors}
         exhibitors={exhibitors}
+        isReadOnly={!canEditModule("attendees", effectivePermissions)}
       />
 
       {/* Team Member Drawer Slide-Over (Granular Permissions & Role Presets) */}

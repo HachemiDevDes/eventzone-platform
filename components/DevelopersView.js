@@ -14,6 +14,7 @@ import {
   fetchEventApiKeys, createEventApiKey, deleteEventApiKey,
   fetchEventWebhooks, saveEventWebhook, deleteEventWebhook
 } from "../lib/db";
+import { canEditModule } from "../lib/permissions";
 
 const PRESET_COLORS = [
   { name: "Blue", hex: "#2563eb" },
@@ -71,6 +72,7 @@ export default function DevelopersView({
 
   const currentEventId = activeEventId || eventDetails?.id || "cf12bb94-0cfb-4e0c-a96c-482a5c4e9021";
   const origin = typeof window !== "undefined" ? window.location.origin : "https://eventzone.io";
+  const canEdit = canEditModule("developers", state?.effectivePermissions);
 
   // Sub-Navigation Tabs
   const [activeTab, setActiveTab] = useState("overview"); // "overview" | "embed_builder" | "api_keys" | "rest_docs" | "webhooks" | "logs"
@@ -430,6 +432,7 @@ const styles = StyleSheet.create({
 
   // Generate API Key
   const handleCreateApiKey = async () => {
+    if (!canEdit) return;
     if (!newKeyName.trim()) return;
     try {
       const created = await createEventApiKey(currentEventId, newKeyName, newKeyPermissions);
@@ -444,6 +447,7 @@ const styles = StyleSheet.create({
 
   // Revoke API Key
   const handleDeleteKey = async (id) => {
+    if (!canEdit) return;
     if (confirm(t("dev.confirmRevokeKey", "Are you sure you want to revoke this API Key? Any external sites using this key will immediately lose access."))) {
       await deleteEventApiKey(id, currentEventId);
       setApiKeys((prev) => prev.filter((k) => k.id !== id));
@@ -452,6 +456,7 @@ const styles = StyleSheet.create({
 
   // Save Webhook
   const handleCreateWebhook = async () => {
+    if (!canEdit) return;
     if (!newWebhookUrl.trim()) return;
     try {
       const created = await saveEventWebhook(currentEventId, {
@@ -469,6 +474,7 @@ const styles = StyleSheet.create({
 
   // Delete Webhook
   const handleDeleteWebhook = async (id) => {
+    if (!canEdit) return;
     if (confirm("Remove this webhook endpoint?")) {
       await deleteEventWebhook(id, currentEventId);
       setWebhooks((prev) => prev.filter((w) => w.id !== id));
@@ -477,6 +483,7 @@ const styles = StyleSheet.create({
 
   // Test Webhook Ping
   const handleTestWebhook = async (wh) => {
+    if (!canEdit) return;
     setTestingWebhookId(wh.id);
     setWebhookTestResult(null);
     try {
@@ -496,6 +503,7 @@ const styles = StyleSheet.create({
 
   // Interactive REST Request Runner
   const handleRunPlaygroundRequest = async () => {
+    if (!canEdit) return;
     setPlaygroundLoading(true);
     setPlaygroundResponse(null);
     const startTime = Date.now();
@@ -1167,6 +1175,12 @@ fun main() {
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
               {t("dev.corsActive", "CORS ACTIVE")}
             </span>
+            {!canEdit && (
+              <span className="px-3 py-1 rounded-xl bg-slate-100 text-slate-600 font-bold text-xs border border-slate-200/80 flex items-center gap-1.5 shadow-xs">
+                <Eye size={13} className="text-slate-500" />
+                <span>Viewer Mode</span>
+              </span>
+            )}
           </div>
           <p className="text-xs text-slate-500 font-medium">
             {t("dev.subtitle", "Command center for public REST APIs, embeddable registration widgets, API keys, and real-time webhook ingestion.")}
@@ -1205,7 +1219,7 @@ fun main() {
             </a>
           )}
 
-          {activeTab === "api_keys" && (
+          {canEdit && activeTab === "api_keys" && (
             <button
               onClick={() => setIsNewKeyModalOpen(true)}
               className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs sm:text-sm shadow-sm transition-all flex items-center gap-2 cursor-pointer"
@@ -1215,7 +1229,7 @@ fun main() {
             </button>
           )}
 
-          {activeTab === "webhooks" && (
+          {canEdit && activeTab === "webhooks" && (
             <button
               onClick={() => setIsNewWebhookModalOpen(true)}
               className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs sm:text-sm shadow-sm transition-all flex items-center gap-2 cursor-pointer"
@@ -1225,7 +1239,7 @@ fun main() {
             </button>
           )}
 
-          {activeTab === "rest_docs" && (
+          {canEdit && activeTab === "rest_docs" && (
             <button
               onClick={handleRunPlaygroundRequest}
               disabled={playgroundLoading}
@@ -1236,7 +1250,7 @@ fun main() {
             </button>
           )}
 
-          {activeTab !== "api_keys" && activeTab !== "webhooks" && activeTab !== "rest_docs" && (
+          {canEdit && activeTab !== "api_keys" && activeTab !== "webhooks" && activeTab !== "rest_docs" && (
             <button
               onClick={() => setIsNewKeyModalOpen(true)}
               className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs sm:text-sm shadow-sm transition-all flex items-center gap-2 cursor-pointer"
@@ -1853,12 +1867,14 @@ fun main() {
                 <p className="text-xs text-slate-400 max-w-sm mx-auto">
                   {t("dev.noApiKeysFoundDesc", "Public GET endpoints do not require an API key, but generating one allows secure backend access.")}
                 </p>
-                <button
-                  onClick={() => setIsNewKeyModalOpen(true)}
-                  className="px-4 py-2 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-bold transition-colors cursor-pointer"
-                >
-                  {t("dev.createYourFirstKey", "Create Your First Key")}
-                </button>
+                {canEdit && (
+                  <button
+                    onClick={() => setIsNewKeyModalOpen(true)}
+                    className="px-4 py-2 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    {t("dev.createYourFirstKey", "Create Your First Key")}
+                  </button>
+                )}
               </div>
             ) : (
               <div className="divide-y divide-slate-150">
@@ -1885,13 +1901,15 @@ fun main() {
 
                     <div className="flex items-center gap-4 text-xs text-slate-400 font-medium">
                       <span>{t("dev.createdDate", "Created: {date}").replace("{date}", k.createdAt ? new Date(k.createdAt).toLocaleDateString(lang === "ar" ? "ar-DZ" : (lang === "fr" ? "fr-FR" : "en-US")) : t("dev.recentlyCreated", "Recently"))}</span>
-                      <button
-                        onClick={() => handleDeleteKey(k.id)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                        title={t("dev.revokeKey", "Revoke Key")}
-                      >
-                        <Trash2 size={15} />
-                      </button>
+                      {canEdit && (
+                        <button
+                          onClick={() => handleDeleteKey(k.id)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                          title={t("dev.revokeKey", "Revoke Key")}
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -2013,15 +2031,17 @@ fun main() {
                   <h3 className="text-base font-extrabold text-slate-900">{t("dev.apiPlaygroundTitle", "API Playground")}</h3>
                   <p className="text-xs text-slate-500">{t("dev.apiPlaygroundSubtitle", "Execute live requests directly against your event.")}</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleRunPlaygroundRequest}
-                  disabled={playgroundLoading}
-                  className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer disabled:opacity-50"
-                >
-                  <Play size={13} />
-                  <span>{playgroundLoading ? t("dev.sendingBtn", "Sending...") : t("dev.executeBtn", "Execute")}</span>
-                </button>
+                {canEdit && (
+                  <button
+                    type="button"
+                    onClick={handleRunPlaygroundRequest}
+                    disabled={playgroundLoading}
+                    className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer disabled:opacity-50"
+                  >
+                    <Play size={13} />
+                    <span>{playgroundLoading ? t("dev.sendingBtn", "Sending...") : t("dev.executeBtn", "Execute")}</span>
+                  </button>
+                )}
               </div>
 
               {/* Editable payload if POST */}
@@ -2118,12 +2138,14 @@ fun main() {
                 <p className="text-xs text-slate-400 max-w-sm mx-auto">
                   {t("dev.noWebhooksConfiguredDesc", "Subscribe to live registration and check-in events to sync attendees automatically to your CRM or custom backend.")}
                 </p>
-                <button
-                  onClick={() => setIsNewWebhookModalOpen(true)}
-                  className="px-4 py-2 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-bold transition-colors cursor-pointer"
-                >
-                  {t("dev.addYourFirstWebhook", "Add Your First Webhook")}
-                </button>
+                {canEdit && (
+                  <button
+                    onClick={() => setIsNewWebhookModalOpen(true)}
+                    className="px-4 py-2 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    {t("dev.addYourFirstWebhook", "Add Your First Webhook")}
+                  </button>
+                )}
               </div>
             ) : (
               <div className="divide-y divide-slate-150">
@@ -2145,25 +2167,27 @@ fun main() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleTestWebhook(wh)}
-                        disabled={testingWebhookId === wh.id}
-                        className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
-                      >
-                        <Send size={12} />
-                        <span>{testingWebhookId === wh.id ? t("dev.pingingBtn", "Pinging...") : t("dev.testPingBtn", "Test Ping")}</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteWebhook(wh.id)}
-                        className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                        title={t("dev.deleteWebhook", "Delete Webhook")}
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
+                    {canEdit && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleTestWebhook(wh)}
+                          disabled={testingWebhookId === wh.id}
+                          className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                          <Send size={12} />
+                          <span>{testingWebhookId === wh.id ? t("dev.pingingBtn", "Pinging...") : t("dev.testPingBtn", "Test Ping")}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteWebhook(wh.id)}
+                          className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                          title={t("dev.deleteWebhook", "Delete Webhook")}
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -2283,7 +2307,7 @@ fun main() {
       ───────────────────────────────────────────── */}
 
       {/* MODAL: CREATE API KEY */}
-      {isNewKeyModalOpen && (
+      {isNewKeyModalOpen && canEdit && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
           <div className="bg-white rounded-3xl border border-slate-200 max-w-md w-full p-6 sm:p-7 shadow-2xl space-y-5 animate-scale-up">
             <div className="flex items-center justify-between">
@@ -2349,7 +2373,7 @@ fun main() {
       )}
 
       {/* MODAL: ADD WEBHOOK */}
-      {isNewWebhookModalOpen && (
+      {isNewWebhookModalOpen && canEdit && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
           <div className="bg-white rounded-3xl border border-slate-200 max-w-md w-full p-6 sm:p-7 shadow-2xl space-y-5 animate-scale-up">
             <div className="flex items-center justify-between">

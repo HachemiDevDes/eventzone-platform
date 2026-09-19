@@ -19,6 +19,7 @@ import {
 } from "../lib/db";
 import { DEFAULT_INVOICING_PROFILE } from "../lib/invoicingConstants";
 import { Check, Copy, AlertCircle } from "lucide-react";
+import { canEditModule } from "../lib/permissions";
 
 /**
  * InvoicingView
@@ -31,7 +32,9 @@ export default function InvoicingView({
   organizations = [],
   opportunities = [],
   onSwitchView,
+  effectivePermissions = null,
 }) {
+  const canEdit = canEditModule("invoicing", effectivePermissions);
   const [viewMode, setViewMode] = useState("dashboard"); // 'dashboard' | 'editor'
   const [editingDoc, setEditingDoc] = useState(null);
   const [invoices, setInvoices] = useState([]);
@@ -96,6 +99,7 @@ export default function InvoicingView({
 
   // 2. Document Creation & Editing
   const handleCreateNewDocument = (docType = "facture") => {
+    if (!canEdit) return;
     const prof = activeProfile || DEFAULT_INVOICING_PROFILE;
     const prefix = docType === "devis"
       ? (prof.quote_prefix || "DEV-26-")
@@ -187,6 +191,7 @@ export default function InvoicingView({
 
   // 3. Document Save
   const handleSaveDocument = async (docData) => {
+    if (!canEdit) return;
     const payload = {
       ...docData,
       user_id: userId || docData.user_id,
@@ -231,6 +236,7 @@ export default function InvoicingView({
 
   // 4. Status Change from Table Row
   const handleStatusChange = async (invoiceId, newStatus) => {
+    if (!canEdit) return;
     const updated = await updateInvoiceStatus(invoiceId, newStatus);
     if (updated) {
       setInvoices(prev => prev.map(inv => inv.id === invoiceId ? { ...inv, status: newStatus } : inv));
@@ -240,6 +246,7 @@ export default function InvoicingView({
 
   // 5. Delete Document
   const handleDeleteDocument = async (invoiceId) => {
+    if (!canEdit) return;
     if (!window.confirm("Êtes-vous sûr de vouloir supprimer ce document ? Cette action est irréversible.")) {
       return;
     }
@@ -252,6 +259,7 @@ export default function InvoicingView({
 
   // 6. Duplicate Document
   const handleDuplicateDocument = async (invoiceId) => {
+    if (!canEdit) return;
     const copy = await duplicateInvoice(invoiceId);
     if (copy) {
       setInvoices(prev => [copy, ...prev]);
@@ -261,6 +269,7 @@ export default function InvoicingView({
 
   // 7. Convert Devis/Proforma to Facture
   const handleConvertDocument = async (invoiceId) => {
+    if (!canEdit) return;
     const invoice = await convertQuoteToInvoice(invoiceId);
     if (invoice) {
       setInvoices(prev => [invoice, ...prev]);
@@ -270,6 +279,7 @@ export default function InvoicingView({
 
   // 8. Save Profile Settings
   const handleSaveProfile = async (profileData) => {
+    if (!canEdit) return;
     const saved = await upsertInvoicingProfile({
       ...profileData,
       user_id: userId,
@@ -303,6 +313,10 @@ export default function InvoicingView({
 
   // 10. Download PDF
   const handleDownloadPdf = async (docToDownload) => {
+    if (!canEdit) {
+      showToast("Téléchargement désactivé en mode lecteur.");
+      return;
+    }
     try {
       showToast("Génération du PDF officiel...");
       const res = await fetch("/api/invoices/pdf", {
@@ -361,6 +375,7 @@ export default function InvoicingView({
           onStatusChange={handleStatusChange}
           onCopyShareLink={handleCopyShareLink}
           onDownloadPdf={handleDownloadPdf}
+          canEdit={canEdit}
         />
       ) : (
         <InvoicingEditor
@@ -376,6 +391,7 @@ export default function InvoicingView({
           onSave={handleSaveDocument}
           onCopyShareLink={handleCopyShareLink}
           onDownloadPdf={handleDownloadPdf}
+          canEdit={canEdit}
         />
       )}
 

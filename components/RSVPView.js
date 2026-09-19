@@ -9,12 +9,13 @@ import {
   ChevronDown, ChevronUp, Copy, Check, ExternalLink,
   Trash2, Edit3, Sparkles, RefreshCw, BarChart2, PieChart,
   UserPlus, Mail, Phone, Building2, Calendar, ArrowRight, ShieldCheck,
-  Award, TrendingUp, HelpCircle, X, Archive, RotateCcw
+  Award, TrendingUp, HelpCircle, X, Archive, RotateCcw, Eye
 } from "lucide-react";
 import { useLanguage } from "../lib/i18n";
 import QRCode from "qrcode";
 import SearchableSelect from "./SearchableSelect";
 import { RSVPSkeleton } from "./SkeletonLoaders";
+import { canEditModule } from "../lib/permissions";
 
 export default function RSVPView({
   rsvps = [],
@@ -29,9 +30,11 @@ export default function RSVPView({
   onPermanentDeleteRSVP,
   onArchiveRSVP,
   onRefreshData,
-  onOpenPublicRSVP
+  onOpenPublicRSVP,
+  effectivePermissions = null
 }) {
   const { t, isRTL } = useLanguage();
+  const canEdit = canEditModule("rsvp", effectivePermissions);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -220,6 +223,7 @@ export default function RSVPView({
   // ─────────────────────────────────────────────
   const handleSaveSettings = async (e) => {
     e.preventDefault();
+    if (!canEdit) return;
     setIsSavingSettings(true);
     try {
       if (onSaveRSVPSettings) {
@@ -237,6 +241,7 @@ export default function RSVPView({
 
   const handleManualSubmit = async (e) => {
     e.preventDefault();
+    if (!canEdit) return;
     if (!manualForm.fullName.trim() || !manualForm.email.trim()) {
       alert(t("rsvp.errorEnterNameAndEmail", "Please enter full name and a valid email."));
       return;
@@ -276,6 +281,7 @@ export default function RSVPView({
   };
 
   const handleQuickStatusChange = async (rsvpId, newStatus) => {
+    if (!canEdit) return;
     try {
       if (onUpdateRSVPStatus) {
         await onUpdateRSVPStatus(rsvpId, newStatus);
@@ -299,7 +305,7 @@ export default function RSVPView({
   };
 
   const handleSavePartyNames = async () => {
-    if (!selectedPartyRsvp) return;
+    if (!canEdit || !selectedPartyRsvp) return;
     setIsSavingParty(true);
     try {
       const cleanedNames = partyNamesInput.map(n => n.trim()).filter(Boolean);
@@ -320,6 +326,7 @@ export default function RSVPView({
   };
 
   const handlePromoteFromWaitlist = async (rsvp) => {
+    if (!canEdit) return;
     if (analytics.spotsRemaining <= 0) {
       if (!confirm(`Warning: The event is currently at full capacity (${analytics.attendingHeadcount}/${analytics.capacityLimit}). Are you sure you want to promote ${rsvp.fullName} and exceed capacity?`)) {
         return;
@@ -329,6 +336,7 @@ export default function RSVPView({
   };
 
   const handleArchive = async (rsvpId, name) => {
+    if (!canEdit) return;
     if (confirm(`Archive the RSVP for ${name || 'this guest'}? (Record is safely preserved in archives)`)) {
       if (onArchiveRSVP) {
         await onArchiveRSVP(rsvpId);
@@ -339,6 +347,7 @@ export default function RSVPView({
   };
 
   const handlePermanentDelete = async (rsvpId, name) => {
+    if (!canEdit) return;
     if (confirm(`Permanently delete the RSVP for ${name || 'this guest'}? This action cannot be undone.`)) {
       if (onPermanentDeleteRSVP) {
         await onPermanentDeleteRSVP(rsvpId);
@@ -352,6 +361,7 @@ export default function RSVPView({
 
   // Export to CSV
   const handleExportCSV = () => {
+    if (!canEdit) return;
     const headers = [
       "Guest Name",
       "Email",
@@ -412,6 +422,7 @@ export default function RSVPView({
   };
 
   const handleDownloadQr = () => {
+    if (!canEdit) return;
     if (!shareQrUrl) return;
     const link = document.createElement("a");
     link.href = shareQrUrl;
@@ -469,13 +480,22 @@ export default function RSVPView({
 
         {/* Top Buttons */}
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={() => setIsManualModalOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
-          >
-            <Plus size={14} />
-            <span>{t("rsvp.manualAdd", "Add Guest RSVP")}</span>
-          </button>
+          {!canEdit && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 border border-amber-500/20">
+              <Eye size={13} />
+              Viewer Mode (Read-Only)
+            </span>
+          )}
+
+          {canEdit && (
+            <button
+              onClick={() => setIsManualModalOpen(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
+            >
+              <Plus size={14} />
+              <span>{t("rsvp.manualAdd", "Add Guest RSVP")}</span>
+            </button>
+          )}
 
           <button
             onClick={() => setIsShareModalOpen(true)}
@@ -485,14 +505,16 @@ export default function RSVPView({
             <span>{t("rsvp.shareLink", "Share RSVP Link")}</span>
           </button>
 
-          <button
-            onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-xs transition-colors cursor-pointer shadow-2xs"
-            title={t("rsvp.exportCsv", "Export CSV")}
-          >
-            <Download size={13} />
-            <span>{t("rsvp.export", "Export CSV")}</span>
-          </button>
+          {canEdit && (
+            <button
+              onClick={handleExportCSV}
+              className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-xs transition-colors cursor-pointer shadow-2xs"
+              title={t("rsvp.exportCsv", "Export CSV")}
+            >
+              <Download size={13} />
+              <span>{t("rsvp.export", "Export CSV")}</span>
+            </button>
+          )}
 
           <button
             onClick={() => setIsSettingsOpen(true)}
@@ -903,24 +925,46 @@ export default function RSVPView({
 
                       {/* Status Dropdown */}
                       <td className="py-3 px-4">
-                        <select
-                          value={st}
-                          onChange={(e) => handleQuickStatusChange(rsvp.id, e.target.value)}
-                          className={`px-2.5 py-1 rounded-xl text-[11px] font-extrabold border focus:outline-none cursor-pointer ${
-                            st === "attending"
-                              ? "bg-emerald-50 border-emerald-300 text-emerald-800"
+                        {canEdit ? (
+                          <select
+                            value={st}
+                            onChange={(e) => handleQuickStatusChange(rsvp.id, e.target.value)}
+                            className={`px-2.5 py-1 rounded-xl text-[11px] font-extrabold border focus:outline-none cursor-pointer ${
+                              st === "attending"
+                                ? "bg-emerald-50 border-emerald-300 text-emerald-800"
+                                : st === "waitlisted"
+                                ? "bg-amber-50 border-amber-300 text-amber-800"
+                                : st === "declined"
+                                ? "bg-rose-50 border-rose-300 text-rose-800"
+                                : "bg-slate-100 border-slate-300 text-slate-700"
+                            }`}
+                          >
+                            <option value="attending">{t("rsvp.statusAttendingCheck", "✓ Attending")}</option>
+                            <option value="waitlisted">{t("rsvp.statusWaitlistedClock", "⏱ Waitlisted")}</option>
+                            <option value="tentative">{t("rsvp.statusTentativeQuestion", "? Tentative")}</option>
+                            <option value="declined">{t("rsvp.statusDeclinedCross", "✕ Declined")}</option>
+                          </select>
+                        ) : (
+                          <span
+                            className={`inline-block px-2.5 py-1 rounded-xl text-[11px] font-extrabold border ${
+                              st === "attending"
+                                ? "bg-emerald-50 border-emerald-300 text-emerald-800"
+                                : st === "waitlisted"
+                                ? "bg-amber-50 border-amber-300 text-amber-800"
+                                : st === "declined"
+                                ? "bg-rose-50 border-rose-300 text-rose-800"
+                                : "bg-slate-100 border-slate-300 text-slate-700"
+                            }`}
+                          >
+                            {st === "attending"
+                              ? t("rsvp.statusAttendingCheck", "✓ Attending")
                               : st === "waitlisted"
-                              ? "bg-amber-50 border-amber-300 text-amber-800"
+                              ? t("rsvp.statusWaitlistedClock", "⏱ Waitlisted")
                               : st === "declined"
-                              ? "bg-rose-50 border-rose-300 text-rose-800"
-                              : "bg-slate-100 border-slate-300 text-slate-700"
-                          }`}
-                        >
-                          <option value="attending">{t("rsvp.statusAttendingCheck", "✓ Attending")}</option>
-                          <option value="waitlisted">{t("rsvp.statusWaitlistedClock", "⏱ Waitlisted")}</option>
-                          <option value="tentative">{t("rsvp.statusTentativeQuestion", "? Tentative")}</option>
-                          <option value="declined">{t("rsvp.statusDeclinedCross", "✕ Declined")}</option>
-                        </select>
+                              ? t("rsvp.statusDeclinedCross", "✕ Declined")
+                              : t("rsvp.statusTentativeQuestion", "? Tentative")}
+                          </span>
+                        )}
                       </td>
 
                       {/* Headcount & Companions */}
@@ -986,46 +1030,48 @@ export default function RSVPView({
 
                       {/* Actions */}
                       <td className="py-3 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {st === "waitlisted" && (
-                            <button
-                              onClick={() => handlePromoteFromWaitlist(rsvp)}
-                              className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] transition-colors cursor-pointer"
-                              title={t("rsvp.promoteToAttendingTooltip", "Promote to Attending")}
-                            >
-                              {t("rsvp.promoteBtn", "Promote")}
-                            </button>
-                          )}
+                        {canEdit && (
+                          <div className="flex items-center justify-end gap-1.5">
+                            {st === "waitlisted" && (
+                              <button
+                                onClick={() => handlePromoteFromWaitlist(rsvp)}
+                                className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] transition-colors cursor-pointer"
+                                title={t("rsvp.promoteToAttendingTooltip", "Promote to Attending")}
+                              >
+                                {t("rsvp.promoteBtn", "Promote")}
+                              </button>
+                            )}
 
-                          {st === "archived" ? (
-                            <div className="flex items-center gap-1">
+                            {st === "archived" ? (
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => handleQuickStatusChange(rsvp.id, "attending")}
+                                  className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 transition-colors cursor-pointer flex items-center gap-1 text-[11px] font-bold"
+                                  title={t("rsvp.restoreRsvpTooltip", "Restore RSVP")}
+                                >
+                                  <RotateCcw size={13} />
+                                  <span>{t("rsvp.restoreBtn", "Restore")}</span>
+                                </button>
+                                <button
+                                  onClick={() => handlePermanentDelete(rsvp.id, rsvp.fullName || rsvp.full_name)}
+                                  className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition-colors cursor-pointer flex items-center gap-1 text-[11px] font-bold"
+                                  title={t("rsvp.deletePermanentlyTooltip", "Delete RSVP Permanently")}
+                                >
+                                  <Trash2 size={13} />
+                                  <span>{t("rsvp.deleteBtn", "Delete")}</span>
+                                </button>
+                              </div>
+                            ) : (
                               <button
-                                onClick={() => handleQuickStatusChange(rsvp.id, "attending")}
-                                className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 transition-colors cursor-pointer flex items-center gap-1 text-[11px] font-bold"
-                                title={t("rsvp.restoreRsvpTooltip", "Restore RSVP")}
+                                onClick={() => handleArchive(rsvp.id, rsvp.fullName || rsvp.full_name)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors cursor-pointer"
+                                title={t("rsvp.archiveRsvpTooltip", "Archive RSVP (Data preserved)")}
                               >
-                                <RotateCcw size={13} />
-                                <span>{t("rsvp.restoreBtn", "Restore")}</span>
+                                <Archive size={13} />
                               </button>
-                              <button
-                                onClick={() => handlePermanentDelete(rsvp.id, rsvp.fullName || rsvp.full_name)}
-                                className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition-colors cursor-pointer flex items-center gap-1 text-[11px] font-bold"
-                                title={t("rsvp.deletePermanentlyTooltip", "Delete RSVP Permanently")}
-                              >
-                                <Trash2 size={13} />
-                                <span>{t("rsvp.deleteBtn", "Delete")}</span>
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => handleArchive(rsvp.id, rsvp.fullName || rsvp.full_name)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors cursor-pointer"
-                              title={t("rsvp.archiveRsvpTooltip", "Archive RSVP (Data preserved)")}
-                            >
-                              <Archive size={13} />
-                            </button>
-                          )}
-                        </div>
+                            )}
+                          </div>
+                        )}
                       </td>
 
                     </tr>
@@ -1057,7 +1103,15 @@ export default function RSVPView({
               </button>
             </div>
 
+            {!canEdit && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl text-xs font-medium text-amber-800 flex items-center gap-2">
+                <Eye size={14} className="shrink-0 text-amber-600" />
+                <span>You are viewing RSVP settings in read-only mode. Changes cannot be saved.</span>
+              </div>
+            )}
+
             <form onSubmit={handleSaveSettings} className="space-y-4 text-xs">
+              <fieldset disabled={!canEdit} className="contents">
               
               {/* Enable Toggle */}
               <div className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-200">
@@ -1165,17 +1219,19 @@ export default function RSVPView({
                   onClick={() => setIsSettingsOpen(false)}
                   className="px-4 py-2 rounded-xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
                 >
-                  {t("common.cancel", "Cancel")}
+                  {canEdit ? t("common.cancel", "Cancel") : t("common.close", "Close")}
                 </button>
-                <button
-                  type="submit"
-                  disabled={isSavingSettings}
-                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all cursor-pointer shadow-xs"
-                >
-                  {isSavingSettings ? t("rsvp.savingBtn", "Saving...") : t("rsvp.saveSettingsBtn", "Save Settings")}
-                </button>
+                {canEdit && (
+                  <button
+                    type="submit"
+                    disabled={isSavingSettings}
+                    className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all cursor-pointer shadow-xs"
+                  >
+                    {isSavingSettings ? t("rsvp.savingBtn", "Saving...") : t("rsvp.saveSettingsBtn", "Save Settings")}
+                  </button>
+                )}
               </div>
-
+              </fieldset>
             </form>
           </div>
         </div>,
@@ -1401,14 +1457,18 @@ export default function RSVPView({
                   <img src={shareQrUrl} alt="RSVP QR Code" className="w-48 h-48 object-contain mx-auto rounded-lg bg-white p-1" />
                   <div className="flex items-center justify-center gap-2">
                     <span className="text-[11px] font-bold text-slate-500">{t("rsvp.scanOnMobile", "Scan on mobile")}</span>
-                    <span>•</span>
-                    <button
-                      onClick={handleDownloadQr}
-                      className="text-[11px] font-bold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1 cursor-pointer"
-                    >
-                      <Download size={12} />
-                      <span>{t("rsvp.downloadQrPng", "Download QR (PNG)")}</span>
-                    </button>
+                    {canEdit && (
+                      <>
+                        <span>•</span>
+                        <button
+                          onClick={handleDownloadQr}
+                          className="text-[11px] font-bold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          <Download size={12} />
+                          <span>{t("rsvp.downloadQrPng", "Download QR (PNG)")}</span>
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               )}
@@ -1568,7 +1628,7 @@ export default function RSVPView({
                     </span>
                   </div>
 
-                  {parseInt(selectedPartyRsvp.plusOnes || selectedPartyRsvp.plus_ones || 0, 10) > 0 && (
+                  {canEdit && parseInt(selectedPartyRsvp.plusOnes || selectedPartyRsvp.plus_ones || 0, 10) > 0 && (
                     <button
                       type="button"
                       onClick={() => setIsEditingPartyNames(!isEditingPartyNames)}

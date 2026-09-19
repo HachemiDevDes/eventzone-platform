@@ -11,7 +11,7 @@ import {
   Bold, Italic, Underline, Strikethrough,
   AlignLeft, AlignCenter, AlignRight, AlignJustify,
   List, ListOrdered, Quote, Palette, Highlighter,
-  RemoveFormatting
+  RemoveFormatting, Eye
 } from "lucide-react";
 import CustomDatePicker from "./CustomDatePicker";
 import CustomSchedulePicker from "./CustomSchedulePicker";
@@ -22,6 +22,7 @@ import { EventDetailsSkeleton } from "./SkeletonLoaders";
 import { uploadMedia } from "../lib/storage";
 import { useLanguage } from "../lib/i18n";
 import { getLocalizedIndustry } from "../lib/constants";
+import { canEditModule } from "../lib/permissions";
 
 const INDUSTRIES = [
   "Technology, AI & Software",
@@ -512,9 +513,11 @@ export default function EventDetailsView({
   isLoading = false,
   onUpdateEventDetails, 
   onPreviewLandingPage,
-  onUploadFile 
+  onUploadFile,
+  effectivePermissions = null
 }) {
   const { t, lang } = useLanguage();
+  const canEdit = canEditModule("event-details", effectivePermissions);
   // ─── TAB 1: GENERAL SUMMIT STATE ─────────────────────────────────────────
   const [title, setTitle] = useState(eventDetails?.title || "");
   const [tagline, setTagline] = useState(eventDetails?.tagline || "");
@@ -830,6 +833,7 @@ export default function EventDetailsView({
 
   // Real-time Debounced Auto-Save Trigger (Fires ONLY on user modification)
   useEffect(() => {
+    if (!canEdit) return;
     if (!eventDetails || !eventDetails.id || isSyncingFromProps.current) {
       return;
     }
@@ -867,6 +871,7 @@ export default function EventDetailsView({
       }
     };
   }, [
+    canEdit,
     eventDetails, title, tagline, category, type, startDate, endDate, isMultiDay,
     scheduleTime, scheduleMode, country, city, venueName, venueAddress,
     virtualUrl, virtualPlatform, virtualInstructions, multiLocations,
@@ -877,6 +882,7 @@ export default function EventDetailsView({
 
   // ─── MULTI-LOCATION MANAGEMENT HELPERS ───────────────────────────────────
   const handleAddStop = () => {
+    if (!canEdit) return;
     const nextIdx = multiLocations.length + 1;
     const newStop = {
       id: `loc-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
@@ -899,10 +905,12 @@ export default function EventDetailsView({
   };
 
   const handleUpdateStop = (stopId, field, val) => {
+    if (!canEdit) return;
     setMultiLocations(prev => prev.map(s => s.id === stopId ? { ...s, [field]: val } : s));
   };
 
   const handleDuplicateStop = (stopToDuplicate) => {
+    if (!canEdit) return;
     const copy = {
       ...stopToDuplicate,
       id: `loc-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
@@ -912,6 +920,7 @@ export default function EventDetailsView({
   };
 
   const handleDeleteStop = (stopId) => {
+    if (!canEdit) return;
     if (multiLocations.length <= 1) {
       alert("At least one date and location stop must be maintained.");
       return;
@@ -924,6 +933,7 @@ export default function EventDetailsView({
 
   // ─── FILE UPLOAD HANDLERS (MAX 5 IMAGES, MAX 5MB EACH) ────────────────────
   const handleImageUpload = async (e) => {
+    if (!canEdit) return;
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -980,7 +990,7 @@ export default function EventDetailsView({
   };
 
   const handleSetPrimaryCover = async (idx) => {
-    if (idx === 0) return;
+    if (!canEdit || idx === 0) return;
     const target = galleryImages[idx];
     const reordered = [target, ...galleryImages.filter((_, i) => i !== idx)];
     setGalleryImages(reordered);
@@ -999,6 +1009,7 @@ export default function EventDetailsView({
   };
 
   const handleRemoveImage = async (idxToRemove) => {
+    if (!canEdit) return;
     const updated = galleryImages.filter((_, idx) => idx !== idxToRemove);
     setGalleryImages(updated);
     const newBanner = updated.length > 0 ? (idxToRemove === 0 ? updated[0] : banner) : "";
@@ -1017,6 +1028,7 @@ export default function EventDetailsView({
   };
 
   const handleEventLogoUpload = async (e) => {
+    if (!canEdit) return;
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -1057,6 +1069,7 @@ export default function EventDetailsView({
   };
 
   const handleOrganizerLogoUpload = async (e) => {
+    if (!canEdit) return;
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -1139,26 +1152,32 @@ export default function EventDetailsView({
         </div>
 
         <div className="flex items-center gap-2.5">
-          {/* Real-time sync status indicator badge */}
-          <div className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-white border border-slate-200 text-xs font-semibold select-none shadow-2xs">
-            {syncStatus === "saving" ? (
-              <span className="flex items-center gap-1.5 text-blue-600">
-                <Loader2 size={12} className="animate-spin" />
-                <span>{t("details.savingRealtime", "Saving in real time...")}</span>
-              </span>
-            ) : (
-              <span className="flex items-center gap-1.5 text-emerald-700">
-                <CheckCircle2 size={12} className="text-emerald-600" />
-                <span>{t("details.allChangesSaved", "All changes saved")}</span>
-              </span>
-            )}
-          </div>
+          {!canEdit ? (
+            <div className="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-amber-50 border border-amber-200 text-xs font-semibold text-amber-700 select-none shadow-2xs">
+              <Eye size={13} />
+              <span>Viewer Mode (Read-Only)</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-white border border-slate-200 text-xs font-semibold select-none shadow-2xs">
+              {syncStatus === "saving" ? (
+                <span className="flex items-center gap-1.5 text-blue-600">
+                  <Loader2 size={12} className="animate-spin" />
+                  <span>{t("details.savingRealtime", "Saving in real time...")}</span>
+                </span>
+              ) : (
+                <span className="flex items-center gap-1.5 text-emerald-700">
+                  <CheckCircle2 size={12} className="text-emerald-600" />
+                  <span>{t("details.allChangesSaved", "All changes saved")}</span>
+                </span>
+              )}
+            </div>
+          )}
 
           {onPreviewLandingPage && (
             <button
               type="button"
               onClick={() => {
-                if (onUpdateEventDetails) {
+                if (canEdit && onUpdateEventDetails) {
                   onUpdateEventDetails(buildPayload());
                 }
                 onPreviewLandingPage();
@@ -1224,6 +1243,7 @@ export default function EventDetailsView({
 
       {/* Form Content Card */}
       <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-6">
+        <fieldset disabled={!canEdit} className="contents">
         
         {/* ══════════════════════════════════════════════════════════════════ */}
         {/* TAB 1: GENERAL INFORMATION                                        */}
@@ -1269,26 +1289,28 @@ export default function EventDetailsView({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => eventLogoFileInputRef.current?.click()}
-                      disabled={uploadingEventLogo}
-                      className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-800 text-xs font-bold transition-all cursor-pointer shadow-2xs"
-                    >
-                      {uploadingEventLogo ? "Uploading..." : "Replace Logo"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setEventLogo("")}
-                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
-                      title="Remove event logo"
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
+                  {canEdit && (
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => eventLogoFileInputRef.current?.click()}
+                        disabled={uploadingEventLogo}
+                        className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-800 text-xs font-bold transition-all cursor-pointer shadow-2xs"
+                      >
+                        {uploadingEventLogo ? "Uploading..." : "Replace Logo"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEventLogo("")}
+                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
+                        title="Remove event logo"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  )}
                 </div>
-              ) : (
+              ) : canEdit ? (
                 <div
                   onClick={() => !uploadingEventLogo && eventLogoFileInputRef.current?.click()}
                   className="p-4 rounded-2xl border border-dashed border-slate-300 hover:border-blue-500 bg-slate-50/60 hover:bg-blue-50/30 flex items-center justify-between gap-3 transition-all cursor-pointer group shadow-2xs"
@@ -1305,6 +1327,17 @@ export default function EventDetailsView({
                   <div className="shrink-0">
                     <span className="px-3.5 py-1.5 rounded-xl bg-white border border-slate-200 group-hover:border-blue-300 group-hover:text-blue-600 text-slate-700 text-xs font-bold shadow-2xs transition-all inline-block">
                       {uploadingEventLogo ? t("common.uploading", "Uploading...") : t("details.uploadLogo", "Upload Logo")}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 flex items-center justify-between gap-3 shadow-2xs">
+                  <div>
+                    <span className="text-xs font-bold text-slate-500 block">
+                      No event logo uploaded
+                    </span>
+                    <span className="text-[11px] text-slate-400 block mt-0.5">
+                      {t("details.logoPublicUsage", "Displayed on public navigation bars, delegate registration passes, and confirmation tickets")}
                     </span>
                   </div>
                 </div>
@@ -1623,14 +1656,16 @@ export default function EventDetailsView({
                       Add, arrange, and configure multiple dates, times, cities, venues, or online tracks.
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleAddStop}
-                    className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0"
-                  >
-                    <Plus size={14} />
-                    <span>{t("details.addDateLocation", "Add Date & Location")}</span>
-                  </button>
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={handleAddStop}
+                      className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0"
+                    >
+                      <Plus size={14} />
+                      <span>{t("details.addDateLocation", "Add Date & Location")}</span>
+                    </button>
+                  )}
                 </div>
 
                 {/* List of Multiple Location Cards */}
@@ -1702,25 +1737,29 @@ export default function EventDetailsView({
                               onClick={() => setEditingStopId(isEditing ? null : stop.id)}
                               className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 text-[11px] font-semibold transition-colors cursor-pointer flex items-center gap-1"
                             >
-                              <Edit3 size={12} />
-                              <span>{isEditing ? "Close" : "Edit"}</span>
+                              {canEdit ? <Edit3 size={12} /> : <Eye size={12} />}
+                              <span>{isEditing ? "Close" : canEdit ? "Edit" : "View Details"}</span>
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDuplicateStop(stop)}
-                              className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors cursor-pointer"
-                              title="Duplicate stop"
-                            >
-                              <Copy size={13} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteStop(stop.id)}
-                              className="p-1.5 rounded-lg border border-slate-200 text-slate-400 hover:text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors cursor-pointer"
-                              title="Delete stop"
-                            >
-                              <Trash2 size={13} />
-                            </button>
+                            {canEdit && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDuplicateStop(stop)}
+                                  className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors cursor-pointer"
+                                  title="Duplicate stop"
+                                >
+                                  <Copy size={13} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteStop(stop.id)}
+                                  className="p-1.5 rounded-lg border border-slate-200 text-slate-400 hover:text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors cursor-pointer"
+                                  title="Delete stop"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </div>
 
@@ -1967,21 +2006,23 @@ export default function EventDetailsView({
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2 self-start sm:self-center">
-                  <button
-                    type="button"
-                    onClick={() => imageFileInputRef.current?.click()}
-                    disabled={uploadingImage || galleryImages.length >= 5}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer ${
-                      galleryImages.length >= 5
-                        ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-                        : "bg-blue-600 hover:bg-blue-700 text-white"
-                    }`}
-                  >
-                    <Upload size={13} />
-                    <span>{uploadingImage ? t("common.uploading", "Uploading...") : t("details.uploadImageMax", "Upload Image (Max 10MB)")}</span>
-                  </button>
-                </div>
+                {canEdit && (
+                  <div className="flex items-center gap-2 self-start sm:self-center">
+                    <button
+                      type="button"
+                      onClick={() => imageFileInputRef.current?.click()}
+                      disabled={uploadingImage || galleryImages.length >= 5}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer ${
+                        galleryImages.length >= 5
+                          ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                          : "bg-blue-600 hover:bg-blue-700 text-white"
+                      }`}
+                    >
+                      <Upload size={13} />
+                      <span>{uploadingImage ? t("common.uploading", "Uploading...") : t("details.uploadImageMax", "Upload Image (Max 10MB)")}</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Image Cards Grid */}
@@ -2022,33 +2063,35 @@ export default function EventDetailsView({
                           {imgUrl.replace(/^https?:\/\//, '')}
                         </span>
 
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {!isPrimary && (
+                        {canEdit && (
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {!isPrimary && (
+                              <button
+                                type="button"
+                                onClick={() => handleSetPrimaryCover(idx)}
+                                className="px-2.5 py-1 rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-[10px] font-bold transition-all cursor-pointer"
+                                title="Set as primary cover banner"
+                              >
+                                {t("details.setAsCover", "Set as Cover")}
+                              </button>
+                            )}
                             <button
                               type="button"
-                              onClick={() => handleSetPrimaryCover(idx)}
-                              className="px-2.5 py-1 rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-[10px] font-bold transition-all cursor-pointer"
-                              title="Set as primary cover banner"
+                              onClick={() => handleRemoveImage(idx)}
+                              className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                              title="Remove image"
                             >
-                              {t("details.setAsCover", "Set as Cover")}
+                              <Trash2 size={13} />
                             </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveImage(idx)}
-                            className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                            title="Remove image"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
                 })}
 
                 {/* Empty Placeholders up to 5 */}
-                {Array.from({ length: Math.max(0, 5 - galleryImages.length) }).map((_, slotIdx) => (
+                {canEdit && Array.from({ length: Math.max(0, 5 - galleryImages.length) }).map((_, slotIdx) => (
                   <button
                     key={`slot-${slotIdx}`}
                     type="button"
@@ -2061,6 +2104,11 @@ export default function EventDetailsView({
                     <span className="text-xs font-semibold">{t("details.imageSlot", "Image Slot")} {galleryImages.length + slotIdx + 1} (Max 10MB)</span>
                   </button>
                 ))}
+                {!canEdit && galleryImages.length === 0 && (
+                  <div className="col-span-full py-8 text-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 text-slate-400 text-xs font-medium">
+                    No gallery images or cover photos uploaded.
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -2110,26 +2158,28 @@ export default function EventDetailsView({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => organizerLogoFileInputRef.current?.click()}
-                      disabled={uploadingOrganizerLogo}
-                      className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-800 text-xs font-bold transition-all cursor-pointer shadow-2xs"
-                    >
-                      {uploadingOrganizerLogo ? t("common.uploading", "Uploading...") : t("details.replaceLogo", "Replace Logo")}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setOrganizerLogo("")}
-                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
-                      title="Remove organizer logo"
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
+                  {canEdit && (
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => organizerLogoFileInputRef.current?.click()}
+                        disabled={uploadingOrganizerLogo}
+                        className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-800 text-xs font-bold transition-all cursor-pointer shadow-2xs"
+                      >
+                        {uploadingOrganizerLogo ? t("common.uploading", "Uploading...") : t("details.replaceLogo", "Replace Logo")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setOrganizerLogo("")}
+                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
+                        title="Remove organizer logo"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  )}
                 </div>
-              ) : (
+              ) : canEdit ? (
                 <div
                   onClick={() => !uploadingOrganizerLogo && organizerLogoFileInputRef.current?.click()}
                   className="p-4 rounded-2xl border border-dashed border-slate-300 hover:border-blue-500 bg-slate-50/60 hover:bg-blue-50/30 flex items-center justify-between gap-3 transition-all cursor-pointer group shadow-2xs"
@@ -2146,6 +2196,17 @@ export default function EventDetailsView({
                   <div className="shrink-0">
                     <span className="px-3.5 py-1.5 rounded-xl bg-white border border-slate-200 group-hover:border-blue-300 group-hover:text-blue-600 text-slate-700 text-xs font-bold shadow-2xs transition-all inline-block">
                       {uploadingOrganizerLogo ? t("common.uploading", "Uploading...") : t("details.uploadLogo", "Upload Logo")}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 flex items-center justify-between gap-3 shadow-2xs">
+                  <div>
+                    <span className="text-xs font-bold text-slate-500 block">
+                      No host or organizer logo uploaded
+                    </span>
+                    <span className="text-[11px] text-slate-400 block mt-0.5">
+                      Displayed on delegate badges, host credentials, and footer recognition
                     </span>
                   </div>
                 </div>
@@ -2188,42 +2249,45 @@ export default function EventDetailsView({
             {/* Manual Save & Feedback Action */}
             <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
               <span className="text-xs text-slate-400 font-medium">
-                {syncStatus === "saving" ? t("details.savingRealtime", "Saving changes in real time...") : t("details.allChangesSaved", "All changes saved")}
+                {!canEdit ? "Viewer mode (Read-only)" : syncStatus === "saving" ? t("details.savingRealtime", "Saving changes in real time...") : t("details.allChangesSaved", "All changes saved")}
               </span>
-              <button
-                type="button"
-                disabled={syncStatus === "saving"}
-                onClick={async () => {
-                  setSyncStatus("saving");
-                  const payload = buildPayload();
-                  try {
-                    if (onUpdateEventDetails) {
-                      await onUpdateEventDetails(payload);
+              {canEdit && (
+                <button
+                  type="button"
+                  disabled={syncStatus === "saving"}
+                  onClick={async () => {
+                    setSyncStatus("saving");
+                    const payload = buildPayload();
+                    try {
+                      if (onUpdateEventDetails) {
+                        await onUpdateEventDetails(payload);
+                      }
+                      lastSavedSnapshotRef.current = getComparableSnapshot(payload);
+                      setSyncStatus("saved");
+                    } catch (err) {
+                      console.error("Save organizer details error:", err);
+                      setSyncStatus("saved");
                     }
-                    lastSavedSnapshotRef.current = getComparableSnapshot(payload);
-                    setSyncStatus("saved");
-                  } catch (err) {
-                    console.error("Save organizer details error:", err);
-                    setSyncStatus("saved");
-                  }
-                }}
-                className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50"
-              >
-                {syncStatus === "saving" ? (
-                  <>
-                    <Loader2 size={13} className="animate-spin" />
-                    <span>{t("common.saving", "Saving...")}</span>
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 size={13} />
-                    <span>{t("details.saveOrganizerDetails", "Save Organizer Details")}</span>
-                  </>
-                )}
-              </button>
+                  }}
+                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {syncStatus === "saving" ? (
+                    <>
+                      <Loader2 size={13} className="animate-spin" />
+                      <span>{t("common.saving", "Saving...")}</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 size={13} />
+                      <span>{t("details.saveOrganizerDetails", "Save Organizer Details")}</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
         )}
+        </fieldset>
       </div>
     </div>
   );

@@ -4,9 +4,10 @@ import React, { useState } from "react";
 import { useLanguage } from "../lib/i18n";
 import {
   Map, Plus, Edit3, Copy, Archive, RotateCcw, Grid, LayoutGrid,
-  Clock, Layers, Trash2
+  Clock, Layers, Trash2, Eye
 } from "lucide-react";
 import { FloorPlanSkeleton } from "./SkeletonLoaders";
+import { canEditModule } from "../lib/permissions";
 
 // Thumbnail preview: mini SVG representation of element counts
 function PlanThumbnail({ plan }) {
@@ -52,7 +53,7 @@ function formatDate(iso) {
 }
 
 // Single floor plan card
-function PlanCard({ plan, onEdit, onDuplicate, onDelete, onPermanentDelete, onArchive, onRestore, onRename }) {
+function PlanCard({ plan, canEdit = true, onEdit, onDuplicate, onDelete, onPermanentDelete, onArchive, onRestore, onRename }) {
   const { t } = useLanguage();
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameVal, setNameVal] = useState(plan.name);
@@ -62,6 +63,7 @@ function PlanCard({ plan, onEdit, onDuplicate, onDelete, onPermanentDelete, onAr
 
   const handleNameSubmit = () => {
     setIsEditingName(false);
+    if (!canEdit) return;
     const trimmed = nameVal.trim();
     if (trimmed && trimmed !== plan.name && onRename) {
       onRename(plan.id, trimmed);
@@ -84,7 +86,7 @@ function PlanCard({ plan, onEdit, onDuplicate, onDelete, onPermanentDelete, onAr
       <div className="p-4 flex flex-col gap-3 flex-1">
         {/* Name (editable inline) */}
         <div>
-          {isEditingName ? (
+          {isEditingName && canEdit ? (
             <input
               type="text"
               value={nameVal}
@@ -100,9 +102,9 @@ function PlanCard({ plan, onEdit, onDuplicate, onDelete, onPermanentDelete, onAr
           ) : (
             <div className="flex items-center justify-between gap-2">
               <h3
-                onDoubleClick={() => !isArchived && setIsEditingName(true)}
-                className="text-sm font-bold text-slate-800 group-hover:text-indigo-650 transition-colors truncate cursor-pointer"
-                title={isArchived ? plan.name : "Double-click to rename"}
+                onDoubleClick={() => !isArchived && canEdit && setIsEditingName(true)}
+                className={`text-sm font-bold text-slate-800 group-hover:text-indigo-650 transition-colors truncate ${canEdit ? "cursor-pointer" : "cursor-default"}`}
+                title={!canEdit ? plan.name : (isArchived ? plan.name : "Double-click to rename")}
               >
                 {plan.name}
               </h3>
@@ -132,11 +134,11 @@ function PlanCard({ plan, onEdit, onDuplicate, onDelete, onPermanentDelete, onAr
             onClick={() => onEdit(plan.id)}
             className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl font-semibold text-xs transition-all duration-200 cursor-pointer shadow-sm hover:shadow"
           >
-            <Edit3 size={13} />
-            <span>{t("common.edit", "Edit")}</span>
+            {canEdit ? <Edit3 size={13} /> : <Eye size={13} />}
+            <span>{canEdit ? t("common.edit", "Edit") : t("common.view", "View")}</span>
           </button>
 
-          {!isArchived && (
+          {!isArchived && canEdit && (
             <button
               onClick={() => onDuplicate(plan.id)}
               className="p-2 border border-slate-200 hover:border-indigo-200 hover:text-indigo-650 rounded-xl text-slate-500 transition-all duration-200 cursor-pointer"
@@ -146,74 +148,76 @@ function PlanCard({ plan, onEdit, onDuplicate, onDelete, onPermanentDelete, onAr
             </button>
           )}
 
-          {isArchived ? (
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => onRestore && onRestore(plan.id)}
-                className="p-2 border border-emerald-200 hover:bg-emerald-50 text-emerald-600 rounded-xl transition-all duration-200 cursor-pointer flex items-center gap-1 text-xs font-bold"
-                title="Restore floor plan"
-              >
-                <RotateCcw size={14} />
-              </button>
+          {canEdit && (
+            isArchived ? (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => onRestore && onRestore(plan.id)}
+                  className="p-2 border border-emerald-200 hover:bg-emerald-50 text-emerald-600 rounded-xl transition-all duration-200 cursor-pointer flex items-center gap-1 text-xs font-bold"
+                  title="Restore floor plan"
+                >
+                  <RotateCcw size={14} />
+                </button>
 
-              {showDeleteConfirm ? (
-                <div className="flex items-center gap-1">
+                {showDeleteConfirm ? (
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => {
+                        if (onPermanentDelete) onPermanentDelete(plan.id);
+                        else if (onDelete) onDelete(plan.id);
+                        setShowDeleteConfirm(false);
+                      }}
+                      className="p-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl transition-colors cursor-pointer"
+                      title="Confirm permanent deletion"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                    <button
+                      onClick={() => setShowDeleteConfirm(false)}
+                      className="p-2 border border-slate-200 hover:border-slate-300 text-slate-400 rounded-xl transition-colors cursor-pointer text-[10px] font-bold"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
                   <button
-                    onClick={() => {
-                      if (onPermanentDelete) onPermanentDelete(plan.id);
-                      else if (onDelete) onDelete(plan.id);
-                      setShowDeleteConfirm(false);
-                    }}
-                    className="p-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl transition-colors cursor-pointer"
-                    title="Confirm permanent deletion"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="p-2 border border-slate-200 hover:border-rose-200 hover:bg-rose-50 text-rose-500 rounded-xl transition-all duration-200 cursor-pointer"
+                    title="Delete permanently"
                   >
                     <Trash2 size={14} />
                   </button>
-                  <button
-                    onClick={() => setShowDeleteConfirm(false)}
-                    className="p-2 border border-slate-200 hover:border-slate-300 text-slate-400 rounded-xl transition-colors cursor-pointer text-[10px] font-bold"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ) : (
+                )}
+              </div>
+            ) : showArchiveConfirm ? (
+              <div className="flex items-center gap-1">
                 <button
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className="p-2 border border-slate-200 hover:border-rose-200 hover:bg-rose-50 text-rose-500 rounded-xl transition-all duration-200 cursor-pointer"
-                  title="Delete permanently"
+                  onClick={() => { 
+                    if (onArchive) onArchive(plan.id);
+                    else if (onDelete) onDelete(plan.id);
+                    setShowArchiveConfirm(false); 
+                  }}
+                  className="p-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl transition-colors cursor-pointer"
+                  title="Confirm archive (data is preserved)"
                 >
-                  <Trash2 size={14} />
+                  <Archive size={14} />
                 </button>
-              )}
-            </div>
-          ) : showArchiveConfirm ? (
-            <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setShowArchiveConfirm(false)}
+                  className="p-2 border border-slate-200 hover:border-slate-300 text-slate-400 rounded-xl transition-colors cursor-pointer text-[10px] font-bold"
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
               <button
-                onClick={() => { 
-                  if (onArchive) onArchive(plan.id);
-                  else if (onDelete) onDelete(plan.id);
-                  setShowArchiveConfirm(false); 
-                }}
-                className="p-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl transition-colors cursor-pointer"
-                title="Confirm archive (data is preserved)"
+                onClick={() => setShowArchiveConfirm(true)}
+                className="p-2 border border-slate-200 hover:border-amber-200 hover:text-amber-600 rounded-xl text-slate-500 transition-all duration-200 cursor-pointer"
+                title="Archive this floor plan"
               >
                 <Archive size={14} />
               </button>
-              <button
-                onClick={() => setShowArchiveConfirm(false)}
-                className="p-2 border border-slate-200 hover:border-slate-300 text-slate-400 rounded-xl transition-colors cursor-pointer text-[10px] font-bold"
-              >
-                ✕
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setShowArchiveConfirm(true)}
-              className="p-2 border border-slate-200 hover:border-amber-200 hover:text-amber-600 rounded-xl text-slate-500 transition-all duration-200 cursor-pointer"
-              title="Archive this floor plan"
-            >
-              <Archive size={14} />
-            </button>
+            )
           )}
         </div>
       </div>
@@ -222,9 +226,9 @@ function PlanCard({ plan, onEdit, onDuplicate, onDelete, onPermanentDelete, onAr
 }
 
 export default function FloorPlanGallery({
-
   floorPlans = [],
   isLoading = false,
+  effectivePermissions = null,
   onEdit,
   onCreateNew,
   onDuplicate,
@@ -235,6 +239,7 @@ export default function FloorPlanGallery({
   onRename,
 }) {
   const { t } = useLanguage();
+  const canEdit = canEditModule("floor-plan", effectivePermissions);
   const [filter, setFilter] = useState("active"); // "active" | "archived" | "all"
 
   if (isLoading) {
@@ -251,14 +256,22 @@ export default function FloorPlanGallery({
       {/* Page header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex flex-col gap-1">
-          <div>
+          <div className="flex items-center gap-2.5">
             <h1 className="text-2xl font-bold text-slate-900">{t("floorPlan.title", "Floor Plans")}</h1>
-            <p className="text-sm text-slate-500">
-              {activePlans.length === 0
-                ? t("floorPlan.noActiveSubtitle", "No active floor plans — create your first one below")
-                : `${activePlans.length} ${t("floorPlan.activePlansCount", "active plan(s)")} · ${t("floorPlan.doubleClickRename", "Double-click a name to rename")}`}
-            </p>
+            {!canEdit && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                <Eye size={12} />
+                <span>{t("common.viewerMode", "Viewer Mode (Read-only)")}</span>
+              </span>
+            )}
           </div>
+          <p className="text-sm text-slate-500">
+            {!canEdit
+              ? t("floorPlan.viewerSubtitle", "Inspect venue layouts, booth assignments, and floor plans.")
+              : (activePlans.length === 0
+                  ? t("floorPlan.noActiveSubtitle", "No active floor plans — create your first one below")
+                  : `${activePlans.length} ${t("floorPlan.activePlansCount", "active plan(s)")} · ${t("floorPlan.doubleClickRename", "Double-click a name to rename")}`)}
+          </p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -281,12 +294,14 @@ export default function FloorPlanGallery({
             </button>
           </div>
 
-          <button
-            onClick={() => onCreateNew && onCreateNew()}
-            className="px-5 py-2.5 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs transition-all duration-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 cursor-pointer"
-          >
-            {t("floorPlan.newFloorPlan", "New Floor Plan")}
-          </button>
+          {canEdit && (
+            <button
+              onClick={() => onCreateNew && onCreateNew()}
+              className="px-5 py-2.5 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs transition-all duration-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 cursor-pointer"
+            >
+              {t("floorPlan.newFloorPlan", "New Floor Plan")}
+            </button>
+          )}
         </div>
       </div>
 
@@ -304,7 +319,7 @@ export default function FloorPlanGallery({
               {filter === "archived" ? t("floorPlan.archivedDesc", "Archived floor plans will appear here.") : t("floorPlan.noPlansDesc", "Create your first venue floor plan to start designing your event layout with booths, stages, and more.")}
             </p>
           </div>
-          {filter !== "archived" && (
+          {filter !== "archived" && canEdit && (
             <button
               onClick={() => onCreateNew && onCreateNew()}
               className="flex items-center gap-2 px-6 py-3 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm transition-all duration-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 cursor-pointer"
@@ -323,6 +338,7 @@ export default function FloorPlanGallery({
             <PlanCard
               key={plan.id}
               plan={plan}
+              canEdit={canEdit}
               onEdit={onEdit}
               onDuplicate={onDuplicate}
               onDelete={onDelete}
@@ -334,7 +350,7 @@ export default function FloorPlanGallery({
           ))}
 
           {/* Quick-add card */}
-          {filter !== "archived" && (
+          {filter !== "archived" && canEdit && (
             <button
               onClick={() => onCreateNew && onCreateNew()}
               className="min-h-[220px] border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center gap-3 text-slate-400 hover:text-indigo-500 hover:border-indigo-300 hover:bg-indigo-50/30 transition-all duration-200 cursor-pointer group"
