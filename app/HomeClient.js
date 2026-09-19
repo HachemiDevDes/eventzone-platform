@@ -944,7 +944,11 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
             const finalForm = {
               ...pendingData,
               hostName: pendingData.hostName || syncedUser?.fullName || session.user.user_metadata?.full_name || "Event Organizer",
-              hostEmail: pendingData.hostEmail || syncedUser?.email || session.user.email || "organizer@eventzone.pro"
+              hostEmail: pendingData.hostEmail || syncedUser?.email || session.user.email || "organizer@eventzone.pro",
+              organization: pendingData.organization || syncedUser?.companyName || syncedUser?.organization || "",
+              contactPhone: pendingData.contactPhone || syncedUser?.phone || "",
+              organizerName: pendingData.organizerName || pendingData.hostName || syncedUser?.fullName || session.user.user_metadata?.full_name || "Event Organizer",
+              contactEmail: pendingData.contactEmail || pendingData.hostEmail || syncedUser?.email || session.user.email || "organizer@eventzone.pro",
             };
             const created = await createEvent(finalForm, session.user.id);
             setUserEvents(prev => [created, ...prev]);
@@ -1990,7 +1994,11 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
         const finalForm = {
           ...pendingData,
           hostName: pendingData.hostName || user.fullName || "Event Organizer",
-          hostEmail: pendingData.hostEmail || user.email || "organizer@eventzone.pro"
+          hostEmail: pendingData.hostEmail || user.email || "organizer@eventzone.pro",
+          organization: pendingData.organization || user.companyName || user.organization || "",
+          contactPhone: pendingData.contactPhone || user.phone || "",
+          organizerName: pendingData.organizerName || pendingData.hostName || user.fullName || "Event Organizer",
+          contactEmail: pendingData.contactEmail || pendingData.hostEmail || user.email || "organizer@eventzone.pro",
         };
         const created = await createEvent(finalForm, user.id);
         setUserEvents(prev => [created, ...prev]);
@@ -2133,8 +2141,16 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
       return;
     }
 
-    // Sanitize capacity against organizer maxAttendees cap if set
-    const sanitizedFormData = { ...formData };
+    // Sanitize capacity against organizer maxAttendees cap if set, and populate organizer info
+    const sanitizedFormData = {
+      ...formData,
+      hostName: formData.hostName || currentUser?.fullName || currentUser?.name || "Event Organizer",
+      hostEmail: formData.hostEmail || formData.contactEmail || currentUser?.email || "",
+      organization: formData.organization || currentUser?.companyName || currentUser?.organization || "",
+      contactPhone: formData.contactPhone || currentUser?.phone || "",
+      organizerName: formData.organizerName || formData.hostName || currentUser?.fullName || currentUser?.name || "Event Organizer",
+      contactEmail: formData.contactEmail || formData.hostEmail || currentUser?.email || "",
+    };
     if (currentUser?.maxAttendees !== null && currentUser?.maxAttendees !== undefined) {
       const requestedCap = Number(formData.capacity) || 500;
       if (requestedCap > currentUser.maxAttendees) {

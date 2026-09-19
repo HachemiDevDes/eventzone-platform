@@ -38,7 +38,7 @@ export async function POST(request) {
 
     if (!type) {
       return NextResponse.json(
-        { error: "Missing required 'type' field ('organizer_joined' | 'event_published')." },
+        { error: "Missing required 'type' field ('organizer_joined' | 'event_created' | 'event_published')." },
         { status: 400 }
       );
     }
@@ -100,14 +100,15 @@ export async function POST(request) {
       });
     }
 
-    // ── 2. EVENT PUBLISHED NOTIFICATION ──
-    if (type === "event_published") {
+    // ── 2. NEW EVENT ADDED / CREATED NOTIFICATION ──
+    if (type === "event_created" || type === "event_published") {
       let enrichedEvent = { ...event };
       let enrichedOrganizer = { ...organizer };
       const eventId = event.id;
       const eventSlug = event.slug;
+      const organizerId = organizer.id || event.organizer_id;
 
-      const dedupeKey = `event_published:${eventId || eventSlug || event.title}`;
+      const dedupeKey = `event_created:${eventId || eventSlug || event.title}`;
       if (isDuplicateNotification(dedupeKey)) {
         return NextResponse.json({
           success: true,
@@ -146,29 +147,36 @@ export async function POST(request) {
               contact_phone: eventRow.contact_phone || enrichedEvent.contact_phone,
               organizer_id: eventRow.organizer_id || enrichedEvent.organizer_id,
             };
-
-            // If organizer info not passed, look up organizer profile via organizer_id
-            if (eventRow.organizer_id && (!enrichedOrganizer.email || !enrichedOrganizer.fullName)) {
-              const { data: orgProfile } = await supabase
-                .from("profiles")
-                .select("*")
-                .eq("id", eventRow.organizer_id)
-                .maybeSingle();
-
-              if (orgProfile) {
-                enrichedOrganizer = {
-                  id: orgProfile.id,
-                  fullName: orgProfile.full_name || enrichedOrganizer.fullName || eventRow.organizer_name,
-                  email: orgProfile.email || enrichedOrganizer.email || eventRow.contact_email,
-                  companyName: orgProfile.company_name || enrichedOrganizer.companyName || eventRow.organization,
-                  phone: orgProfile.phone || enrichedOrganizer.phone || eventRow.contact_phone,
-                  jobTitle: orgProfile.job_title || enrichedOrganizer.jobTitle,
-                };
-              }
-            }
           }
         } catch (dbErr) {
-          console.warn("Could not enrich event or organizer details from DB:", dbErr);
+          console.warn("Could not enrich event details from DB:", dbErr);
+        }
+      }
+
+      // Enrich organizer from profiles table if needed
+      const lookupOrgId = organizerId || enrichedEvent.organizer_id;
+      const lookupOrgEmail = enrichedOrganizer.email || enrichedEvent.contact_email;
+      if (supabase && (lookupOrgId || lookupOrgEmail)) {
+        try {
+          let query = supabase.from("profiles").select("*");
+          if (lookupOrgId) {
+            query = query.eq("id", lookupOrgId);
+          } else {
+            query = query.eq("email", lookupOrgEmail);
+          }
+          const { data: orgProfile } = await query.maybeSingle();
+          if (orgProfile) {
+            enrichedOrganizer = {
+              id: orgProfile.id || enrichedOrganizer.id,
+              fullName: orgProfile.full_name || enrichedOrganizer.fullName || enrichedEvent.organizer_name || "Organizer",
+              email: orgProfile.email || enrichedOrganizer.email || enrichedEvent.contact_email,
+              companyName: orgProfile.company_name || enrichedOrganizer.companyName || enrichedEvent.organization || "",
+              phone: orgProfile.phone || enrichedOrganizer.phone || enrichedEvent.contact_phone || "",
+              jobTitle: orgProfile.job_title || enrichedOrganizer.jobTitle || "",
+            };
+          }
+        } catch (orgErr) {
+          console.warn("Could not enrich organizer profile from DB:", orgErr);
         }
       }
 
@@ -179,7 +187,7 @@ export async function POST(request) {
 
       return NextResponse.json({
         success: true,
-        type: "event_published",
+        type: "event_created",
         messageId: sendResult?.messageId || null,
         eventId: enrichedEvent.id || null,
         eventTitle: enrichedEvent.name || enrichedEvent.title,
