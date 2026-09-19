@@ -2034,6 +2034,34 @@ export default function EventPublicLandingPage({
                       </div>
                     )}
 
+                    {/* Session Partner / Sponsor Logos */}
+                    {Array.isArray(session.logos) && session.logos.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        {session.logos.map((logo, idx) => {
+                          const logoImg = typeof logo === "string" ? logo : (logo?.image || logo?.url || logo?.logo || "");
+                          const logoLabel = typeof logo === "object" ? (logo?.label || "Partner") : "Partner";
+                          if (!logoImg) return null;
+
+                          return (
+                            <div
+                              key={logo?.id || idx}
+                              className="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl shadow-2xs"
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={logoImg}
+                                alt={logoLabel}
+                                className="h-4 object-contain max-w-[70px]"
+                              />
+                              <span className="text-[10px] font-bold text-slate-500">
+                                {logoLabel}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
                     {/* Description */}
                     {session.description && (
                       <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal pt-1">
