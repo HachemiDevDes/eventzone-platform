@@ -1,18 +1,21 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { formatCurrency, calculateFiscalStamp, formatInvoicingDate } from "../lib/invoicingConstants";
 import { numberToAlgerianWords } from "../lib/numberToWords";
 
 /**
- * InvoicingDocumentPreview
- * Pixel-perfect A4 Document Preview matching Algerian fiscal standards and Eventzone design.
+ * InvoicingDocumentSheet
+ * Core presentation of the A4 invoice document.
+ * Used for both live on-screen preview and clean multi-page print output.
  */
-export default function InvoicingDocumentPreview({
+function InvoicingDocumentSheet({
   document = {},
   isPrintMode = false,
   className = "",
+  id,
 }) {
   const {
     document_type = "facture",
@@ -83,15 +86,19 @@ export default function InvoicingDocumentPreview({
 
   return (
     <div 
-      className={`bg-white text-slate-900 mx-auto transition-all shadow-[0_4px_24px_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.04)] rounded-xs sm:rounded-sm border border-slate-200/90 p-8 sm:p-12 md:p-14 font-sans w-full max-w-[794px] min-h-[1123px] flex flex-col justify-between select-text ${isPrintMode ? 'shadow-none border-none p-0 max-w-none min-h-0' : ''} ${className}`}
-      id="a4-invoice-render"
+      className={
+        isPrintMode
+          ? `bg-white text-slate-900 mx-auto font-sans w-full max-w-none min-h-0 h-auto block p-0 m-0 border-none shadow-none select-text ${className}`
+          : `bg-white text-slate-900 mx-auto transition-all shadow-[0_4px_24px_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.04)] rounded-xs sm:rounded-sm border border-slate-200/90 p-8 sm:p-12 md:p-14 font-sans w-full max-w-[794px] min-h-[1123px] flex flex-col justify-between select-text ${className}`
+      }
+      id={id}
       style={{
         boxSizing: 'border-box',
       }}
     >
-      <div className="space-y-6">
+      <div className={`space-y-6 ${isPrintMode ? 'block' : ''}`}>
         {/* 1. Header: Logo (Left) & Document Title / Ref (Right) */}
-        <div className="flex items-start justify-between gap-4 pb-1">
+        <div className="flex items-start justify-between gap-4 pb-1 invoice-header-block print-avoid-break">
           <div>
             {logo_url ? (
               <img 
@@ -120,7 +127,7 @@ export default function InvoicingDocumentPreview({
         </div>
 
         {/* 2. Metadata Pill Container (Date d'émission, Échéance, Référence) */}
-        <div className="grid grid-cols-3 gap-4 bg-slate-50/50 border border-slate-200/90 rounded-2xl px-6 py-3.5">
+        <div className="grid grid-cols-3 gap-4 bg-slate-50/50 border border-slate-200/90 rounded-2xl px-6 py-3.5 invoice-meta-block print-avoid-break">
           <div>
             <span className="block text-[9.5px] font-bold uppercase tracking-wider text-slate-400">
               DATE D&apos;ÉMISSION
@@ -148,7 +155,7 @@ export default function InvoicingDocumentPreview({
         </div>
 
         {/* 3. Two Columns: Émetteur vs Destinataire */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 pt-2">
+        <div className="grid grid-cols-2 gap-8 pt-2 invoice-parties-block print-avoid-break">
           {/* Émetteur */}
           <div className="space-y-1 text-xs">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
@@ -205,11 +212,11 @@ export default function InvoicingDocumentPreview({
         </div>
 
         {/* 4. Table: Désignation, Qté, Prix Unitaire HT, Montant HT */}
-        <div className="pt-2">
+        <div className="pt-2 invoice-table-block">
           <div className="overflow-hidden rounded-xl border border-slate-200">
-            <table className="w-full text-left text-xs">
+            <table className="w-full text-left text-xs border-collapse">
               <thead className="bg-slate-900 text-white uppercase text-[9px] font-black tracking-wider">
-                <tr>
+                <tr className="print-avoid-break">
                   <th scope="col" className="px-4 py-2.5 font-black">DÉSIGNATION</th>
                   <th scope="col" className="px-3 py-2.5 text-center font-black w-16">QTÉ</th>
                   <th scope="col" className="px-3 py-2.5 text-right font-black w-28">PRIX UNITAIRE HT</th>
@@ -223,7 +230,10 @@ export default function InvoicingDocumentPreview({
                     const p = Number(item.unit_price) || 0;
                     const tot = Number(item.total_ht) !== undefined ? Number(item.total_ht) : q * p;
                     return (
-                      <tr key={item.id || idx} className={idx % 2 === 1 ? "bg-slate-50/50" : "bg-white"}>
+                      <tr 
+                        key={item.id || idx} 
+                        className={`${idx % 2 === 1 ? "bg-slate-50/50" : "bg-white"} invoice-table-row print-avoid-break`}
+                      >
                         <td className="px-4 py-3 font-semibold text-slate-800 whitespace-pre-line">
                           {item.description || "—"}
                         </td>
@@ -240,7 +250,7 @@ export default function InvoicingDocumentPreview({
                     );
                   })
                 ) : (
-                  <tr>
+                  <tr className="print-avoid-break">
                     <td colSpan={4} className="px-4 py-6 text-center text-slate-400 italic">
                       Aucune ligne d&apos;article ajoutée
                     </td>
@@ -252,7 +262,7 @@ export default function InvoicingDocumentPreview({
         </div>
 
         {/* 5. Totals Block */}
-        <div className="flex justify-end pt-2">
+        <div className="flex justify-end pt-2 invoice-totals-block print-avoid-break">
           <div className="w-full sm:w-72 space-y-1.5 text-xs">
             <div className="flex justify-between py-1 border-b border-slate-100 text-slate-600">
               <span>Montant HT</span>
@@ -296,7 +306,7 @@ export default function InvoicingDocumentPreview({
         </div>
 
         {/* 6. Legal Highlight Box: Arrêté à la somme de */}
-        <div className="bg-blue-50/70 border border-blue-200/80 rounded-xl p-3 sm:p-4 text-xs">
+        <div className="bg-blue-50/70 border border-blue-200/80 rounded-xl p-3 sm:p-4 text-xs invoice-words-block print-avoid-break">
           <span className="block text-[9px] font-extrabold uppercase tracking-wider text-blue-700">
             ARRÊTÉ À LA SOMME DE
           </span>
@@ -307,7 +317,7 @@ export default function InvoicingDocumentPreview({
 
         {/* 7. Bank Coordinates & Payment Details */}
         {(bank.rib || bank.account_number || bank.bank_name) && (
-          <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 text-[11px] space-y-1">
+          <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 text-[11px] space-y-1 invoice-bank-block print-avoid-break">
             <span className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-400">
               COORDONNÉES BANCAIRES
             </span>
@@ -321,7 +331,7 @@ export default function InvoicingDocumentPreview({
         )}
 
         {/* 8. Notes / Conditions & Cachet */}
-        <div className="flex flex-col sm:flex-row items-start justify-between gap-4 pt-2">
+        <div className="flex flex-row items-start justify-between gap-4 pt-2 invoice-notes-block print-avoid-break">
           {notes && (
             <div className="flex-1 text-[11px] text-slate-500">
               <span className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-400 mb-0.5">
@@ -349,7 +359,7 @@ export default function InvoicingDocumentPreview({
       </div>
 
       {/* 9. Legal Fiscal Footer */}
-      <div className="pt-8 border-t border-slate-200 mt-6 text-center text-[10px] text-slate-400 space-y-1">
+      <div className={`pt-6 border-t border-slate-200 text-center text-[10px] text-slate-400 space-y-1 invoice-footer-block print-avoid-break ${isPrintMode ? 'mt-6 pb-2' : 'mt-6'}`}>
         <p className="font-semibold text-slate-500">
           {[
             emitter_company_name || "SPASU Eventzone",
@@ -364,5 +374,67 @@ export default function InvoicingDocumentPreview({
         </p>
       </div>
     </div>
+  );
+}
+
+/**
+ * InvoicingDocumentPreview
+ * Pixel-perfect A4 Document Preview matching Algerian fiscal standards and Eventzone design.
+ * Automatically manages on-screen responsive preview and dedicated print portal for 100% clean browser printing.
+ */
+export default function InvoicingDocumentPreview({
+  document = {},
+  isPrintMode = false,
+  className = "",
+}) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    if (typeof window !== "undefined" && window.document?.body) {
+      window.document.body.classList.add("has-invoice-print");
+    }
+    return () => {
+      if (typeof window !== "undefined" && window.document?.body) {
+        window.document.body.classList.remove("has-invoice-print");
+      }
+    };
+  }, []);
+
+  // Direct print mode invocation (e.g. within pdf rendering or manual isolation)
+  if (isPrintMode) {
+    return (
+      <InvoicingDocumentSheet
+        document={document}
+        isPrintMode={true}
+        className={className}
+        id="a4-invoice-render"
+      />
+    );
+  }
+
+  return (
+    <>
+      {/* 1. On-Screen Interactive Preview (Hidden during browser window.print()) */}
+      <div className="a4-preview-screen print:hidden w-full flex justify-center">
+        <InvoicingDocumentSheet
+          document={document}
+          isPrintMode={false}
+          className={className}
+          id="a4-invoice-render"
+        />
+      </div>
+
+      {/* 2. Dedicated Body-Level Print Portal (Hidden on screen, Sole document in window.print()) */}
+      {mounted && typeof window !== "undefined" && createPortal(
+        <div id="invoice-print-container" className="hidden print:block w-full bg-white text-slate-900">
+          <InvoicingDocumentSheet
+            document={document}
+            isPrintMode={true}
+          />
+        </div>,
+        window.document.body
+      )}
+    </>
   );
 }

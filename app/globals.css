@@ -548,46 +548,85 @@ div[class*="rounded"] > button,
 @media print {
   @page {
     size: A4 portrait;
-    margin: 0;
+    margin: 14mm 12mm 14mm 12mm;
   }
 
   html, body {
-    background: white !important;
+    background: #ffffff !important;
     margin: 0 !important;
     padding: 0 !important;
-    width: 210mm !important;
-    min-height: 297mm !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
-  /* Hide all surrounding webpage chrome, sidebar, navigation, and editor inputs */
-  body * {
-    visibility: hidden !important;
+  /* When printing an invoice, completely hide all surrounding webpage chrome and UI */
+  body.has-invoice-print > *:not(#invoice-print-container),
+  body:has(#invoice-print-container) > *:not(#invoice-print-container) {
+    display: none !important;
   }
 
-  /* Make only the A4 invoice sheet and its children visible */
-  #a4-invoice-render,
-  #a4-invoice-render * {
-    visibility: visible !important;
-  }
-
-  #a4-invoice-render {
-    position: fixed !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 210mm !important;
-    min-height: 297mm !important;
-    max-width: 210mm !important;
+  /* Dedicated body-level print container: flows naturally across pages without repeating headers */
+  #invoice-print-container {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
     margin: 0 !important;
-    padding: 15mm 20mm !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    box-shadow: none !important;
+    border: none !important;
+    overflow: visible !important;
+  }
+
+  /* Fallback in case #invoice-print-container is not mounted directly on body */
+  #a4-invoice-render {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
     box-shadow: none !important;
     border: none !important;
     border-radius: 0 !important;
-    background: white !important;
-    z-index: 999999 !important;
+    background: #ffffff !important;
+    overflow: visible !important;
   }
 
+  /* Prevent awkward page-break splits inside logical units (rows, totals, bank, notes) */
+  .print-avoid-break,
+  tr,
+  td,
+  th,
+  .invoice-table-row,
+  .invoice-header-block,
+  .invoice-meta-block,
+  .invoice-parties-block,
+  .invoice-totals-block,
+  .invoice-words-block,
+  .invoice-bank-block,
+  .invoice-notes-block,
+  .invoice-footer-block {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Ensure table borders and rows render cleanly across multiple pages */
+  table {
+    border-collapse: collapse !important;
+  }
+
+  /* Hide interactive controls, navigation, and portals */
   aside, 
   nav, 
   header, 
@@ -600,4 +639,5 @@ div[class*="rounded"] > button,
     display: none !important;
   }
 }
+
 
