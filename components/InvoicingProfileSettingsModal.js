@@ -15,11 +15,12 @@ import {
   TVA_RATES 
 } from "../lib/invoicingConstants";
 import { uploadMedia } from "../lib/storage";
+import { useLanguage } from "../lib/i18n";
 
 /**
  * InvoicingProfileSettingsModal
  * Manages company profile, Algerian fiscal identifiers, default sequence prefixes, and bank accounts.
- * Exact replication of Images 4 & 5.
+ * Rendered as a sleek right-side slide-over drawer panel matching the platform's standard UI.
  */
 export default function InvoicingProfileSettingsModal({
   isOpen = false,
@@ -28,6 +29,7 @@ export default function InvoicingProfileSettingsModal({
   onSaveProfile,
   userId = null,
 }) {
+  const { t, isRTL } = useLanguage();
   const [profile, setProfile] = useState(DEFAULT_INVOICING_PROFILE);
   const [activeSection, setActiveSection] = useState("company"); // 'company', 'fiscal', 'defaults', 'treasury', 'bank', 'taxes'
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);

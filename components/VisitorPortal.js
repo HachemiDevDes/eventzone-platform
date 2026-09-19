@@ -409,6 +409,24 @@ export default function VisitorPortal({
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {registrations.map(reg => {
                   const isPending = reg.status === "pending" || Boolean(reg.requiresApproval);
+                  const matchedEvent = (events || []).find(e => 
+                    (e.id && reg.eventId && String(e.id).toLowerCase() === String(reg.eventId).toLowerCase()) ||
+                    (e.slug && reg.eventId && String(e.slug).toLowerCase() === String(reg.eventId).toLowerCase())
+                  ) || {};
+
+                  const eventTitle = (reg.eventTitle && reg.eventTitle !== "Event Registration" && reg.eventTitle !== "Event" ? reg.eventTitle : null) 
+                    || matchedEvent.title 
+                    || matchedEvent.name 
+                    || reg.eventTitle 
+                    || "Eventzone Summit";
+
+                  const startDate = reg.startDate || matchedEvent.startDate || matchedEvent.start_date || "";
+                  const endDate = reg.endDate || matchedEvent.endDate || matchedEvent.end_date || "";
+                  const location = (reg.location && reg.location !== "Venue TBA" && reg.location !== "Online / TBA" ? reg.location : null)
+                    || matchedEvent.location
+                    || matchedEvent.venueName
+                    || reg.location
+                    || "Venue TBA";
 
                   return (
                     <div 
@@ -436,17 +454,17 @@ export default function VisitorPortal({
                           </div>
 
                           <h3 className="text-base sm:text-lg font-bold text-slate-900 leading-snug mb-2">
-                            {reg.eventTitle}
+                            {eventTitle}
                           </h3>
 
                           <div className="space-y-1.5 text-xs text-slate-600 font-medium mb-4">
                             <div className="flex items-center gap-2">
                               <Calendar size={13} className="text-emerald-600 shrink-0" />
-                              <span>{reg.startDate} — {reg.endDate}</span>
+                              <span>{startDate}{endDate ? ` — ${endDate}` : (startDate ? '' : 'Date TBA')}</span>
                             </div>
                             <div className="flex items-center gap-2">
                               <MapPin size={13} className="text-emerald-600 shrink-0" />
-                              <span className="truncate">{reg.location}</span>
+                              <span className="truncate">{location}</span>
                             </div>
                           </div>
                         </div>

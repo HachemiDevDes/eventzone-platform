@@ -310,6 +310,48 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
     }
     return initialView || "home";
   });
+
+  // Track previous views and history navigation flags for pristine back navigation
+  const lastSyncedViewRef = useRef(currentView);
+  const lastSyncedEventIdRef = useRef(activeEventId);
+  const isPopStateNavigatingRef = useRef(false);
+  const previousViewRef = useRef(null);
+  const hasInternalNavigationRef = useRef(false);
+
+  // Keep previousViewRef updated whenever currentView is outside create-event
+  useEffect(() => {
+    if (currentView !== "create-event") {
+      previousViewRef.current = {
+        view: currentView,
+        eventId: activeEventId,
+      };
+    }
+  }, [currentView, activeEventId]);
+
+  // Dedicated cancel handler for create-event that reliably returns user to their previous page
+  const handleCancelCreateEvent = useCallback(() => {
+    // 1. If user navigated internally and browser history exists, pop cleanly back to the exact previous page
+    if (hasInternalNavigationRef.current && typeof window !== "undefined" && window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+
+    // 2. Fallback: Restore previously tracked view and event if recorded
+    if (previousViewRef.current?.view && previousViewRef.current.view !== "create-event") {
+      if (previousViewRef.current.eventId) {
+        setActiveEventStateId(previousViewRef.current.eventId);
+      }
+      setCurrentView(previousViewRef.current.view);
+      return;
+    }
+
+    // 3. Fallback for direct URL landings (/ ?view=create-event without prior app state)
+    if (currentUser && userEvents.length > 0) {
+      setCurrentView("events-hub");
+    } else {
+      setCurrentView("home");
+    }
+  }, [currentUser, userEvents.length, setActiveEventStateId]);
  
   const [participantsOpen, setParticipantsOpen] = useState(false);
   const [companiesOpen, setCompaniesOpen] = useState(false);
@@ -1744,13 +1786,26 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
     const isSearchMismatch = window.location.search !== (queryString ? `?${queryString}` : "");
     const isPathMismatch = window.location.pathname !== "/";
 
+    const isViewChanged = lastSyncedViewRef.current !== currentView;
+    const isEventChanged = lastSyncedEventIdRef.current !== activeEventId;
+
     if (isSearchMismatch || isPathMismatch) {
-      if (currentView === "home" || !params.has("eventId") || isPathMismatch) {
-        window.history.replaceState({}, "", newUrl);
-      } else {
+      if (isPopStateNavigatingRef.current) {
+        // Popstate already navigated the browser URL — do not re-push or replace
+        isPopStateNavigatingRef.current = false;
+      } else if (isViewChanged || isEventChanged || isPathMismatch) {
         window.history.pushState({}, "", newUrl);
+        hasInternalNavigationRef.current = true;
+      } else {
+        // Same view and event, only minor query parameters updated in place
+        window.history.replaceState({}, "", newUrl);
       }
+    } else if (isPopStateNavigatingRef.current) {
+      isPopStateNavigatingRef.current = false;
     }
+
+    lastSyncedViewRef.current = currentView;
+    lastSyncedEventIdRef.current = activeEventId;
   }, [currentView, activeFloorPlanId, initialPreviewMode, activeEventId, eventDetails?.slug, isLoading]);
 
   // Parse URL query parameters on initial load & on browser Back/Forward (popstate)
@@ -1758,6 +1813,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
     if (typeof window === "undefined") return;
 
     const syncStateFromUrl = () => {
+      isPopStateNavigatingRef.current = true;
       const searchParams = new URLSearchParams(window.location.search);
       const viewParam = searchParams.get("view");
       const eventIdParam = searchParams.get("eventId") || searchParams.get("event");
@@ -1786,10 +1842,10 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
           }
         } else {
           const validViews = [
-            "home", "auth", "profile", "my-tickets", "events-hub", "create-event", "event-landing", "register", "visitor-portal", "overview", "page-builder", "calendar", "event-details", 
+            "home", "auth", "profile", "my-tickets", "events-hub", "create-event", "event-landing", "register", "visitor-portal", "attendee-portal", "overview", "page-builder", "calendar", "event-details", 
             "attendees", "pending", "organizations", "sponsors", 
             "exhibitors", "speakers", "opportunities", "influencers", "tickets", "forms", "rsvp", "logistics", "documents", "check-in", 
-            "my-team", "analytics", "communications", "floor-plan", "admin"
+            "my-team", "developers", "analytics", "communications", "certificates", "floor-plan", "portal-settings", "admin", "invoicing", "invoices"
           ];
           if (validViews.includes(viewParam)) {
             setCurrentView(viewParam);
@@ -4223,13 +4279,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
     }
     return (
       <EventCreationWizard
-        onCancel={() => {
-          if (currentUser) {
-            setCurrentView("events-hub");
-          } else {
-            setCurrentView("home");
-          }
-        }}
+        onCancel={handleCancelCreateEvent}
         onEventCreated={handleEventCreated}
         userId={currentUser?.id}
         currentUser={currentUser}

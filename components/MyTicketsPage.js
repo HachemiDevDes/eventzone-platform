@@ -66,12 +66,22 @@ export default function MyTicketsPage({
   useEffect(() => {
     const generateQRs = async () => {
       const urls = {};
-      for (const reg of registrations) {
+      for (const reg of (registrations || [])) {
         try {
+          const matchedEvent = (events || []).find(e => 
+            (e.id && reg.eventId && String(e.id).toLowerCase() === String(reg.eventId).toLowerCase()) ||
+            (e.slug && reg.eventId && String(e.slug).toLowerCase() === String(reg.eventId).toLowerCase())
+          ) || {};
+          const eventTitle = (reg.eventTitle && reg.eventTitle !== "Event Registration" && reg.eventTitle !== "Event" ? reg.eventTitle : null) 
+            || matchedEvent.title 
+            || matchedEvent.name 
+            || reg.eventTitle 
+            || "Event";
+
           const qrData = JSON.stringify({
             badgeCode: reg.badgeCode,
             eventId: reg.eventId,
-            eventTitle: reg.eventTitle,
+            eventTitle: eventTitle,
             attendeeName: reg.attendeeName || currentUser?.fullName || "Attendee",
             ticketType: reg.ticketType,
             verified: true,
@@ -90,10 +100,10 @@ export default function MyTicketsPage({
       setQrCodeUrls(urls);
     };
 
-    if (registrations.length > 0) {
+    if (Array.isArray(registrations) && registrations.length > 0) {
       generateQRs();
     }
-  }, [registrations, currentUser]);
+  }, [registrations, events, currentUser]);
 
   const handleCopyCode = (code, id) => {
     navigator.clipboard?.writeText(code);
@@ -120,13 +130,47 @@ export default function MyTicketsPage({
     window.open(googleCalUrl, "_blank");
   };
 
-  const filteredRegistrations = registrations.filter(reg => {
+  const enrichedRegistrations = (registrations || []).map(reg => {
+    const matchedEvent = (events || []).find(e => 
+      (e.id && reg.eventId && String(e.id).toLowerCase() === String(reg.eventId).toLowerCase()) ||
+      (e.slug && reg.eventId && String(e.slug).toLowerCase() === String(reg.eventId).toLowerCase())
+    ) || {};
+
+    const resolvedEventTitle = (reg.eventTitle && reg.eventTitle !== "Event Registration" && reg.eventTitle !== "Event" ? reg.eventTitle : null) 
+      || matchedEvent.title 
+      || matchedEvent.name 
+      || reg.eventTitle 
+      || reg.eventName 
+      || "Event Registration";
+
+    const resolvedStartDate = reg.startDate || matchedEvent.startDate || matchedEvent.start_date || "";
+    const resolvedEndDate = reg.endDate || matchedEvent.endDate || matchedEvent.end_date || "";
+    const resolvedLocation = (reg.location && reg.location !== "Venue TBA" && reg.location !== "Online / TBA" ? reg.location : null)
+      || matchedEvent.location
+      || matchedEvent.venueName
+      || matchedEvent.venueAddress
+      || matchedEvent.city
+      || reg.location
+      || "Venue TBA";
+
+    return {
+      ...reg,
+      eventTitle: resolvedEventTitle,
+      startDate: resolvedStartDate,
+      endDate: resolvedEndDate,
+      location: resolvedLocation,
+      matchedEvent
+    };
+  });
+
+  const filteredRegistrations = enrichedRegistrations.filter(reg => {
     const q = searchQuery.toLowerCase().trim();
     const matchesSearch = !q || 
       (reg.eventTitle || "").toLowerCase().includes(q) ||
       (reg.location || "").toLowerCase().includes(q) ||
       (reg.badgeCode || "").toLowerCase().includes(q) ||
-      (reg.ticketType || "").toLowerCase().includes(q);
+      (reg.ticketType || "").toLowerCase().includes(q) ||
+      (reg.attendeeName || "").toLowerCase().includes(q);
 
     const matchesTier = filterTier === "all" || 
       (filterTier === "vip" && (reg.ticketType || "").toLowerCase().includes("vip")) ||

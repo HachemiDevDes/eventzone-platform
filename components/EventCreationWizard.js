@@ -618,6 +618,16 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
 
         {/* Right Actions: Language Switcher & Exit Button */}
         <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] sm:text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border border-slate-200/80 shadow-2xs"
+            title={t("wizard.backToEvents", "Back to Events")}
+          >
+            <ArrowLeft className={`w-3.5 h-3.5 ${isRTL ? "rotate-180" : ""}`} />
+            <span>{t("common.back", "Back")}</span>
+          </button>
+
           {/* Language Selector */}
           <div className="relative">
             {(() => {
