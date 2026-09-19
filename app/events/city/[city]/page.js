@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Calendar, MapPin, ChevronRight, Compass, Building2, ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
 import { fetchPublicEvents } from "../../../../lib/db";
+import { stripHtml } from "../../../../lib/constants";
 import { POPULAR_CITIES, getCityBySlug, filterEventsByCity } from "../../../../lib/seoCategories";
 import Footer from "../../../../components/Footer";
 
@@ -255,7 +256,7 @@ export default async function CityPage({ params }) {
                     </Link>
 
                     <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed font-normal">
-                      {ev.tagline || ev.description || "Join leading delegates for keynotes, exhibitions, and networking."}
+                      {stripHtml(ev.tagline) || stripHtml(ev.description) || "Join leading delegates for keynotes, exhibitions, and networking."}
                     </p>
 
                     <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-100 text-xs">

@@ -1,5 +1,6 @@
 import React from "react";
 import { fetchEventDetails } from "../../lib/db";
+import { stripHtml } from "../../lib/constants";
 import EventLandingClient from "./EventLandingClient";
 
 /**
@@ -29,8 +30,14 @@ export async function generateMetadata({ params }) {
 
   const dateSnippet = event.startDate ? ` on ${event.startDate}` : "";
   const locationSnippet = event.location ? ` in ${event.location}` : "";
-  const baseDescription = event.tagline || event.description || `Register for ${event.title}${dateSnippet}${locationSnippet}. Discover the event agenda, keynote speakers, floor plans, and tickets on Eventzone.`;
-  const cleanDescription = baseDescription.replace(/\s+/g, " ").trim().slice(0, 160);
+  const fallbackDescription = `Register for ${event.title}${dateSnippet}${locationSnippet}. Discover the event agenda, keynote speakers, floor plans, and tickets on Eventzone.`;
+
+  const plainTagline = stripHtml(event.tagline);
+  const plainDescription = stripHtml(event.description);
+  const rawDescription = plainTagline || plainDescription || fallbackDescription;
+  const cleanDescription = rawDescription.length > 160 
+    ? `${rawDescription.slice(0, 157).trimEnd()}...` 
+    : rawDescription;
 
   const canonicalUrl = `https://eventzone.pro/${event.slug || slug}`;
   const bannerImage = event.banner || event.cover_url || "https://i.imgur.com/jFDrQbM.png";
@@ -93,6 +100,7 @@ export default async function Page({ params }) {
 
   let jsonLd = null;
   if (event && event.id) {
+    const fallbackDescription = `Register for ${event.title}${event.startDate ? ` on ${event.startDate}` : ""}. Discover the event agenda, keynote speakers, floor plans, and tickets on Eventzone.`;
     const canonicalUrl = `https://eventzone.pro/${event.slug || slug}`;
     const attendanceMode = event.type === "Virtual"
       ? "https://schema.org/OnlineEventAttendanceMode"
@@ -119,7 +127,7 @@ export default async function Page({ params }) {
       "@context": "https://schema.org",
       "@type": "Event",
       "name": event.title,
-      "description": event.description || event.tagline || `${event.title} on Eventzone`,
+      "description": stripHtml(event.description) || stripHtml(event.tagline) || fallbackDescription,
       "image": [event.banner || event.cover_url || "https://i.imgur.com/jFDrQbM.png"].filter(Boolean),
       "startDate": startDateIso,
       "endDate": endDateIso,

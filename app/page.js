@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import HomeClient from "./HomeClient";
 import { fetchPublicEvents } from "../lib/db";
+import { stripHtml } from "../lib/constants";
 
 // Strict ISO helper for Google Schema.org dates
 function parseToIso(dateStr, fallbackHour = 8) {
@@ -146,7 +147,7 @@ export default async function Page(props) {
           "@type": "Event",
           "name": ev.title,
           "url": eventUrl,
-          "description": ev.tagline || ev.description || `${ev.title} on Eventzone`,
+          "description": stripHtml(ev.tagline) || stripHtml(ev.description) || `${ev.title} on Eventzone`,
           "startDate": startDateIso,
           "endDate": endDateIso,
           "eventAttendanceMode": isVirtual

@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 import { fetchEventDetails } from "../../lib/db";
+import { stripHtml } from "../../lib/constants";
 
 export const runtime = "nodejs";
 export const alt = "Eventzone Event Preview";
@@ -21,7 +22,9 @@ export default async function Image({ params }) {
     : "Date Announced on Eventzone";
   const location = event?.location || event?.venueName || (event?.type === "Virtual" ? "Online Virtual Event" : "Algiers, Algeria");
   const category = event?.category || "Technology & Business";
-  const tagline = event?.tagline || event?.description?.slice(0, 100) || "Join industry leaders, founders, and delegates for high-impact keynotes and networking.";
+  const plainTagline = stripHtml(event?.tagline);
+  const plainDesc = stripHtml(event?.description);
+  const tagline = plainTagline || (plainDesc ? (plainDesc.length > 120 ? `${plainDesc.slice(0, 117).trimEnd()}...` : plainDesc) : "Join industry leaders, founders, and delegates for high-impact keynotes and networking.");
 
   return new ImageResponse(
     (
