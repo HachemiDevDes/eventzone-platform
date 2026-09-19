@@ -548,7 +548,7 @@ div[class*="rounded"] > button,
 @media print {
   @page {
     size: A4 portrait;
-    margin: 14mm 12mm 14mm 12mm;
+    margin: 0; /* Suppresses browser-default header (date, title) and footer (URL, page number) */
   }
 
   html, body {
@@ -578,12 +578,15 @@ div[class*="rounded"] > button,
     min-height: 0 !important;
     height: auto !important;
     margin: 0 !important;
-    padding: 0 !important;
+    padding: 12mm 15mm !important; /* Clean top, bottom, and side padding directly on the printed sheet */
+    box-sizing: border-box !important;
     background: #ffffff !important;
     color: #0f172a !important;
     box-shadow: none !important;
     border: none !important;
     overflow: visible !important;
+    -webkit-box-decoration-break: clone !important;
+    box-decoration-break: clone !important;
   }
 
   /* Fallback in case #invoice-print-container is not mounted directly on body */

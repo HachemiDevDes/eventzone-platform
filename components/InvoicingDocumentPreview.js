@@ -394,7 +394,24 @@ export default function InvoicingDocumentPreview({
     if (typeof window !== "undefined" && window.document?.body) {
       window.document.body.classList.add("has-invoice-print");
     }
+
+    const handleBeforePrint = () => {
+      window.__prevDocTitle = document.title;
+      document.title = " ";
+    };
+
+    const handleAfterPrint = () => {
+      if (typeof window.__prevDocTitle === "string") {
+        document.title = window.__prevDocTitle;
+      }
+    };
+
+    window.addEventListener("beforeprint", handleBeforePrint);
+    window.addEventListener("afterprint", handleAfterPrint);
+
     return () => {
+      window.removeEventListener("beforeprint", handleBeforePrint);
+      window.removeEventListener("afterprint", handleAfterPrint);
       if (typeof window !== "undefined" && window.document?.body) {
         window.document.body.classList.remove("has-invoice-print");
       }
