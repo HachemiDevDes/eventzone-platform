@@ -1104,163 +1104,695 @@ export default function PlatformAdminView({
         ) : (
           <>
             {/* ═══════════════════════════════════════════
-                TAB 1: EXECUTIVE OVERVIEW
+                TAB 1: EXECUTIVE OVERVIEW & INTELLIGENCE
             ═══════════════════════════════════════════ */}
             {activeTab === "overview" && (
               <div className="space-y-6 animate-in fade-in duration-300">
-                {/* Metric Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs hover:shadow-xs hover:border-slate-300 transition-all">
-                    <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
-                      <span>Total Settled GMV</span>
-                      <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100">
-                        <CreditCard className="w-4 h-4" />
-                      </div>
+                {/* Executive Telemetry Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white border border-slate-200/90 rounded-2xl p-4 shadow-2xs">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
+                      <Activity className="w-5 h-5 animate-pulse" />
                     </div>
-                    <div className="mt-3">
-                      <div className="text-2xl font-black text-slate-900 tracking-tight font-mono">
-                        {(paymentMetrics.totalGmv || 0).toLocaleString()} <span className="text-xs font-bold text-emerald-600">DZD</span>
-                      </div>
-                      <p className="text-[11px] text-slate-500 mt-1 flex items-center gap-1">
-                        <span className="text-emerald-700 font-bold">{paymentMetrics.paidCount}</span> successful transactions
+                    <div>
+                      <h2 className="text-sm font-black text-slate-900 tracking-tight flex items-center gap-2">
+                        Executive Intelligence & Platform Telemetry
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                          Live Ledger
+                        </span>
+                      </h2>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        High-level metrics across Algerian DZD payment rails, verified attendees, organizers, and commercial pipeline.
                       </p>
                     </div>
                   </div>
+                  <div className="flex items-center gap-2 self-start sm:self-center">
+                    <button
+                      onClick={handleManualRefresh}
+                      disabled={isRefreshing}
+                      className="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white text-slate-700 text-xs font-bold transition-all shadow-2xs cursor-pointer flex items-center gap-1.5"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin text-blue-600" : "text-slate-500"}`} />
+                      <span>Sync Telemetry</span>
+                    </button>
+                  </div>
+                </div>
 
-                  <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs hover:shadow-xs hover:border-slate-300 transition-all">
-                    <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
-                      <span>Registered Organizers</span>
-                      <div className="p-2 rounded-xl bg-blue-50 text-blue-600 border border-blue-100">
-                        <Building2 className="w-4 h-4" />
+                {/* ─── Row 1: 6 Smart Executive KPI Cards ─── */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5">
+                  {/* 1. Total Settled GMV */}
+                  <div 
+                    onClick={() => setActiveTab("financials")}
+                    className="bg-white border border-slate-200/90 hover:border-emerald-300 rounded-2xl p-4 shadow-2xs hover:shadow-xs transition-all cursor-pointer group flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
+                        <span className="group-hover:text-emerald-700 transition-colors">Settled GMV</span>
+                        <div className="p-1.5 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 group-hover:bg-emerald-600 group-hover:text-white transition-all">
+                          <CreditCard className="w-3.5 h-3.5" />
+                        </div>
+                      </div>
+                      <div className="mt-2.5">
+                        <div className="text-xl font-black text-slate-900 tracking-tight font-mono">
+                          {(executiveAnalytics.totalGmv || 0).toLocaleString()}
+                        </div>
+                        <div className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider mt-0.5">
+                          Algerian DZD
+                        </div>
                       </div>
                     </div>
-                    <div className="mt-3">
-                      <div className="text-2xl font-black text-slate-900 tracking-tight font-mono">
-                        {organizers.length}
-                      </div>
-                      <p className="text-[11px] text-slate-500 mt-1">
-                        <span className="text-blue-700 font-bold">{organizers.filter(o => o.status === "active").length}</span> active accounts
-                      </p>
+                    <div className="mt-3 pt-2.5 border-t border-slate-100 text-[11px] text-slate-500 flex items-center justify-between">
+                      <span><strong className="text-slate-800">{executiveAnalytics.paidCount}</strong> orders</span>
+                      <span className="font-mono text-emerald-700 font-bold">{executiveAnalytics.aov.toLocaleString()} DZD avg</span>
                     </div>
                   </div>
 
-                  <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs hover:shadow-xs hover:border-slate-300 transition-all">
-                    <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
-                      <span>Active Events</span>
-                      <div className="p-2 rounded-xl bg-amber-50 text-amber-600 border border-amber-100">
-                        <Calendar className="w-4 h-4" />
+                  {/* 2. Platform Attendee Footprint */}
+                  <div 
+                    onClick={() => setActiveTab("events")}
+                    className="bg-white border border-slate-200/90 hover:border-indigo-300 rounded-2xl p-4 shadow-2xs hover:shadow-xs transition-all cursor-pointer group flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
+                        <span className="group-hover:text-indigo-700 transition-colors">Total Attendees</span>
+                        <div className="p-1.5 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                          <Users className="w-3.5 h-3.5" />
+                        </div>
+                      </div>
+                      <div className="mt-2.5">
+                        <div className="text-xl font-black text-slate-900 tracking-tight font-mono">
+                          {executiveAnalytics.totalRegisteredAttendees.toLocaleString()}
+                        </div>
+                        <div className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider mt-0.5">
+                          Registered
+                        </div>
                       </div>
                     </div>
-                    <div className="mt-3">
-                      <div className="text-2xl font-black text-slate-900 tracking-tight font-mono">
-                        {events.filter(e => e.status === "published").length}
-                      </div>
-                      <p className="text-[11px] text-slate-500 mt-1">
-                        {events.length} total events in directory
-                      </p>
+                    <div className="mt-3 pt-2.5 border-t border-slate-100 text-[11px] text-slate-500 flex items-center justify-between">
+                      <span><strong className="text-slate-800">{executiveAnalytics.totalCheckedInAttendees}</strong> verified</span>
+                      <span className="font-mono text-indigo-600 font-bold">{executiveAnalytics.checkinTurnoutRate}% turnout</span>
                     </div>
                   </div>
 
-                  <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs hover:shadow-xs hover:border-slate-300 transition-all">
-                    <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
-                      <span>Hero Curated Events</span>
-                      <div className="p-2 rounded-xl bg-yellow-50 text-yellow-600 border border-yellow-100">
-                        <Star className="w-4 h-4 fill-yellow-500" />
+                  {/* 3. Active Master Events */}
+                  <div 
+                    onClick={() => setActiveTab("events")}
+                    className="bg-white border border-slate-200/90 hover:border-amber-300 rounded-2xl p-4 shadow-2xs hover:shadow-xs transition-all cursor-pointer group flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
+                        <span className="group-hover:text-amber-700 transition-colors">Active Events</span>
+                        <div className="p-1.5 rounded-xl bg-amber-50 text-amber-600 border border-amber-100 group-hover:bg-amber-600 group-hover:text-white transition-all">
+                          <Calendar className="w-3.5 h-3.5" />
+                        </div>
+                      </div>
+                      <div className="mt-2.5">
+                        <div className="text-xl font-black text-slate-900 tracking-tight font-mono">
+                          {executiveAnalytics.publishedEventsCount}
+                        </div>
+                        <div className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mt-0.5">
+                          {executiveAnalytics.totalEvents} In Directory
+                        </div>
                       </div>
                     </div>
-                    <div className="mt-3">
-                      <div className="text-2xl font-black text-slate-900 tracking-tight font-mono">
-                        {curatedHeroEvents.length} <span className="text-xs font-medium text-slate-400">/ 4</span>
+                    <div className="mt-3 pt-2.5 border-t border-slate-100 text-[11px] text-slate-500 flex items-center justify-between">
+                      <span><strong className="text-slate-800">{curatedHeroEvents.length}</strong> hero pinned</span>
+                      <span className="font-mono text-amber-700 font-bold">{executiveAnalytics.avgEventsPerOrganizer} avg/host</span>
+                    </div>
+                  </div>
+
+                  {/* 4. Organizer Network */}
+                  <div 
+                    onClick={() => setActiveTab("organizers")}
+                    className="bg-white border border-slate-200/90 hover:border-blue-300 rounded-2xl p-4 shadow-2xs hover:shadow-xs transition-all cursor-pointer group flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
+                        <span className="group-hover:text-blue-700 transition-colors">Organizers</span>
+                        <div className="p-1.5 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                          <Building2 className="w-3.5 h-3.5" />
+                        </div>
                       </div>
-                      <p className="text-[11px] text-slate-500 mt-1">
-                        {curatedHeroEvents.length >= 1 ? "Custom priority active" : "Default order active"}
-                      </p>
+                      <div className="mt-2.5">
+                        <div className="text-xl font-black text-slate-900 tracking-tight font-mono">
+                          {executiveAnalytics.totalOrganizers}
+                        </div>
+                        <div className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mt-0.5">
+                          {executiveAnalytics.activeOrganizers} Active Accounts
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-3 pt-2.5 border-t border-slate-100 text-[11px] text-slate-500 flex items-center justify-between">
+                      <span><strong className="text-slate-800">{executiveAnalytics.organizersWithEvents}</strong> published</span>
+                      <span className="font-mono text-blue-600 font-bold">
+                        {executiveAnalytics.totalOrganizers > 0 ? Math.round((executiveAnalytics.organizersWithEvents / executiveAnalytics.totalOrganizers) * 100) : 0}% active
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 5. B2B Commercial Quotes */}
+                  <div 
+                    onClick={() => setActiveTab("quotes")}
+                    className="bg-white border border-slate-200/90 hover:border-rose-300 rounded-2xl p-4 shadow-2xs hover:shadow-xs transition-all cursor-pointer group flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
+                        <span className="group-hover:text-rose-700 transition-colors">B2B Pipeline</span>
+                        <div className="p-1.5 rounded-xl bg-rose-50 text-rose-600 border border-rose-100 group-hover:bg-rose-600 group-hover:text-white transition-all">
+                          <Target className="w-3.5 h-3.5" />
+                        </div>
+                      </div>
+                      <div className="mt-2.5">
+                        <div className="text-xl font-black text-slate-900 tracking-tight font-mono">
+                          {executiveAnalytics.totalQuotes}
+                        </div>
+                        <div className="text-[10px] font-bold text-rose-600 uppercase tracking-wider mt-0.5">
+                          Quote Inquiries
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-3 pt-2.5 border-t border-slate-100 text-[11px] text-slate-500 flex items-center justify-between">
+                      <span><strong className="text-emerald-700">{executiveAnalytics.wonQuotes}</strong> won</span>
+                      <span className="font-mono text-rose-600 font-bold">{executiveAnalytics.quoteWinRate}% win rate</span>
+                    </div>
+                  </div>
+
+                  {/* 6. Subscribers & Audience */}
+                  <div 
+                    onClick={() => setActiveTab("subscribers")}
+                    className="bg-white border border-slate-200/90 hover:border-teal-300 rounded-2xl p-4 shadow-2xs hover:shadow-xs transition-all cursor-pointer group flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
+                        <span className="group-hover:text-teal-700 transition-colors">Subscribers</span>
+                        <div className="p-1.5 rounded-xl bg-teal-50 text-teal-600 border border-teal-100 group-hover:bg-teal-600 group-hover:text-white transition-all">
+                          <Mail className="w-3.5 h-3.5" />
+                        </div>
+                      </div>
+                      <div className="mt-2.5">
+                        <div className="text-xl font-black text-slate-900 tracking-tight font-mono">
+                          {subscribers.length}
+                        </div>
+                        <div className="text-[10px] font-bold text-teal-600 uppercase tracking-wider mt-0.5">
+                          Newsletter Reach
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-3 pt-2.5 border-t border-slate-100 text-[11px] text-slate-500 flex items-center justify-between">
+                      <span><strong className="text-slate-800">{subscribers.filter(s => s.status !== "unsubscribed").length}</strong> active</span>
+                      <span className="font-mono text-teal-600 font-bold">100% Organic</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Split Insights */}
+                {/* ─── Row 2: Deep Dive Analytics (Financials & Operations) ─── */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Financial Breakdown */}
-                  <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs">
+                  {/* 2.1 Chargily Gateway & Financial Intelligence */}
+                  <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs">
                     <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                      <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                        <CreditCard className="w-4 h-4 text-emerald-600" />
-                        Chargily Gateway Breakdown
-                      </h3>
-                      <span className="text-xs text-slate-500 font-mono font-bold">Algeria DZD</span>
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100">
+                          <CreditCard className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-bold text-slate-900">Chargily Gateway & Payment Rails</h3>
+                          <p className="text-[11px] text-slate-500">Live Algerian DZD e-payment breakdown & settlements</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setActiveTab("financials")}
+                        className="text-xs text-blue-600 hover:text-blue-700 font-bold flex items-center gap-1 cursor-pointer"
+                      >
+                        <span>Ledger</span>
+                        <ArrowUpRight className="w-3.5 h-3.5" />
+                      </button>
                     </div>
 
-                    <div className="mt-4 space-y-4">
-                      <div>
-                        <div className="flex items-center justify-between text-xs mb-1.5">
-                          <span className="text-slate-700 font-semibold flex items-center gap-1.5">
-                            <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                            EDAHABIA Volume
+                    <div className="mt-5 space-y-4">
+                      {/* EDAHABIA */}
+                      <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                        <div className="flex items-center justify-between text-xs mb-2">
+                          <span className="text-slate-800 font-bold flex items-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-2xs" />
+                            EDAHABIA Card Volume
                           </span>
-                          <span className="font-mono text-slate-900 font-bold">
-                            {(paymentMetrics.edahabiaGmv || 0).toLocaleString()} DZD ({paymentMetrics.edahabiaCount || 0})
-                          </span>
+                          <div className="text-right">
+                            <span className="font-mono text-slate-900 font-black">
+                              {(executiveAnalytics.edahabiaGmv || 0).toLocaleString()} DZD
+                            </span>
+                            <span className="text-[11px] text-slate-500 ml-1.5 font-medium">
+                              ({executiveAnalytics.edahabiaCount} txn • {executiveAnalytics.edahabiaPct}%)
+                            </span>
+                          </div>
                         </div>
-                        <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                        <div className="w-full h-2.5 bg-slate-200/70 rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-amber-500 rounded-full"
-                            style={{ width: `${paymentMetrics.totalGmv > 0 ? (paymentMetrics.edahabiaGmv / paymentMetrics.totalGmv) * 100 : 50}%` }}
+                            className="h-full bg-amber-500 rounded-full transition-all duration-500"
+                            style={{ width: `${executiveAnalytics.edahabiaPct}%` }}
                           />
                         </div>
                       </div>
 
-                      <div>
-                        <div className="flex items-center justify-between text-xs mb-1.5">
-                          <span className="text-slate-700 font-semibold flex items-center gap-1.5">
-                            <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-                            CIB Card Volume
+                      {/* CIB */}
+                      <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                        <div className="flex items-center justify-between text-xs mb-2">
+                          <span className="text-slate-800 font-bold flex items-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-2xs" />
+                            CIB Interbank Card Volume
                           </span>
-                          <span className="font-mono text-slate-900 font-bold">
-                            {(paymentMetrics.cibGmv || 0).toLocaleString()} DZD ({paymentMetrics.cibCount || 0})
-                          </span>
+                          <div className="text-right">
+                            <span className="font-mono text-slate-900 font-black">
+                              {(executiveAnalytics.cibGmv || 0).toLocaleString()} DZD
+                            </span>
+                            <span className="text-[11px] text-slate-500 ml-1.5 font-medium">
+                              ({executiveAnalytics.cibCount} txn • {executiveAnalytics.cibPct}%)
+                            </span>
+                          </div>
                         </div>
-                        <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                        <div className="w-full h-2.5 bg-slate-200/70 rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-blue-500 rounded-full"
-                            style={{ width: `${paymentMetrics.totalGmv > 0 ? (paymentMetrics.cibGmv / paymentMetrics.totalGmv) * 100 : 50}%` }}
+                            className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                            style={{ width: `${executiveAnalytics.cibPct}%` }}
                           />
                         </div>
                       </div>
 
-                      <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                        <span className="font-medium">Checkout Conversion Rate:</span>
-                        <span className="font-mono text-emerald-600 font-bold">{paymentMetrics.successRate}%</span>
+                      {/* Mini 4-metric grid */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2">
+                        <div className="p-2.5 rounded-xl bg-emerald-50/50 border border-emerald-100/80">
+                          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Avg Order Value</div>
+                          <div className="text-sm font-black text-emerald-800 font-mono mt-0.5">
+                            {executiveAnalytics.aov.toLocaleString()} <span className="text-[10px]">DZD</span>
+                          </div>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-blue-50/50 border border-blue-100/80">
+                          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Success Rate</div>
+                          <div className="text-sm font-black text-blue-800 font-mono mt-0.5">
+                            {executiveAnalytics.successRate}%
+                          </div>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-amber-50/50 border border-amber-100/80">
+                          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Pending Orders</div>
+                          <div className="text-sm font-black text-amber-800 font-mono mt-0.5">
+                            {executiveAnalytics.pendingCount}
+                          </div>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-rose-50/50 border border-rose-100/80">
+                          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Failed / Expired</div>
+                          <div className="text-sm font-black text-rose-800 font-mono mt-0.5">
+                            {executiveAnalytics.failedCount}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Top Regional Distribution */}
-                  <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs">
+                  {/* 2.2 Attendance & Operations Health */}
+                  <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs">
                     <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                      <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-blue-600" />
-                        Top Algerian Wilayas
-                      </h3>
-                      <span className="text-xs text-slate-500 font-medium">Events Hosted</span>
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100">
+                          <Activity className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-bold text-slate-900">Attendance & Operations Health</h3>
+                          <p className="text-[11px] text-slate-500">Live QR scanner check-in rates and venue capacity</p>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100 font-mono text-[11px] font-bold">
+                        {executiveAnalytics.checkinTurnoutRate}% Turnout
+                      </span>
+                    </div>
+
+                    <div className="mt-5 space-y-4">
+                      {/* Check-in Turnout Meter */}
+                      <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                        <div className="flex items-center justify-between text-xs mb-2">
+                          <span className="text-slate-800 font-bold flex items-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-2xs" />
+                            Verified On-Site Check-in Rate
+                          </span>
+                          <span className="font-mono text-slate-900 font-bold text-xs">
+                            {executiveAnalytics.totalCheckedInAttendees} / {executiveAnalytics.totalRegisteredAttendees} ({executiveAnalytics.checkinTurnoutRate}%)
+                          </span>
+                        </div>
+                        <div className="w-full h-2.5 bg-slate-200/70 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full transition-all duration-500"
+                            style={{ width: `${Math.min(100, executiveAnalytics.checkinTurnoutRate)}%` }}
+                          />
+                        </div>
+                        <p className="text-[11px] text-slate-500 mt-2">
+                          Verified physical badge scans vs. registered guest list across active events.
+                        </p>
+                      </div>
+
+                      {/* Venue Capacity Occupancy */}
+                      <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                        <div className="flex items-center justify-between text-xs mb-2">
+                          <span className="text-slate-800 font-bold flex items-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 shadow-2xs" />
+                            Global Venue Capacity Occupancy
+                          </span>
+                          <span className="font-mono text-slate-900 font-bold text-xs">
+                            {executiveAnalytics.totalRegisteredAttendees} / {executiveAnalytics.totalPlatformCapacity.toLocaleString()} ({executiveAnalytics.capacityOccupancyRate}%)
+                          </span>
+                        </div>
+                        <div className="w-full h-2.5 bg-slate-200/70 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-indigo-600 rounded-full transition-all duration-500"
+                            style={{ width: `${Math.min(100, executiveAnalytics.capacityOccupancyRate)}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Event Delivery Formats */}
+                      <div className="pt-1">
+                        <div className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5">
+                          <span>Event Delivery Formats</span>
+                          <span className="text-[11px] text-slate-400 font-normal">({executiveAnalytics.totalEvents} total)</span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="p-2 rounded-xl bg-white border border-slate-200 text-center shadow-2xs">
+                            <div className="text-xs font-black text-slate-900 font-mono">{executiveAnalytics.inPersonCount}</div>
+                            <div className="text-[10px] font-bold text-slate-500 uppercase mt-0.5">In-Person</div>
+                            <div className="text-[10px] text-emerald-600 font-semibold mt-0.5">
+                              {executiveAnalytics.totalEvents > 0 ? Math.round((executiveAnalytics.inPersonCount / executiveAnalytics.totalEvents) * 100) : 0}%
+                            </div>
+                          </div>
+                          <div className="p-2 rounded-xl bg-white border border-slate-200 text-center shadow-2xs">
+                            <div className="text-xs font-black text-slate-900 font-mono">{executiveAnalytics.hybridCount}</div>
+                            <div className="text-[10px] font-bold text-slate-500 uppercase mt-0.5">Hybrid</div>
+                            <div className="text-[10px] text-blue-600 font-semibold mt-0.5">
+                              {executiveAnalytics.totalEvents > 0 ? Math.round((executiveAnalytics.hybridCount / executiveAnalytics.totalEvents) * 100) : 0}%
+                            </div>
+                          </div>
+                          <div className="p-2 rounded-xl bg-white border border-slate-200 text-center shadow-2xs">
+                            <div className="text-xs font-black text-slate-900 font-mono">{executiveAnalytics.virtualCount}</div>
+                            <div className="text-[10px] font-bold text-slate-500 uppercase mt-0.5">Virtual</div>
+                            <div className="text-[10px] text-amber-600 font-semibold mt-0.5">
+                              {executiveAnalytics.totalEvents > 0 ? Math.round((executiveAnalytics.virtualCount / executiveAnalytics.totalEvents) * 100) : 0}%
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ─── Row 3: Regional & Industry Distribution ─── */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* 3.1 Top Algerian Wilayas & Event Hubs */}
+                  <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-2 rounded-xl bg-blue-50 text-blue-600 border border-blue-100">
+                          <MapPin className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-bold text-slate-900">Top Algerian Wilayas & Event Hubs</h3>
+                          <p className="text-[11px] text-slate-500">Geographic footprint normalized across national venues</p>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-100 font-mono text-[11px] font-bold">
+                        {executiveAnalytics.activeWilayasCount} Wilayas Active
+                      </span>
                     </div>
 
                     <div className="mt-4 space-y-3">
-                      {wilayaDistribution.length === 0 ? (
-                        <p className="text-xs text-slate-400 py-4 text-center">No location records yet</p>
+                      {executiveAnalytics.topWilayas.length === 0 ? (
+                        <p className="text-xs text-slate-400 py-6 text-center">No location records yet</p>
                       ) : (
-                        wilayaDistribution.map(([wilaya, count], idx) => (
-                          <div key={wilaya} className="flex items-center justify-between text-xs">
-                            <div className="flex items-center gap-2">
-                              <span className="w-4 text-slate-400 font-mono font-bold">#{idx + 1}</span>
-                              <span className="text-slate-700 font-medium truncate max-w-[180px]">{wilaya}</span>
+                        executiveAnalytics.topWilayas.map(([wilaya, count], idx) => {
+                          const pct = executiveAnalytics.totalEvents > 0 
+                            ? Math.round((count / executiveAnalytics.totalEvents) * 100) 
+                            : 0;
+                          return (
+                            <div key={wilaya} className="group">
+                              <div className="flex items-center justify-between text-xs mb-1">
+                                <div className="flex items-center gap-2">
+                                  <span className={`w-5 h-5 rounded-md flex items-center justify-center font-mono text-[10px] font-black ${
+                                    idx === 0 ? "bg-amber-100 text-amber-800" :
+                                    idx === 1 ? "bg-slate-200 text-slate-700" :
+                                    idx === 2 ? "bg-amber-50 text-amber-700" :
+                                    "bg-slate-100 text-slate-500"
+                                  }`}>
+                                    #{idx + 1}
+                                  </span>
+                                  <span className="text-slate-800 font-semibold truncate max-w-[200px]">{wilaya}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-mono text-slate-900 font-bold text-xs">{count} {count === 1 ? "event" : "events"}</span>
+                                  <span className="text-[11px] font-bold text-slate-400 w-9 text-right font-mono">{pct}%</span>
+                                </div>
+                              </div>
+                              <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                <div 
+                                  className={`h-full rounded-full transition-all duration-500 ${
+                                    idx === 0 ? "bg-blue-600" :
+                                    idx === 1 ? "bg-blue-500" :
+                                    idx === 2 ? "bg-indigo-500" :
+                                    "bg-slate-400"
+                                  }`}
+                                  style={{ width: `${Math.max(5, pct)}%` }}
+                                />
+                              </div>
                             </div>
-                            <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-mono text-[11px] font-bold">
-                              {count} {count === 1 ? "event" : "events"}
-                            </span>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 3.2 Industry & Sector Breakdown */}
+                  <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-2 rounded-xl bg-violet-50 text-violet-600 border border-violet-100">
+                          <Layers className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-bold text-slate-900">Industry & Sector Breakdown</h3>
+                          <p className="text-[11px] text-slate-500">Distribution of commercial and thematic verticals</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setActiveTab("events")}
+                        className="text-xs text-violet-600 hover:text-violet-700 font-bold flex items-center gap-1 cursor-pointer"
+                      >
+                        <span>Master Catalog</span>
+                        <ArrowUpRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <div className="mt-4 space-y-3">
+                      {executiveAnalytics.topCategories.length === 0 ? (
+                        <p className="text-xs text-slate-400 py-6 text-center">No categories recorded yet</p>
+                      ) : (
+                        executiveAnalytics.topCategories.map(([category, count], idx) => {
+                          const pct = executiveAnalytics.totalEvents > 0 
+                            ? Math.round((count / executiveAnalytics.totalEvents) * 100) 
+                            : 0;
+                          const colorClasses = [
+                            "bg-violet-500", "bg-emerald-500", "bg-blue-500", "bg-amber-500", "bg-rose-500", "bg-cyan-500"
+                          ];
+                          return (
+                            <div key={category} className="group">
+                              <div className="flex items-center justify-between text-xs mb-1">
+                                <div className="flex items-center gap-2">
+                                  <span className={`w-2 h-2 rounded-full ${colorClasses[idx % colorClasses.length]}`} />
+                                  <span className="text-slate-800 font-semibold truncate max-w-[220px]">{category}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-mono text-slate-900 font-bold text-xs">{count} {count === 1 ? "event" : "events"}</span>
+                                  <span className="text-[11px] font-bold text-slate-400 w-9 text-right font-mono">{pct}%</span>
+                                </div>
+                              </div>
+                              <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                <div 
+                                  className={`h-full rounded-full transition-all duration-500 ${colorClasses[idx % colorClasses.length]}`}
+                                  style={{ width: `${Math.max(5, pct)}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ─── Row 4: Spotlight Leaders (Top Events & Top Hosts) ─── */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* 4.1 Top Performing Events by Registrations */}
+                  <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-2 rounded-xl bg-amber-50 text-amber-600 border border-amber-100">
+                          <Award className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-bold text-slate-900">Audience Leaders: Top Events</h3>
+                          <p className="text-[11px] text-slate-500">Highest registered attendee demand and turnout</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setActiveTab("events")}
+                        className="text-xs text-blue-600 hover:text-blue-700 font-bold flex items-center gap-1 cursor-pointer"
+                      >
+                        <span>All Events</span>
+                        <ArrowUpRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <div className="mt-4 space-y-2.5">
+                      {executiveAnalytics.topEvents.length === 0 ? (
+                        <p className="text-xs text-slate-400 py-6 text-center">No event records available</p>
+                      ) : (
+                        executiveAnalytics.topEvents.map((ev, idx) => {
+                          const reg = Number(ev.registeredCount) || 0;
+                          const cap = Number(ev.capacity) || 500;
+                          const chk = Number(ev.checkedInCount) || 0;
+                          const turnout = reg > 0 ? Math.round((chk / reg) * 100) : 0;
+                          return (
+                            <div 
+                              key={ev.id}
+                              className="flex items-center justify-between p-3 rounded-xl bg-slate-50/70 hover:bg-slate-50 border border-slate-200/70 hover:border-slate-300 transition-all text-xs"
+                            >
+                              <div className="min-w-0 pr-3">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-mono text-slate-400 font-bold text-[10px]">#{idx + 1}</span>
+                                  <h4 className="font-bold text-slate-900 truncate max-w-[220px]">{ev.title}</h4>
+                                  {ev.status === "published" ? (
+                                    <span className="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">Live</span>
+                                  ) : (
+                                    <span className="px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 text-[10px] font-bold">{ev.status}</span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-500">
+                                  <span className="font-medium text-slate-700 truncate max-w-[140px]">{ev.organizerFullName || "Host"}</span>
+                                  <span>•</span>
+                                  <span className="truncate max-w-[100px]">{ev.city || "Algeria"}</span>
+                                  <span>•</span>
+                                  <span className="text-indigo-600 font-semibold">{chk} checked-in ({turnout}%)</span>
+                                </div>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <div className="font-mono font-black text-slate-900 text-sm">{reg}</div>
+                                <div className="text-[10px] text-slate-400 font-medium">/ {cap} cap</div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 4.2 Leading Hosts & Event Organizers */}
+                  <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-2xs">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-2 rounded-xl bg-blue-50 text-blue-600 border border-blue-100">
+                          <Building2 className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-bold text-slate-900">Producer Spotlight: Top Hosts</h3>
+                          <p className="text-[11px] text-slate-500">Most active event organizers on the platform</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setActiveTab("organizers")}
+                        className="text-xs text-blue-600 hover:text-blue-700 font-bold flex items-center gap-1 cursor-pointer"
+                      >
+                        <span>All Organizers</span>
+                        <ArrowUpRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <div className="mt-4 space-y-2.5">
+                      {executiveAnalytics.topOrganizers.length === 0 ? (
+                        <p className="text-xs text-slate-400 py-6 text-center">No organizers registered yet</p>
+                      ) : (
+                        executiveAnalytics.topOrganizers.map((org, idx) => (
+                          <div 
+                            key={org.id}
+                            className="flex items-center justify-between p-3 rounded-xl bg-slate-50/70 hover:bg-slate-50 border border-slate-200/70 hover:border-slate-300 transition-all text-xs"
+                          >
+                            <div className="min-w-0 pr-3">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-slate-400 font-bold text-[10px]">#{idx + 1}</span>
+                                <h4 className="font-bold text-slate-900 truncate max-w-[200px]">{org.fullName || org.company || "Organizer"}</h4>
+                                {org.status === "active" ? (
+                                  <span className="px-1.5 py-0.2 rounded bg-blue-100 text-blue-800 text-[10px] font-bold">Active</span>
+                                ) : (
+                                  <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 text-[10px] font-bold">{org.status}</span>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-slate-500 truncate max-w-[220px] mt-0.5 font-mono">
+                                {org.email}
+                              </p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <div className="font-mono font-black text-slate-900 text-sm">{org.eventsCount || 0}</div>
+                              <div className="text-[10px] text-slate-400 font-medium">events hosted</div>
+                            </div>
                           </div>
                         ))
                       )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ─── Row 5: Quick Executive Navigation Bar ─── */}
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-2xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="text-xs font-bold text-slate-700">
+                      Executive Direct Jump:
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        onClick={() => setActiveTab("quotes")}
+                        className="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 text-slate-700 hover:text-rose-700 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                      >
+                        <Target className="w-3.5 h-3.5 text-rose-500" />
+                        <span>Quotes ({quoteRequests.length})</span>
+                      </button>
+                      <button
+                        onClick={() => setActiveTab("organizers")}
+                        className="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 text-slate-700 hover:text-blue-700 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                      >
+                        <Building2 className="w-3.5 h-3.5 text-blue-500" />
+                        <span>Organizers ({organizers.length})</span>
+                      </button>
+                      <button
+                        onClick={() => setActiveTab("events")}
+                        className="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-amber-50 border border-slate-200 hover:border-amber-200 text-slate-700 hover:text-amber-700 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                      >
+                        <Calendar className="w-3.5 h-3.5 text-amber-500" />
+                        <span>Master Events ({events.length})</span>
+                      </button>
+                      <button
+                        onClick={() => setActiveTab("financials")}
+                        className="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-200 text-slate-700 hover:text-emerald-700 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                      >
+                        <CreditCard className="w-3.5 h-3.5 text-emerald-500" />
+                        <span>Chargily Ledger ({payments.length})</span>
+                      </button>
+                      <button
+                        onClick={() => setActiveTab("hero")}
+                        className="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-yellow-50 border border-slate-200 hover:border-yellow-200 text-slate-700 hover:text-yellow-700 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                      >
+                        <Star className="w-3.5 h-3.5 text-yellow-500" />
+                        <span>Hero Curator ({curatedHeroEvents.length}/4)</span>
+                      </button>
+                      <button
+                        onClick={() => setActiveTab("subscribers")}
+                        className="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-teal-50 border border-slate-200 hover:border-teal-200 text-slate-700 hover:text-teal-700 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                      >
+                        <Mail className="w-3.5 h-3.5 text-teal-500" />
+                        <span>Subscribers ({subscribers.length})</span>
+                      </button>
                     </div>
                   </div>
                 </div>
