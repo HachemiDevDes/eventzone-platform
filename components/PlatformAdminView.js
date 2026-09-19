@@ -71,6 +71,46 @@ const QUOTA_STATUS_OPTIONS = [
   { value: "banned", label: "Banned" },
 ];
 
+function formatJoinedDate(dateStr) {
+  if (!dateStr) return { formatted: "—", relative: "" };
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return { formatted: "—", relative: "" };
+
+    const formatted = d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric"
+    });
+
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    let relative = "";
+    if (diffDays <= 0) {
+      relative = "Today";
+    } else if (diffDays === 1) {
+      relative = "Yesterday";
+    } else if (diffDays < 30) {
+      relative = `${diffDays}d ago`;
+    } else if (diffDays < 365) {
+      const months = Math.floor(diffDays / 30);
+      relative = `${months} ${months === 1 ? "month" : "months"} ago`;
+    } else {
+      const years = Math.floor(diffDays / 365);
+      const remainingMonths = Math.floor((diffDays % 365) / 30);
+      relative = remainingMonths > 0
+        ? `${years}y ${remainingMonths}m ago`
+        : `${years} ${years === 1 ? "year" : "years"} ago`;
+    }
+
+    return { formatted, relative };
+  } catch {
+    return { formatted: "—", relative: "" };
+  }
+}
+
 export default function PlatformAdminView({
   currentUser,
   onExitAdmin,
@@ -99,6 +139,7 @@ export default function PlatformAdminView({
   const [organizerSearch, setOrganizerSearch] = useState("");
   const [organizerWilayaFilter, setOrganizerWilayaFilter] = useState("All");
   const [organizerStatusFilter, setOrganizerStatusFilter] = useState("All");
+  const [organizerSort, setOrganizerSort] = useState("newest");
 
   const [eventSearch, setEventSearch] = useState("");
   const [eventWilayaFilter, setEventWilayaFilter] = useState("All");
@@ -628,9 +669,9 @@ export default function PlatformAdminView({
       });
   }, [events, heroSearch, heroWilayaFilter, heroCategoryFilter]);
 
-  // Filtered Organizers
+  // Filtered & Sorted Organizers
   const filteredOrganizers = useMemo(() => {
-    return organizers.filter(org => {
+    const list = organizers.filter(org => {
       const matchesSearch = !organizerSearch.trim() ||
         org.fullName.toLowerCase().includes(organizerSearch.toLowerCase()) ||
         org.email.toLowerCase().includes(organizerSearch.toLowerCase()) ||
@@ -641,7 +682,27 @@ export default function PlatformAdminView({
 
       return matchesSearch && matchesWilaya && matchesStatus;
     });
-  }, [organizers, organizerSearch, organizerWilayaFilter, organizerStatusFilter]);
+
+    return [...list].sort((a, b) => {
+      if (organizerSort === "newest") {
+        const timeA = (a.createdAt || a.joinedAt) ? new Date(a.createdAt || a.joinedAt).getTime() : 0;
+        const timeB = (b.createdAt || b.joinedAt) ? new Date(b.createdAt || b.joinedAt).getTime() : 0;
+        return timeB - timeA;
+      }
+      if (organizerSort === "oldest") {
+        const timeA = (a.createdAt || a.joinedAt) ? new Date(a.createdAt || a.joinedAt).getTime() : 0;
+        const timeB = (b.createdAt || b.joinedAt) ? new Date(b.createdAt || b.joinedAt).getTime() : 0;
+        return timeA - timeB;
+      }
+      if (organizerSort === "events") {
+        return (b.eventsCount || 0) - (a.eventsCount || 0);
+      }
+      if (organizerSort === "name") {
+        return (a.fullName || "").localeCompare(b.fullName || "");
+      }
+      return 0;
+    });
+  }, [organizers, organizerSearch, organizerWilayaFilter, organizerStatusFilter, organizerSort]);
 
   // Filtered Events
   const filteredEvents = useMemo(() => {
@@ -1010,7 +1071,22 @@ export default function PlatformAdminView({
                   </div>
 
                   <div className="flex items-center gap-2 flex-wrap">
-                    <div className="w-48">
+                    <div className="w-44">
+                      <SearchableSelect
+                        value={organizerSort}
+                        onChange={setOrganizerSort}
+                        options={[
+                          { value: "newest", label: "Joined: Newest First" },
+                          { value: "oldest", label: "Joined: Oldest First" },
+                          { value: "events", label: "Most Events Created" },
+                          { value: "name", label: "Organizer Name (A-Z)" }
+                        ]}
+                        placeholder="Sort By"
+                        buttonClassName="bg-white! border-slate-200! text-slate-800! text-xs! rounded-xl!"
+                      />
+                    </div>
+
+                    <div className="w-44">
                       <SearchableSelect
                         value={organizerWilayaFilter}
                         onChange={setOrganizerWilayaFilter}
@@ -1046,6 +1122,20 @@ export default function PlatformAdminView({
                           <th className="py-3.5 px-4">Organizer / Company</th>
                           <th className="py-3.5 px-4">Contact</th>
                           <th className="py-3.5 px-4">Wilaya</th>
+                          <th 
+                            onClick={() => setOrganizerSort(prev => prev === "newest" ? "oldest" : "newest")}
+                            className="py-3.5 px-4 cursor-pointer select-none hover:text-slate-700 transition-colors group"
+                            title="Click to sort by join date"
+                          >
+                            <div className="flex items-center gap-1.5">
+                              <span>Joined</span>
+                              {organizerSort === "newest" && <ArrowDown className="w-3 h-3 text-emerald-600" />}
+                              {organizerSort === "oldest" && <ArrowUp className="w-3 h-3 text-emerald-600" />}
+                              {organizerSort !== "newest" && organizerSort !== "oldest" && (
+                                <ArrowDown className="w-3 h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              )}
+                            </div>
+                          </th>
                           <th className="py-3.5 px-4">Events Created / Quota</th>
                           <th className="py-3.5 px-4">Max Capacity Cap</th>
                           <th className="py-3.5 px-4">Status</th>
@@ -1055,7 +1145,7 @@ export default function PlatformAdminView({
                       <tbody className="divide-y divide-slate-100">
                         {filteredOrganizers.length === 0 ? (
                           <tr>
-                            <td colSpan={7} className="py-12 text-center text-slate-400 text-xs">
+                            <td colSpan={8} className="py-12 text-center text-slate-400 text-xs">
                               No organizers match current search criteria.
                             </td>
                           </tr>
@@ -1074,6 +1164,24 @@ export default function PlatformAdminView({
                                 </td>
                                 <td className="py-3.5 px-4 text-slate-600 font-medium">
                                   {org.location || "Algeria"}
+                                </td>
+                                <td className="py-3.5 px-4 whitespace-nowrap">
+                                  {(() => {
+                                    const { formatted, relative } = formatJoinedDate(org.createdAt || org.joinedAt);
+                                    return (
+                                      <div>
+                                        <div className="font-semibold text-slate-800 flex items-center gap-1.5">
+                                          <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                          <span>{formatted}</span>
+                                        </div>
+                                        {relative && (
+                                          <div className="text-[10px] text-slate-400 font-normal pl-5 mt-0.5">
+                                            {relative}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })()}
                                 </td>
                                 <td className="py-3.5 px-4">
                                   <div className="flex items-center gap-1.5">
@@ -1121,7 +1229,7 @@ export default function PlatformAdminView({
                                     </button>
 
                                     <button
-                                      onClick={() => setSelectedOrgEvents(events.filter(e => e.organizerId === org.id))}
+                                      onClick={() => setSelectedOrgEvents({ org, events: events.filter(e => e.organizerId === org.id) })}
                                       className="px-3 py-1.5 rounded-xl bg-white hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 text-slate-700 border border-slate-200 text-xs font-semibold transition-all shadow-2xs cursor-pointer"
                                       title="View all events by this organizer"
                                     >
@@ -2347,6 +2455,31 @@ export default function PlatformAdminView({
 
               {/* Drawer Scrollable Body */}
               <div className="flex-1 overflow-y-auto p-6 space-y-6 text-xs">
+                {/* Organizer Profile & Joined Info Card */}
+                <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 flex items-center justify-between gap-3 shadow-2xs">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 font-bold text-sm shadow-2xs shrink-0">
+                      {editingOrganizer.fullName?.charAt(0)?.toUpperCase() || "O"}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-bold text-slate-900 text-xs truncate">{editingOrganizer.fullName}</div>
+                      <div className="text-[11px] text-slate-500 truncate">{editingOrganizer.email}</div>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Member Since</div>
+                    <div className="text-xs font-bold text-slate-800 flex items-center justify-end gap-1 mt-0.5">
+                      <Calendar className="w-3 h-3 text-slate-400" />
+                      <span>{formatJoinedDate(editingOrganizer.createdAt || editingOrganizer.joinedAt).formatted}</span>
+                    </div>
+                    {formatJoinedDate(editingOrganizer.createdAt || editingOrganizer.joinedAt).relative && (
+                      <div className="text-[10px] text-slate-400">
+                        {formatJoinedDate(editingOrganizer.createdAt || editingOrganizer.joinedAt).relative}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 {/* Allowed Number of Events */}
                 <div>
                   <label className="block font-bold text-slate-900 mb-1">
@@ -2499,25 +2632,36 @@ export default function PlatformAdminView({
 
           {/* Slide-over panel on the right */}
           <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-            <div className="w-screen max-w-md bg-white border-l border-slate-200 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
-              <div className="px-6 py-5 border-b border-slate-200 flex items-center justify-between bg-slate-50/60">
-                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-emerald-600" />
-                  Organizer Hosted Events ({selectedOrgEvents.length})
-                </h3>
-                <button
-                  onClick={() => setSelectedOrgEvents(null)}
-                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
+            {(() => {
+              const orgEventsList = Array.isArray(selectedOrgEvents) ? selectedOrgEvents : (selectedOrgEvents?.events || []);
+              const currentOrg = selectedOrgEvents?.org || null;
+              return (
+                <div className="w-screen max-w-md bg-white border-l border-slate-200 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+                  <div className="px-6 py-5 border-b border-slate-200 flex items-center justify-between bg-slate-50/60">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-emerald-600" />
+                        Organizer Hosted Events ({orgEventsList.length})
+                      </h3>
+                      {currentOrg && (
+                        <p className="text-xs text-slate-500 font-medium truncate max-w-[260px] mt-0.5">
+                          {currentOrg.fullName} • Joined {formatJoinedDate(currentOrg.createdAt || currentOrg.joinedAt).formatted}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => setSelectedOrgEvents(null)}
+                      className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
 
-              <div className="flex-1 overflow-y-auto p-6 space-y-3">
-                {selectedOrgEvents.length === 0 ? (
-                  <p className="text-xs text-slate-400 py-12 text-center">This organizer has not created any events yet.</p>
-                ) : (
-                  selectedOrgEvents.map(ev => (
+                  <div className="flex-1 overflow-y-auto p-6 space-y-3">
+                    {orgEventsList.length === 0 ? (
+                      <p className="text-xs text-slate-400 py-12 text-center">This organizer has not created any events yet.</p>
+                    ) : (
+                      orgEventsList.map(ev => (
                     <div key={ev.id} className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-3 text-xs hover:bg-slate-100/60 transition-colors">
                       <div>
                         <div className="font-bold text-slate-900">{ev.title}</div>
@@ -2533,8 +2677,10 @@ export default function PlatformAdminView({
                     </div>
                   ))
                 )}
-              </div>
-            </div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}
