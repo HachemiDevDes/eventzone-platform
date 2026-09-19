@@ -1,7 +1,12 @@
 "use client";
 
 import React from "react";
-import { Check, Sparkles } from "lucide-react";
+import { 
+  Check, Sparkles, Receipt, FileText, CheckCircle, Download, 
+  Printer, ExternalLink, ShieldCheck, DollarSign, Building2, 
+  Search, Filter, Plus, ArrowUpRight, Clock, AlertCircle, 
+  TrendingUp, Copy, Eye, Landmark, Settings, ChevronDown, CheckCheck 
+} from "lucide-react";
 import { useLanguage } from "../../lib/i18n";
 import { getLocalizedFeature, getFeaturesUI } from "../../lib/featuresData";
 
@@ -1373,6 +1378,470 @@ function VisualGraphicCard({ item, idx, featureSlug, lang = "fr" }) {
             <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Active</span>
           </div>
           <p className="text-[11px] text-slate-500 mt-1">Depth elevation with realistic ambient light</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 13. Facturation, Devis & Proforma (Conformité Légale)
+  // 13.1. Command Center & Registre Officiel des Documents
+  if (type === "invoicing-register-preview" || (featureSlug === "facturation-devis-proforma" && idx === 0)) {
+    return (
+      <div className="space-y-4">
+        {/* Command Center Header */}
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div className="flex items-center gap-2 text-start">
+            <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-200/60 flex items-center justify-center text-blue-600">
+              <Receipt size={16} className="stroke-[2.5]" />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-black text-slate-900 tracking-tight">Invoicing & Quotes</span>
+                <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-200/60 px-1.5 py-0.5 rounded-full">
+                  Command Center
+                </span>
+              </div>
+              <span className="text-[10px] text-slate-500 font-medium block">
+                Facturation certifiée & suivi trésorerie
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <button className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors">
+              <Download size={11} />
+              <span>CSV</span>
+            </button>
+            <button className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition-colors">
+              <Plus size={12} />
+              <span>Nouveau</span>
+            </button>
+          </div>
+        </div>
+
+        {/* 4 Financial KPIs Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-start">
+          {/* Total Encaissé */}
+          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-slate-500">Total Encaissé</span>
+              <div className="w-5 h-5 rounded-md bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <TrendingUp size={11} />
+              </div>
+            </div>
+            <div className="mt-1">
+              <span className="text-xs sm:text-sm font-black text-slate-900 block leading-tight">1 850 000 DA</span>
+              <span className="text-[9px] font-bold text-emerald-600">● 4 factures réglées</span>
+            </div>
+          </div>
+
+          {/* En Attente */}
+          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-slate-500">En Attente</span>
+              <div className="w-5 h-5 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center">
+                <Clock size={11} />
+              </div>
+            </div>
+            <div className="mt-1">
+              <span className="text-xs sm:text-sm font-black text-slate-900 block leading-tight">420 000 DA</span>
+              <span className="text-[9px] font-medium text-slate-500">2 en attente</span>
+            </div>
+          </div>
+
+          {/* En Retard */}
+          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-slate-500">En Retard</span>
+              <div className="w-5 h-5 rounded-md bg-rose-50 text-rose-600 flex items-center justify-center">
+                <AlertCircle size={11} />
+              </div>
+            </div>
+            <div className="mt-1">
+              <span className="text-xs sm:text-sm font-black text-slate-900 block leading-tight">180 000 DA</span>
+              <span className="text-[9px] font-bold text-rose-600">1 à relancer</span>
+            </div>
+          </div>
+
+          {/* Taux d'encaissement */}
+          <div className="p-2.5 rounded-xl bg-blue-50/60 border border-blue-200/70 flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-blue-800">Recouvrement</span>
+              <span className="text-[10px] font-black text-blue-700">91.2%</span>
+            </div>
+            <div className="mt-1">
+              <div className="w-full bg-blue-200/60 rounded-full h-1.5 overflow-hidden">
+                <div className="bg-blue-600 h-1.5 rounded-full w-[91%]" />
+              </div>
+              <span className="text-[9px] font-semibold text-blue-700 mt-1 block">7 documents</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Document Tabs & Filter */}
+        <div className="flex items-center justify-between gap-2 pt-1">
+          <div className="flex items-center gap-1 overflow-x-auto text-[11px] font-bold">
+            <span className="px-2.5 py-1 rounded-lg bg-blue-600 text-white shadow-2xs">
+              Factures (4)
+            </span>
+            <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+              Devis (2)
+            </span>
+            <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+              Proforma (1)
+            </span>
+          </div>
+          <div className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 text-[10px] text-slate-500 font-medium">
+            <Search size={10} />
+            <span>Rechercher...</span>
+          </div>
+        </div>
+
+        {/* Official Registry Table Preview */}
+        <div className="rounded-xl border border-slate-200/90 overflow-hidden bg-white shadow-2xs text-start">
+          <div className="bg-slate-900 text-white px-3 py-2 flex items-center justify-between text-[10px] font-bold">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Registre officiel des documents</span>
+            </div>
+            <span className="text-slate-400 font-normal">Exercice fiscal 2026</span>
+          </div>
+          <div className="divide-y divide-slate-100 text-[11px]">
+            {/* Row 1 */}
+            <div className="p-2.5 flex items-center justify-between hover:bg-slate-50/80 transition-colors">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-black text-[10px] border border-blue-200/60 shrink-0">
+                  FAC-26-0830
+                </span>
+                <div className="truncate">
+                  <span className="font-bold text-slate-900 block leading-tight truncate">Sonatrach SPA Logistics</span>
+                  <span className="text-[10px] text-slate-400">Échéance 19/10/2026</span>
+                </div>
+              </div>
+              <div className="text-end shrink-0 pl-2">
+                <span className="font-black text-slate-900 block">833 000 DA</span>
+                <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
+                  <CheckCircle size={9} /> Payée
+                </span>
+              </div>
+            </div>
+
+            {/* Row 2 */}
+            <div className="p-2.5 flex items-center justify-between hover:bg-slate-50/80 transition-colors">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-black text-[10px] border border-blue-200/60 shrink-0">
+                  FAC-26-0831
+                </span>
+                <div className="truncate">
+                  <span className="font-bold text-slate-900 block leading-tight truncate">Ooredoo Business B2B</span>
+                  <span className="text-[10px] text-slate-400">Échéance 25/10/2026</span>
+                </div>
+              </div>
+              <div className="text-end shrink-0 pl-2">
+                <span className="font-black text-slate-900 block">420 000 DA</span>
+                <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded">
+                  <Clock size={9} /> En attente
+                </span>
+              </div>
+            </div>
+
+            {/* Row 3 */}
+            <div className="p-2.5 flex items-center justify-between hover:bg-slate-50/80 transition-colors">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-black text-[10px] border border-blue-200/60 shrink-0">
+                  FAC-26-0829
+                </span>
+                <div className="truncate">
+                  <span className="font-bold text-slate-900 block leading-tight truncate">Cevital Events & Agro</span>
+                  <span className="text-[10px] text-rose-500 font-semibold">Échue (+5 j)</span>
+                </div>
+              </div>
+              <div className="text-end shrink-0 pl-2">
+                <span className="font-black text-slate-900 block">180 000 DA</span>
+                <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded">
+                  <AlertCircle size={9} /> En retard
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 13.2. Profils de Facturation & Identifiants Fiscaux DZ
+  if (type === "fiscal-profile-preview" || (featureSlug === "facturation-devis-proforma" && idx === 1)) {
+    return (
+      <div className="space-y-4">
+        {/* Modal Window Header Mockup */}
+        <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-sm text-start">
+          <div className="flex items-start justify-between pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
+                <Building2 size={16} />
+              </div>
+              <div>
+                <h4 className="text-xs font-black text-slate-900">Profil de Facturation & Paramètres</h4>
+                <p className="text-[10px] text-slate-500">Identité légale certifiée & conformité DGI</p>
+              </div>
+            </div>
+            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+              Conforme CNRC
+            </span>
+          </div>
+
+          {/* Company Details */}
+          <div className="mt-3 space-y-2.5">
+            <div className="grid grid-cols-2 gap-2 text-start">
+              <div className="p-2 rounded-xl bg-slate-50 border border-slate-200/70">
+                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block">Raison Sociale</span>
+                <span className="text-[11px] font-black text-slate-900 truncate block">EVENTZONE ALGERIA SARL</span>
+              </div>
+              <div className="p-2 rounded-xl bg-slate-50 border border-slate-200/70">
+                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block">Gérance & Contact</span>
+                <span className="text-[11px] font-bold text-slate-800 truncate block">Direction des Opérations</span>
+              </div>
+            </div>
+
+            <div className="p-2 rounded-xl bg-slate-50 border border-slate-200/70 text-start">
+              <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block">Adresse & Siège Social</span>
+              <span className="text-[10px] font-medium text-slate-700 block">
+                Lotissement Pons N° 80, Bureau N° 16, Kouba, 16 - Alger
+              </span>
+            </div>
+
+            {/* DZ Tax Identifiers Block */}
+            <div className="p-2.5 rounded-xl bg-blue-50/60 border border-blue-200/70 text-start">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-black text-blue-900 uppercase tracking-wide flex items-center gap-1">
+                  <ShieldCheck size={12} className="text-blue-600" />
+                  Mentions Fiscales Algériennes Obligatoires
+                </span>
+                <span className="text-[9px] font-bold text-blue-700 bg-white/80 px-1.5 py-0.5 rounded border border-blue-200/60">
+                  Vérifié
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-[10px]">
+                <div className="bg-white/90 p-1.5 rounded-lg border border-blue-100">
+                  <span className="text-[9px] text-slate-400 block font-semibold">NIF (15 chiffres)</span>
+                  <span className="font-mono font-black text-slate-900">0021 1601 2345 678</span>
+                </div>
+                <div className="bg-white/90 p-1.5 rounded-lg border border-blue-100">
+                  <span className="text-[9px] text-slate-400 block font-semibold">Registre de Commerce (RC)</span>
+                  <span className="font-mono font-black text-slate-900">16/00-1234567B21</span>
+                </div>
+                <div className="bg-white/90 p-1.5 rounded-lg border border-blue-100">
+                  <span className="text-[9px] text-slate-400 block font-semibold">Article d'Imposition (AI)</span>
+                  <span className="font-mono font-black text-slate-900">1603 2014 523</span>
+                </div>
+                <div className="bg-white/90 p-1.5 rounded-lg border border-blue-100">
+                  <span className="text-[9px] text-slate-400 block font-semibold">NIS (Statistique)</span>
+                  <span className="font-mono font-black text-slate-900">0021 1609 0123 456</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Cachet & Signature and Bank Rib */}
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <div className="p-2 rounded-xl bg-slate-50 border border-slate-200/70 text-start flex items-center justify-between">
+                <div>
+                  <span className="text-[9px] font-bold text-slate-400 block uppercase">Banque (RIB)</span>
+                  <span className="text-[10px] font-mono font-bold text-slate-800 block">BEA • ...44</span>
+                </div>
+                <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">TVA 19%</span>
+              </div>
+              <div className="p-2 rounded-xl border border-dashed border-blue-300 bg-blue-50/40 flex items-center justify-center gap-2">
+                <div className="w-6 h-6 rounded-full border border-blue-500 border-dashed flex items-center justify-center text-blue-600 text-[8px] font-black">
+                  VISA
+                </div>
+                <span className="text-[10px] font-bold text-blue-700">Cachet & Signature prêts</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 13.3. Éditeur Visuel Double Écran & Aperçu A4 en Direct
+  if (type === "invoice-editor-split-preview" || (featureSlug === "facturation-devis-proforma" && idx === 2)) {
+    return (
+      <div className="space-y-3">
+        {/* Split Screen Top Bar */}
+        <div className="flex items-center justify-between pb-2 border-b border-slate-100 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="font-black text-slate-900">Éditeur Facture</span>
+            <span className="font-mono text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded font-bold">
+              EZ-26-0830
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Aperçu A4 interactif
+            </span>
+          </div>
+        </div>
+
+        {/* Main A4 Document Sheet Mockup */}
+        <div className="rounded-2xl bg-white border border-slate-300/80 shadow-lg p-4 sm:p-5 relative overflow-hidden text-start">
+          <div className="flex items-start justify-between border-b border-slate-200/80 pb-3">
+            <div>
+              <span className="text-base sm:text-lg font-black tracking-tight text-blue-600 font-sans">
+                eventzone
+              </span>
+              <span className="text-[9px] text-slate-400 block font-medium">SARL EVENTZONE ALGERIA</span>
+            </div>
+            <div className="text-end">
+              <span className="text-sm sm:text-base font-black text-slate-900 tracking-wider block">
+                FACTURE
+              </span>
+              <span className="text-[10px] font-mono font-bold text-slate-500">N° EZ-26-0830</span>
+            </div>
+          </div>
+
+          {/* Dates & Client Meta */}
+          <div className="grid grid-cols-2 gap-3 py-2.5 text-[10px] border-b border-slate-100">
+            <div>
+              <span className="text-[9px] text-slate-400 uppercase font-bold block">Client Destinataire</span>
+              <span className="font-bold text-slate-900 block">SARL Sonatrach Logistics</span>
+              <span className="text-slate-500 text-[9px] block">NIF: 000216012345678 • RC: 16/00-0987</span>
+            </div>
+            <div className="text-end space-y-0.5">
+              <div className="text-slate-500">Date d'émission : <span className="font-bold text-slate-800">19/09/2026</span></div>
+              <div className="text-slate-500">Date d'échéance : <span className="font-bold text-slate-800">19/10/2026</span></div>
+              <div className="text-blue-600 font-bold">Délai : 30 jours nets</div>
+            </div>
+          </div>
+
+          {/* Itemized Table (Dark Header) */}
+          <div className="mt-2.5 rounded-lg overflow-hidden border border-slate-200 text-[10px]">
+            <div className="bg-slate-900 text-white px-2.5 py-1.5 grid grid-cols-12 font-bold text-[9px] uppercase tracking-wider">
+              <span className="col-span-6">Désignation Prestation</span>
+              <span className="col-span-2 text-center">Qté</span>
+              <span className="col-span-2 text-end">P.U HT</span>
+              <span className="col-span-2 text-end">Total HT</span>
+            </div>
+            <div className="divide-y divide-slate-100 bg-slate-50/50">
+              <div className="px-2.5 py-1.5 grid grid-cols-12 items-center">
+                <span className="col-span-6 font-semibold text-slate-800 truncate">Stand Exposition 36m² (Hall A)</span>
+                <span className="col-span-2 text-center font-bold text-slate-700">1</span>
+                <span className="col-span-2 text-end text-slate-600">500 000</span>
+                <span className="col-span-2 text-end font-black text-slate-900">500 000 DA</span>
+              </div>
+              <div className="px-2.5 py-1.5 grid grid-cols-12 items-center">
+                <span className="col-span-6 font-semibold text-slate-800 truncate">Pass VIP & Badges RFID NFC</span>
+                <span className="col-span-2 text-center font-bold text-slate-700">20</span>
+                <span className="col-span-2 text-end text-slate-600">10 000</span>
+                <span className="col-span-2 text-end font-black text-slate-900">200 000 DA</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Totals Section */}
+          <div className="mt-2.5 flex justify-end">
+            <div className="w-48 space-y-1 text-[10px]">
+              <div className="flex justify-between text-slate-600">
+                <span>Montant Total HT :</span>
+                <span className="font-bold text-slate-900">700 000,00 DA</span>
+              </div>
+              <div className="flex justify-between text-slate-600">
+                <span>TVA (19%) :</span>
+                <span className="font-bold text-slate-900">133 000,00 DA</span>
+              </div>
+              <div className="flex justify-between pt-1 border-t border-slate-200 text-xs font-black text-blue-600">
+                <span>Total TTC :</span>
+                <span>833 000,00 DA</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Arrêté en toutes lettres Callout Box */}
+          <div className="mt-3 p-2 rounded-lg bg-blue-50/80 border border-blue-200/70">
+            <span className="text-[9px] font-black uppercase tracking-wider text-blue-800 block">
+              Arrêté la présente facture à la somme de :
+            </span>
+            <span className="text-[10px] font-bold italic text-blue-950 block">
+              « Huit cent trente-trois mille dinars algériens TTC »
+            </span>
+          </div>
+
+          {/* Stamp and Signature preview */}
+          <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[9px] text-slate-400">
+            <span>Mention légale DGI art. 11</span>
+            <div className="flex items-center gap-1.5 text-blue-700 font-bold">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+              <span>Cachet & Signature numérisés valides</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 13.4. Export PDF Haute Définition & Partage Sécurisé
+  if (type === "pdf-export-preview" || (featureSlug === "facturation-devis-proforma" && idx === 3)) {
+    return (
+      <div className="space-y-4">
+        {/* Actions Bar */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div className="p-3 rounded-xl bg-blue-600 text-white flex items-center gap-2 shadow-xs cursor-pointer hover:bg-blue-700 transition-colors">
+            <Download size={16} className="shrink-0" />
+            <div className="text-start">
+              <span className="text-xs font-bold block leading-tight">Télécharger PDF</span>
+              <span className="text-[10px] text-blue-100">Format A4 Vectoriel</span>
+            </div>
+          </div>
+          <div className="p-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center gap-2 transition-colors cursor-pointer">
+            <Printer size={16} className="shrink-0 text-slate-600" />
+            <div className="text-start">
+              <span className="text-xs font-bold block leading-tight">Imprimer direct</span>
+              <span className="text-[10px] text-slate-500">Mise en page A4</span>
+            </div>
+          </div>
+          <div className="p-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center gap-2 transition-colors cursor-pointer">
+            <ExternalLink size={16} className="shrink-0 text-blue-600" />
+            <div className="text-start">
+              <span className="text-xs font-bold block leading-tight">Lien Client</span>
+              <span className="text-[10px] text-slate-500">Accès sécurisé</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Secure Link Preview Bar */}
+        <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-start flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+            <span className="text-[11px] font-mono text-slate-600 truncate">
+              https://eventzone.dz/f/fac-26-0830?token=sec_98f4
+            </span>
+          </div>
+          <button className="px-2 py-1 text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors shrink-0">
+            Copier
+          </button>
+        </div>
+
+        {/* Quality Features Showcase */}
+        <div className="grid grid-cols-3 gap-2 text-center text-xs">
+          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
+            <span className="text-[10px] font-bold text-slate-400 block">Rendu A4</span>
+            <span className="text-xs font-black text-slate-900">300 DPI Vectoriel</span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
+            <span className="text-[10px] font-bold text-slate-400 block">Conformité</span>
+            <span className="text-xs font-black text-emerald-700">Fiscalité DZ</span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-blue-50/70 border border-blue-200">
+            <span className="text-[10px] font-bold text-blue-700 block">Horodatage</span>
+            <span className="text-xs font-black text-blue-800">Automatique</span>
+          </div>
+        </div>
+
+        {/* Audit & Status sync pill */}
+        <div className="p-3 rounded-xl bg-emerald-50/60 border border-emerald-200/70 flex items-center gap-2 text-start text-xs">
+          <CheckCheck size={16} className="text-emerald-600 shrink-0" />
+          <span className="text-[11px] text-emerald-950 font-medium">
+            <strong>Synchronisation en temps réel :</strong> La consultation ou le téléchargement par le client met à jour immédiatement le registre.
+          </span>
         </div>
       </div>
     );

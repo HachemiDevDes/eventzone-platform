@@ -9,7 +9,7 @@ import {
   DollarSign, Activity, Award, FileDown, CheckCircle,
   Globe, Search, Calendar, Handshake,
   Smartphone, Ticket, MessageCircle, MessageSquare,
-  TrendingUp, Target, Share2, Video
+  TrendingUp, Target, Share2, Video, Receipt
 } from "lucide-react";
 import { useLanguage } from "../../lib/i18n";
 import { getLocalizedFeature, getFeaturesUI } from "../../lib/featuresData";
@@ -23,7 +23,7 @@ const ICON_MAP = {
   DollarSign, Activity, Award, FileDown,
   Globe, Search, Calendar, Handshake,
   Smartphone, Ticket, MessageCircle, MessageSquare,
-  TrendingUp, Target, Share2, Video
+  TrendingUp, Target, Share2, Video, Receipt
 };
 
 export default function FeatureBenefitsGrid({ feature }) {
