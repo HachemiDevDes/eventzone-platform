@@ -4583,7 +4583,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
           </div>
 
           {/* Tab Search Bar */}
-          <div className="relative my-1">
+          <div className="relative mt-2 mb-3.5">
             <div className="relative flex items-center">
               <Search size={13} className="absolute left-2.5 rtl:right-2.5 rtl:left-auto text-slate-400 pointer-events-none" />
               <input
