@@ -119,33 +119,48 @@ export default function InvoicingProfileSettingsModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-fade-in">
-      <div className="bg-white rounded-3xl shadow-2xl border border-slate-200/80 w-full max-w-2xl my-8 overflow-hidden flex flex-col max-h-[90vh]">
-        {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50/50 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600">
-              <Settings size={18} />
+    <div className="fixed inset-0 z-50 overflow-hidden bg-slate-900/40 backdrop-blur-xs flex justify-end animate-fade-in font-sans">
+      {/* Blurry Backdrop with click to close */}
+      <div
+        onClick={onClose}
+        className="absolute inset-0 cursor-pointer"
+      />
+
+      {/* Slide-over Drawer on the Right */}
+      <div
+        dir={isRTL ? "rtl" : "ltr"}
+        className="relative w-full max-w-2xl lg:max-w-3xl bg-white h-full shadow-2xl z-10 flex flex-col border-inline-start border-slate-200 overflow-hidden animate-slide-in-right"
+      >
+        {/* Drawer Header */}
+        <header className="px-6 sm:px-8 py-5 border-b border-slate-200 flex items-center justify-between bg-white select-none shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shrink-0">
+              <Settings size={20} />
             </div>
             <div>
-              <h2 className="text-base font-black text-slate-900 tracking-tight">
-                Profil de facturation & Paramètres
+              <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">
+                {t("invoicing.fiscalProfileTitle", "Profil de facturation & Paramètres")}
               </h2>
-              <p className="text-xs text-slate-500 font-medium">
-                Configurez l&apos;identité légale, la fiscalité et les coordonnées bancaires de votre organisation.
+              <p className="text-xs text-slate-500 font-medium mt-0.5">
+                {t("invoicing.fiscalProfileDesc", "Configurez l'identité légale, la fiscalité et les coordonnées bancaires de votre organisation.")}
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all cursor-pointer"
-          >
-            <X size={16} />
-          </button>
-        </div>
 
-        {/* Scrollable Form Content */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-9 h-9 rounded-full border border-slate-200 bg-white hover:bg-slate-100 text-slate-400 hover:text-slate-800 flex items-center justify-center transition-colors cursor-pointer shrink-0"
+            title={t("common.close", "Fermer")}
+          >
+            <X size={18} />
+          </button>
+        </header>
+
+        {/* Form wrapping scrollable content and sticky footer */}
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          {/* Scrollable Form Content */}
+          <div className="flex-1 overflow-y-auto px-6 sm:px-8 py-6 space-y-5">
           {/* NOM DU PROFIL */}
           <div>
             <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">
@@ -717,30 +732,32 @@ export default function InvoicingProfileSettingsModal({
             )}
           </div>
 
-          {/* Footer Save Button */}
-          <div className="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
+          </div>
+
+          {/* Sticky Bottom Footer */}
+          <footer className="px-6 sm:px-8 py-4 border-t border-slate-200 bg-white flex items-center justify-between shrink-0 shadow-lg select-none">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+              className="px-5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
             >
-              Annuler
+              {t("common.cancel", "Annuler")}
             </button>
             <button
               type="submit"
               disabled={isSaving}
-              className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold transition-all cursor-pointer shadow-xs flex items-center gap-2"
+              className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs transition-all cursor-pointer shadow-xs flex items-center gap-2 disabled:opacity-50"
             >
               {saveSuccess ? (
                 <>
                   <CheckCircle2 size={16} className="text-white" />
-                  <span>Enregistré !</span>
+                  <span>{t("common.saved", "Enregistré !")}</span>
                 </>
               ) : (
-                <span>{isSaving ? "Enregistrement..." : "Enregistrer le profil"}</span>
+                <span>{isSaving ? t("common.saving", "Enregistrement...") : t("invoicing.saveProfile", "Enregistrer le profil")}</span>
               )}
             </button>
-          </div>
+          </footer>
         </form>
       </div>
     </div>
