@@ -8,7 +8,8 @@ import {
   Plane, Hotel, Layers, Link2, BarChart3, 
   DollarSign, Activity, Award, FileDown, CheckCircle,
   Globe, Search, Calendar, Handshake,
-  Smartphone, Ticket, MessageCircle
+  Smartphone, Ticket, MessageCircle, MessageSquare,
+  TrendingUp, Target, Share2, Video
 } from "lucide-react";
 import { useLanguage } from "../../lib/i18n";
 import { getLocalizedFeature, getFeaturesUI } from "../../lib/featuresData";
@@ -21,7 +22,8 @@ const ICON_MAP = {
   Plane, Hotel, Layers, Link2, BarChart3,
   DollarSign, Activity, Award, FileDown,
   Globe, Search, Calendar, Handshake,
-  Smartphone, Ticket, MessageCircle
+  Smartphone, Ticket, MessageCircle, MessageSquare,
+  TrendingUp, Target, Share2, Video
 };
 
 export default function FeatureBenefitsGrid({ feature }) {

@@ -1,8 +1,8 @@
-﻿import { redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 
 export const metadata = {
-  title: "Video Test — Eventzone",
-  description: "Laboratoire de design interactif avec arrière-plan vidéo cinématique pour Eventzone.",
+  title: "Conversion Social Media & Marketing Événementiel — Eventzone",
+  description: "Transformez vos abonnés Instagram, TikTok et LinkedIn en participants confirmés et clients payants avec Eventzone.",
 };
 
 export default function VideoTestPage() {

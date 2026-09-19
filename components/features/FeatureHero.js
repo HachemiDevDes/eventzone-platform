@@ -39,14 +39,43 @@ export default function FeatureHero({ feature }) {
   const ui = getFeaturesUI(lang);
   const heroVideo = localized.heroVideo || feature.heroVideo;
 
+  const HEADLINE_OPTIONS = [
+    {
+      id: "social-clients",
+      label: "Social → Clients",
+      lines: ["TURN  SOCIAL", "TRAFFIC", "INTO  CLIENTS"],
+      subtitle: "Stop losing 80% of your social media visitors. Eventzone converts your Instagram, TikTok, and LinkedIn traffic into confirmed ticket buyers and corporate clients with 1-click in-app checkout and automated WhatsApp recovery.",
+      primaryBtn: "START CONVERTING NOW",
+    },
+    {
+      id: "social-attendees",
+      label: "Social → Attendees",
+      lines: ["CONVERT  MORE", "ATTENDEES", "FROM  SOCIAL"],
+      subtitle: "Frictionless in-app browser checkout funnels, automated WhatsApp cart abandonment recovery, and creator affiliate tracking to pack your event.",
+      primaryBtn: "BOOST ATTENDANCE NOW",
+    },
+    {
+      id: "reference-image",
+      label: "Original Tech Style",
+      lines: ["EXPECT  MORE", "ATTENDEES", "FROM  YOUR  EVENTS"],
+      subtitle: "Purpose-built and AI-powered – with the data insights, ecosystem, and expertise to deliver real event outcomes.",
+      primaryBtn: "EXPLORE THE PLATFORM",
+    },
+  ];
+
   const videoRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(true);
   // Default to "reference" mode when hero video is present
   const [designMode, setDesignMode] = useState(heroVideo ? "reference" : "light");
-  const [useReferenceText, setUseReferenceText] = useState(true);
+  const [headlineIndex, setHeadlineIndex] = useState(0);
 
   const currentOverlay = OVERLAY_STYLES[designMode] || OVERLAY_STYLES.reference;
   const isDark = !currentOverlay.isDarkText;
+  const activeHeadline = HEADLINE_OPTIONS[headlineIndex] || HEADLINE_OPTIONS[0];
+
+  const cycleHeadline = () => {
+    setHeadlineIndex((prev) => (prev + 1) % HEADLINE_OPTIONS.length);
+  };
 
   const togglePlayback = () => {
     if (!videoRef.current) return;
@@ -157,15 +186,15 @@ export default function FeatureHero({ feature }) {
 
             <div className="h-4 w-px bg-white/20" />
 
-            {/* Toggle Text Copy (Reference vs Eventzone) */}
+            {/* Cycle Headline Copy */}
             <button
               type="button"
-              onClick={() => setUseReferenceText(!useReferenceText)}
+              onClick={cycleHeadline}
               className="px-2.5 py-1 text-xs font-bold text-slate-200 hover:text-white bg-white/10 hover:bg-white/20 rounded-lg transition-all flex items-center gap-1 cursor-pointer font-mono"
-              title="Toggle headline copy between Reference and Eventzone"
+              title="Cycle headline messaging (Social Conversion / Attendees / Original Image)"
             >
               <Type size={12} />
-              <span>{useReferenceText ? "Text: Image" : "Text: Module"}</span>
+              <span>{activeHeadline.label}</span>
             </button>
 
             {/* Play/Pause Button */}
@@ -191,79 +220,47 @@ export default function FeatureHero({ feature }) {
               {/* Left Column: Bold Technical All-Caps Typography */}
               <div className="flex-1 max-w-3xl text-start">
                 <h1 className="font-mono text-3xl sm:text-4xl md:text-5xl lg:text-[44px] xl:text-[52px] font-bold text-white uppercase tracking-[0.14em] sm:tracking-[0.17em] leading-[1.15] select-none drop-shadow-md">
-                  {useReferenceText ? (
-                    <>
-                      <span className="block whitespace-nowrap">EXPECT &nbsp;MORE</span>
-                      <span className="block mt-1 sm:mt-1.5 whitespace-nowrap">
-                        <span>ATTENDEES</span>
-                        <span className="inline-flex items-center ml-1 sm:ml-2 align-middle">
-                          <svg 
-                            className="w-5 h-5 sm:w-7 sm:h-7 text-[#00E575] shrink-0" 
-                            viewBox="0 0 24 24" 
-                            fill="none" 
-                            stroke="currentColor" 
-                            strokeWidth="3.2" 
-                            strokeLinecap="square"
-                          >
-                            <line x1="12" y1="2" x2="12" y2="22" />
-                            <line x1="2" y1="12" x2="22" y2="12" />
-                          </svg>
-                        </span>
-                      </span>
-                      <span className="block mt-1 sm:mt-1.5 whitespace-nowrap">
-                        <span>FROM &nbsp;YOUR &nbsp;EVENTS</span>
-                        <span className="text-[0.38em] font-sans font-bold tracking-normal text-white/90 align-super ml-1.5 leading-none inline-block">
-                          ™
-                        </span>
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="block whitespace-nowrap">NEXT-GEN</span>
-                      <span className="block mt-1 sm:mt-1.5 whitespace-nowrap">
-                        <span>VIDEO &nbsp;LAB</span>
-                        <span className="inline-flex items-center ml-1 sm:ml-2 align-middle">
-                          <svg 
-                            className="w-5 h-5 sm:w-7 sm:h-7 text-[#00E575] shrink-0" 
-                            viewBox="0 0 24 24" 
-                            fill="none" 
-                            stroke="currentColor" 
-                            strokeWidth="3.2" 
-                            strokeLinecap="square"
-                          >
-                            <line x1="12" y1="2" x2="12" y2="22" />
-                            <line x1="2" y1="12" x2="22" y2="12" />
-                          </svg>
-                        </span>
-                      </span>
-                      <span className="block mt-1 sm:mt-1.5 whitespace-nowrap">
-                        <span>FOR &nbsp;EVENTZONE</span>
-                        <span className="text-[0.38em] font-sans font-bold tracking-normal text-white/90 align-super ml-1.5 leading-none inline-block">
-                          ™
-                        </span>
-                      </span>
-                    </>
-                  )}
+                  <span className="block whitespace-nowrap">{activeHeadline.lines[0]}</span>
+                  <span className="block mt-1 sm:mt-1.5 whitespace-nowrap">
+                    <span>{activeHeadline.lines[1]}</span>
+                    <span className="inline-flex items-center ml-1 sm:ml-2 align-middle">
+                      <svg 
+                        className="w-5 h-5 sm:w-7 sm:h-7 text-[#00E575] shrink-0" 
+                        viewBox="0 0 24 24" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        strokeWidth="3.2" 
+                        strokeLinecap="square"
+                      >
+                        <line x1="12" y1="2" x2="12" y2="22" />
+                        <line x1="2" y1="12" x2="22" y2="12" />
+                      </svg>
+                    </span>
+                  </span>
+                  <span className="block mt-1 sm:mt-1.5 whitespace-nowrap">
+                    <span>{activeHeadline.lines[2]}</span>
+                    <span className="text-[0.38em] font-sans font-bold tracking-normal text-white/90 align-super ml-1.5 leading-none inline-block">
+                      ™
+                    </span>
+                  </span>
                 </h1>
 
                 <p className="mt-5 sm:mt-6 text-xs sm:text-[14px] font-semibold text-white/95 leading-relaxed max-w-[460px] font-sans drop-shadow-xs">
-                  {useReferenceText
-                    ? "Purpose-built and AI-powered \u2013 with the data insights, ecosystem, and expertise to deliver real event outcomes."
-                    : (localized.heroDescription || localized.tagline)}
+                  {activeHeadline.subtitle}
                 </p>
               </div>
 
               {/* Right Column: Exact Reference Buttons */}
               <div className="flex flex-row flex-wrap items-center gap-3 shrink-0 self-start lg:self-center mt-2 lg:mt-0">
                 <a
-                  href="#apercu"
+                  href="#benefices"
                   className="px-5 sm:px-6 py-3 bg-[#00E575] hover:bg-[#00c965] active:scale-95 text-black font-mono font-bold text-xs sm:text-[13px] uppercase tracking-wider transition-all flex items-center justify-center cursor-pointer shadow-lg shadow-[#00E575]/25 border border-[#00E575] whitespace-nowrap rounded-[1px]"
                 >
-                  EXPLORE THE PLATFORM
+                  {activeHeadline.primaryBtn}
                 </a>
 
                 <a
-                  href="https://wa.me/213781457511?text=Bonjour%20Eventzone%2C%20je%20souhaite%20une%20d%C3%A9mo%20personnalis%C3%A9e"
+                  href="https://wa.me/213781457511?text=Bonjour%20Eventzone%2C%20je%20souhaite%20convertir%20mon%20trafic%20social%20en%20clients"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="px-5 sm:px-6 py-3 bg-black/40 hover:bg-white/10 active:scale-95 text-white font-mono font-medium text-xs sm:text-[13px] uppercase tracking-wider border border-white/40 hover:border-white/80 transition-all flex items-center justify-center cursor-pointer backdrop-blur-xs whitespace-nowrap rounded-[1px]"
