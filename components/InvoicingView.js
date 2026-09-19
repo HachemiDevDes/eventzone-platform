@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import InvoicingDashboard from "./InvoicingDashboard";
 import InvoicingEditor from "./InvoicingEditor";
 import InvoicingProfileSettingsModal from "./InvoicingProfileSettingsModal";
@@ -15,7 +15,8 @@ import {
   convertQuoteToInvoice, 
   duplicateInvoice, 
   fetchInvoicingClients,
-  upsertInvoicingClient
+  upsertInvoicingClient,
+  fetchOrganizations
 } from "../lib/db";
 import { DEFAULT_INVOICING_PROFILE } from "../lib/invoicingConstants";
 import { Check, Copy, AlertCircle } from "lucide-react";
@@ -31,6 +32,8 @@ export default function InvoicingView({
   eventDetails = null,
   organizations = [],
   opportunities = [],
+  sponsors = [],
+  exhibitors = [],
   onSwitchView,
   effectivePermissions = null,
 }) {
@@ -41,6 +44,7 @@ export default function InvoicingView({
   const [profiles, setProfiles] = useState([]);
   const [selectedProfileId, setSelectedProfileId] = useState("all");
   const [savedClients, setSavedClients] = useState([]);
+  const [fetchedOrganizations, setFetchedOrganizations] = useState([]);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [toastMessage, setToastMessage] = useState(null);
@@ -80,9 +84,15 @@ export default function InvoicingView({
       });
       setInvoices(loadedInvoices || []);
 
-      // Fetch saved client address book
-      const loadedClients = await fetchInvoicingClients(userId);
+      // Fetch saved client address book & organizations in parallel
+      const [loadedClients, loadedOrgs] = await Promise.all([
+        fetchInvoicingClients(userId).catch(() => []),
+        fetchOrganizations(activeEventId).catch(() => []),
+      ]);
       setSavedClients(loadedClients || []);
+      if (loadedOrgs && loadedOrgs.length > 0) {
+        setFetchedOrganizations(loadedOrgs);
+      }
     } catch (err) {
       console.error("Invoicing load error:", err);
     } finally {
@@ -93,6 +103,14 @@ export default function InvoicingView({
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Merge prop organizations and directly fetched organizations
+  const effectiveOrganizations = useMemo(() => {
+    const map = new Map();
+    (organizations || []).forEach(o => { if (o && (o.id || o.name)) map.set(String(o.id || o.name), o); });
+    (fetchedOrganizations || []).forEach(o => { if (o && (o.id || o.name)) map.set(String(o.id || o.name), o); });
+    return Array.from(map.values());
+  }, [organizations, fetchedOrganizations]);
 
   // Active Profile object
   const activeProfile = profiles.find(p => p.id === selectedProfileId) || profiles[0] || DEFAULT_INVOICING_PROFILE;
@@ -382,8 +400,12 @@ export default function InvoicingView({
           initialDocument={editingDoc}
           activeProfile={activeProfile}
           savedClients={savedClients}
-          organizations={organizations}
+          organizations={effectiveOrganizations}
           opportunities={opportunities}
+          sponsors={sponsors}
+          exhibitors={exhibitors}
+          invoices={invoices}
+          activeEventId={activeEventId}
           onBack={() => {
             setViewMode("dashboard");
             setEditingDoc(null);
