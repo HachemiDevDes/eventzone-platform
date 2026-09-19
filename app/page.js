@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import HomeClient from "./HomeClient";
-import { fetchPublicEvents } from "../lib/db";
+import { fetchPublicEvents, fetchEventDetails, fetchTickets } from "../lib/db";
 import { stripHtml } from "../lib/constants";
 
 // Strict ISO helper for Google Schema.org dates
@@ -18,48 +18,163 @@ function parseToIso(dateStr, fallbackHour = 8) {
   return undefined;
 }
 
-export const metadata = {
-  title: "Eventzone - All in One Event Management Platform",
-  description: "The all-in-one event management platform for organizers. Host conferences & expos with interactive floor plans, online ticketing, custom badges, and QR check-in.",
-  keywords: [
-    "Eventzone",
-    "events Algeria",
-    "conferences Algeria",
-    "summits",
-    "expositions",
-    "salons Algerie",
-    "ticketing",
-    "event management",
-    "event discovery",
-    "interactive floor plans",
-    "Algiers events"
-  ],
-  alternates: {
-    canonical: "https://eventzone.pro",
-  },
-  openGraph: {
+function ensureAbsoluteUrl(url, baseUrl = "https://eventzone.pro") {
+  if (!url || typeof url !== "string") return `${baseUrl}/og-image.png`;
+  const trimmed = url.trim();
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
+  if (trimmed.startsWith("/")) return `${baseUrl}${trimmed}`;
+  return `${baseUrl}/${trimmed}`;
+}
+
+export async function generateMetadata(props) {
+  const searchParams = (await props?.searchParams) || {};
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://eventzone.pro";
+
+  const eventIdOrSlug = searchParams.eventId || searchParams.id || searchParams.slug || searchParams.event;
+  const rawTicketParam = searchParams.ticket || searchParams.ticketId;
+  const isRegisterView = searchParams.view === "register" || searchParams.register === "true";
+
+  if (eventIdOrSlug) {
+    try {
+      const event = await fetchEventDetails(eventIdOrSlug);
+      if (event && event.id) {
+        // Decode ticket parameter if present
+        let cleanTicketName = "";
+        if (rawTicketParam) {
+          const rawTicketStr = typeof rawTicketParam === "string" ? rawTicketParam.replace(/\+/g, " ") : "";
+          try {
+            cleanTicketName = stripHtml(decodeURIComponent(rawTicketStr)).replace(/\s+/g, " ").trim();
+          } catch (e) {
+            cleanTicketName = stripHtml(rawTicketStr).replace(/\s+/g, " ").trim();
+          }
+        }
+
+        // If ticket parameter looks like a UUID or is missing but we're in register view, try to resolve from event tickets
+        if ((!cleanTicketName || /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanTicketName)) && isRegisterView) {
+          try {
+            const eventTickets = await fetchTickets(event.id);
+            if (Array.isArray(eventTickets) && eventTickets.length > 0) {
+              const matchedTicket = eventTickets.find(t => t.id === rawTicketParam) || eventTickets[0];
+              if (matchedTicket && matchedTicket.name) {
+                cleanTicketName = stripHtml(matchedTicket.name).replace(/\s+/g, " ").trim();
+              }
+            }
+          } catch (tErr) {
+            console.warn("generateMetadata ticket lookup notice:", tErr);
+          }
+        }
+
+        // Event image resolution (prioritize event banner, cover_url, gallery)
+        const rawImage = event.banner || event.cover_url || (Array.isArray(event.gallery) && event.gallery[0]) || "";
+        const bannerImage = ensureAbsoluteUrl(rawImage, baseUrl);
+
+        const dateSnippet = event.startDate ? ` on ${event.startDate}` : "";
+        const locationSnippet = event.location ? ` in ${event.location}` : "";
+        const plainTagline = stripHtml(event.tagline);
+        const plainDescription = stripHtml(event.description);
+        const eventSnippet = plainTagline || plainDescription;
+
+        let metaTitle = `${event.title} — Tickets & Event Details`;
+        let ogTitle = `${event.title} | Eventzone`;
+        let cleanDescription = "";
+
+        if (cleanTicketName) {
+          // User requirement: make the text the same name of the ticket
+          metaTitle = `${cleanTicketName} | ${event.title}`;
+          ogTitle = cleanTicketName;
+          const rawTicketDesc = `Register for ${cleanTicketName} at ${event.title}${dateSnippet}${locationSnippet}.${eventSnippet ? ` ${eventSnippet}` : " Get your pass on Eventzone."}`.trim();
+          cleanDescription = rawTicketDesc.length > 160 
+            ? `${rawTicketDesc.slice(0, 157).trimEnd()}...` 
+            : rawTicketDesc;
+        } else {
+          const fallbackDescription = `Register for ${event.title}${dateSnippet}${locationSnippet}. Discover the event agenda, keynote speakers, floor plans, and tickets on Eventzone.`;
+          const rawDescription = eventSnippet || fallbackDescription;
+          cleanDescription = rawDescription.length > 160 
+            ? `${rawDescription.slice(0, 157).trimEnd()}...` 
+            : rawDescription;
+        }
+
+        const canonicalUrl = `${baseUrl}/?view=${searchParams.view || "register"}&eventId=${event.id}${cleanTicketName ? `&ticket=${encodeURIComponent(cleanTicketName)}` : ""}`;
+
+        return {
+          title: metaTitle,
+          description: cleanDescription,
+          alternates: {
+            canonical: canonicalUrl,
+          },
+          openGraph: {
+            title: ogTitle,
+            description: cleanDescription,
+            url: canonicalUrl,
+            siteName: "Eventzone",
+            images: [
+              {
+                url: bannerImage,
+                width: 1200,
+                height: 630,
+                alt: cleanTicketName || event.title,
+              },
+            ],
+            locale: "en_US",
+            type: "website",
+          },
+          twitter: {
+            card: "summary_large_image",
+            title: ogTitle,
+            description: cleanDescription,
+            images: [bannerImage],
+          },
+        };
+      }
+    } catch (err) {
+      console.warn("generateMetadata event fetch notice:", err);
+    }
+  }
+
+  // Default homepage metadata
+  return {
     title: "Eventzone - All in One Event Management Platform",
     description: "The all-in-one event management platform for organizers. Host conferences & expos with interactive floor plans, online ticketing, custom badges, and QR check-in.",
-    url: "https://eventzone.pro",
-    siteName: "Eventzone",
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "Eventzone",
-      },
+    keywords: [
+      "Eventzone",
+      "events Algeria",
+      "conferences Algeria",
+      "summits",
+      "expositions",
+      "salons Algerie",
+      "ticketing",
+      "event management",
+      "event discovery",
+      "interactive floor plans",
+      "Algiers events"
     ],
-    locale: "en_US",
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Eventzone - All in One Event Management Platform",
-    description: "The all-in-one event management platform for organizers. Host conferences & expos with interactive floor plans, online ticketing, custom badges, and QR check-in.",
-    images: ["/og-image.png"],
-  },
-};
+    alternates: {
+      canonical: baseUrl,
+    },
+    openGraph: {
+      title: "Eventzone - All in One Event Management Platform",
+      description: "The all-in-one event management platform for organizers. Host conferences & expos with interactive floor plans, online ticketing, custom badges, and QR check-in.",
+      url: baseUrl,
+      siteName: "Eventzone",
+      images: [
+        {
+          url: `${baseUrl}/og-image.png`,
+          width: 1200,
+          height: 630,
+          alt: "Eventzone",
+        },
+      ],
+      locale: "en_US",
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: "Eventzone - All in One Event Management Platform",
+      description: "The all-in-one event management platform for organizers. Host conferences & expos with interactive floor plans, online ticketing, custom badges, and QR check-in.",
+      images: [`${baseUrl}/og-image.png`],
+    },
+  };
+}
 
 export default async function Page(props) {
   const searchParams = props?.searchParams ? await props.searchParams : {};

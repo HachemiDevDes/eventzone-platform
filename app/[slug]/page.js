@@ -1,14 +1,24 @@
 import React from "react";
-import { fetchEventDetails } from "../../lib/db";
+import { fetchEventDetails, fetchTickets } from "../../lib/db";
 import { stripHtml } from "../../lib/constants";
 import EventLandingClient from "./EventLandingClient";
 
+function ensureAbsoluteUrl(url, baseUrl = "https://eventzone.pro") {
+  if (!url || typeof url !== "string") return `${baseUrl}/og-image.png`;
+  const trimmed = url.trim();
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
+  if (trimmed.startsWith("/")) return `${baseUrl}${trimmed}`;
+  return `${baseUrl}/${trimmed}`;
+}
+
 /**
  * Dynamic SEO Metadata Generation for Event Landing Pages
- * Allows search engines (Google, Bing) to index official event titles, dates, descriptions & OG images
+ * Allows search engines (Google, Bing) and social platforms (WhatsApp, Twitter, LinkedIn)
+ * to unfurl official event titles, ticket registration passes, and banner images
  */
-export async function generateMetadata({ params }) {
-  const resolvedParams = await params;
+export async function generateMetadata(props) {
+  const resolvedParams = await props?.params;
+  const searchParams = (await props?.searchParams) || {};
   const rawSlug = resolvedParams?.slug;
   const slug = Array.isArray(rawSlug) ? rawSlug[0] : (rawSlug || "");
 
@@ -34,15 +44,61 @@ export async function generateMetadata({ params }) {
 
   const plainTagline = stripHtml(event.tagline);
   const plainDescription = stripHtml(event.description);
-  const rawDescription = plainTagline || plainDescription || fallbackDescription;
-  const cleanDescription = rawDescription.length > 160 
-    ? `${rawDescription.slice(0, 157).trimEnd()}...` 
-    : rawDescription;
+  const eventSnippet = plainTagline || plainDescription;
 
-  const canonicalUrl = `https://eventzone.pro/${event.slug || slug}`;
-  const bannerImage = event.banner || event.cover_url || "https://i.imgur.com/jFDrQbM.png";
+  // Check if a specific ticket tier is present in query parameters
+  const rawTicketParam = searchParams.ticket || searchParams.ticketId;
+  const isRegisterView = searchParams.view === "register" || searchParams.register === "true";
+  let cleanTicketName = "";
+  if (rawTicketParam) {
+    const rawTicketStr = typeof rawTicketParam === "string" ? rawTicketParam.replace(/\+/g, " ") : "";
+    try {
+      cleanTicketName = stripHtml(decodeURIComponent(rawTicketStr)).replace(/\s+/g, " ").trim();
+    } catch (e) {
+      cleanTicketName = stripHtml(rawTicketStr).replace(/\s+/g, " ").trim();
+    }
+  }
+
+  if ((!cleanTicketName || /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanTicketName)) && isRegisterView) {
+    try {
+      const eventTickets = await fetchTickets(event.id);
+      if (Array.isArray(eventTickets) && eventTickets.length > 0) {
+        const matchedTicket = eventTickets.find(t => t.id === rawTicketParam) || eventTickets[0];
+        if (matchedTicket && matchedTicket.name) {
+          cleanTicketName = stripHtml(matchedTicket.name).replace(/\s+/g, " ").trim();
+        }
+      }
+    } catch (tErr) {
+      console.warn("slug generateMetadata ticket lookup notice:", tErr);
+    }
+  }
+
+  const rawImage = event.banner || event.cover_url || (Array.isArray(event.gallery) && event.gallery[0]) || "";
+  const bannerImage = ensureAbsoluteUrl(rawImage, "https://eventzone.pro");
+
+  let metaTitle = `${event.title} — Tickets & Event Details`;
+  let ogTitle = `${event.title} | Eventzone`;
+  let cleanDescription = "";
+
+  if (cleanTicketName) {
+    // User requirement: make the text the same name of the ticket
+    metaTitle = `${cleanTicketName} | ${event.title}`;
+    ogTitle = cleanTicketName;
+    const rawTicketDesc = `Register for ${cleanTicketName} at ${event.title}${dateSnippet}${locationSnippet}.${eventSnippet ? ` ${eventSnippet}` : " Get your pass on Eventzone."}`.trim();
+    cleanDescription = rawTicketDesc.length > 160 
+      ? `${rawTicketDesc.slice(0, 157).trimEnd()}...` 
+      : rawTicketDesc;
+  } else {
+    const rawDescription = eventSnippet || fallbackDescription;
+    cleanDescription = rawDescription.length > 160 
+      ? `${rawDescription.slice(0, 157).trimEnd()}...` 
+      : rawDescription;
+  }
+
+  const canonicalUrl = `https://eventzone.pro/${event.slug || slug}${cleanTicketName ? `?ticket=${encodeURIComponent(cleanTicketName)}` : ""}`;
 
   const keywords = [
+    cleanTicketName,
     event.title,
     event.category,
     event.location,
@@ -56,14 +112,14 @@ export async function generateMetadata({ params }) {
   ].filter(Boolean);
 
   return {
-    title: `${event.title} — Tickets & Event Details`,
+    title: metaTitle,
     description: cleanDescription,
     keywords,
     alternates: {
       canonical: canonicalUrl,
     },
     openGraph: {
-      title: `${event.title} | Eventzone`,
+      title: ogTitle,
       description: cleanDescription,
       url: canonicalUrl,
       siteName: "Eventzone",
@@ -72,7 +128,7 @@ export async function generateMetadata({ params }) {
           url: bannerImage,
           width: 1200,
           height: 630,
-          alt: `${event.title} Banner`,
+          alt: cleanTicketName || `${event.title} Banner`,
         },
       ],
       locale: "en_US",
@@ -80,7 +136,7 @@ export async function generateMetadata({ params }) {
     },
     twitter: {
       card: "summary_large_image",
-      title: `${event.title} | Eventzone`,
+      title: ogTitle,
       description: cleanDescription,
       images: [bannerImage],
     },

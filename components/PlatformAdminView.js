@@ -8,7 +8,8 @@ import {
   ExternalLink, RefreshCw, Star, Download, Eye, AlertCircle, CheckCircle2, 
   Lock, Unlock, Edit3, Pin, ChevronDown, Sliders, BarChart3, TrendingUp,
   MapPin, Clock, Smartphone, Mail, Globe, ArrowRight, ArrowUp, ArrowDown, Plus, Trash2,
-  FileText, PhoneCall, Copy, DollarSign, Layers
+  FileText, PhoneCall, Copy, DollarSign, Layers,
+  Activity, Percent, PieChart, Target, Award, Zap
 } from "lucide-react";
 import SearchableSelect from "./SearchableSelect";
 import { COUNTRY_CITIES_MAP } from "../lib/formPresets";
@@ -109,6 +110,80 @@ function formatJoinedDate(dateStr) {
   } catch {
     return { formatted: "—", relative: "" };
   }
+}
+
+/**
+ * Normalizes Algerian venue/city text into standard wilayas to prevent fragmentation.
+ */
+export function normalizeWilaya(str) {
+  if (!str) return "Algiers";
+  const s = String(str).toLowerCase().trim();
+  
+  if (s.includes("virtual") || s.includes("online") || s.includes("zoom") || s.includes("webinar") || s.includes("en ligne")) {
+    return "Virtual / Online";
+  }
+  if (s.includes("alger") || s.includes("algiers") || s.includes("cic") || s.includes("safex") || s.includes("pins maritimes") || s.includes("el hamma") || s.includes("bab ezzouar") || s.includes("16 -") || s === "16") {
+    return "Algiers";
+  }
+  if (s.includes("oran") || s.includes("cco") || s.includes("akid lotfi") || s.includes("meridien oran") || s.includes("31 -") || s === "31") {
+    return "Oran";
+  }
+  if (s.includes("constantine") || s.includes("zenith") || s.includes("cirta") || s.includes("25 -") || s === "25") {
+    return "Constantine";
+  }
+  if (s.includes("annaba") || s.includes("bone") || s.includes("23 -") || s === "23") {
+    return "Annaba";
+  }
+  if (s.includes("setif") || s.includes("sétif") || s.includes("park mall") || s.includes("19 -") || s === "19") {
+    return "Sétif";
+  }
+  if (s.includes("blida") || s.includes("09 -") || s === "09" || s === "9") {
+    return "Blida";
+  }
+  if (s.includes("tlemcen") || s.includes("13 -") || s === "13") {
+    return "Tlemcen";
+  }
+  if (s.includes("bejaia") || s.includes("béjaïa") || s.includes("06 -") || s === "06" || s === "6") {
+    return "Béjaïa";
+  }
+  if (s.includes("batna") || s.includes("05 -") || s === "05" || s === "5") {
+    return "Batna";
+  }
+  if (s.includes("mostaganem") || s.includes("27 -") || s === "27") {
+    return "Mostaganem";
+  }
+  if (s.includes("ouargla") || s.includes("hassi")) {
+    return "Ouargla";
+  }
+  if (s.includes("biskra") || s.includes("07 -") || s === "07" || s === "7") {
+    return "Biskra";
+  }
+  if (s.includes("ghardaia") || s.includes("ghardaïa") || s.includes("47 -") || s === "47") {
+    return "Ghardaïa";
+  }
+  if (s.includes("tizi") || s.includes("15 -") || s === "15") {
+    return "Tizi Ouzou";
+  }
+  if (s.includes("boumerdes") || s.includes("boumerdès") || s.includes("35 -") || s === "35") {
+    return "Boumerdès";
+  }
+  if (s.includes("tipaza") || s.includes("42 -") || s === "42") {
+    return "Tipaza";
+  }
+
+  for (const w of ALGERIA_WILAYAS) {
+    const rawName = w.replace(/^\d+\s*-\s*/, "").trim();
+    if (s.includes(rawName.toLowerCase())) {
+      return rawName;
+    }
+  }
+
+  if (str.length > 30) {
+    if (s.includes("alger")) return "Algiers";
+    return str.split(",")[0].trim().slice(0, 24);
+  }
+
+  return str.replace(/^\d+\s*-\s*/, "").trim();
 }
 
 export default function PlatformAdminView({
@@ -745,17 +820,147 @@ export default function PlatformAdminView({
     });
   }, [payments, paymentSearch, paymentStatusFilter, paymentMethodFilter]);
 
-  // Wilaya distribution metrics
-  const wilayaDistribution = useMemo(() => {
-    const counts = {};
-    events.forEach(e => {
-      const w = e.city || e.location || "Algiers";
-      counts[w] = (counts[w] || 0) + 1;
+  // ─────────────────────────────────────────────
+  //  SMART EXECUTIVE ANALYTICS ENGINE
+  // ─────────────────────────────────────────────
+  const executiveAnalytics = useMemo(() => {
+    // 1. Financial Performance & Rails
+    const totalGmv = paymentMetrics.totalGmv || 0;
+    const paidCount = paymentMetrics.paidCount || 0;
+    const aov = paidCount > 0 ? Math.round(totalGmv / paidCount) : 0;
+    const successRate = paymentMetrics.successRate || 0;
+    const edahabiaGmv = paymentMetrics.edahabiaGmv || 0;
+    const edahabiaCount = paymentMetrics.edahabiaCount || 0;
+    const cibGmv = paymentMetrics.cibGmv || 0;
+    const cibCount = paymentMetrics.cibCount || 0;
+    const failedCount = paymentMetrics.failedCount || 0;
+    const pendingCount = paymentMetrics.pendingCount || 0;
+    const edahabiaPct = totalGmv > 0 ? Math.round((edahabiaGmv / totalGmv) * 100) : 0;
+    const cibPct = totalGmv > 0 ? Math.round((cibGmv / totalGmv) * 100) : 0;
+
+    // 2. Attendance & Turnout Telemetry
+    const totalRegisteredAttendees = events.reduce((acc, ev) => acc + (Number(ev.registeredCount) || 0), 0);
+    const totalCheckedInAttendees = events.reduce((acc, ev) => acc + (Number(ev.checkedInCount) || 0), 0);
+    const checkinTurnoutRate = totalRegisteredAttendees > 0 
+      ? Math.round((totalCheckedInAttendees / totalRegisteredAttendees) * 100) 
+      : 0;
+    const totalPlatformCapacity = events.reduce((acc, ev) => acc + (Number(ev.capacity) || 0), 0);
+    const capacityOccupancyRate = totalPlatformCapacity > 0
+      ? Math.min(100, Math.round((totalRegisteredAttendees / totalPlatformCapacity) * 100))
+      : 0;
+
+    // 3. Event Delivery Formats & Directory Health
+    let inPersonCount = 0;
+    let hybridCount = 0;
+    let virtualCount = 0;
+    events.forEach(ev => {
+      const t = (ev.type || "").toLowerCase();
+      if (t.includes("virtual") || t.includes("online")) {
+        virtualCount++;
+      } else if (t.includes("hybrid")) {
+        hybridCount++;
+      } else {
+        inPersonCount++;
+      }
     });
-    return Object.entries(counts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 6);
-  }, [events]);
+    const totalEvents = events.length;
+    const publishedEventsCount = events.filter(e => e.status === "published").length;
+    const draftEventsCount = events.filter(e => e.status === "draft").length;
+    const suspendedEventsCount = events.filter(e => e.status === "suspended" || e.status === "cancelled").length;
+
+    // 4. Organizer Ecosystem Metrics
+    const totalOrganizers = organizers.length;
+    const activeOrganizers = organizers.filter(o => o.status === "active").length;
+    const organizersWithEvents = organizers.filter(o => (Number(o.eventsCount) || 0) > 0).length;
+    const avgEventsPerOrganizer = totalOrganizers > 0 ? (totalEvents / totalOrganizers).toFixed(1) : "0";
+
+    // 5. B2B Commercial Quotes Pipeline
+    const totalQuotes = quoteRequests.length;
+    const pendingQuotes = quoteRequests.filter(q => q.status === "pending").length;
+    const contactedQuotes = quoteRequests.filter(q => q.status === "contacted").length;
+    const quotedQuotes = quoteRequests.filter(q => q.status === "quoted").length;
+    const wonQuotes = quoteRequests.filter(q => q.status === "won").length;
+    const quoteWinRate = totalQuotes > 0 ? Math.round((wonQuotes / totalQuotes) * 100) : 0;
+    const totalQuotedValue = quoteRequests.reduce((acc, q) => acc + (Number(q.quoted_amount) || 0), 0);
+
+    // 6. Geographic Distribution (Normalized Wilayas)
+    const wilayaMap = {};
+    events.forEach(ev => {
+      const raw = ev.city || ev.location || ev.venueAddress || "";
+      const norm = normalizeWilaya(raw);
+      wilayaMap[norm] = (wilayaMap[norm] || 0) + 1;
+    });
+    const sortedWilayas = Object.entries(wilayaMap).sort((a, b) => b[1] - a[1]);
+    const topWilayas = sortedWilayas.slice(0, 6);
+    const activeWilayasCount = sortedWilayas.length;
+
+    // 7. Industry & Sector Vertical Breakdown
+    const categoryMap = {};
+    events.forEach(ev => {
+      const cat = ev.category || "General Business";
+      categoryMap[cat] = (categoryMap[cat] || 0) + 1;
+    });
+    const sortedCategories = Object.entries(categoryMap).sort((a, b) => b[1] - a[1]);
+    const topCategories = sortedCategories.slice(0, 6);
+
+    // 8. Audience Leaders: Top Performing Events (by attendees)
+    const topEvents = [...events]
+      .sort((a, b) => (Number(b.registeredCount) || 0) - (Number(a.registeredCount) || 0))
+      .slice(0, 4);
+
+    // 9. Host Spotlight: Top Active Organizers
+    const topOrganizers = [...organizers]
+      .sort((a, b) => (Number(b.eventsCount) || 0) - (Number(a.eventsCount) || 0))
+      .slice(0, 4);
+
+    return {
+      totalGmv,
+      paidCount,
+      aov,
+      successRate,
+      edahabiaGmv,
+      edahabiaCount,
+      edahabiaPct,
+      cibGmv,
+      cibCount,
+      cibPct,
+      failedCount,
+      pendingCount,
+      totalRegisteredAttendees,
+      totalCheckedInAttendees,
+      checkinTurnoutRate,
+      totalPlatformCapacity,
+      capacityOccupancyRate,
+      inPersonCount,
+      hybridCount,
+      virtualCount,
+      totalEvents,
+      publishedEventsCount,
+      draftEventsCount,
+      suspendedEventsCount,
+      totalOrganizers,
+      activeOrganizers,
+      organizersWithEvents,
+      avgEventsPerOrganizer,
+      totalQuotes,
+      pendingQuotes,
+      contactedQuotes,
+      quotedQuotes,
+      wonQuotes,
+      quoteWinRate,
+      totalQuotedValue,
+      topWilayas,
+      activeWilayasCount,
+      topCategories,
+      topEvents,
+      topOrganizers,
+    };
+  }, [events, organizers, payments, paymentMetrics, quoteRequests, subscribers]);
+
+  // Backward-compatible wilaya distribution for any auxiliary views
+  const wilayaDistribution = useMemo(() => {
+    return executiveAnalytics.topWilayas;
+  }, [executiveAnalytics]);
 
   if (!isAuthorized) {
     return (
