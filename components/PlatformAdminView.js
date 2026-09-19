@@ -145,6 +145,7 @@ export default function PlatformAdminView({
   const [eventWilayaFilter, setEventWilayaFilter] = useState("All");
   const [eventCategoryFilter, setEventCategoryFilter] = useState("All");
   const [eventStatusFilter, setEventStatusFilter] = useState("All");
+  const [eventSort, setEventSort] = useState("newest");
 
   const [paymentSearch, setPaymentSearch] = useState("");
   const [paymentStatusFilter, setPaymentStatusFilter] = useState("All");
@@ -706,19 +707,28 @@ export default function PlatformAdminView({
 
   // Filtered Events
   const filteredEvents = useMemo(() => {
-    return events.filter(ev => {
+    const list = events.filter(ev => {
       const matchesSearch = !eventSearch.trim() ||
-        ev.title.toLowerCase().includes(eventSearch.toLowerCase()) ||
-        ev.organizerFullName.toLowerCase().includes(eventSearch.toLowerCase()) ||
-        ev.category.toLowerCase().includes(eventSearch.toLowerCase());
+        (ev.title && ev.title.toLowerCase().includes(eventSearch.toLowerCase())) ||
+        (ev.organizerFullName && ev.organizerFullName.toLowerCase().includes(eventSearch.toLowerCase())) ||
+        (ev.category && ev.category.toLowerCase().includes(eventSearch.toLowerCase()));
 
-      const matchesWilaya = eventWilayaFilter === "All" || ev.city === eventWilayaFilter || ev.location.includes(eventWilayaFilter);
+      const matchesWilaya = eventWilayaFilter === "All" || ev.city === eventWilayaFilter || (ev.location && ev.location.includes(eventWilayaFilter));
       const matchesCategory = eventCategoryFilter === "All" || ev.category === eventCategoryFilter;
       const matchesStatus = eventStatusFilter === "All" || ev.status === eventStatusFilter;
 
       return matchesSearch && matchesWilaya && matchesCategory && matchesStatus;
     });
-  }, [events, eventSearch, eventWilayaFilter, eventCategoryFilter, eventStatusFilter]);
+
+    return [...list].sort((a, b) => {
+      const timeA = (a.createdAt || a.created_at) ? new Date(a.createdAt || a.created_at).getTime() : 0;
+      const timeB = (b.createdAt || b.created_at) ? new Date(b.createdAt || b.created_at).getTime() : 0;
+      if (eventSort === "oldest") {
+        return timeA - timeB;
+      }
+      return timeB - timeA;
+    });
+  }, [events, eventSearch, eventWilayaFilter, eventCategoryFilter, eventStatusFilter, eventSort]);
 
   // Filtered Payments
   const filteredPayments = useMemo(() => {
@@ -1581,7 +1591,20 @@ export default function PlatformAdminView({
                           <th className="py-3.5 px-4">Event Details</th>
                           <th className="py-3.5 px-4">Organizer</th>
                           <th className="py-3.5 px-4">Location / Wilaya</th>
-                          <th className="py-3.5 px-4">Dates</th>
+                          <th 
+                            onClick={() => setEventSort(prev => prev === "newest" ? "oldest" : "newest")}
+                            className="py-3.5 px-4 cursor-pointer select-none hover:text-slate-700 transition-colors group"
+                            title="Click to sort by date added"
+                          >
+                            <div className="flex items-center gap-1.5">
+                              <span>Date Added</span>
+                              {eventSort === "newest" && <ArrowDown className="w-3 h-3 text-emerald-600" />}
+                              {eventSort === "oldest" && <ArrowUp className="w-3 h-3 text-emerald-600" />}
+                              {eventSort !== "newest" && eventSort !== "oldest" && (
+                                <ArrowDown className="w-3 h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              )}
+                            </div>
+                          </th>
                           <th className="py-3.5 px-4">Attendees / Cap</th>
                           <th className="py-3.5 px-4">Status</th>
                           <th className="py-3.5 px-4 text-right">Moderation Actions</th>
@@ -1624,8 +1647,27 @@ export default function PlatformAdminView({
                               <td className="py-3.5 px-4 text-slate-600 font-medium">
                                 {ev.city || ev.location || "Algeria"}
                               </td>
-                              <td className="py-3.5 px-4 text-slate-600 font-medium">
-                                {ev.startDate || "TBA"}
+                              <td className="py-3.5 px-4 whitespace-nowrap" title={ev.startDate ? `Event Date: ${ev.startDate}${ev.endDate ? ` to ${ev.endDate}` : ''}` : undefined}>
+                                {(() => {
+                                  const { formatted, relative } = formatJoinedDate(ev.createdAt || ev.created_at);
+                                  return (
+                                    <div>
+                                      <div className="font-semibold text-slate-800 flex items-center gap-1.5">
+                                        <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                        <span>{formatted !== "—" ? formatted : (ev.startDate || "—")}</span>
+                                      </div>
+                                      {relative ? (
+                                        <div className="text-[10px] text-slate-400 font-normal pl-5 mt-0.5">
+                                          {relative}
+                                        </div>
+                                      ) : ev.startDate ? (
+                                        <div className="text-[10px] text-slate-400 font-normal pl-5 mt-0.5">
+                                          Event: {ev.startDate}
+                                        </div>
+                                      ) : null}
+                                    </div>
+                                  );
+                                })()}
                               </td>
                               <td className="py-3.5 px-4 font-mono text-slate-700">
                                 <span className="font-bold text-emerald-600">{ev.registeredCount || 0}</span>
@@ -2665,7 +2707,10 @@ export default function PlatformAdminView({
                     <div key={ev.id} className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-3 text-xs hover:bg-slate-100/60 transition-colors">
                       <div>
                         <div className="font-bold text-slate-900">{ev.title}</div>
-                        <div className="text-[11px] text-slate-500 mt-0.5">{ev.category} • {ev.city || ev.location}</div>
+                        <div className="text-[11px] text-slate-500 mt-0.5">
+                          {ev.category} • {ev.city || ev.location}
+                          {(ev.createdAt || ev.created_at) && ` • Added ${formatJoinedDate(ev.createdAt || ev.created_at).formatted}`}
+                        </div>
                       </div>
                       <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold capitalize border ${
                         ev.status === "published"
