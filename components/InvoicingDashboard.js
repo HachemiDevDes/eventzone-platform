@@ -1,7 +1,8 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { 
   TrendingUp, Clock, AlertCircle, AlertTriangle, CheckCircle2,
   FileText, FileCheck, FileSpreadsheet, Layers, Search, 
@@ -42,8 +43,80 @@ export default function InvoicingDashboard({
   const [activeTab, setActiveTab] = useState("all"); // 'all' | 'facture' | 'devis' | 'proforma'
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all"); // 'all' | 'encaisse' | 'envoye' | 'en_retard' | 'partiel' | 'brouillon'
-  const [openStatusMenuId, setOpenStatusMenuId] = useState(null);
+  const [statusMenuState, setStatusMenuState] = useState(null); // { id, currentStatus, top, bottom, left, right, openUpwards }
   const [isNewDocMenuOpen, setIsNewDocMenuOpen] = useState(false);
+
+  // Close portaled status dropdown on scroll, window resize, click outside, or Escape
+  useEffect(() => {
+    if (!statusMenuState) return;
+    const handleClose = (e) => {
+      if (e?.target && e.target.closest && e.target.closest('.portaled-status-menu')) {
+        return;
+      }
+      setStatusMenuState(null);
+    };
+    const handleKey = (e) => {
+      if (e.key === 'Escape') setStatusMenuState(null);
+    };
+
+    window.addEventListener('scroll', handleClose, true);
+    window.addEventListener('resize', handleClose);
+    document.addEventListener('click', handleClose);
+    document.addEventListener('keydown', handleKey);
+
+    return () => {
+      window.removeEventListener('scroll', handleClose, true);
+      window.removeEventListener('resize', handleClose);
+      document.removeEventListener('click', handleClose);
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [statusMenuState]);
+
+  // Open portaled status dropdown with boundary detection
+  const handleOpenStatusMenu = (e, inv) => {
+    e.stopPropagation();
+    if (statusMenuState?.id === inv.id) {
+      setStatusMenuState(null);
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const openUpwards = spaceBelow < 240;
+    const menuWidth = 176;
+    const margin = 12;
+
+    let left = undefined;
+    let right = undefined;
+
+    const fitsRightAligned = (rect.right - menuWidth) >= margin;
+    const fitsLeftAligned = (rect.left + menuWidth) <= (window.innerWidth - margin);
+
+    if (isRTL) {
+      if (fitsLeftAligned) {
+        left = Math.max(margin, rect.left);
+      } else {
+        right = Math.max(margin, window.innerWidth - rect.right);
+      }
+    } else {
+      if (fitsRightAligned) {
+        right = Math.max(margin, window.innerWidth - rect.right);
+      } else if (fitsLeftAligned) {
+        left = Math.max(margin, rect.left);
+      } else {
+        left = margin;
+      }
+    }
+
+    setStatusMenuState({
+      id: inv.id,
+      currentStatus: inv.status,
+      top: openUpwards ? undefined : rect.bottom + 6,
+      bottom: openUpwards ? (window.innerHeight - rect.top + 6) : undefined,
+      left,
+      right,
+      openUpwards,
+    });
+  };
 
   // Profile options for selector
   const profileOptions = useMemo(() => {
@@ -600,7 +673,7 @@ export default function InvoicingDashboard({
           </div>
 
           {/* Table */}
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto min-h-[160px]">
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50/80 border-b border-slate-150 text-slate-400 uppercase text-[9px] font-extrabold tracking-wider">
                 <tr>
@@ -620,7 +693,7 @@ export default function InvoicingDashboard({
                 {filteredInvoices.map((inv) => {
                   const typeObj = DOCUMENT_TYPES.find(t => t.id === inv.document_type) || DOCUMENT_TYPES[0];
                   const statusObj = DOCUMENT_STATUSES.find(s => s.id === inv.status) || DOCUMENT_STATUSES[0];
-                  const isMenuOpen = openStatusMenuId === inv.id;
+                  const isMenuOpen = statusMenuState?.id === inv.id;
 
                   return (
                     <tr 
@@ -683,47 +756,19 @@ export default function InvoicingDashboard({
                       </td>
 
                       {/* STATUT (Dropdown button or Read-Only Badge) */}
-                      <td className="px-4 py-3.5 whitespace-nowrap text-center relative">
+                      <td className="px-4 py-3.5 whitespace-nowrap text-center">
                         {canEdit ? (
-                          <div className="relative inline-block text-left">
+                          <div className="relative inline-block text-center">
                             <button
                               type="button"
-                              onClick={() => setOpenStatusMenuId(isMenuOpen ? null : inv.id)}
-                              className="px-3 py-1 rounded-xl text-[11px] font-bold border border-slate-200 bg-white hover:bg-slate-50 text-slate-800 flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+                              onClick={(e) => handleOpenStatusMenu(e, inv)}
+                              className={`px-3 py-1 rounded-xl text-[11px] font-bold border border-slate-200 bg-white hover:bg-slate-50 text-slate-800 inline-flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer ${
+                                isMenuOpen ? "ring-2 ring-blue-500/20 border-blue-400 bg-blue-50/30" : ""
+                              }`}
                             >
                               <span>{statusObj.label}</span>
-                              <ChevronDown size={12} className="text-slate-400" />
+                              <ChevronDown size={12} className={`text-slate-400 transition-transform duration-200 ${isMenuOpen ? "rotate-180 text-blue-600" : ""}`} />
                             </button>
-
-                            {/* Status Dropdown Popover */}
-                            {isMenuOpen && (
-                              <>
-                                <div
-                                  className="fixed inset-0 z-20"
-                                  onClick={() => setOpenStatusMenuId(null)}
-                                />
-                                <div className="absolute right-0 top-full mt-1 w-36 bg-white border border-slate-200 rounded-xl shadow-xl p-1 z-30 animate-scale-up">
-                                  {DOCUMENT_STATUSES.map((st) => (
-                                    <button
-                                      key={st.id}
-                                      type="button"
-                                      onClick={() => {
-                                        if (onStatusChange) onStatusChange(inv.id, st.id);
-                                        setOpenStatusMenuId(null);
-                                      }}
-                                      className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
-                                        inv.status === st.id
-                                          ? "bg-blue-600 text-white font-bold"
-                                          : "text-slate-700 hover:bg-slate-50"
-                                      }`}
-                                    >
-                                      <span>{st.label}</span>
-                                      {inv.status === st.id && <Check size={12} />}
-                                    </button>
-                                  ))}
-                                </div>
-                              </>
-                            )}
                           </div>
                         ) : (
                           <span className="px-3 py-1 rounded-xl text-[11px] font-bold border border-slate-200 bg-slate-50 text-slate-700 inline-block shadow-2xs">
@@ -805,6 +850,49 @@ export default function InvoicingDashboard({
             </table>
           </div>
         </div>
+      )}
+
+      {/* Portaled Status Dropdown Menu (Escapes table overflow-x-auto & card overflow-hidden boundaries) */}
+      {statusMenuState && typeof document !== "undefined" && createPortal(
+        <>
+          <div
+            className="fixed inset-0 z-[99998]"
+            onClick={() => setStatusMenuState(null)}
+          />
+          <div
+            style={{
+              position: "fixed",
+              top: statusMenuState.top,
+              bottom: statusMenuState.bottom,
+              left: statusMenuState.left,
+              right: statusMenuState.right,
+              zIndex: 99999,
+            }}
+            dir={isRTL ? "rtl" : "ltr"}
+            className="portaled-status-menu w-44 bg-white border border-slate-200 rounded-2xl shadow-2xl shadow-slate-900/15 p-1.5 animate-scale-up select-none flex flex-col gap-0.5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {DOCUMENT_STATUSES.map((st) => (
+              <button
+                key={st.id}
+                type="button"
+                onClick={() => {
+                  if (onStatusChange) onStatusChange(statusMenuState.id, st.id);
+                  setStatusMenuState(null);
+                }}
+                className={`w-full text-left px-2.5 py-1.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
+                  statusMenuState.currentStatus === st.id
+                    ? "bg-blue-600 text-white font-bold"
+                    : "text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                <span>{st.label}</span>
+                {statusMenuState.currentStatus === st.id && <Check size={13} className="shrink-0" />}
+              </button>
+            ))}
+          </div>
+        </>,
+        document.body
       )}
     </div>
   );
