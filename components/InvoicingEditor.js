@@ -427,7 +427,7 @@ export default function InvoicingEditor({
       {/* 2. Split Screen: Left (Editor) vs Right (Live A4 Preview) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* LEFT COLUMN: Form Configuration (7 cols on lg) */}
-        <div className="lg:col-span-6 xl:col-span-6 space-y-6">
+        <div className="lg:col-span-6 xl:col-span-6 flex flex-col gap-6">
           {!canEdit && (
             <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3 text-amber-800 text-xs font-medium">
               <AlertCircle size={16} className="text-amber-600 shrink-0" />
@@ -435,7 +435,7 @@ export default function InvoicingEditor({
             </div>
           )}
 
-          <fieldset disabled={!canEdit} className="contents">
+          <fieldset disabled={!canEdit} className="flex flex-col gap-6 border-0 p-0 m-0 min-w-0">
           {/* Card 1: Configuration du document */}
           <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-xs space-y-4">
             <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
@@ -542,7 +542,7 @@ export default function InvoicingEditor({
               Délai de paiement
             </h3>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
               {PAYMENT_DELAYS.map(del => {
                 const isSelected = doc.payment_terms_type === del.id;
                 return (
