@@ -10,7 +10,7 @@ import {
   Users2, UserCheck, BarChart3, X, Globe, Map, Sparkles, Upload, Mail,
   Building2, Plus, ArrowLeft, ArrowRight, Layers, LogOut, Compass, ExternalLink, ChevronRight, Home as HomeIcon, User,
   FileText, ClipboardList, QrCode, Store, Mic2, Check, TrendingUp, Share2, Boxes, Truck, Package, Files, Code2, Award, Eye,
-  Plane, ClipboardCheck, Receipt
+  Plane, ClipboardCheck, Receipt, Search
 } from "lucide-react";
 
 import MainHomePage from "../components/MainHomePage";
@@ -356,6 +356,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
   const [participantsOpen, setParticipantsOpen] = useState(false);
   const [companiesOpen, setCompaniesOpen] = useState(false);
   const [logisticsOpen, setLogisticsOpen] = useState(false);
+  const [tabSearchQuery, setTabSearchQuery] = useState("");
   const [logisticsTab, setLogisticsTab] = useState(() => {
     if (typeof window !== "undefined") {
       const searchParams = new URLSearchParams(window.location.search);
@@ -4345,6 +4346,98 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
 
   const currentEventSummary = userEvents.find(e => e.id === activeEventId) || eventDetails || {};
 
+  const tabQuery = tabSearchQuery.trim().toLowerCase();
+
+  const matchesTabQuery = (text, synonyms = []) => {
+    if (!tabQuery) return true;
+    if (typeof text === "string" && text.toLowerCase().includes(tabQuery)) return true;
+    for (const syn of synonyms) {
+      if (typeof syn === "string" && syn.toLowerCase().includes(tabQuery)) return true;
+    }
+    return false;
+  };
+
+  const showTabOverview = canViewModule("overview", effectivePermissions.permissions) && matchesTabQuery(t("dash.overview", "Overview"), ["Overview", "dashboard", "home", "summary"]);
+  const showTabEventDetails = canViewModule("event-details", effectivePermissions.permissions) && matchesTabQuery(t("dash.eventDetails", "Event Details"), ["Event Details", "details", "page builder", "landing", "builder"]);
+  const showTabCalendar = canViewModule("calendar", effectivePermissions.permissions) && matchesTabQuery(t("dash.calendar", "Agenda"), ["Agenda", "calendar", "schedule", "sessions", "program", "programme", "timeline"]);
+  const showTabOpportunities = canViewModule("opportunities", effectivePermissions.permissions) && matchesTabQuery(t("dash.opportunities", "Opportunities"), ["Opportunities", "deals", "leads", "sponsorship", "pipeline"]);
+
+  // Participants
+  const matchGroupParticipants = matchesTabQuery(t("dash.participants", "Participants"), ["Participants", "people", "users"]);
+  const matchSubAttendees = canViewModule("attendees", effectivePermissions.permissions) && matchesTabQuery(t("dash.attendees", "All Attendees"), ["All Attendees", "attendees", "guests", "people", "visitors"]);
+  const matchSubPending = canViewModule("pending", effectivePermissions.permissions) && matchesTabQuery(t("dash.pending", "Pending"), ["Pending", "approval", "requests", "waiting", "review"]);
+  const matchSubSpeakers = canViewModule("speakers", effectivePermissions.permissions) && matchesTabQuery(t("dash.speakers", "Speakers"), ["Speakers", "presenters", "talks", "keynote", "hosts"]);
+
+  const hasAnyParticipants = canViewModule("attendees", effectivePermissions.permissions) || canViewModule("pending", effectivePermissions.permissions) || canViewModule("speakers", effectivePermissions.permissions);
+  const showGroupParticipants = hasAnyParticipants && (!tabQuery || matchGroupParticipants || matchSubAttendees || matchSubPending || matchSubSpeakers);
+  const isParticipantsExpanded = tabQuery ? (matchGroupParticipants || matchSubAttendees || matchSubPending || matchSubSpeakers) : participantsOpen;
+  const showSubAttendees = canViewModule("attendees", effectivePermissions.permissions) && (!tabQuery || matchGroupParticipants || matchSubAttendees);
+  const showSubPending = canViewModule("pending", effectivePermissions.permissions) && (!tabQuery || matchGroupParticipants || matchSubPending);
+  const showSubSpeakers = canViewModule("speakers", effectivePermissions.permissions) && (!tabQuery || matchGroupParticipants || matchSubSpeakers);
+
+  // Companies
+  const matchGroupCompanies = matchesTabQuery(t("dash.allCompanies", "Companies"), ["Companies", "enterprises", "firms"]);
+  const matchSubOrganizations = canViewModule("organizations", effectivePermissions.permissions) && matchesTabQuery(t("dash.organizations", "Organizations"), ["Organizations", "partners", "companies", "institutions"]);
+  const matchSubSponsors = canViewModule("sponsors", effectivePermissions.permissions) && matchesTabQuery(t("dash.sponsors", "Sponsors"), ["Sponsors", "sponsorship", "patrons", "donors"]);
+  const matchSubExhibitors = canViewModule("exhibitors", effectivePermissions.permissions) && matchesTabQuery(t("dash.exhibitors", "Exhibitors"), ["Exhibitors", "booths", "stands", "expo"]);
+
+  const hasAnyCompanies = canViewModule("organizations", effectivePermissions.permissions) || canViewModule("sponsors", effectivePermissions.permissions) || canViewModule("exhibitors", effectivePermissions.permissions);
+  const showGroupCompanies = hasAnyCompanies && (!tabQuery || matchGroupCompanies || matchSubOrganizations || matchSubSponsors || matchSubExhibitors);
+  const isCompaniesExpanded = tabQuery ? (matchGroupCompanies || matchSubOrganizations || matchSubSponsors || matchSubExhibitors) : companiesOpen;
+  const showSubOrganizations = canViewModule("organizations", effectivePermissions.permissions) && (!tabQuery || matchGroupCompanies || matchSubOrganizations);
+  const showSubSponsors = canViewModule("sponsors", effectivePermissions.permissions) && (!tabQuery || matchGroupCompanies || matchSubSponsors);
+  const showSubExhibitors = canViewModule("exhibitors", effectivePermissions.permissions) && (!tabQuery || matchGroupCompanies || matchSubExhibitors);
+
+  const showTabFloorPlan = canViewModule("floor-plan", effectivePermissions.permissions) && matchesTabQuery(t("dash.floorPlan", "Floor Plans"), ["Floor Plans", "floor plan", "map", "layout", "booths", "stands", "hall", "blueprint"]);
+  const showTabTickets = canViewModule("tickets", effectivePermissions.permissions) && matchesTabQuery(t("dash.tickets", "Tickets"), ["Tickets", "passes", "pricing", "admission", "sales", "badges", "registration"]);
+  const showTabPortal = canViewModule("portal-settings", effectivePermissions.permissions) && matchesTabQuery(t("dash.attendeePortal", "Attendee Portal"), ["Attendee Portal", "portal", "settings", "app", "mobile"]);
+  const showTabForms = canViewModule("forms", effectivePermissions.permissions) && matchesTabQuery(t("dash.forms", "Forms & Surveys"), ["Forms & Surveys", "forms", "surveys", "questionnaire", "feedback", "poll"]);
+  const showTabRsvp = canViewModule("rsvp", effectivePermissions.permissions) && matchesTabQuery(t("dash.rsvp", "RSVP"), ["RSVP", "invitation", "confirmation", "attendance", "responses"]);
+
+  // Logistics
+  const matchGroupLogistics = matchesTabQuery(t("dash.logistics", "Logistics"), ["Logistics", "operations"]);
+  const matchSubInventory = matchesTabQuery(t("logistics.tabInventory", "Inventory & Equipment"), ["Inventory & Equipment", "inventory", "equipment", "items", "assets", "stock"]);
+  const matchSubVendors = matchesTabQuery(t("logistics.tabVendors", "Vendors & Deliveries"), ["Vendors & Deliveries", "vendors", "suppliers", "deliveries", "catering", "services"]);
+  const matchSubTravel = matchesTabQuery(t("logistics.tabTravel", "VIP Travel & Lodging"), ["VIP Travel & Lodging", "travel", "lodging", "hotel", "flights", "transport", "vip", "accommodation"]);
+  const matchSubRunOfShow = matchesTabQuery(t("logistics.tabRunOfShow", "Run of Show & Schedule"), ["Run of Show & Schedule", "run of show", "schedule", "cue", "timing", "rundown", "program"]);
+  const matchSubChecklists = matchesTabQuery(t("logistics.tabChecklists", "Checklists & Issues"), ["Checklists & Issues", "checklists", "tasks", "issues", "todos", "action items"]);
+
+  const hasLogistics = canViewModule("logistics", effectivePermissions.permissions);
+  const showGroupLogistics = hasLogistics && (!tabQuery || matchGroupLogistics || matchSubInventory || matchSubVendors || matchSubTravel || matchSubRunOfShow || matchSubChecklists);
+  const isLogisticsExpanded = tabQuery ? (matchGroupLogistics || matchSubInventory || matchSubVendors || matchSubTravel || matchSubRunOfShow || matchSubChecklists) : logisticsOpen;
+  const showSubInventory = !tabQuery || matchGroupLogistics || matchSubInventory;
+  const showSubVendors = !tabQuery || matchGroupLogistics || matchSubVendors;
+  const showSubTravel = !tabQuery || matchGroupLogistics || matchSubTravel;
+  const showSubRunOfShow = !tabQuery || matchGroupLogistics || matchSubRunOfShow;
+  const showSubChecklists = !tabQuery || matchGroupLogistics || matchSubChecklists;
+
+  const showTabInfluencers = canViewModule("influencers", effectivePermissions.permissions) && matchesTabQuery(t("dash.influencers", "Influencers"), ["Influencers", "creators", "ambassadors", "media", "pr"]);
+  const showTabInvoicing = canViewModule("invoicing", effectivePermissions.permissions) && matchesTabQuery(t("dash.invoicing", "Facturation & Devis"), ["Facturation & Devis", "Invoicing & Quotes", "invoicing", "quotes", "facturation", "devis", "billing", "invoices", "receipts", "finance"]);
+  const showTabCheckIn = canViewModule("check-in", effectivePermissions.permissions) && matchesTabQuery(t("dash.checkIn", "Check In"), ["Check In", "qr", "scanner", "arrival", "gate", "badge scan", "desk"]);
+  const showTabTeam = canViewModule("my-team", effectivePermissions.permissions) && matchesTabQuery(t("dash.myTeam", "My Team"), ["My Team", "team", "members", "staff", "roles", "permissions", "collaborators"]);
+  const showTabAnalytics = canViewModule("analytics", effectivePermissions.permissions) && matchesTabQuery(t("dash.analytics", "Analytics"), ["Analytics", "stats", "reports", "metrics", "insights", "charts"]);
+  const showTabCommunications = canViewModule("communications", effectivePermissions.permissions) && matchesTabQuery(t("dash.communications", "Communications"), ["Communications", "emails", "broadcast", "messages", "notifications", "newsletter"]);
+  const showTabCertificates = canViewModule("certificates", effectivePermissions.permissions) && matchesTabQuery(t("dash.certificates", "Certificates"), ["Certificates", "badges", "diploma", "awards", "accreditation"]);
+  const showTabDevelopers = canViewModule("developers", effectivePermissions.permissions) && matchesTabQuery(t("dash.developers", "Developers & API"), ["Developers & API", "developers", "api", "webhooks", "keys", "tokens", "code"]);
+
+  const hasAdminAccess = !!(
+    currentUser &&
+    currentUser.id && (
+      currentUser.isVerifiedAdmin === true ||
+      isPlatformSuperAdminEmail(currentUser.email) ||
+      (currentUser.role === 'super_admin' && (currentUser.isAdmin === true || currentUser.is_admin === true))
+    )
+  );
+  const showTabAdmin = hasAdminAccess && matchesTabQuery("Back Office Admin", ["Back Office", "Admin", "Super Admin", "backoffice"]);
+
+  const hasAnyVisibleTab = (
+    showTabOverview || showTabEventDetails || showTabCalendar || showTabOpportunities ||
+    showGroupParticipants || showGroupCompanies || showTabFloorPlan || showTabTickets ||
+    showTabPortal || showTabForms || showTabRsvp || showGroupLogistics || showTabInfluencers ||
+    showTabInvoicing || showTabCheckIn || showTabTeam || showTabAnalytics ||
+    showTabCommunications || showTabCertificates || showTabDevelopers || showTabAdmin
+  );
+
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans" dir={dir}>
       {/* Sidebar Navigation — hidden while editing a floor plan */}
@@ -4471,9 +4564,37 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
             )}
           </div>
 
+          {/* Tab Search Bar */}
+          <div className="relative my-1">
+            <div className="relative flex items-center">
+              <Search size={13} className="absolute left-2.5 rtl:right-2.5 rtl:left-auto text-slate-400 pointer-events-none" />
+              <input
+                type="text"
+                value={tabSearchQuery}
+                onChange={(e) => setTabSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") setTabSearchQuery("");
+                }}
+                placeholder={t("dash.searchTabs", "Search tabs...")}
+                className="w-full text-xs pl-8 pr-7 rtl:pr-8 rtl:pl-7 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200 focus:border-blue-500 rounded-xl outline-hidden text-slate-700 placeholder-slate-400 transition-all shadow-2xs focus:shadow-xs"
+              />
+              {tabSearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setTabSearchQuery("")}
+                  className="absolute right-2 rtl:left-2 rtl:right-auto text-slate-400 hover:text-slate-600 p-0.5 rounded-full hover:bg-slate-200 transition-colors cursor-pointer"
+                  title={t("dash.clearSearch", "Clear search")}
+                  aria-label="Clear search"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+          </div>
+
           {/* Navigation Links */}
           <nav className="flex flex-col gap-0.5">
-            {canViewModule("overview", effectivePermissions.permissions) && (
+            {showTabOverview && (
               <button 
                 onClick={() => setCurrentView("overview")}
                 className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "overview" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
@@ -4483,7 +4604,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               </button>
             )}
 
-            {canViewModule("event-details", effectivePermissions.permissions) && (
+            {showTabEventDetails && (
               <button 
                 onClick={() => setCurrentView("event-details")}
                 className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${["event-details", "page-builder"].includes(currentView) ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
@@ -4493,7 +4614,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               </button>
             )}
 
-            {canViewModule("calendar", effectivePermissions.permissions) && (
+            {showTabCalendar && (
               <button 
                 onClick={() => setCurrentView("calendar")}
                 className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "calendar" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
@@ -4504,7 +4625,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
             )}
 
             {/* Standalone Opportunities Tab */}
-            {canViewModule("opportunities", effectivePermissions.permissions) && (
+            {showTabOpportunities && (
               <button 
                 onClick={() => setCurrentView("opportunities")}
                 className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "opportunities" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
@@ -4518,24 +4639,22 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
             )}
 
             {/* 1. Expandable Participants Submenu */}
-            {(canViewModule("attendees", effectivePermissions.permissions) ||
-              canViewModule("pending", effectivePermissions.permissions) ||
-              canViewModule("speakers", effectivePermissions.permissions)) && (
+            {showGroupParticipants && (
               <div className="flex flex-col">
                 <button 
-                  onClick={() => setParticipantsOpen(!participantsOpen)}
+                  onClick={() => setParticipantsOpen(!isParticipantsExpanded)}
                   className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${["attendees", "pending", "speakers"].includes(currentView) ? "text-blue-700 bg-blue-50/50 font-extrabold" : "text-slate-600 hover:bg-slate-50"}`}
                 >
                   <div className="flex items-center gap-2">
                     <Users2 size={14} className={`shrink-0 ${["attendees", "pending", "speakers"].includes(currentView) ? "text-blue-600" : "text-slate-400 group-hover:text-blue-600"}`} />
                     <span>{t("dash.participants", "Participants")}</span>
                   </div>
-                  <ChevronDown size={11} className={`text-slate-400 transition-transform ${participantsOpen ? "rotate-180" : ""}`} />
+                  <ChevronDown size={11} className={`text-slate-400 transition-transform ${isParticipantsExpanded ? "rotate-180" : ""}`} />
                 </button>
 
-                {participantsOpen && (
+                {isParticipantsExpanded && (
                   <div className="flex flex-col gap-0.5 pl-3 rtl:pr-3 rtl:pl-0 mt-1 border-l rtl:border-r rtl:border-l-0 border-slate-100 ml-4 rtl:mr-4 rtl:ml-0">
-                    {canViewModule("attendees", effectivePermissions.permissions) && (
+                    {showSubAttendees && (
                       <button 
                         onClick={() => setCurrentView("attendees")}
                         className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "attendees" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
@@ -4548,7 +4667,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
                       </button>
                     )}
 
-                    {canViewModule("pending", effectivePermissions.permissions) && (
+                    {showSubPending && (
                       <button 
                         onClick={() => setCurrentView("pending")}
                         className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "pending" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
@@ -4561,7 +4680,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
                       </button>
                     )}
 
-                    {canViewModule("speakers", effectivePermissions.permissions) && (
+                    {showSubSpeakers && (
                       <button 
                         onClick={() => setCurrentView("speakers")}
                         className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "speakers" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
@@ -4579,24 +4698,22 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
             )}
 
             {/* 2. Expandable Companies Submenu */}
-            {(canViewModule("organizations", effectivePermissions.permissions) ||
-              canViewModule("sponsors", effectivePermissions.permissions) ||
-              canViewModule("exhibitors", effectivePermissions.permissions)) && (
+            {showGroupCompanies && (
               <div className="flex flex-col">
                 <button 
-                  onClick={() => setCompaniesOpen(!companiesOpen)}
+                  onClick={() => setCompaniesOpen(!isCompaniesExpanded)}
                   className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${["organizations", "sponsors", "exhibitors"].includes(currentView) ? "text-blue-700 bg-blue-50/50 font-extrabold" : "text-slate-600 hover:bg-slate-50"}`}
                 >
                   <div className="flex items-center gap-2">
                     <Building2 size={14} className={`shrink-0 ${["organizations", "sponsors", "exhibitors"].includes(currentView) ? "text-blue-600" : "text-slate-400 group-hover:text-blue-600"}`} />
                     <span>{t("dash.allCompanies", "Companies")}</span>
                   </div>
-                  <ChevronDown size={11} className={`text-slate-400 transition-transform ${companiesOpen ? "rotate-180" : ""}`} />
+                  <ChevronDown size={11} className={`text-slate-400 transition-transform ${isCompaniesExpanded ? "rotate-180" : ""}`} />
                 </button>
 
-                {companiesOpen && (
+                {isCompaniesExpanded && (
                   <div className="flex flex-col gap-0.5 pl-3 rtl:pr-3 rtl:pl-0 mt-1 border-l rtl:border-r rtl:border-l-0 border-slate-100 ml-4 rtl:mr-4 rtl:ml-0">
-                    {canViewModule("organizations", effectivePermissions.permissions) && (
+                    {showSubOrganizations && (
                       <button 
                         onClick={() => setCurrentView("organizations")}
                         className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "organizations" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
@@ -4609,7 +4726,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
                       </button>
                     )}
 
-                    {canViewModule("sponsors", effectivePermissions.permissions) && (
+                    {showSubSponsors && (
                       <button 
                         onClick={() => setCurrentView("sponsors")}
                         className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "sponsors" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
@@ -4622,7 +4739,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
                       </button>
                     )}
 
-                    {canViewModule("exhibitors", effectivePermissions.permissions) && (
+                    {showSubExhibitors && (
                       <button 
                         onClick={() => setCurrentView("exhibitors")}
                         className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "exhibitors" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
@@ -4639,7 +4756,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               </div>
             )}
 
-            {canViewModule("floor-plan", effectivePermissions.permissions) && (
+            {showTabFloorPlan && (
               <button 
                 onClick={() => { setCurrentView("floor-plan"); setActiveFloorPlanId(null); }}
                 className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "floor-plan" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
@@ -4652,7 +4769,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               </button>
             )}
 
-            {canViewModule("tickets", effectivePermissions.permissions) && (
+            {showTabTickets && (
               <button 
                 onClick={() => setCurrentView("tickets")}
                 className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "tickets" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
@@ -4662,7 +4779,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               </button>
             )}
 
-            {canViewModule("portal-settings", effectivePermissions.permissions) && (
+            {showTabPortal && (
               <button 
                 onClick={() => setCurrentView("portal-settings")}
                 className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "portal-settings" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
@@ -4681,7 +4798,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               </button>
             )}
 
-            {canViewModule("forms", effectivePermissions.permissions) && (
+            {showTabForms && (
               <button 
                 onClick={() => setCurrentView("forms")}
                 className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "forms" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
@@ -4694,7 +4811,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               </button>
             )}
 
-            {canViewModule("rsvp", effectivePermissions.permissions) && (
+            {showTabRsvp && (
               <button 
                 onClick={() => setCurrentView("rsvp")}
                 className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "rsvp" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
@@ -4708,82 +4825,92 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
             )}
 
             {/* 3. Expandable Logistics Submenu */}
-            {canViewModule("logistics", effectivePermissions.permissions) && (
+            {showGroupLogistics && (
               <div className="flex flex-col">
                 <button 
-                  onClick={() => setLogisticsOpen(!logisticsOpen)}
+                  onClick={() => setLogisticsOpen(!isLogisticsExpanded)}
                   className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "logistics" ? "text-blue-700 bg-blue-50/50 font-extrabold" : "text-slate-600 hover:bg-slate-50"}`}
                 >
                   <div className="flex items-center gap-2">
                     <Boxes size={14} className={`shrink-0 ${currentView === "logistics" ? "text-blue-600" : "text-slate-400 group-hover:text-blue-600"}`} />
                     <span>{t("dash.logistics", "Logistics")}</span>
                   </div>
-                  <ChevronDown size={11} className={`text-slate-400 transition-transform ${logisticsOpen ? "rotate-180" : ""}`} />
+                  <ChevronDown size={11} className={`text-slate-400 transition-transform ${isLogisticsExpanded ? "rotate-180" : ""}`} />
                 </button>
 
-                {logisticsOpen && (
+                {isLogisticsExpanded && (
                   <div className="flex flex-col gap-0.5 pl-3 rtl:pr-3 rtl:pl-0 mt-1 border-l rtl:border-r rtl:border-l-0 border-slate-100 ml-4 rtl:mr-4 rtl:ml-0">
-                    <button 
-                      onClick={() => { setCurrentView("logistics"); setLogisticsTab("inventory"); }}
-                      className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "logistics" && logisticsTab === "inventory" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
-                    >
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <Package size={12} className="shrink-0" />
-                        <span className="truncate">{t("logistics.tabInventory", "Inventory & Equipment")}</span>
-                      </div>
-                      <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "logistics" && logisticsTab === "inventory" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{logisticsData.inventory?.length || 0}</span>
-                    </button>
+                    {showSubInventory && (
+                      <button 
+                        onClick={() => { setCurrentView("logistics"); setLogisticsTab("inventory"); }}
+                        className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "logistics" && logisticsTab === "inventory" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
+                      >
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Package size={12} className="shrink-0" />
+                          <span className="truncate">{t("logistics.tabInventory", "Inventory & Equipment")}</span>
+                        </div>
+                        <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "logistics" && logisticsTab === "inventory" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{logisticsData.inventory?.length || 0}</span>
+                      </button>
+                    )}
 
-                    <button 
-                      onClick={() => { setCurrentView("logistics"); setLogisticsTab("vendors"); }}
-                      className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "logistics" && logisticsTab === "vendors" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
-                    >
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <Truck size={12} className="shrink-0" />
-                        <span className="truncate">{t("logistics.tabVendors", "Vendors & Deliveries")}</span>
-                      </div>
-                      <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "logistics" && logisticsTab === "vendors" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{logisticsData.vendors?.length || 0}</span>
-                    </button>
+                    {showSubVendors && (
+                      <button 
+                        onClick={() => { setCurrentView("logistics"); setLogisticsTab("vendors"); }}
+                        className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "logistics" && logisticsTab === "vendors" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
+                      >
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Truck size={12} className="shrink-0" />
+                          <span className="truncate">{t("logistics.tabVendors", "Vendors & Deliveries")}</span>
+                        </div>
+                        <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "logistics" && logisticsTab === "vendors" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{logisticsData.vendors?.length || 0}</span>
+                      </button>
+                    )}
 
-                    <button 
-                      onClick={() => { setCurrentView("logistics"); setLogisticsTab("travel"); }}
-                      className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "logistics" && logisticsTab === "travel" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
-                    >
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <Plane size={12} className="shrink-0" />
-                        <span className="truncate">{t("logistics.tabTravel", "VIP Travel & Lodging")}</span>
-                      </div>
-                      <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "logistics" && logisticsTab === "travel" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{logisticsData.travel?.length || 0}</span>
-                    </button>
+                    {showSubTravel && (
+                      <button 
+                        onClick={() => { setCurrentView("logistics"); setLogisticsTab("travel"); }}
+                        className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "logistics" && logisticsTab === "travel" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
+                      >
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Plane size={12} className="shrink-0" />
+                          <span className="truncate">{t("logistics.tabTravel", "VIP Travel & Lodging")}</span>
+                        </div>
+                        <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "logistics" && logisticsTab === "travel" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{logisticsData.travel?.length || 0}</span>
+                      </button>
+                    )}
 
-                    <button 
-                      onClick={() => { setCurrentView("logistics"); setLogisticsTab("runOfShow"); }}
-                      className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "logistics" && logisticsTab === "runOfShow" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
-                    >
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <Clock size={12} className="shrink-0" />
-                        <span className="truncate">{t("logistics.tabRunOfShow", "Run of Show & Schedule")}</span>
-                      </div>
-                      <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "logistics" && logisticsTab === "runOfShow" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{logisticsData.runOfShow?.length || 0}</span>
-                    </button>
+                    {showSubRunOfShow && (
+                      <button 
+                        onClick={() => { setCurrentView("logistics"); setLogisticsTab("runOfShow"); }}
+                        className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "logistics" && logisticsTab === "runOfShow" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
+                      >
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Clock size={12} className="shrink-0" />
+                          <span className="truncate">{t("logistics.tabRunOfShow", "Run of Show & Schedule")}</span>
+                        </div>
+                        <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "logistics" && logisticsTab === "runOfShow" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{logisticsData.runOfShow?.length || 0}</span>
+                      </button>
+                    )}
 
-                    <button 
-                      onClick={() => { setCurrentView("logistics"); setLogisticsTab("checklists"); }}
-                      className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "logistics" && logisticsTab === "checklists" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
-                    >
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <ClipboardCheck size={12} className="shrink-0" />
-                        <span className="truncate">{t("logistics.tabChecklists", "Checklists & Issues")}</span>
-                      </div>
-                      <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "logistics" && logisticsTab === "checklists" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{logisticsData.checklists?.length || 0}</span>
-                    </button>
+                    {showSubChecklists && (
+                      <button 
+                        onClick={() => { setCurrentView("logistics"); setLogisticsTab("checklists"); }}
+                        className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "logistics" && logisticsTab === "checklists" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
+                      >
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <ClipboardCheck size={12} className="shrink-0" />
+                          <span className="truncate">{t("logistics.tabChecklists", "Checklists & Issues")}</span>
+                        </div>
+                        <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "logistics" && logisticsTab === "checklists" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{logisticsData.checklists?.length || 0}</span>
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
             )}
 
             {/* Standalone Influencers Tab */}
-            {canViewModule("influencers", effectivePermissions.permissions) && (
+            {showTabInfluencers && (
               <button 
                 onClick={() => setCurrentView("influencers")}
                 className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "influencers" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
@@ -4797,7 +4924,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
             )}
 
             {/* Facturation & Devis Tab */}
-            {canViewModule("invoicing", effectivePermissions.permissions) && (
+            {showTabInvoicing && (
               <button 
                 onClick={() => setCurrentView("invoicing")}
                 className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${["invoicing", "invoices"].includes(currentView) ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
@@ -4809,7 +4936,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               </button>
             )}
 
-            {canViewModule("check-in", effectivePermissions.permissions) && (
+            {showTabCheckIn && (
               <button 
                 onClick={() => setCurrentView("check-in")}
                 className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "check-in" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
@@ -4819,7 +4946,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               </button>
             )}
 
-            {canViewModule("my-team", effectivePermissions.permissions) && (
+            {showTabTeam && (
               <button 
                 onClick={() => setCurrentView("my-team")}
                 className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "my-team" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
@@ -4829,7 +4956,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               </button>
             )}
 
-            {canViewModule("analytics", effectivePermissions.permissions) && (
+            {showTabAnalytics && (
               <button 
                 onClick={() => setCurrentView("analytics")}
                 className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "analytics" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
@@ -4839,7 +4966,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               </button>
             )}
 
-            {canViewModule("communications", effectivePermissions.permissions) && (
+            {showTabCommunications && (
               <button 
                 onClick={() => setCurrentView("communications")}
                 className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "communications" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
@@ -4849,7 +4976,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               </button>
             )}
 
-            {canViewModule("certificates", effectivePermissions.permissions) && (
+            {showTabCertificates && (
               <button 
                 onClick={() => setCurrentView("certificates")}
                 className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "certificates" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
@@ -4864,7 +4991,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               </button>
             )}
 
-            {canViewModule("developers", effectivePermissions.permissions) && (
+            {showTabDevelopers && (
               <button 
                 onClick={() => setCurrentView("developers")}
                 className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "developers" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
@@ -4874,14 +5001,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               </button>
             )}
 
-            {!!(
-              currentUser &&
-              currentUser.id && (
-                currentUser.isVerifiedAdmin === true ||
-                isPlatformSuperAdminEmail(currentUser.email) ||
-                (currentUser.role === 'super_admin' && (currentUser.isAdmin === true || currentUser.is_admin === true))
-              )
-            ) && (
+            {showTabAdmin && (
               <div className="pt-3 mt-3 border-t border-slate-100">
                 <button
                   onClick={() => setCurrentView("admin")}
@@ -4894,6 +5014,23 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
                   <span className="text-[9px] font-black uppercase tracking-wider py-0.5 px-1.5 rounded-md bg-blue-600 text-white">
                     Admin
                   </span>
+                </button>
+              </div>
+            )}
+
+            {!hasAnyVisibleTab && (
+              <div className="py-8 px-3 text-center flex flex-col items-center justify-center text-slate-400">
+                <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 mb-2">
+                  <Search size={16} />
+                </div>
+                <p className="text-xs font-bold text-slate-600">{t("dash.noTabsFound", "No tabs found")}</p>
+                <p className="text-[10px] text-slate-400 mt-0.5 max-w-[180px] leading-tight">{t("dash.tryDifferentSearch", "Try a different search term")}</p>
+                <button
+                  type="button"
+                  onClick={() => setTabSearchQuery("")}
+                  className="mt-3 text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-lg transition-colors cursor-pointer"
+                >
+                  {t("dash.clearSearch", "Clear search")}
                 </button>
               </div>
             )}

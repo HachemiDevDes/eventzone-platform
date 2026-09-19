@@ -3,9 +3,7 @@
 
 import React, { useState, useEffect } from "react";
 import { 
-  Building2, FileText, Settings, Wallet, CreditCard, 
-  Receipt, X, ChevronDown, Upload, Trash2, CheckCircle2, 
-  AlertCircle, ShieldCheck
+  X, ChevronDown, Upload, CheckCircle2, ShieldCheck
 } from "lucide-react";
 import SearchableSelect from "./SearchableSelect";
 import { 
@@ -133,18 +131,13 @@ export default function InvoicingProfileSettingsModal({
       >
         {/* Drawer Header */}
         <header className="px-6 sm:px-8 py-5 border-b border-slate-200 flex items-center justify-between bg-white select-none shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shrink-0">
-              <Settings size={20} />
-            </div>
-            <div>
-              <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">
-                {t("invoicing.fiscalProfileTitle", "Profil de facturation & Paramètres")}
-              </h2>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">
-                {t("invoicing.fiscalProfileDesc", "Configurez l'identité légale, la fiscalité et les coordonnées bancaires de votre organisation.")}
-              </p>
-            </div>
+          <div>
+            <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">
+              {t("invoicing.fiscalProfileTitle", "Profil de facturation & Paramètres")}
+            </h2>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">
+              {t("invoicing.fiscalProfileDesc", "Configurez l'identité légale, la fiscalité et les coordonnées bancaires de votre organisation.")}
+            </p>
           </div>
 
           <button
@@ -183,8 +176,7 @@ export default function InvoicingProfileSettingsModal({
               onClick={() => toggleSection("company")}
               className="w-full px-4 py-3 bg-slate-50/70 hover:bg-slate-50 flex items-center justify-between text-left transition-colors cursor-pointer"
             >
-              <div className="flex items-center gap-2.5">
-                <Building2 size={16} className="text-blue-600" />
+              <div>
                 <span className="text-xs font-bold text-slate-800">
                   Informations de l&apos;entreprise
                 </span>
@@ -374,8 +366,7 @@ export default function InvoicingProfileSettingsModal({
               onClick={() => toggleSection("fiscal")}
               className="w-full px-4 py-3 bg-slate-50/70 hover:bg-slate-50 flex items-center justify-between text-left transition-colors cursor-pointer"
             >
-              <div className="flex items-center gap-2.5">
-                <FileText size={16} className="text-blue-600" />
+              <div>
                 <span className="text-xs font-bold text-slate-800">
                   DZ Identification fiscale
                 </span>
@@ -452,8 +443,7 @@ export default function InvoicingProfileSettingsModal({
               onClick={() => toggleSection("defaults")}
               className="w-full px-4 py-3 bg-slate-50/70 hover:bg-slate-50 flex items-center justify-between text-left transition-colors cursor-pointer"
             >
-              <div className="flex items-center gap-2.5">
-                <Settings size={16} className="text-blue-600" />
+              <div>
                 <span className="text-xs font-bold text-slate-800">
                   Paramètres par défaut
                 </span>
@@ -549,8 +539,7 @@ export default function InvoicingProfileSettingsModal({
               onClick={() => toggleSection("treasury")}
               className="w-full px-4 py-3 bg-slate-50/70 hover:bg-slate-50 flex items-center justify-between text-left transition-colors cursor-pointer"
             >
-              <div className="flex items-center gap-2.5">
-                <Wallet size={16} className="text-blue-600" />
+              <div>
                 <span className="text-xs font-bold text-slate-800">
                   Trésorerie — Solde Bancaire Initial
                 </span>
@@ -590,8 +579,7 @@ export default function InvoicingProfileSettingsModal({
               onClick={() => toggleSection("bank")}
               className="w-full px-4 py-3 bg-slate-50/70 hover:bg-slate-50 flex items-center justify-between text-left transition-colors cursor-pointer"
             >
-              <div className="flex items-center gap-2.5">
-                <CreditCard size={16} className="text-blue-600" />
+              <div>
                 <span className="text-xs font-bold text-slate-800">
                   Compte bancaire
                 </span>
@@ -707,8 +695,7 @@ export default function InvoicingProfileSettingsModal({
               onClick={() => toggleSection("taxes")}
               className="w-full px-4 py-3 bg-slate-50/70 hover:bg-slate-50 flex items-center justify-between text-left transition-colors cursor-pointer"
             >
-              <div className="flex items-center gap-2.5">
-                <Receipt size={16} className="text-blue-600" />
+              <div>
                 <span className="text-xs font-bold text-slate-800">
                   Fiscalité & Déclarations (G50 / IBS / IRG)
                 </span>
