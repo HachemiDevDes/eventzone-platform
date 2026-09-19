@@ -158,8 +158,14 @@ export function resolveActiveEventId() {
     }
 
     const cachedUserEvents = safeLocalStorageGet("eventzone_cache_user_events", []);
-    if (Array.isArray(cachedUserEvents) && cachedUserEvents.length > 0 && cachedUserEvents[0]?.id) {
-      return cachedUserEvents[0].id;
+    if (Array.isArray(cachedUserEvents) && cachedUserEvents.length > 0) {
+      const firstActive = cachedUserEvents.find(e => e && String(e.status).toLowerCase() !== "archived" && !e.isArchived && !e.is_archived);
+      if (firstActive?.id) {
+        return firstActive.id;
+      }
+      if (cachedUserEvents[0]?.id) {
+        return cachedUserEvents[0].id;
+      }
     }
   } catch (e) {}
   return DEFAULT_EVENT_ID;
@@ -1214,7 +1220,8 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
             const hasDefaultData = (Array.isArray(defaultAtts) && defaultAtts.length > 0) || (Array.isArray(defaultQueue) && defaultQueue.length > 0);
 
             if (!hasDefaultData) {
-              const targetId = savedActive || uEvents[0]?.id;
+              const firstActive = uEvents.find(ev => ev && String(ev.status).toLowerCase() !== "archived" && !ev.isArchived && !ev.is_archived);
+              const targetId = savedActive || firstActive?.id || uEvents[0]?.id;
               const hasDefault = uEvents.some(ev => ev.id === DEFAULT_EVENT_ID);
               if ((!hasDefault || savedActive) && targetId) {
                 setActiveEventStateId(targetId);
@@ -2178,7 +2185,12 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
       setUserEvents(prev => prev.map(e => e.id === id ? { ...e, status: "archived" } : e));
       setPublicEvents(prev => prev.filter(e => e.id !== id));
       if (activeEventId === id) {
-        setActiveEventStateId(DEFAULT_EVENT_ID);
+        const remaining = userEvents.filter(e => e.id !== id && String(e.status).toLowerCase() !== "archived" && !e.isArchived && !e.is_archived);
+        if (remaining.length > 0) {
+          setActiveEventStateId(remaining[0].id);
+        } else {
+          setActiveEventStateId(DEFAULT_EVENT_ID);
+        }
       }
     }
   };
@@ -4557,7 +4569,9 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
                   {t("dash.switchEvent", "Switch Event")}
                 </span>
                 <div className="max-h-48 overflow-y-auto space-y-0.5">
-                  {userEvents.map(ev => (
+                  {userEvents
+                    .filter(ev => ev && String(ev.status).toLowerCase() !== "archived" && !ev.isArchived && !ev.is_archived)
+                    .map(ev => (
                     <button
                       key={ev.id}
                       onClick={() => {
@@ -4571,6 +4585,11 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
                       <span className="truncate">{ev.title}</span>
                     </button>
                   ))}
+                  {userEvents.filter(ev => ev && String(ev.status).toLowerCase() !== "archived" && !ev.isArchived && !ev.is_archived).length === 0 && (
+                    <span className="text-[10px] text-slate-400 italic px-2 py-1.5 block text-center">
+                      {t("dash.noActiveEvents", "No active events")}
+                    </span>
+                  )}
                 </div>
 
                 <div className="pt-2 border-t border-slate-100 mt-1 space-y-1">
