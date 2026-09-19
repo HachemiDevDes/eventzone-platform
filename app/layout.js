@@ -24,11 +24,11 @@ export const metadata = {
     default: "Eventzone - All in One Event Management Platform",
     template: "%s | Eventzone",
   },
-  description: "A premium event organizer platform to design floor layouts, manage schedules, and register for conferences & expos.",
+  description: "The all-in-one event management platform for organizers. Host conferences & expos with interactive floor plans, online ticketing, custom badges, and QR check-in.",
   keywords: ["Eventzone", "events", "conferences", "summits", "expos", "tickets", "event management", "Algeria"],
   openGraph: {
     title: "Eventzone - All in One Event Management Platform",
-    description: "A premium event organizer platform to design floor layouts, manage schedules, and register for conferences & expos.",
+    description: "The all-in-one event management platform for organizers. Host conferences & expos with interactive floor plans, online ticketing, custom badges, and QR check-in.",
     url: "https://eventzone.pro",
     siteName: "Eventzone",
     images: [
@@ -45,7 +45,7 @@ export const metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Eventzone - All in One Event Management Platform",
-    description: "A premium event organizer platform to design floor layouts, manage schedules, and register for conferences & expos.",
+    description: "The all-in-one event management platform for organizers. Host conferences & expos with interactive floor plans, online ticketing, custom badges, and QR check-in.",
   },
   icons: {
     icon: [

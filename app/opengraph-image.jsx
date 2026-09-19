@@ -134,7 +134,7 @@ export default function Image() {
               maxWidth: "850px",
             }}
           >
-            The modern platform to explore upcoming summits, design interactive 2D floor plans, book digital badge passes, and connect with attendees.
+            The all-in-one platform for organizers to host conferences, design interactive floor plans, issue custom badges, and streamline check-in.
           </div>
         </div>
 

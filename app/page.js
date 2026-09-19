@@ -19,7 +19,7 @@ function parseToIso(dateStr, fallbackHour = 8) {
 
 export const metadata = {
   title: "Eventzone - All in One Event Management Platform",
-  description: "Discover leading conferences, summits, exhibitions, and professional events on Eventzone. Book tickets, explore interactive floor plans, and manage events seamlessly.",
+  description: "The all-in-one event management platform for organizers. Host conferences & expos with interactive floor plans, online ticketing, custom badges, and QR check-in.",
   keywords: [
     "Eventzone",
     "events Algeria",
@@ -38,7 +38,7 @@ export const metadata = {
   },
   openGraph: {
     title: "Eventzone - All in One Event Management Platform",
-    description: "Discover leading conferences, summits, exhibitions, and professional events on Eventzone. Book tickets, explore interactive floor plans, and manage events seamlessly.",
+    description: "The all-in-one event management platform for organizers. Host conferences & expos with interactive floor plans, online ticketing, custom badges, and QR check-in.",
     url: "https://eventzone.pro",
     siteName: "Eventzone",
     images: [
@@ -55,7 +55,7 @@ export const metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Eventzone - All in One Event Management Platform",
-    description: "Discover leading conferences, summits, exhibitions, and professional events on Eventzone. Book tickets, explore interactive floor plans, and manage events seamlessly.",
+    description: "The all-in-one event management platform for organizers. Host conferences & expos with interactive floor plans, online ticketing, custom badges, and QR check-in.",
     images: ["/og-image.png"],
   },
 };
