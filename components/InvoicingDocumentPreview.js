@@ -331,27 +331,40 @@ function InvoicingDocumentSheet({
         )}
 
         {/* 8. Notes / Conditions & Cachet */}
-        <div className="flex flex-row items-start justify-between gap-4 pt-2 invoice-notes-block print-avoid-break">
-          {notes && (
+        <div className="flex flex-row items-start justify-between gap-6 pt-3 invoice-notes-block print-avoid-break">
+          {notes ? (
             <div className="flex-1 text-[11px] text-slate-500">
-              <span className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-400 mb-0.5">
+              <span className="block text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1">
                 CONDITIONS & NOTES
               </span>
               <p className="whitespace-pre-line leading-relaxed">{notes}</p>
             </div>
+          ) : (
+            <div className="flex-1" />
           )}
 
-          {show_signature_stamp && signature_stamp_url && (
-            <div className="shrink-0 flex flex-col items-center">
-              <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400 mb-1">
+          {show_signature_stamp && (
+            <div className="shrink-0 flex flex-col items-center ml-auto">
+              <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5 text-center">
                 CACHET & SIGNATURE
               </span>
-              <div className="w-24 h-24 sm:w-28 sm:h-28 border border-dashed border-slate-200 rounded-xl p-1 flex items-center justify-center bg-white">
-                <img 
-                  src={signature_stamp_url} 
-                  alt="Cachet" 
-                  className="max-h-full max-w-full object-contain" 
-                />
+              <div className="w-52 h-36 sm:w-64 sm:h-44 print:w-64 print:h-44 border-2 border-dashed border-slate-300/90 rounded-2xl p-2.5 flex items-center justify-center bg-white relative overflow-hidden shadow-2xs">
+                {signature_stamp_url ? (
+                  <img 
+                    src={signature_stamp_url} 
+                    alt="Cachet & Signature" 
+                    className="max-h-full max-w-full object-contain pointer-events-none select-none" 
+                  />
+                ) : (
+                  <div className="text-center px-4 py-3 text-slate-300 select-none">
+                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-400/80 block">
+                      Cachet & Signature
+                    </span>
+                    <span className="text-[9px] text-slate-300 block mt-1 italic">
+                      Zone réservée pour validation légale
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           )}
