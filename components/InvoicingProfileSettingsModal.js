@@ -157,13 +157,13 @@ export default function InvoicingProfileSettingsModal({
           {/* NOM DU PROFIL */}
           <div>
             <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">
-              NOM DU PROFIL
+              {t("invoicing.profileName", "NOM DU PROFIL")}
             </label>
             <input
               type="text"
               value={profile.name || ""}
               onChange={(e) => handleFieldChange("name", e.target.value)}
-              placeholder="Ex: Eventzone ou Filiale Ouest"
+              placeholder={t("invoicing.profileNamePlaceholder", "Ex: Eventzone ou Filiale Ouest")}
               required
               className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all"
             />
@@ -174,11 +174,11 @@ export default function InvoicingProfileSettingsModal({
             <button
               type="button"
               onClick={() => toggleSection("company")}
-              className="w-full px-4 py-3 bg-slate-50/70 hover:bg-slate-50 flex items-center justify-between text-left transition-colors cursor-pointer"
+              className="w-full px-4 py-3 bg-slate-50/70 hover:bg-slate-50 flex items-center justify-between text-start transition-colors cursor-pointer"
             >
               <div>
                 <span className="text-xs font-bold text-slate-800">
-                  Informations de l&apos;entreprise
+                  {t("invoicing.companyInfo", "Informations de l'entreprise")}
                 </span>
               </div>
               <ChevronDown
@@ -192,7 +192,7 @@ export default function InvoicingProfileSettingsModal({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
-                      RAISON SOCIALE *
+                      {t("invoicing.companyName", "RAISON SOCIALE")} *
                     </label>
                     <input
                       type="text"
@@ -205,7 +205,7 @@ export default function InvoicingProfileSettingsModal({
                   </div>
                   <div>
                     <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
-                      NOM DU GÉRANT
+                      {t("invoicing.managerName", "NOM DU GÉRANT")}
                     </label>
                     <input
                       type="text"
@@ -220,7 +220,7 @@ export default function InvoicingProfileSettingsModal({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
-                      EMAIL
+                      {t("invoicing.email", "EMAIL")}
                     </label>
                     <input
                       type="email"
@@ -232,7 +232,7 @@ export default function InvoicingProfileSettingsModal({
                   </div>
                   <div>
                     <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
-                      TÉLÉPHONE
+                      {t("invoicing.phone", "TÉLÉPHONE")}
                     </label>
                     <input
                       type="text"
@@ -246,7 +246,7 @@ export default function InvoicingProfileSettingsModal({
 
                 <div>
                   <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
-                    ADRESSE
+                    {t("invoicing.address", "ADRESSE")}
                   </label>
                   <textarea
                     rows={2}
@@ -260,18 +260,18 @@ export default function InvoicingProfileSettingsModal({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
-                      WILAYA
+                      {t("invoicing.wilaya", "WILAYA")}
                     </label>
                     <SearchableSelect
                       options={ALGERIAN_WILAYAS}
                       value={profile.wilaya || "16 - Alger"}
                       onChange={(val) => handleFieldChange("wilaya", val)}
-                      placeholder="Sélectionner une wilaya"
+                      placeholder={t("invoicing.selectWilaya", "Sélectionner une wilaya")}
                     />
                   </div>
                   <div>
                     <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
-                      SECTEUR D&apos;ACTIVITÉ
+                      {t("invoicing.activitySector", "SECTEUR D'ACTIVITÉ")}
                     </label>
                     <input
                       type="text"
@@ -288,7 +288,7 @@ export default function InvoicingProfileSettingsModal({
                   {/* Logo de l'entreprise */}
                   <div>
                     <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1.5">
-                      LOGO DE L&apos;ENTREPRISE
+                      {t("invoicing.companyLogo", "LOGO DE L'ENTREPRISE")}
                     </label>
                     {profile.logo_url ? (
                       <div className="flex items-center gap-3 p-2 border border-slate-200 rounded-xl bg-slate-50">
@@ -308,7 +308,7 @@ export default function InvoicingProfileSettingsModal({
                     ) : (
                       <label className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-slate-200 rounded-xl hover:border-blue-400 bg-slate-50/50 cursor-pointer transition-colors text-xs font-bold text-slate-600">
                         <Upload size={14} className="text-slate-400" />
-                        <span>{isUploadingLogo ? "Téléchargement..." : "Choisir un logo"}</span>
+                        <span>{isUploadingLogo ? t("invoicing.uploading", "Téléchargement...") : t("invoicing.chooseLogo", "Choisir un logo")}</span>
                         <input
                           type="file"
                           accept="image/*"
@@ -323,7 +323,7 @@ export default function InvoicingProfileSettingsModal({
                   {/* Cachet / Signature */}
                   <div>
                     <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1.5">
-                      CACHET / SIGNATURE
+                      {t("invoicing.stampSignature", "CACHET / SIGNATURE")}
                     </label>
                     {profile.signature_url ? (
                       <div className="flex items-center gap-3 p-2 border border-slate-200 rounded-xl bg-slate-50">
@@ -343,7 +343,7 @@ export default function InvoicingProfileSettingsModal({
                     ) : (
                       <label className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-slate-200 rounded-xl hover:border-blue-400 bg-slate-50/50 cursor-pointer transition-colors text-xs font-bold text-slate-600">
                         <Upload size={14} className="text-slate-400" />
-                        <span>{isUploadingStamp ? "Téléchargement..." : "Choisir un cachet"}</span>
+                        <span>{isUploadingStamp ? t("invoicing.uploading", "Téléchargement...") : t("invoicing.chooseStamp", "Choisir un cachet")}</span>
                         <input
                           type="file"
                           accept="image/*"
@@ -364,11 +364,11 @@ export default function InvoicingProfileSettingsModal({
             <button
               type="button"
               onClick={() => toggleSection("fiscal")}
-              className="w-full px-4 py-3 bg-slate-50/70 hover:bg-slate-50 flex items-center justify-between text-left transition-colors cursor-pointer"
+              className="w-full px-4 py-3 bg-slate-50/70 hover:bg-slate-50 flex items-center justify-between text-start transition-colors cursor-pointer"
             >
               <div>
                 <span className="text-xs font-bold text-slate-800">
-                  DZ Identification fiscale
+                  {t("invoicing.fiscalIdSection", "DZ Identification fiscale")}
                 </span>
               </div>
               <ChevronDown
@@ -382,7 +382,7 @@ export default function InvoicingProfileSettingsModal({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
-                      NIF (NUMÉRO D&apos;IDENTIFICATION FISCALE)
+                      {t("invoicing.nif", "NIF (NUMÉRO D'IDENTIFICATION FISCALE)")}
                     </label>
                     <input
                       type="text"
@@ -394,7 +394,7 @@ export default function InvoicingProfileSettingsModal({
                   </div>
                   <div>
                     <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
-                      NIS (NUMÉRO D&apos;IDENTIFICATION STATISTIQUE)
+                      {t("invoicing.nis", "NIS (NUMÉRO D'IDENTIFICATION STATISTIQUE)")}
                     </label>
                     <input
                       type="text"
@@ -409,7 +409,7 @@ export default function InvoicingProfileSettingsModal({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
-                      RC (REGISTRE DU COMMERCE)
+                      {t("invoicing.rc", "RC (REGISTRE DU COMMERCE)")}
                     </label>
                     <input
                       type="text"
@@ -421,7 +421,7 @@ export default function InvoicingProfileSettingsModal({
                   </div>
                   <div>
                     <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
-                      ARTICLE D&apos;IMPOSITION (ART. IMP.)
+                      {t("invoicing.articleImposition", "ARTICLE D'IMPOSITION (ART. IMP.)")}
                     </label>
                     <input
                       type="text"
@@ -441,11 +441,11 @@ export default function InvoicingProfileSettingsModal({
             <button
               type="button"
               onClick={() => toggleSection("defaults")}
-              className="w-full px-4 py-3 bg-slate-50/70 hover:bg-slate-50 flex items-center justify-between text-left transition-colors cursor-pointer"
+              className="w-full px-4 py-3 bg-slate-50/70 hover:bg-slate-50 flex items-center justify-between text-start transition-colors cursor-pointer"
             >
               <div>
                 <span className="text-xs font-bold text-slate-800">
-                  Paramètres par défaut
+                  {t("invoicing.defaultSettingsSection", "Paramètres par défaut")}
                 </span>
               </div>
               <ChevronDown
@@ -459,7 +459,7 @@ export default function InvoicingProfileSettingsModal({
                 <div className="grid grid-cols-3 gap-3">
                   <div>
                     <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
-                      PRÉFIXE FACTURE
+                      {t("invoicing.invoicePrefix", "PRÉFIXE FACTURE")}
                     </label>
                     <input
                       type="text"
@@ -470,7 +470,7 @@ export default function InvoicingProfileSettingsModal({
                   </div>
                   <div>
                     <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
-                      PRÉFIXE DEVIS
+                      {t("invoicing.quotePrefix", "PRÉFIXE DEVIS")}
                     </label>
                     <input
                       type="text"
@@ -481,7 +481,7 @@ export default function InvoicingProfileSettingsModal({
                   </div>
                   <div>
                     <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
-                      PRÉFIXE PROFORMA
+                      {t("invoicing.proformaPrefix", "PRÉFIXE PROFORMA")}
                     </label>
                     <input
                       type="text"
@@ -495,7 +495,7 @@ export default function InvoicingProfileSettingsModal({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
-                      DÉLAI DE PAIEMENT PAR DÉFAUT (JOURS)
+                      {t("invoicing.defaultPaymentDelay", "DÉLAI DE PAIEMENT PAR DÉFAUT (JOURS)")}
                     </label>
                     <input
                       type="number"
@@ -506,7 +506,7 @@ export default function InvoicingProfileSettingsModal({
                   </div>
                   <div>
                     <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
-                      TAUX DE TVA PAR DÉFAUT
+                      {t("invoicing.defaultTvaRate", "TAUX DE TVA PAR DÉFAUT")}
                     </label>
                     <SearchableSelect
                       options={TVA_RATES}
@@ -518,7 +518,7 @@ export default function InvoicingProfileSettingsModal({
 
                 <div>
                   <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
-                    CONDITIONS DE PAIEMENT PAR DÉFAUT
+                    {t("invoicing.defaultTerms", "CONDITIONS DE PAIEMENT PAR DÉFAUT")}
                   </label>
                   <textarea
                     rows={2}
@@ -537,11 +537,11 @@ export default function InvoicingProfileSettingsModal({
             <button
               type="button"
               onClick={() => toggleSection("treasury")}
-              className="w-full px-4 py-3 bg-slate-50/70 hover:bg-slate-50 flex items-center justify-between text-left transition-colors cursor-pointer"
+              className="w-full px-4 py-3 bg-slate-50/70 hover:bg-slate-50 flex items-center justify-between text-start transition-colors cursor-pointer"
             >
               <div>
                 <span className="text-xs font-bold text-slate-800">
-                  Trésorerie — Solde Bancaire Initial
+                  {t("invoicing.treasurySection", "Trésorerie — Solde Bancaire Initial")}
                 </span>
               </div>
               <ChevronDown
@@ -554,7 +554,7 @@ export default function InvoicingProfileSettingsModal({
               <div className="p-4 space-y-3 border-t border-slate-200 bg-white">
                 <div>
                   <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
-                    SOLDE BANCAIRE INITIAL (DZD)
+                    {t("invoicing.initialBalance", "SOLDE BANCAIRE INITIAL (DZD)")}
                   </label>
                   <input
                     type="number"
@@ -565,7 +565,7 @@ export default function InvoicingProfileSettingsModal({
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold text-slate-900"
                   />
                   <span className="text-[10px] text-slate-400 mt-1 block">
-                    Utilisé pour calculer votre balance de trésorerie nette et les encaissements.
+                    {t("invoicing.initialBalanceDesc", "Utilisé pour calculer votre balance de trésorerie nette et les encaissements.")}
                   </span>
                 </div>
               </div>
@@ -577,11 +577,11 @@ export default function InvoicingProfileSettingsModal({
             <button
               type="button"
               onClick={() => toggleSection("bank")}
-              className="w-full px-4 py-3 bg-slate-50/70 hover:bg-slate-50 flex items-center justify-between text-left transition-colors cursor-pointer"
+              className="w-full px-4 py-3 bg-slate-50/70 hover:bg-slate-50 flex items-center justify-between text-start transition-colors cursor-pointer"
             >
               <div>
                 <span className="text-xs font-bold text-slate-800">
-                  Compte bancaire
+                  {t("invoicing.bankAccountSection", "Compte bancaire")}
                 </span>
               </div>
               <ChevronDown
@@ -595,7 +595,7 @@ export default function InvoicingProfileSettingsModal({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
-                      BANQUE
+                      {t("invoicing.bank", "BANQUE")}
                     </label>
                     <SearchableSelect
                       options={ALGERIAN_BANKS}
@@ -606,7 +606,7 @@ export default function InvoicingProfileSettingsModal({
                   </div>
                   <div>
                     <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
-                      TITULAIRE DU COMPTE
+                      {t("invoicing.accountHolder", "TITULAIRE DU COMPTE")}
                     </label>
                     <input
                       type="text"
@@ -621,7 +621,7 @@ export default function InvoicingProfileSettingsModal({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
-                      NUMÉRO DE COMPTE
+                      {t("invoicing.accountNumber", "NUMÉRO DE COMPTE")}
                     </label>
                     <input
                       type="text"
@@ -633,7 +633,7 @@ export default function InvoicingProfileSettingsModal({
                   </div>
                   <div>
                     <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
-                      RIB (RELEVÉ D&apos;IDENTITÉ BANCAIRE)
+                      {t("invoicing.rib", "RIB (RELEVÉ D'IDENTITÉ BANCAIRE)")}
                     </label>
                     <input
                       type="text"
@@ -648,7 +648,7 @@ export default function InvoicingProfileSettingsModal({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
-                      IBAN (SI DISPONIBLE)
+                      {t("invoicing.iban", "IBAN (SI DISPONIBLE)")}
                     </label>
                     <input
                       type="text"
@@ -660,7 +660,7 @@ export default function InvoicingProfileSettingsModal({
                   </div>
                   <div>
                     <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
-                      CODE SWIFT / BIC
+                      {t("invoicing.swiftBic", "CODE SWIFT / BIC")}
                     </label>
                     <input
                       type="text"
@@ -674,7 +674,7 @@ export default function InvoicingProfileSettingsModal({
 
                 <div>
                   <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
-                    ADRESSE DE L&apos;AGENCE BANCAIRE
+                    {t("invoicing.bankAgencyAddress", "ADRESSE DE L'AGENCE BANCAIRE")}
                   </label>
                   <input
                     type="text"
@@ -693,11 +693,11 @@ export default function InvoicingProfileSettingsModal({
             <button
               type="button"
               onClick={() => toggleSection("taxes")}
-              className="w-full px-4 py-3 bg-slate-50/70 hover:bg-slate-50 flex items-center justify-between text-left transition-colors cursor-pointer"
+              className="w-full px-4 py-3 bg-slate-50/70 hover:bg-slate-50 flex items-center justify-between text-start transition-colors cursor-pointer"
             >
               <div>
                 <span className="text-xs font-bold text-slate-800">
-                  Fiscalité & Déclarations (G50 / IBS / IRG)
+                  {t("invoicing.taxesSection", "Fiscalité & Déclarations (G50 / IBS / IRG)")}
                 </span>
               </div>
               <ChevronDown
@@ -709,11 +709,11 @@ export default function InvoicingProfileSettingsModal({
             {activeSection === "taxes" && (
               <div className="p-4 space-y-2 border-t border-slate-200 bg-white text-xs text-slate-600">
                 <p>
-                  Les factures générées dans ce module appliquent automatiquement le taux de TVA en vigueur (19% ou 9%), le calcul du droit de timbre fiscal algérien (1% plafonné à 2 500 DA), et les mentions obligatoires requises par la Direction Générale des Impôts (DGI).
+                  {t("invoicing.taxesNotice", "Les factures générées dans ce module appliquent automatiquement le taux de TVA en vigueur (19% ou 9%), le calcul du droit de timbre fiscal algérien (1% plafonné à 2 500 DA), et les mentions obligatoires requises par la Direction Générale des Impôts (DGI).")}
                 </p>
                 <div className="p-3 bg-blue-50/60 border border-blue-200 rounded-xl flex items-center gap-2 text-[11px] text-blue-800 font-semibold">
                   <ShieldCheck size={16} className="text-blue-600 shrink-0" />
-                  <span>Tous vos documents sont conformes aux normes de comptabilité algériennes (SCF).</span>
+                  <span>{t("invoicing.taxesCompliance", "Tous vos documents sont conformes aux normes de comptabilité algériennes (SCF).")}</span>
                 </div>
               </div>
             )}

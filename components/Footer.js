@@ -252,7 +252,7 @@ export default function Footer({ onOpenEventsHub, onOpenVisitorPasses, cutoutBg 
                     href="/request-quote"
                     className="hover:text-white transition-colors block text-start rtl:text-right text-left text-blue-400 font-bold"
                   >
-                    {t("footer.requestQuote", "Request a Quote / Demander un devis")}
+                    {t("footer.requestQuote", "Request a Quote")}
                   </Link>
                 </li>
                 <li>

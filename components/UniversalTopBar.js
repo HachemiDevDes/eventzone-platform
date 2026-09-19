@@ -71,13 +71,13 @@ export default function UniversalTopBar({
           href="/features"
           className="text-xs font-bold text-slate-600 hover:text-blue-600 transition-colors cursor-pointer"
         >
-          {t("nav.features", "Fonctionnalités")}
+          {t("nav.features", "Features")}
         </Link>
         <Link 
           href="/request-quote"
           className="text-xs font-bold text-slate-600 hover:text-blue-600 transition-colors cursor-pointer"
         >
-          {t("nav.requestQuote", "Demander un devis")}
+          {t("nav.requestQuote", "Request a Quote")}
         </Link>
         <button 
           onClick={handleForOrganizersClick}

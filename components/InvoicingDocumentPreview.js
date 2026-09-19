@@ -5,6 +5,7 @@ import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { formatCurrency, calculateFiscalStamp, formatInvoicingDate } from "../lib/invoicingConstants";
 import { numberToAlgerianWords } from "../lib/numberToWords";
+import { useLanguage } from "../lib/i18n";
 
 /**
  * InvoicingDocumentSheet
@@ -17,6 +18,7 @@ function InvoicingDocumentSheet({
   className = "",
   id,
 }) {
+  const { t, isRTL } = useLanguage();
   const {
     document_type = "facture",
     document_number = "EZ-26-0001",
@@ -69,10 +71,10 @@ function InvoicingDocumentSheet({
 
   // Format document title
   const docTitle = document_type === "devis"
-    ? "DEVIS"
+    ? t("invoicing.quote", "DEVIS").toUpperCase()
     : document_type === "proforma"
-    ? "FACTURE PROFORMA"
-    : "FACTURE";
+    ? t("invoicing.proforma", "FACTURE PROFORMA").toUpperCase()
+    : t("invoicing.invoice", "FACTURE").toUpperCase();
 
   // Calculate totals if needed
   const effectiveSubtotal = Number(subtotal_ht) || 0;
@@ -130,7 +132,7 @@ function InvoicingDocumentSheet({
         <div className="grid grid-cols-3 gap-4 bg-slate-50/50 border border-slate-200/90 rounded-2xl px-6 py-3.5 invoice-meta-block print-avoid-break">
           <div>
             <span className="block text-[9.5px] font-bold uppercase tracking-wider text-slate-400">
-              DATE D&apos;ÉMISSION
+              {t("invoicing.issueDateUpper", "DATE D'ÉMISSION")}
             </span>
             <span className="text-xs sm:text-sm font-black text-slate-900 font-mono mt-1 block">
               {formatInvoicingDate(issue_date)}
@@ -138,7 +140,7 @@ function InvoicingDocumentSheet({
           </div>
           <div>
             <span className="block text-[9.5px] font-bold uppercase tracking-wider text-slate-400">
-              ÉCHÉANCE
+              {t("invoicing.dueUpper", "ÉCHÉANCE")}
             </span>
             <span className="text-xs sm:text-sm font-black text-slate-900 font-mono mt-1 block">
               {formatInvoicingDate(due_date)}
@@ -146,7 +148,7 @@ function InvoicingDocumentSheet({
           </div>
           <div>
             <span className="block text-[9.5px] font-bold uppercase tracking-wider text-slate-400">
-              RÉFÉRENCE
+              {t("invoicing.reference", "RÉFÉRENCE")}
             </span>
             <span className="text-xs sm:text-sm font-black text-slate-900 font-mono mt-1 block truncate">
               {document_number || "—"}
@@ -159,7 +161,7 @@ function InvoicingDocumentSheet({
           {/* Émetteur */}
           <div className="space-y-1 text-xs">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
-              ÉMETTEUR
+              {t("invoicing.emitter", "ÉMETTEUR")}
             </span>
             <p className="font-black text-sm text-slate-900 leading-tight">
               {emitter_company_name || "SPASU Eventzone"}
@@ -181,7 +183,7 @@ function InvoicingDocumentSheet({
           {/* Destinataire */}
           <div className="space-y-1 text-xs">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
-              DESTINATAIRE
+              {t("invoicing.recipientClient", "DESTINATAIRE")}
             </span>
             {client_name ? (
               <>
@@ -217,10 +219,10 @@ function InvoicingDocumentSheet({
             <table className="w-full text-left text-xs border-collapse">
               <thead className="bg-slate-900 text-white uppercase text-[9px] font-black tracking-wider">
                 <tr className="print-avoid-break">
-                  <th scope="col" className="px-4 py-2.5 font-black">DÉSIGNATION</th>
-                  <th scope="col" className="px-3 py-2.5 text-center font-black w-16">QTÉ</th>
-                  <th scope="col" className="px-3 py-2.5 text-right font-black w-28">PRIX UNITAIRE HT</th>
-                  <th scope="col" className="px-4 py-2.5 text-right font-black w-28">MONTANT HT</th>
+                  <th scope="col" className="px-4 py-2.5 font-black text-start">{t("invoicing.description", "DÉSIGNATION")}</th>
+                  <th scope="col" className="px-3 py-2.5 text-center font-black w-16">{t("invoicing.quantity", "QTÉ")}</th>
+                  <th scope="col" className="px-3 py-2.5 text-end font-black w-28">{t("invoicing.unitPriceHt", "PRIX UNITAIRE HT")}</th>
+                  <th scope="col" className="px-4 py-2.5 text-end font-black w-28">{t("invoicing.totalHt", "MONTANT HT")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -252,7 +254,7 @@ function InvoicingDocumentSheet({
                 ) : (
                   <tr className="print-avoid-break">
                     <td colSpan={4} className="px-4 py-6 text-center text-slate-400 italic">
-                      Aucune ligne d&apos;article ajoutée
+                      {t("invoicing.noLineItems", "Aucune ligne d'article ajoutée")}
                     </td>
                   </tr>
                 )}
@@ -265,7 +267,7 @@ function InvoicingDocumentSheet({
         <div className="flex justify-end pt-2 invoice-totals-block print-avoid-break">
           <div className="w-full sm:w-72 space-y-1.5 text-xs">
             <div className="flex justify-between py-1 border-b border-slate-100 text-slate-600">
-              <span>Montant HT</span>
+              <span>{t("invoicing.subtotalHt", "Montant HT")}</span>
               <span className="font-mono font-bold text-slate-800">
                 {formatCurrency(effectiveSubtotal, currency)}
               </span>
@@ -273,7 +275,7 @@ function InvoicingDocumentSheet({
 
             {effectiveDiscount > 0 && (
               <div className="flex justify-between py-1 border-b border-slate-100 text-rose-600">
-                <span>Remise</span>
+                <span>{t("invoicing.discount", "Remise")}</span>
                 <span className="font-mono font-bold">
                   -{formatCurrency(effectiveDiscount, currency)}
                 </span>
@@ -281,7 +283,7 @@ function InvoicingDocumentSheet({
             )}
 
             <div className="flex justify-between py-1 border-b border-slate-100 text-slate-600">
-              <span>TVA ({tva_rate}%)</span>
+              <span>{t("invoicing.tva", "TVA")} ({tva_rate}%)</span>
               <span className="font-mono font-bold text-slate-800">
                 {formatCurrency(effectiveTva, currency)}
               </span>
@@ -289,7 +291,7 @@ function InvoicingDocumentSheet({
 
             {effectiveStamp > 0 && (
               <div className="flex justify-between py-1 border-b border-slate-100 text-slate-600">
-                <span>Droit de timbre</span>
+                <span>{t("invoicing.fiscalStamp", "Droit de timbre")}</span>
                 <span className="font-mono font-bold text-slate-800">
                   {formatCurrency(effectiveStamp, currency)}
                 </span>
@@ -297,7 +299,7 @@ function InvoicingDocumentSheet({
             )}
 
             <div className="flex justify-between py-2 border-t-2 border-slate-900 text-sm font-black text-slate-900 pt-2">
-              <span>Total TTC</span>
+              <span>{t("invoicing.thAmountTtc", "Total TTC")}</span>
               <span className="font-mono text-base text-blue-600">
                 {formatCurrency(effectiveTotalTtc, currency)}
               </span>
@@ -308,7 +310,7 @@ function InvoicingDocumentSheet({
         {/* 6. Legal Highlight Box: Arrêté à la somme de */}
         <div className="bg-blue-50/70 border border-blue-200/80 rounded-xl p-3 sm:p-4 text-xs invoice-words-block print-avoid-break">
           <span className="block text-[9px] font-extrabold uppercase tracking-wider text-blue-700">
-            ARRÊTÉ À LA SOMME DE
+            {t("invoicing.sumOfWords", "ARRÊTÉ À LA SOMME DE")}
           </span>
           <p className="font-bold text-slate-900 mt-0.5 italic">
             {effectiveWords}
@@ -319,13 +321,13 @@ function InvoicingDocumentSheet({
         {(bank.rib || bank.account_number || bank.bank_name) && (
           <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 text-[11px] space-y-1 invoice-bank-block print-avoid-break">
             <span className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-400">
-              COORDONNÉES BANCAIRES
+              {t("invoicing.bankCoordinates", "COORDONNÉES BANCAIRES")}
             </span>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-slate-800">
-              {bank.bank_name && <span>Banque: <strong className="font-sans text-slate-900">{bank.bank_name}</strong></span>}
-              {bank.rib && <span>RIB: <strong>{bank.rib}</strong></span>}
-              {bank.account_number && <span>Compte: <strong>{bank.account_number}</strong></span>}
-              {bank.account_holder && <span>Titulaire: <strong>{bank.account_holder}</strong></span>}
+              {bank.bank_name && <span>{t("invoicing.bank", "Banque")}: <strong className="font-sans text-slate-900">{bank.bank_name}</strong></span>}
+              {bank.rib && <span>{t("invoicing.rib", "RIB")}: <strong>{bank.rib}</strong></span>}
+              {bank.account_number && <span>{t("invoicing.accountNumber", "Compte")}: <strong>{bank.account_number}</strong></span>}
+              {bank.account_holder && <span>{t("invoicing.accountHolder", "Titulaire")}: <strong>{bank.account_holder}</strong></span>}
             </div>
           </div>
         )}
@@ -335,7 +337,7 @@ function InvoicingDocumentSheet({
           {notes ? (
             <div className="flex-1 text-[11px] text-slate-500">
               <span className="block text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1">
-                CONDITIONS & NOTES
+                {t("invoicing.conditionsNotes", "CONDITIONS & NOTES")}
               </span>
               <p className="whitespace-pre-line leading-relaxed">{notes}</p>
             </div>
@@ -346,13 +348,13 @@ function InvoicingDocumentSheet({
           {show_signature_stamp && (
             <div className="shrink-0 flex flex-col items-center ml-auto">
               <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5 text-center">
-                CACHET & SIGNATURE
+                {t("invoicing.stampAndSignature", "CACHET & SIGNATURE")}
               </span>
               <div className="w-52 h-36 sm:w-64 sm:h-44 print:w-64 print:h-44 border-2 border-dashed border-slate-300/90 rounded-2xl p-2.5 flex items-center justify-center bg-white relative overflow-hidden shadow-2xs">
                 {signature_stamp_url ? (
                   <img 
                     src={signature_stamp_url} 
-                    alt="Cachet & Signature" 
+                    alt={t("invoicing.stampAndSignature", "Cachet & Signature")} 
                     className="max-h-full max-w-full object-contain pointer-events-none select-none" 
                   />
                 ) : (
@@ -361,7 +363,7 @@ function InvoicingDocumentSheet({
                       Cachet & Signature
                     </span>
                     <span className="text-[9px] text-slate-300 block mt-1 italic">
-                      Zone réservée pour validation légale
+                      {t("invoicing.legalValidationZone", "Zone réservée pour validation légale")}
                     </span>
                   </div>
                 )}

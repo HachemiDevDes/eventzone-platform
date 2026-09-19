@@ -22,6 +22,7 @@ import {
 import { numberToAlgerianWords } from "../lib/numberToWords";
 import { uploadMedia } from "../lib/storage";
 import { fetchOrganizations } from "../lib/db";
+import { useLanguage } from "../lib/i18n";
 
 /**
  * InvoicingEditor
@@ -128,6 +129,30 @@ export default function InvoicingEditor({
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const { t, isRTL } = useLanguage();
+
+  const getDelayLabel = useCallback((del) => {
+    if (del.id === "reception") return t("invoicing.delayReception", "À réception");
+    if (del.id === "15_jours") return t("invoicing.delay15", "15 jours");
+    if (del.id === "30_jours") return t("invoicing.delay30", "30 jours");
+    if (del.id === "60_jours") return t("invoicing.delay60", "60 jours");
+    if (del.id === "custom") return t("invoicing.delayCustom", "Personnalisé");
+    return del.label;
+  }, [t]);
+
+  const docTypeOptions = useMemo(() => [
+    { value: "facture", label: t("invoicing.invoice", "Facture") },
+    { value: "devis", label: t("invoicing.quote", "Devis") },
+    { value: "proforma", label: t("invoicing.proforma", "Facture Proforma") },
+  ], [t]);
+
+  const docStatusOptions = useMemo(() => [
+    { value: "brouillon", label: t("invoicing.statusSingleDraft", "Brouillon") },
+    { value: "envoye", label: t("invoicing.statusSinglePending", "Envoyé") },
+    { value: "partiel", label: t("invoicing.statusSinglePartial", "Partiel") },
+    { value: "encaisse", label: t("invoicing.statusSinglePaid", "Encaissé") },
+    { value: "en_retard", label: t("invoicing.statusSingleOverdue", "En retard") },
+  ], [t]);
   const [autofilledSource, setAutofilledSource] = useState(null);
   const [selectedClientKey, setSelectedClientKey] = useState("");
   const [directOrganizations, setDirectOrganizations] = useState([]);
@@ -550,32 +575,32 @@ export default function InvoicingEditor({
 
 
   return (
-    <div className="space-y-6 animate-fade-in pb-12">
+    <div dir={isRTL ? "rtl" : "ltr"} className="space-y-6 animate-fade-in pb-12">
       {/* 1. Top Action Bar matching Image 2 */}
       <div className="flex items-center justify-between pb-2">
         <button
           onClick={onBack}
           className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
         >
-          <ArrowLeft size={14} />
-          <span>Retour</span>
+          <ArrowLeft size={14} className="rtl:rotate-180" />
+          <span>{t("common.back", "Retour")}</span>
         </button>
 
         <div className="flex items-center gap-2.5">
           {!canEdit && (
             <span className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 font-bold text-xs border border-slate-200/80 flex items-center gap-1.5 shadow-xs">
               <Eye size={13} className="text-slate-500" />
-              <span>Viewer Mode</span>
+              <span>{t("invoicing.viewerMode", "Mode Lecteur")}</span>
             </span>
           )}
 
           <button
             onClick={() => onCopyShareLink(doc)}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
-            title="Copier le lien public"
+            title={t("invoicing.copyLink", "Copier le lien public")}
           >
             <Share2 size={13} />
-            <span>Copier le lien</span>
+            <span>{t("invoicing.copyLink", "Copier le lien")}</span>
           </button>
 
           {canEdit && (
@@ -587,12 +612,12 @@ export default function InvoicingEditor({
               {saveSuccess ? (
                 <>
                   <CheckCircle2 size={14} />
-                  <span>Enregistré !</span>
+                  <span>{t("common.saved", "Enregistré !")}</span>
                 </>
               ) : (
                 <>
                   <Save size={14} />
-                  <span>{isSaving ? "Enregistrement..." : "Enregistrer"}</span>
+                  <span>{isSaving ? t("common.saving", "Enregistrement...") : t("common.save", "Enregistrer")}</span>
                 </>
               )}
             </button>
@@ -607,7 +632,7 @@ export default function InvoicingEditor({
           {!canEdit && (
             <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3 text-amber-800 text-xs font-medium">
               <AlertCircle size={16} className="text-amber-600 shrink-0" />
-              <span>Vous êtes en mode consultation. La modification, l'ajout et l'enregistrement sont désactivés pour votre rôle.</span>
+              <span>{t("invoicing.consultationModeNotice", "Vous êtes en mode consultation. La modification, l'ajout et l'enregistrement sont désactivés pour votre rôle.")}</span>
             </div>
           )}
 
@@ -615,17 +640,17 @@ export default function InvoicingEditor({
           {/* Card 1: Configuration du document */}
           <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-xs space-y-4">
             <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
-              Configuration du document
+              {t("invoicing.docSetup", "Configuration du document")}
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {/* Type de document */}
               <div>
                 <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
-                  TYPE DE DOCUMENT
+                  {t("invoicing.docType", "TYPE DE DOCUMENT")}
                 </label>
                 <SearchableSelect
-                  options={DOCUMENT_TYPES}
+                  options={docTypeOptions}
                   value={doc.document_type}
                   onChange={(val) => handleFieldChange("document_type", val)}
                   isClearable={false}
@@ -636,7 +661,7 @@ export default function InvoicingEditor({
               {/* Numéro */}
               <div>
                 <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
-                  NUMÉRO
+                  {t("invoicing.docNumber", "NUMÉRO")}
                 </label>
                 <input
                   type="text"
@@ -650,10 +675,10 @@ export default function InvoicingEditor({
               {/* Statut */}
               <div>
                 <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
-                  STATUT
+                  {t("invoicing.thStatus", "STATUT")}
                 </label>
                 <SearchableSelect
-                  options={DOCUMENT_STATUSES}
+                  options={docStatusOptions}
                   value={doc.status}
                   onChange={(val) => handleFieldChange("status", val)}
                   isClearable={false}
@@ -666,7 +691,7 @@ export default function InvoicingEditor({
               {/* Date d'émission */}
               <div>
                 <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
-                  DATE D&apos;ÉMISSION
+                  {t("invoicing.issueDateUpper", "DATE D'ÉMISSION")}
                 </label>
                 <input
                   type="date"
@@ -679,7 +704,7 @@ export default function InvoicingEditor({
               {/* Devise */}
               <div>
                 <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
-                  DEVISE
+                  {t("invoicing.currency", "DEVISE")}
                 </label>
                 <SearchableSelect
                   options={CURRENCIES}
@@ -694,11 +719,11 @@ export default function InvoicingEditor({
               {canEdit && (
                 <div>
                   <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
-                    LOGO
+                    {t("invoicing.companyLogo", "LOGO")}
                   </label>
                   <label className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs font-bold text-slate-700 cursor-pointer transition-colors">
                     <Upload size={13} />
-                    <span>{isUploadingLogo ? "Upload..." : "Changer"}</span>
+                    <span>{isUploadingLogo ? t("invoicing.uploading", "Upload...") : t("invoicing.changeLogo", "Changer")}</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -715,7 +740,7 @@ export default function InvoicingEditor({
           {/* Card 2: Délai de paiement */}
           <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-xs space-y-3">
             <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
-              Délai de paiement
+              {t("invoicing.paymentDelay", "Délai de paiement")}
             </h3>
 
             <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
@@ -732,7 +757,7 @@ export default function InvoicingEditor({
                         : "bg-slate-100 text-slate-600 hover:bg-slate-200/70"
                     }`}
                   >
-                    {del.label}
+                    {getDelayLabel(del)}
                   </button>
                 );
               })}
@@ -742,7 +767,7 @@ export default function InvoicingEditor({
             {doc.payment_terms_type === "custom" && (
               <div className="pt-2 max-w-xs">
                 <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
-                  DATE D&apos;ÉCHÉANCE PERSONNALISÉE
+                  {t("invoicing.customDueDate", "DATE D'ÉCHÉANCE PERSONNALISÉE")}
                 </label>
                 <input
                   type="date"
@@ -757,7 +782,7 @@ export default function InvoicingEditor({
           {/* Card 3: Émetteur (Company info) */}
           <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-xs space-y-4">
             <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
-              Émetteur
+              {t("invoicing.emitter", "Émetteur")}
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -859,10 +884,10 @@ export default function InvoicingEditor({
           <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-xs space-y-4">
             <div>
               <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
-                Client Destinataire
+                {t("invoicing.recipientClient", "Client Destinataire")}
               </h3>
               <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                Sélectionnez une organisation, partenaire ou prospect pour importer ses coordonnées et informations fiscales, ou saisissez-les manuellement.
+                {t("invoicing.recipientClientDesc", "Sélectionnez une organisation, partenaire ou prospect pour importer ses coordonnées et informations fiscales, ou saisissez-les manuellement.")}
               </p>
             </div>
 
@@ -870,7 +895,7 @@ export default function InvoicingEditor({
             <div className="p-3.5 bg-slate-50/80 border border-slate-200/90 rounded-2xl space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-[10px] font-black uppercase tracking-wider text-slate-700">
-                  CHOISIR UNE ORGANISATION / PARTENAIRE (IMPORT FISCAL AUTOMATIQUE)
+                  {t("invoicing.chooseOrgPlaceholder", "CHOISIR UNE ORGANISATION / PARTENAIRE (IMPORT FISCAL AUTOMATIQUE)")}
                 </label>
                 {selectedClientKey && (
                   <button
@@ -882,7 +907,7 @@ export default function InvoicingEditor({
                     className="text-[10px] font-bold text-slate-400 hover:text-rose-600 flex items-center gap-1 cursor-pointer transition-colors"
                   >
                     <X size={11} />
-                    <span>Réinitialiser</span>
+                    <span>{t("invoicing.reset", "Réinitialiser")}</span>
                   </button>
                 )}
               </div>
@@ -892,10 +917,10 @@ export default function InvoicingEditor({
                 onChange={handleSelectClient}
                 placeholder={
                   clientOptions.length > 0 
-                    ? "Rechercher et choisir une organisation, sponsor, exposant ou prospect..." 
-                    : "Aucune organisation enregistrée — saisissez directement les coordonnées ci-dessous"
+                    ? t("invoicing.searchOrgSelect", "Rechercher et choisir une organisation, sponsor, exposant ou prospect...") 
+                    : t("invoicing.noOrgSelect", "Aucune organisation enregistrée — saisissez directement les coordonnées ci-dessous")
                 }
-                searchPlaceholder="Taper le nom d'une organisation..."
+                searchPlaceholder={t("invoicing.typeOrgName", "Taper le nom d'une organisation...")}
                 className="w-full"
               />
             </div>
@@ -914,7 +939,7 @@ export default function InvoicingEditor({
                   onClick={() => setAutofilledSource(null)}
                   className="text-emerald-700 hover:text-emerald-950 text-[11px] font-bold underline ml-2 shrink-0 cursor-pointer"
                 >
-                  Fermer
+                  {t("invoicing.close", "Fermer")}
                 </button>
               </div>
             )}
@@ -922,7 +947,7 @@ export default function InvoicingEditor({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
-                  RAISON SOCIALE / NOM *
+                  {t("invoicing.companyName", "RAISON SOCIALE / NOM")} *
                 </label>
                 <input
                   type="text"
@@ -1045,7 +1070,7 @@ export default function InvoicingEditor({
           {/* Card 5: Articles / Prestations (Table matching Image 3) */}
           <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-xs space-y-4">
             <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
-              Articles / Prestations
+              {t("invoicing.itemsServices", "Articles / Prestations")}
             </h3>
 
             <div className="space-y-3">
@@ -1061,7 +1086,7 @@ export default function InvoicingEditor({
                   {/* Description */}
                   <div className="flex-1">
                     <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-400 mb-1 sm:hidden">
-                      DESCRIPTION
+                      {t("invoicing.description", "DESCRIPTION")}
                     </label>
                     <textarea
                       rows={1}
@@ -1075,7 +1100,7 @@ export default function InvoicingEditor({
                   {/* Quantité */}
                   <div className="w-full sm:w-20">
                     <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-400 mb-1 sm:hidden">
-                      QTÉ
+                      {t("invoicing.quantity", "QTÉ")}
                     </label>
                     <input
                       type="number"
@@ -1089,7 +1114,7 @@ export default function InvoicingEditor({
                   {/* Prix Unitaire HT */}
                   <div className="w-full sm:w-28">
                     <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-400 mb-1 sm:hidden">
-                      PRIX UNITAIRE HT
+                      {t("invoicing.unitPriceHt", "PRIX UNITAIRE HT")}
                     </label>
                     <input
                       type="number"
@@ -1125,21 +1150,21 @@ export default function InvoicingEditor({
               className="px-4 py-2 rounded-xl border border-dashed border-slate-300 hover:border-blue-500 hover:bg-blue-50/50 text-xs font-bold text-blue-600 flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <Plus size={14} />
-              <span>Ajouter une ligne</span>
+              <span>{t("invoicing.addLineItem", "Ajouter une ligne")}</span>
             </button>
           </div>
 
           {/* Card 6: Taxes et réductions */}
           <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-xs space-y-4">
             <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
-              Taxes et réductions
+              {t("invoicing.taxesDiscounts", "Taxes et réductions")}
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Taux TVA */}
               <div>
                 <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
-                  TAUX TVA
+                  {t("invoicing.tvaRate", "TAUX TVA")}
                 </label>
                 <SearchableSelect
                   options={TVA_RATES}
@@ -1183,7 +1208,7 @@ export default function InvoicingEditor({
                   onChange={(e) => handleFieldChange("has_fiscal_stamp", e.target.checked)}
                   className="w-4 h-4 rounded-sm text-blue-600 focus:ring-blue-500 border-slate-300"
                 />
-                <span>Droit de timbre (1% plafonné à 2 500 DA pour paiements en espèces)</span>
+                <span>{t("invoicing.fiscalStampCheckbox", "Droit de timbre (1% plafonné à 2 500 DA pour paiements en espèces)")}</span>
               </label>
 
               <label className="flex items-center gap-2.5 text-xs font-bold text-slate-800 cursor-pointer select-none">
@@ -1193,7 +1218,7 @@ export default function InvoicingEditor({
                   onChange={(e) => handleFieldChange("show_signature_stamp", e.target.checked)}
                   className="w-4 h-4 rounded-sm text-blue-600 focus:ring-blue-500 border-slate-300"
                 />
-                <span>Afficher le cachet / signature</span>
+                <span>{t("invoicing.showStampCheckbox", "Afficher le cachet / signature")}</span>
               </label>
             </div>
           </div>
@@ -1201,7 +1226,7 @@ export default function InvoicingEditor({
           {/* Card 7: Notes / Conditions de paiement */}
           <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-xs space-y-3">
             <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
-              Notes / Conditions de paiement
+              {t("invoicing.notesPaymentTerms", "Notes / Conditions de paiement")}
             </h3>
             <textarea
               rows={3}
@@ -1223,12 +1248,12 @@ export default function InvoicingEditor({
                 {saveSuccess ? (
                   <>
                     <CheckCircle2 size={16} />
-                    <span>Document enregistré !</span>
+                    <span>{t("invoicing.documentSaved", "Document enregistré !")}</span>
                   </>
                 ) : (
                   <>
                     <Save size={16} />
-                    <span>{isSaving ? "Enregistrement en cours..." : "Enregistrer le document"}</span>
+                    <span>{isSaving ? t("invoicing.savingDocument", "Enregistrement en cours...") : t("invoicing.saveDocument", "Enregistrer le document")}</span>
                   </>
                 )}
               </button>
@@ -1241,7 +1266,7 @@ export default function InvoicingEditor({
         <div className="lg:col-span-6 xl:col-span-6 lg:sticky lg:top-4 self-start space-y-3 z-20">
           <div className="flex items-center justify-between px-1">
             <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">
-              APERÇU DU DOCUMENT (FORMAT A4)
+              {t("invoicing.previewA4", "APERÇU DU DOCUMENT (FORMAT A4)")}
             </span>
 
             <div className="flex items-center gap-2">
@@ -1263,10 +1288,10 @@ export default function InvoicingEditor({
                   type="button"
                   onClick={handlePrintDocument}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition-colors cursor-pointer shadow-xs"
-                  title="Imprimer"
+                  title={t("invoicing.print", "Imprimer")}
                 >
                   <Printer size={13} />
-                  <span>Imprimer</span>
+                  <span>{t("invoicing.print", "Imprimer")}</span>
                 </button>
               )}
 
@@ -1286,7 +1311,7 @@ export default function InvoicingEditor({
                   className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-60"
                 >
                   <Download size={13} />
-                  <span>{isDownloading ? "Téléchargement..." : "Télécharger PDF"}</span>
+                  <span>{isDownloading ? t("invoicing.uploading", "Téléchargement...") : t("invoicing.downloadPdf", "Télécharger PDF")}</span>
                 </button>
               )}
             </div>
