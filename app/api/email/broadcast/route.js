@@ -15,7 +15,8 @@ export async function POST(request) {
       eventId,
       recipients = [],
       subject,
-      body: rawBody,
+      body: rawBodyProp,
+      message,
       preheader = "",
       recipientGroup = "all",
       recipientFilter = null,
@@ -27,8 +28,14 @@ export async function POST(request) {
       eventLogo = "",
       eventDate = "",
       eventLocation = "",
-      headerTag = "Official Event Announcement"
+      headerTag = "Official Event Announcement",
+      link,
+      portalUrl,
+      buttonText
     } = payload;
+
+    const rawBody = (rawBodyProp || message || "").trim();
+    const cleanSubject = (subject || "").trim();
 
     if (!eventId || !isValidUuid(eventId)) {
       return NextResponse.json({ error: "Valid eventId is required." }, { status: 400 });
@@ -46,8 +53,20 @@ export async function POST(request) {
     if (!Array.isArray(recipients) || recipients.length === 0) {
       return NextResponse.json({ error: "Recipients array must not be empty." }, { status: 400 });
     }
-    if (!subject || !rawBody) {
+    if (!cleanSubject || !rawBody) {
       return NextResponse.json({ error: "Missing subject or message body." }, { status: 400 });
+    }
+
+    // Auto-configure portal access CTA button if direct link provided
+    const directPortalLink = (link || portalUrl || "").trim();
+    let effectiveButtonConfig = { ...(buttonConfig || {}) };
+    if (directPortalLink && !effectiveButtonConfig.customButtonUrl && !effectiveButtonConfig.formUrl && !effectiveButtonConfig.ticketUrl) {
+      effectiveButtonConfig = {
+        ...effectiveButtonConfig,
+        includeCustomButton: true,
+        customButtonText: buttonText || effectiveButtonConfig.customButtonText || "Access Attendee Portal",
+        customButtonUrl: directPortalLink,
+      };
     }
 
     // Normalize recipient list
@@ -119,24 +138,17 @@ export async function POST(request) {
         .replace(/\{\{organizerName\}\}/gi, organizerName);
     };
 
-    // 1. Create parent communication entry in Supabase
+    // 1. Create parent communication entry in Supabase (only existing schema columns)
     let commRecord = null;
     try {
       const { data: createdComm, error: commError } = await supabase
         .from("communications")
         .insert({
           event_id: validEventId,
-          subject: formatEventLevelVars(subject.trim()),
-          body: formatEventLevelVars(rawBody.trim()),
+          subject: formatEventLevelVars(cleanSubject),
+          body: formatEventLevelVars(rawBody),
           recipient_count: normalizedRecipients.length,
-          recipient_group: recipientGroup,
-          recipient_filter: recipientFilter ? JSON.stringify(recipientFilter) : null,
-          template_id: templateId,
-          include_qr: Boolean(includeQr),
-          button_config: buttonConfig ? JSON.stringify(buttonConfig) : null,
           status: "Sent",
-          opens_count: 0,
-          unique_opens_count: 0,
           sent_at: new Date().toISOString(),
         })
         .select()
@@ -223,10 +235,10 @@ export async function POST(request) {
           };
 
           const trackedButtonConfig = {
-            ...buttonConfig,
-            formUrl: buttonConfig?.formUrl ? trackify(buttonConfig.formUrl) : undefined,
-            ticketUrl: buttonConfig?.ticketUrl ? trackify(buttonConfig.ticketUrl) : undefined,
-            customButtonUrl: buttonConfig?.customButtonUrl ? trackify(buttonConfig.customButtonUrl) : undefined,
+            ...effectiveButtonConfig,
+            formUrl: effectiveButtonConfig?.formUrl ? trackify(effectiveButtonConfig.formUrl) : undefined,
+            ticketUrl: effectiveButtonConfig?.ticketUrl ? trackify(effectiveButtonConfig.ticketUrl) : undefined,
+            customButtonUrl: effectiveButtonConfig?.customButtonUrl ? trackify(effectiveButtonConfig.customButtonUrl) : undefined,
           };
 
           // Dynamic variable interpolation
@@ -247,8 +259,9 @@ export async function POST(request) {
               .replace(/\{\{venue\}\}/gi, eventLocation || "")
               .replace(/\{\{date\}\}/gi, eventDate || "")
               .replace(/\{\{organizerName\}\}/gi, organizerName)
-              .replace(/\{\{formLink\}\}/gi, buttonConfig?.formUrl || "")
-              .replace(/\{\{ticketLink\}\}/gi, buttonConfig?.ticketUrl || "");
+              .replace(/\{\{formLink\}\}/gi, effectiveButtonConfig?.formUrl || "")
+              .replace(/\{\{ticketLink\}\}/gi, effectiveButtonConfig?.ticketUrl || "")
+              .replace(/\{\{portalLink\}\}/gi, effectiveButtonConfig?.customButtonUrl || directPortalLink || "");
           };
 
           const personalizedSubject = replaceVars(subject);
@@ -341,10 +354,11 @@ export async function POST(request) {
       }
     }
 
+    const isSuccess = results.sent > 0 || (results.failed === 0 && results.total > 0);
     return NextResponse.json({
-      success: true,
+      success: isSuccess,
       ...results,
-    });
+    }, { status: isSuccess ? 200 : 500 });
   } catch (error) {
     console.error("Broadcast email API error:", error);
     return NextResponse.json(

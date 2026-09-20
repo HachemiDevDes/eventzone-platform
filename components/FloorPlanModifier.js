@@ -3150,7 +3150,12 @@ export default function FloorPlanModifier({
 
   const handleShareClick = () => {
     if (typeof window !== "undefined") {
-      const shareUrl = `${window.location.origin}/?view=floor-plan&planId=${floorPlanId}&preview=true`;
+      const pId = floorPlanId || "";
+      const eId = eventId || "";
+      const params = new URLSearchParams({ view: "floor-plan", preview: "true" });
+      if (pId) params.set("planId", pId);
+      if (eId) params.set("eventId", eId);
+      const shareUrl = `${window.location.origin}/?${params.toString()}`;
       navigator.clipboard.writeText(shareUrl).then(() => {
         setIsShareTooltipVisible(true);
         setTimeout(() => {

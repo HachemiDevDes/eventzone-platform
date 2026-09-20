@@ -88,6 +88,7 @@ export default function OrganizerAttendeePortalSettings({
   );
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [broadcastDone, setBroadcastDone] = useState(false);
+  const [broadcastError, setBroadcastError] = useState("");
 
   // Computed Portal URL
   const portalUrl = typeof window !== "undefined"
@@ -185,6 +186,7 @@ export default function OrganizerAttendeePortalSettings({
     if (!canEdit) return;
     setIsBroadcasting(true);
     setBroadcastDone(false);
+    setBroadcastError("");
 
     try {
       if (onSendBroadcastEmail) {
@@ -196,9 +198,10 @@ export default function OrganizerAttendeePortalSettings({
         });
       }
       setBroadcastDone(true);
-      setTimeout(() => setBroadcastDone(false), 4000);
+      setTimeout(() => setBroadcastDone(false), 5000);
     } catch (err) {
       console.error("Broadcast failed:", err);
+      setBroadcastError(err?.message || "Failed to dispatch broadcast email.");
     } finally {
       setIsBroadcasting(false);
     }
@@ -248,9 +251,7 @@ export default function OrganizerAttendeePortalSettings({
             className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-full text-xs sm:text-sm transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
             title={t("portalSettings.openPreviewTooltip", "Open Attendee Preview")}
           >
-            <Eye size={14} />
             <span>{t("portalSettings.previewAsAttendee", "Preview as Attendee")}</span>
-            <ArrowUpRight size={13} className="text-slate-400" />
           </button>
 
           {canEdit && (
@@ -748,10 +749,7 @@ export default function OrganizerAttendeePortalSettings({
           {/* Card 1: Sharable Portal Link */}
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4 flex flex-col justify-between">
             <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Share2 size={18} className="text-blue-600" />
-                <h3 className="text-base font-black text-slate-900">{t("portalSettings.directLinkTitle", "Direct Attendee Portal Link")}</h3>
-              </div>
+              <h3 className="text-base font-black text-slate-900">{t("portalSettings.directLinkTitle", "Direct Attendee Portal Link")}</h3>
               <p className="text-xs text-slate-500 font-medium leading-relaxed">
                 {t("portalSettings.directLinkDesc", "Distribute this unique URL in your confirmation emails, website links, or SMS blasts. Attendees will sign in with their ticket email.")}
               </p>
@@ -825,10 +823,7 @@ export default function OrganizerAttendeePortalSettings({
       {activeTab === "broadcast" && (
         <div className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200 shadow-xs space-y-5 animate-fade-in max-w-3xl">
           <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <Mail size={18} className="text-blue-600" />
-              <h3 className="text-base font-black text-slate-900">{t("portalSettings.broadcastTitle", "Broadcast Portal Invitation to All Attendees")}</h3>
-            </div>
+            <h3 className="text-base font-black text-slate-900">{t("portalSettings.broadcastTitle", "Broadcast Portal Invitation to All Attendees")}</h3>
             <p className="text-xs text-slate-500 font-medium">
               {t("portalSettings.broadcastDesc", "Dispatch a personalized email notification containing the portal access link to all {count} confirmed delegates.", { count: attendees.length })}
             </p>
@@ -875,7 +870,7 @@ export default function OrganizerAttendeePortalSettings({
             </div>
 
             {canEdit ? (
-              <div className="pt-2">
+              <div className="pt-2 space-y-3">
                 <button
                   type="submit"
                   disabled={isBroadcasting || attendees.length === 0}
@@ -889,12 +884,22 @@ export default function OrganizerAttendeePortalSettings({
                       <span>{t("portalSettings.broadcastSuccess", "Broadcast Sent Successfully!")}</span>
                     </>
                   ) : (
-                    <>
-                      <Send size={15} />
-                      <span>{t("portalSettings.sendBroadcastBtn", "Send Portal Access Email to {count} Attendees", { count: attendees.length })}</span>
-                    </>
+                    <span>{t("portalSettings.sendBroadcastBtn", "Send Portal Access Email to {count} Attendees", { count: attendees.length })}</span>
                   )}
                 </button>
+
+                {broadcastError && (
+                  <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-2xl flex items-center gap-2 animate-fade-in">
+                    <AlertCircle size={16} className="text-rose-600 shrink-0" />
+                    <span>{broadcastError}</span>
+                  </div>
+                )}
+
+                {attendees.length === 0 && (
+                  <p className="text-[11px] text-slate-400 text-center font-medium">
+                    {t("portalSettings.noAttendeesNotice", "No confirmed attendees registered for this event yet.")}
+                  </p>
+                )}
               </div>
             ) : (
               <div className="p-3 bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold rounded-xl text-center">

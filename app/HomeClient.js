@@ -84,7 +84,7 @@ import {
   fetchInfluencers, upsertInfluencer, deleteInfluencer, archiveInfluencer, recordInfluencerClick,
   fetchTickets, upsertTicket, deleteTicket, archiveTicket,
   fetchTeam, upsertTeamMember, deleteTeamMember, archiveTeamMember,
-  fetchFloorPlans, upsertFloorPlan, deleteFloorPlan, archiveFloorPlan, restoreFloorPlan, permanentDeleteFloorPlan,
+  fetchFloorPlans, fetchSingleFloorPlan, upsertFloorPlan, deleteFloorPlan, archiveFloorPlan, restoreFloorPlan, permanentDeleteFloorPlan,
   fetchForms, upsertForm, deleteForm, archiveForm,
   fetchFormSubmissions, submitFormResponse, deleteFormSubmission,
   fetchRSVPs, fetchRSVPSettings, upsertRSVPSettings, submitGuestRSVP, updateRSVPStatus, deleteRSVP, archiveRSVP,
@@ -281,16 +281,26 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
 
   // Visitor Registrations
-  const [visitorRegistrations, setVisitorRegistrations] = useState([]);
+  const [visitorRegistrations, setVisitorRegistrations] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = safeLocalStorageGet("eventzone_visitor_registrations", []);
+        if (Array.isArray(stored) && stored.length > 0) return stored;
+      } catch (e) {}
+    }
+    return [];
+  });
 
   // Main UI routing view: initialized from initialView (passed from server URL or fallback to "home")
   const [currentView, setCurrentView] = useState(() => {
-    if (initialView && initialView !== "home") {
-      return initialView;
+    const normInit = (initialView === "floor_plan" || initialView === "floor-plan") ? "floor-plan" : initialView;
+    if (normInit && normInit !== "home") {
+      return normInit;
     }
     if (typeof window !== "undefined") {
       const searchParams = new URLSearchParams(window.location.search);
-      const viewParam = searchParams.get("view");
+      const rawViewParam = searchParams.get("view");
+      const viewParam = (rawViewParam === "floor_plan" || rawViewParam === "floor-plan") ? "floor-plan" : rawViewParam;
       const rsvpParam = searchParams.get("rsvp");
 
       if (rsvpParam === "true" || viewParam === "public-rsvp" || (viewParam === "rsvp" && searchParams.get("public") === "true")) {
@@ -314,7 +324,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
         return "event-landing";
       }
     }
-    return initialView || "home";
+    return normInit || "home";
   });
 
   // Track previous views and history navigation flags for pristine back navigation
@@ -383,7 +393,10 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
   const [initialPreviewMode, setInitialPreviewMode] = useState(() => {
     if (typeof window !== "undefined") {
       const searchParams = new URLSearchParams(window.location.search);
-      return searchParams.get("preview") === "true";
+      const rawV = searchParams.get("view");
+      const isFloorPlan = rawV === "floor-plan" || rawV === "floor_plan";
+      const hasPreview = searchParams.get("preview") === "true";
+      return hasPreview || (isFloorPlan && searchParams.has("preview"));
     }
     return false;
   });
@@ -1206,7 +1219,16 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
           setUserEvents(uEvents);
           safeLocalStorageSet("eventzone_cache_user_events", uEvents);
         }
-        if (vRegs) setVisitorRegistrations(vRegs);
+        if (vRegs && vRegs.length > 0) {
+          setVisitorRegistrations(vRegs);
+        } else {
+          const localRegs = safeLocalStorageGet("eventzone_visitor_registrations", []);
+          if (Array.isArray(localRegs) && localRegs.length > 0) {
+            setVisitorRegistrations(localRegs);
+          } else if (vRegs) {
+            setVisitorRegistrations([]);
+          }
+        }
 
         // Auto-select organizer's latest event if opening dashboard on demo default
         // ONLY on initial load — never on reconnection (which would race with offline queue sync)
@@ -1857,7 +1879,8 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
     const syncStateFromUrl = () => {
       isPopStateNavigatingRef.current = true;
       const searchParams = new URLSearchParams(window.location.search);
-      const viewParam = searchParams.get("view");
+      const rawViewParam = searchParams.get("view");
+      const viewParam = (rawViewParam === "floor_plan" || rawViewParam === "floor-plan") ? "floor-plan" : rawViewParam;
       const eventIdParam = searchParams.get("eventId") || searchParams.get("event");
       const planIdParam = searchParams.get("planId");
       const previewParam = searchParams.get("preview");
@@ -1878,9 +1901,9 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
           setCurrentView("floor-plan");
           if (planIdParam) {
             setActiveFloorPlanId(planIdParam);
-            if (previewParam === "true") {
-              setInitialPreviewMode(true);
-            }
+          }
+          if (previewParam === "true" || searchParams.has("preview")) {
+            setInitialPreviewMode(true);
           }
         } else {
           const validViews = [
@@ -1907,6 +1930,31 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
     window.addEventListener("popstate", syncStateFromUrl);
     return () => window.removeEventListener("popstate", syncStateFromUrl);
   }, []);
+
+  // Auto-fetch floor plan directly if planId is provided in URL/state but not yet in floorPlans
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sp = new URLSearchParams(window.location.search);
+    const pId = sp.get("planId") || activeFloorPlanId;
+    if (!pId) return;
+
+    const exists = floorPlans.some(p => p.id === pId);
+    if (!exists) {
+      fetchSingleFloorPlan(pId).then(plan => {
+        if (plan) {
+          setFloorPlans(prev => {
+            const hasIt = prev.some(p => p.id === plan.id);
+            return hasIt ? prev : [...prev, plan];
+          });
+          if (plan.event_id && plan.event_id !== activeEventId) {
+            setActiveEventStateId(plan.event_id);
+          }
+        }
+      }).catch(err => {
+        console.warn("fetchSingleFloorPlan error:", err);
+      });
+    }
+  }, [activeFloorPlanId]);
 
   // Strict URL & security cleanup for admin route: strips ?view=admin if non-super-admin tries to linger
   useEffect(() => {
@@ -4395,6 +4443,144 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
   }
 
   // ==========================================================================
+  // 3.5. PUBLIC STANDALONE FLOOR PLAN PREVIEW (ATTENDEE / PUBLIC ACCESS)
+  // Accessible to anyone with a preview link WITHOUT requiring an account!
+  // ==========================================================================
+  const isFloorPlanView = currentView === "floor-plan" || currentView === "floor_plan";
+  const isPublicPreviewRequested = initialPreviewMode || (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("preview"));
+  const isNonOrganizerUser = !effectivePermissions?.isOwner && !effectivePermissions?.isAdmin && !effectivePermissions?.member;
+  const isStandalonePublicFloorPlan = isFloorPlanView && (isPublicPreviewRequested || isNonOrganizerUser || !currentUser);
+
+  if (isStandalonePublicFloorPlan) {
+    const previewPlan = (activeFloorPlanId && floorPlans.find(p => p.id === activeFloorPlanId)) || floorPlans[0] || null;
+
+    if (isLoading && !previewPlan) {
+      return (
+        <div className="fixed inset-0 z-50 bg-slate-50 flex flex-col">
+          <FloorPlanSkeleton />
+        </div>
+      );
+    }
+
+    if (!previewPlan) {
+      return (
+        <div className="fixed inset-0 z-50 bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-650 flex items-center justify-center mb-4 shadow-xs">
+            <Map size={32} />
+          </div>
+          <h2 className="text-lg font-bold text-slate-900 mb-1">{t("floor.noPlanAvailable", "Floor Plan Not Available")}</h2>
+          <p className="text-xs text-slate-500 max-w-sm mb-6 leading-relaxed">
+            {t("floor.noPlanAvailableDesc", "The requested floor plan could not be found or has not been published yet.")}
+          </p>
+          <button
+            onClick={() => {
+              if (eventDetails?.slug) {
+                window.location.href = `/${eventDetails.slug}`;
+              } else if (activeEventId) {
+                setCurrentView("event-landing");
+              } else {
+                setCurrentView("home");
+              }
+            }}
+            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+          >
+            {eventDetails?.title ? `${t("common.backTo", "Back to")} ${eventDetails.title}` : t("common.goToHome", "Go to Home")}
+          </button>
+        </div>
+      );
+    }
+
+    const publicExhibitors = (exhibitors || []).map(ex => {
+      const org = (organizations || []).find(o => String(o.id) === String(ex.org_id || ex.orgId));
+      const contactEmail = ex.contactEmail || ex.email || org?.email || '';
+      const contactName = ex.contact || ex.contactPerson || org?.contact || '';
+      const matchingAtt = (attendees || []).find(a => 
+        !a.isArchived && a.status !== 'archived' && (
+          (contactEmail && a.email && a.email.trim().toLowerCase() === contactEmail.trim().toLowerCase()) ||
+          (contactName && a.name && a.name.trim().toLowerCase() === contactName.trim().toLowerCase())
+        )
+      );
+      return {
+        ...ex,
+        logo: ex.logo || org?.logo || '',
+        description: ex.description || org?.description || org?.about || '',
+        about: ex.about || ex.description || org?.about || org?.description || '',
+        website: ex.website || org?.website || '',
+        contact: contactName,
+        contactPerson: contactName,
+        contactEmail: contactEmail,
+        contactPhone: ex.contactPhone || ex.phone || org?.phone || matchingAtt?.phone || '',
+        contactPosition: ex.contactPosition || ex.position || ex.jobTitle || org?.jobTitle || matchingAtt?.jobTitle || 'Representative',
+        contactPhoto: matchingAtt?.image || matchingAtt?.avatar || matchingAtt?.photo || matchingAtt?.badgePicture || ex.contactPhoto || ex.contactAvatar || ex.photo || ex.avatar || '',
+        personnel: ex.personnel || [],
+      };
+    });
+
+    const publicSponsors = (sponsors || []).map(sp => {
+      const org = (organizations || []).find(o => String(o.id) === String(sp.org_id || sp.orgId));
+      const contactEmail = sp.contactEmail || sp.email || org?.email || '';
+      const contactName = sp.contact || sp.contactPerson || org?.contact || '';
+      const matchingAtt = (attendees || []).find(a => 
+        !a.isArchived && a.status !== 'archived' && (
+          (contactEmail && a.email && a.email.trim().toLowerCase() === contactEmail.trim().toLowerCase()) ||
+          (contactName && a.name && a.name.trim().toLowerCase() === contactName.trim().toLowerCase())
+        )
+      );
+      return {
+        ...sp,
+        logo: sp.logo || sp.image || org?.logo || '',
+        image: sp.logo || sp.image || org?.logo || '',
+        website: sp.website || org?.website || '',
+        contact: contactName,
+        contactPerson: contactName,
+        contactEmail: contactEmail,
+        email: contactEmail,
+        contactPhone: sp.contactPhone || sp.phone || org?.phone || matchingAtt?.phone || '',
+        contactPosition: sp.contactPosition || sp.jobTitle || org?.jobTitle || matchingAtt?.jobTitle || 'Representative',
+        tier: sp.tier || 'Sponsor',
+      };
+    });
+
+    return (
+      <div className="fixed inset-0 z-50 bg-slate-50 flex flex-col overflow-hidden">
+        <FloorPlanModifier 
+          key={previewPlan.id}
+          exhibitors={publicExhibitors}
+          attendees={attendees}
+          sponsors={publicSponsors}
+          eventId={activeEventId}
+          eventName={eventDetails?.name || eventDetails?.title || previewPlan.name || "Eventzone Summit"}
+          initialLayout={previewPlan.elements || []}
+          initialBlueprintState={previewPlan.blueprint}
+          initialFloors={previewPlan.floors || []}
+          fontFamily={previewPlan.fontFamily || "Inter"}
+          planName={previewPlan.name}
+          floorPlanId={previewPlan.id}
+          onSaveLayout={() => {}}
+          onSaveBlueprintState={() => {}}
+          onSaveFloors={() => {}}
+          onSaveFontFamily={() => {}}
+          onBack={() => {
+            if (eventDetails?.slug) {
+              window.location.href = `/${eventDetails.slug}`;
+            } else if (activeEventId) {
+              setCurrentView("event-landing");
+            } else {
+              setCurrentView("home");
+            }
+          }}
+          onRename={() => {}}
+          onUploadFile={() => {}}
+          saveStatus="saved"
+          initialPreviewMode={true}
+          isReadOnly={true}
+          effectivePermissions={{ permissions: {}, isAdmin: false, isOwner: false }}
+        />
+      </div>
+    );
+  }
+
+  // ==========================================================================
   // 4. SINGLE EVENT DASHBOARD (ORGANIZER VIEW)
   // ==========================================================================
   if ((isAuthProcessing || !authInitialized) && !currentUser) {
@@ -4410,6 +4596,67 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
         onGoToHome={() => setCurrentView("home")}
         onClose={() => setCurrentView("home")}
       />
+    );
+  }
+
+  // ==========================================================================
+  // 4.1. ORGANIZER DASHBOARD AUTHORIZATION GUARD
+  // Prevent unauthorized users / attendees / other organizers from accessing private event dashboards
+  // ==========================================================================
+  const isAuthorizedForEventDashboard = !!(
+    effectivePermissions?.isOwner ||
+    effectivePermissions?.isAdmin ||
+    effectivePermissions?.member ||
+    activeEventId === DEFAULT_EVENT_ID ||
+    activeEventId === "default-summit-2025" ||
+    activeEventId === "myevent" ||
+    activeEventId === "00000000-0000-0000-0000-000000000001" ||
+    (Array.isArray(userEvents) && userEvents.some(e => e && String(e.id) === String(activeEventId)))
+  );
+
+  if (isLoading && !isAuthorizedForEventDashboard && (!Array.isArray(userEvents) || userEvents.length === 0)) {
+    return <OverviewSkeleton />;
+  }
+
+  if (!isAuthorizedForEventDashboard) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mb-4 shadow-xs">
+          <ShieldAlert size={32} />
+        </div>
+        <h2 className="text-lg font-bold text-slate-900 mb-1">{t("dash.accessRestrictedTitle", "Access Restricted")}</h2>
+        <p className="text-xs text-slate-500 max-w-md mb-6 leading-relaxed">
+          {t("dash.notAuthorizedForDashboard", "You are not authorized to access the organizer management dashboard for this event.")}
+        </p>
+        <div className="flex items-center gap-3">
+          {eventDetails?.title && (
+            <button
+              onClick={() => {
+                if (eventDetails?.slug) {
+                  window.location.href = `/${eventDetails.slug}`;
+                } else {
+                  setCurrentView("event-landing");
+                }
+              }}
+              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+            >
+              {t("dash.viewPublicEvent", "View Public Event Page")}
+            </button>
+          )}
+          <button
+            onClick={() => {
+              if (currentUser.role === "organizer" || (Array.isArray(userEvents) && userEvents.length > 0)) {
+                setCurrentView("events-hub");
+              } else {
+                setCurrentView("home");
+              }
+            }}
+            className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
+          >
+            {currentUser.role === "organizer" || (Array.isArray(userEvents) && userEvents.length > 0) ? t("dash.backToEventsHub", "Back to My Events") : t("common.goToHome", "Go to Home")}
+          </button>
+        </div>
+      </div>
     );
   }
 
@@ -5582,24 +5829,62 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               effectivePermissions={effectivePermissions}
               onUpdateEventDetails={(val) => handleUpdateState("eventDetails", val)}
               onSendBroadcastEmail={async ({ subject, message, portalUrl, recipientCount }) => {
-                if (activeEventId) {
-                  try {
-                    await fetch('/api/email/broadcast', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        eventId: activeEventId,
-                        eventTitle: eventDetails?.title,
-                        subject,
-                        message,
-                        link: portalUrl,
-                        recipients: attendees.map(a => a.email).filter(Boolean)
-                      })
-                    }).catch(e => console.log('Broadcast API dispatched:', e));
-                  } catch (e) {
-                    console.log('Broadcast error:', e);
-                  }
+                if (!activeEventId) {
+                  throw new Error("No active event selected.");
                 }
+
+                let authToken = null;
+                try {
+                  const { data: sessionData } = await supabase.auth.getSession();
+                  authToken = sessionData?.session?.access_token || null;
+                } catch (e) {}
+
+                const headers = { "Content-Type": "application/json" };
+                if (authToken) {
+                  headers["Authorization"] = `Bearer ${authToken}`;
+                }
+
+                const payload = {
+                  eventId: activeEventId,
+                  eventTitle: eventDetails?.title || eventDetails?.name || "Eventzone Event",
+                  organizerName: currentUser?.fullName || currentUser?.name || eventDetails?.organizerName || "Eventzone Organizer",
+                  eventLogo: eventDetails?.eventLogo || eventDetails?.logo || "",
+                  eventDate: eventDetails?.startDate || eventDetails?.date || "",
+                  eventLocation: eventDetails?.location || eventDetails?.venue || "",
+                  subject: (subject || "").trim(),
+                  body: (message || "").trim(),
+                  message: (message || "").trim(),
+                  link: portalUrl,
+                  portalUrl: portalUrl,
+                  buttonText: "Access Attendee Portal",
+                  buttonConfig: {
+                    includeCustomButton: true,
+                    customButtonText: "Access Attendee Portal",
+                    customButtonUrl: portalUrl
+                  },
+                  recipients: (attendees || []).map(a => ({
+                    id: a.id,
+                    email: (a.email || "").trim(),
+                    name: a.name || `${a.firstName || ''} ${a.lastName || ''}`.trim() || 'Attendee',
+                    role: a.role || 'attendee',
+                    ticketTier: a.ticketType || a.ticketTier || 'Standard Admission',
+                    company: a.company || '',
+                    jobTitle: a.jobTitle || ''
+                  })).filter(r => r.email && r.email.includes('@'))
+                };
+
+                const res = await fetch('/api/email/broadcast', {
+                  method: 'POST',
+                  headers,
+                  body: JSON.stringify(payload)
+                });
+
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok || !data.success) {
+                  const errMsg = data.error || (data.errors && data.errors[0]?.error) || "Failed to dispatch email broadcast.";
+                  throw new Error(errMsg);
+                }
+                return data;
               }}
               onPreviewAttendeePortal={() => {
                 setCurrentView("attendee-portal");

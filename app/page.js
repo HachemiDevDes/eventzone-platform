@@ -179,7 +179,8 @@ export async function generateMetadata(props) {
 
 export default async function Page(props) {
   const searchParams = props?.searchParams ? await props.searchParams : {};
-  const viewParam = searchParams?.view;
+  const rawView = searchParams?.view;
+  const viewParam = (rawView === "floor_plan" || rawView === "floor-plan") ? "floor-plan" : rawView;
   const rsvpParam = searchParams?.rsvp;
   let initialView = "home";
 

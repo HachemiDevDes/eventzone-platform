@@ -19,7 +19,8 @@ export async function POST(request) {
       eventId = null,
       testEmail,
       subject,
-      body: rawBody,
+      body: rawBodyProp,
+      message,
       preheader = "",
       buttonConfig = {},
       includeQr = false,
@@ -29,8 +30,14 @@ export async function POST(request) {
       eventDate = "",
       eventLocation = "",
       headerTag = "Email Preview",
-      sampleAttendee = {}
+      sampleAttendee = {},
+      link,
+      portalUrl,
+      buttonText
     } = payload;
+
+    const rawBody = (rawBodyProp || message || "").trim();
+    const cleanSubject = (subject || "").trim();
 
     const validEventId = isValidUuid(eventId) ? eventId : null;
 
@@ -46,8 +53,20 @@ export async function POST(request) {
     if (!testEmail || !testEmail.includes("@")) {
       return NextResponse.json({ error: "Please provide a valid test email address." }, { status: 400 });
     }
-    if (!subject || !rawBody) {
+    if (!cleanSubject || !rawBody) {
       return NextResponse.json({ error: "Missing subject line or message content." }, { status: 400 });
+    }
+
+    // Auto-configure buttonConfig if direct portal link provided
+    const directPortalLink = (link || portalUrl || "").trim();
+    let effectiveButtonConfig = { ...(buttonConfig || {}) };
+    if (directPortalLink && !effectiveButtonConfig.customButtonUrl && !effectiveButtonConfig.formUrl && !effectiveButtonConfig.ticketUrl) {
+      effectiveButtonConfig = {
+        ...effectiveButtonConfig,
+        includeCustomButton: true,
+        customButtonText: buttonText || effectiveButtonConfig.customButtonText || "Access Attendee Portal",
+        customButtonUrl: directPortalLink,
+      };
     }
 
     const supabase = getServiceSupabase();
@@ -63,7 +82,7 @@ export async function POST(request) {
         .replace(/\{\{organizerName\}\}/gi, organizerName);
     };
 
-    // Create a tracked communication entry in Supabase
+    // Create a tracked communication entry in Supabase (only actual table columns)
     let commRecord = null;
     let recRecord = null;
     try {
@@ -71,13 +90,10 @@ export async function POST(request) {
         .from("communications")
         .insert({
           event_id: validEventId,
-          subject: formatEventLevelVars(subject.trim()),
-          body: formatEventLevelVars(rawBody.trim()),
+          subject: formatEventLevelVars(cleanSubject),
+          body: formatEventLevelVars(rawBody),
           recipient_count: 1,
-          recipient_group: "test",
           status: "Sent",
-          opens_count: 0,
-          unique_opens_count: 0,
           sent_at: new Date().toISOString(),
         })
         .select()
@@ -130,11 +146,12 @@ export async function POST(request) {
         .replace(/\{\{venue\}\}/gi, eventLocation || "Metropolitan Grand Convention Center")
         .replace(/\{\{date\}\}/gi, eventDate || "October 24-26, 2026")
         .replace(/\{\{organizerName\}\}/gi, organizerName)
-        .replace(/\{\{formLink\}\}/gi, buttonConfig?.formUrl || "https://eventzone.pro")
-        .replace(/\{\{ticketLink\}\}/gi, buttonConfig?.ticketUrl || "https://eventzone.pro");
+        .replace(/\{\{formLink\}\}/gi, effectiveButtonConfig?.formUrl || "https://eventzone.pro")
+        .replace(/\{\{ticketLink\}\}/gi, effectiveButtonConfig?.ticketUrl || "https://eventzone.pro")
+        .replace(/\{\{portalLink\}\}/gi, effectiveButtonConfig?.customButtonUrl || directPortalLink || "https://eventzone.pro");
     };
 
-    const personalizedSubject = replaceVars(subject);
+    const personalizedSubject = replaceVars(cleanSubject);
     const personalizedBody = replaceVars(rawBody);
     const personalizedPreheader = replaceVars(preheader);
 
@@ -151,10 +168,10 @@ export async function POST(request) {
     };
 
     const trackedButtonConfig = {
-      ...buttonConfig,
-      formUrl: buttonConfig?.formUrl ? trackify(buttonConfig.formUrl) : undefined,
-      ticketUrl: buttonConfig?.ticketUrl ? trackify(buttonConfig.ticketUrl) : undefined,
-      customButtonUrl: buttonConfig?.customButtonUrl ? trackify(buttonConfig.customButtonUrl) : undefined,
+      ...effectiveButtonConfig,
+      formUrl: effectiveButtonConfig?.formUrl ? trackify(effectiveButtonConfig.formUrl) : undefined,
+      ticketUrl: effectiveButtonConfig?.ticketUrl ? trackify(effectiveButtonConfig.ticketUrl) : undefined,
+      customButtonUrl: effectiveButtonConfig?.customButtonUrl ? trackify(effectiveButtonConfig.customButtonUrl) : undefined,
     };
 
     let qrBuffer = null;

@@ -13,7 +13,7 @@ import { useLanguage } from "../lib/i18n";
 import UniversalTopBar from "./UniversalTopBar";
 import A4BadgeSheet, { printA4BadgeDocument } from "./A4BadgeSheet";
 import Footer from "./Footer";
-import { fetchTickets } from "../lib/db";
+import { fetchTickets, fetchEventDetails } from "../lib/db";
 
 export default function MyTicketsPage({
   registrations = [],
@@ -37,8 +37,10 @@ export default function MyTicketsPage({
 
   // Tickets cache indexed by eventId: { [eventId]: ticket[] }
   const [eventTicketsMap, setEventTicketsMap] = useState({});
+  // Missing events cache: { [eventId]: event }
+  const [missingEventsMap, setMissingEventsMap] = useState({});
 
-  // Fetch tickets for all events present in registrations to resolve badge artwork
+  // Fetch tickets & event details for all events present in registrations to resolve artwork and portal status
   useEffect(() => {
     const eventIds = [...new Set((registrations || []).map(r => r.eventId).filter(Boolean))];
     eventIds.forEach(async (evId) => {
@@ -50,8 +52,18 @@ export default function MyTicketsPage({
       } catch (err) {
         console.warn("fetchTickets for pass error:", evId, err);
       }
+
+      const alreadyKnown = (events || []).some(e => String(e.id) === String(evId) || String(e.slug) === String(evId));
+      if (!alreadyKnown) {
+        try {
+          const ev = await fetchEventDetails(evId);
+          if (ev) {
+            setMissingEventsMap(prev => ({ ...prev, [evId]: ev }));
+          }
+        } catch (e) {}
+      }
     });
-  }, [registrations]);
+  }, [registrations, events]);
 
   // QR Code data URLs: { [regId]: string }
   const [qrCodeUrls, setQrCodeUrls] = useState({});
@@ -256,7 +268,7 @@ export default function MyTicketsPage({
           /* Tickets Grid */
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {filteredRegistrations.map(reg => {
-              const matchedEvent = (events || []).find(e => String(e.id) === String(reg.eventId));
+              const matchedEvent = (events || []).find(e => String(e.id) === String(reg.eventId)) || missingEventsMap[reg.eventId] || {};
               const rawPortalStatus = matchedEvent?.portalStatus || matchedEvent?.portal_status || matchedEvent?.portalSettings?.portal_status || matchedEvent?.portal_settings?.portal_status || "open";
               const isPortalClosed = String(rawPortalStatus).toLowerCase().trim() === "closed";
               const isVip = (reg.ticketType || "").toLowerCase().includes("vip");

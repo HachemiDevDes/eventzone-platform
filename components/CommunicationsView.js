@@ -23,6 +23,7 @@ import {
 } from "../lib/db";
 import { useLanguage } from "../lib/i18n";
 import { canEditModule } from "../lib/permissions";
+import { supabase } from "../lib/supabase";
 
 // Preset 10+ Pre-Built Templates
 const PRESET_TEMPLATES = [
@@ -1127,9 +1128,20 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
     }
     setIsTestSending(true);
     try {
+      let authToken = null;
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        authToken = sessionData?.session?.access_token || null;
+      } catch (e) {}
+
+      const headers = { "Content-Type": "application/json" };
+      if (authToken) {
+        headers["Authorization"] = `Bearer ${authToken}`;
+      }
+
       const res = await fetch("/api/email/test-send", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           eventId: activeEventId,
           appUrl: typeof window !== "undefined" ? window.location.origin : "",
@@ -1189,9 +1201,20 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
     setSendingProgress(0);
 
     try {
+      let authToken = null;
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        authToken = sessionData?.session?.access_token || null;
+      } catch (e) {}
+
+      const headers = { "Content-Type": "application/json" };
+      if (authToken) {
+        headers["Authorization"] = `Bearer ${authToken}`;
+      }
+
       const res = await fetch("/api/email/broadcast", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           eventId: activeEventId,
           appUrl: typeof window !== "undefined" ? window.location.origin : "",
