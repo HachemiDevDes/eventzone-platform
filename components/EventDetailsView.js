@@ -1410,11 +1410,11 @@ export default function EventDetailsView({
               </div>
 
               {/* Compact Event Schedule Type Selector */}
-              <div className="inline-flex p-1 bg-slate-100 rounded-xl border border-slate-200 text-xs font-semibold self-start sm:self-center shrink-0 shadow-2xs">
+              <div className="inline-flex p-1 bg-slate-100 rounded-full border border-slate-200 text-xs font-semibold self-start sm:self-center shrink-0 shadow-2xs">
                 <button
                   type="button"
                   onClick={() => setScheduleMode("single")}
-                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                  className={`px-3 py-1.5 rounded-full transition-all cursor-pointer flex items-center gap-1.5 ${
                     scheduleMode === "single"
                       ? "bg-white text-blue-700 shadow-xs font-bold"
                       : "text-slate-600 hover:text-slate-900"
@@ -1426,7 +1426,7 @@ export default function EventDetailsView({
                 <button
                   type="button"
                   onClick={() => setScheduleMode("multiple")}
-                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                  className={`px-3 py-1.5 rounded-full transition-all cursor-pointer flex items-center gap-1.5 ${
                     scheduleMode === "multiple"
                       ? "bg-white text-blue-700 shadow-xs font-bold"
                       : "text-slate-600 hover:text-slate-900"
@@ -1455,14 +1455,14 @@ export default function EventDetailsView({
                     </div>
 
                     {/* Single Day vs Multi-Day Range toggle pills */}
-                    <div className="inline-flex p-0.5 bg-white rounded-xl border border-slate-200 text-[11px] font-semibold self-start sm:self-center shadow-2xs">
+                    <div className="inline-flex p-0.5 bg-white rounded-full border border-slate-200 text-[11px] font-semibold self-start sm:self-center shadow-2xs">
                       <button
                         type="button"
                         onClick={() => {
                           setIsMultiDay(false);
                           setEndDate(startDate);
                         }}
-                        className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                        className={`px-3 py-1 rounded-full transition-all cursor-pointer ${
                           !isMultiDay ? "bg-blue-600 text-white font-bold shadow-xs" : "text-slate-600 hover:text-slate-900"
                         }`}
                       >
@@ -1471,7 +1471,7 @@ export default function EventDetailsView({
                       <button
                         type="button"
                         onClick={() => setIsMultiDay(true)}
-                        className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                        className={`px-3 py-1 rounded-full transition-all cursor-pointer ${
                           isMultiDay ? "bg-blue-600 text-white font-bold shadow-xs" : "text-slate-600 hover:text-slate-900"
                         }`}
                       >
