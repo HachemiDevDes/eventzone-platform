@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/apiAuth";
+import crypto from "crypto";
 
-// Global in-memory cache to ensure cross-browser real-time consistency
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
+
+// Global in-memory cache to ensure instant intra-process consistency
 if (!global._eventzoneChatStore) {
   global._eventzoneChatStore = new Map();
 }
@@ -21,51 +26,84 @@ function cleanEmail(e) {
   return String(e || "").trim().toLowerCase();
 }
 
-async function checkIsConnected(eventId, email1, email2) {
+function isValidUuid(str) {
+  if (!str || typeof str !== "string") return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str.trim());
+}
+
+function toValidUuid(val, fallbackSeed = "") {
+  if (val && typeof val === "string") {
+    const trimmed = val.trim();
+    if (isValidUuid(trimmed)) {
+      return trimmed.toLowerCase();
+    }
+  }
+  const input = String(val || fallbackSeed || crypto.randomUUID()).toLowerCase().trim();
+  const hash = crypto.createHash("sha256").update(input).digest("hex");
+  return `${hash.substring(0, 8)}-${hash.substring(8, 12)}-4${hash.substring(13, 16)}-a${hash.substring(17, 20)}-${hash.substring(20, 32)}`;
+}
+
+async function resolveEventUuid(supabase, eventParam) {
+  if (!eventParam) return null;
+  if (isValidUuid(eventParam)) return eventParam;
+  try {
+    const { data } = await supabase
+      .from("events")
+      .select("id")
+      .or(`slug.eq.${eventParam},id.eq.${eventParam}`)
+      .maybeSingle();
+    if (data?.id && isValidUuid(data.id)) return data.id;
+  } catch (e) {}
+  return null;
+}
+
+async function checkIsConnected(supabase, eventId, eventUuid, email1, email2) {
   const e1 = cleanEmail(email1);
   const e2 = cleanEmail(email2);
+  if (!e1 || !e2) return false;
 
-  // 1. Check in-memory first
+  // 1. Check in-memory store across both eventId and eventUuid
   if (global._eventzoneConnectionsStore) {
-    const connections = global._eventzoneConnectionsStore.get(eventId) || [];
-    const found = connections.some(
-      (c) =>
-        c.status === "accepted" &&
-        ((cleanEmail(c.sender_email) === e1 && cleanEmail(c.recipient_email) === e2) ||
-          (cleanEmail(c.sender_email) === e2 && cleanEmail(c.recipient_email) === e1))
-    );
+    const list1 = global._eventzoneConnectionsStore.get(eventId) || [];
+    const list2 = eventUuid && eventUuid !== eventId ? (global._eventzoneConnectionsStore.get(eventUuid) || []) : [];
+    const combined = [...list1, ...list2];
+    const found = combined.some((c) => {
+      const isAcc = c.status === "accepted" || c.status === "connected";
+      const s = cleanEmail(c.sender_email);
+      const r = cleanEmail(c.recipient_email);
+      return isAcc && ((s === e1 && r === e2) || (s === e2 && r === e1));
+    });
     if (found) return true;
   }
 
-  // 2. Query Supabase if not found in memory
+  // 2. Query Supabase database connections
   try {
-    const supabase = getServiceSupabase();
-    const { data: dbData } = await supabase
-      .from("connections")
-      .select("*")
-      .eq("event_id", eventId);
-
-    if (Array.isArray(dbData)) {
+    let query = supabase.from("connections").select("*");
+    if (eventUuid) {
+      query = query.eq("event_id", eventUuid);
+    }
+    const { data: dbData, error } = await query;
+    if (!error && Array.isArray(dbData)) {
       for (const row of dbData) {
         let meta = {};
         if (row.notes && row.notes.startsWith("{")) {
           try { meta = JSON.parse(row.notes); } catch (e) {}
         }
-        const status = meta.status || row.pipeline_stage || "accepted";
-        if (status !== "accepted") continue;
+        const rawStatus = (row.status || row.pipeline_stage || meta.status || "").toLowerCase();
+        const isAcc = rawStatus === "accepted" || rawStatus === "connected";
+        if (!isAcc) continue;
 
-        const sEmail = cleanEmail(meta.sender_email || (row.source === "incoming" ? row.email : ""));
-        const rEmail = cleanEmail(meta.recipient_email || row.email || "");
+        const sEmail = cleanEmail(meta.sender_email || (Array.isArray(row.tags) && row.tags[0]) || (row.source === "incoming" ? row.email : ""));
+        const rEmail = cleanEmail(meta.recipient_email || (Array.isArray(row.tags) && row.tags[1]) || row.email || "");
 
-        if (
-          (sEmail === e1 && rEmail === e2) ||
-          (sEmail === e2 && rEmail === e1)
-        ) {
+        if ((sEmail === e1 && rEmail === e2) || (sEmail === e2 && rEmail === e1)) {
           return true;
         }
       }
     }
-  } catch (err) {}
+  } catch (err) {
+    console.warn("checkIsConnected Supabase check error:", err);
+  }
 
   return false;
 }
@@ -77,15 +115,23 @@ export async function GET(request, { params }) {
   const userId = searchParams.get("userId") || "";
 
   if (!email && !userId) {
-    return NextResponse.json({ messages: [] });
+    return NextResponse.json(
+      { messages: [] },
+      { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate" } }
+    );
   }
 
   const memoryList = getEventMessages(eventId);
+  const allMessagesMap = new Map();
+  const supabase = getServiceSupabase();
+  const eventUuid = await resolveEventUuid(supabase, eventId);
 
-  // Sync with Supabase messages table if available
+  // 1. Sync from Supabase messages database
   try {
-    const supabase = getServiceSupabase();
-    let query = supabase.from("messages").select("*").eq("event", eventId);
+    let query = supabase.from("messages").select("*").order("created_at", { ascending: true });
+    if (eventUuid) {
+      query = query.or(`event_id.eq.${eventUuid},event_id.is.null`);
+    }
     const { data: dbData, error } = await query;
 
     if (!error && Array.isArray(dbData)) {
@@ -94,10 +140,10 @@ export async function GET(request, { params }) {
         if (row.content && row.content.startsWith("{") && row.content.includes('"content":')) {
           try { meta = JSON.parse(row.content); } catch (e) {}
         }
-        const existingIdx = memoryList.findIndex((m) => m.id === row.id);
+
         const item = {
           id: row.id,
-          event_id: eventId,
+          event_id: row.event_id || eventUuid || eventId,
           sender_id: row.sender_id || meta.sender_id || null,
           sender_email: cleanEmail(meta.sender_email || ""),
           sender_name: meta.sender_name || "Delegate",
@@ -111,20 +157,28 @@ export async function GET(request, { params }) {
           is_read: row.is_read || false,
         };
 
-        if (existingIdx >= 0) {
-          memoryList[existingIdx] = { ...item, ...memoryList[existingIdx] };
-        } else {
-          memoryList.push(item);
-        }
+        allMessagesMap.set(row.id, item);
       });
-      setEventMessages(eventId, memoryList);
     }
   } catch (err) {
-    // Non-fatal, use memory store
+    console.warn("Error syncing messages from Supabase:", err);
   }
 
-  // Filter messages relevant to this user
-  const userMessages = memoryList.filter((m) => {
+  // 2. Merge memory messages (authoritative database rows take precedence)
+  memoryList.forEach((m) => {
+    if (!allMessagesMap.has(m.id)) {
+      allMessagesMap.set(m.id, m);
+    } else {
+      const fromDb = allMessagesMap.get(m.id);
+      allMessagesMap.set(m.id, { ...m, ...fromDb });
+    }
+  });
+
+  const combinedList = Array.from(allMessagesMap.values());
+  setEventMessages(eventId, combinedList);
+
+  // 3. Filter messages relevant to this user
+  const userMessages = combinedList.filter((m) => {
     const sEmail = cleanEmail(m.sender_email);
     const rEmail = cleanEmail(m.recipient_email);
     const sId = String(m.sender_id || "");
@@ -136,7 +190,10 @@ export async function GET(request, { params }) {
     );
   });
 
-  return NextResponse.json({ messages: userMessages });
+  return NextResponse.json(
+    { messages: userMessages },
+    { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate" } }
+  );
 }
 
 export async function POST(request, { params }) {
@@ -155,12 +212,14 @@ export async function POST(request, { params }) {
 
     const senderEmail = cleanEmail(sender.email);
     const recipientEmail = cleanEmail(recipient.email);
+    const supabase = getServiceSupabase();
+    const eventUuid = await resolveEventUuid(supabase, eventId);
 
     // =========================================================================
     // STRICT CONNECTION VERIFICATION GUARD:
     // Only delegates with an accepted connection can send 1-on-1 messages!
     // =========================================================================
-    const isConnected = await checkIsConnected(eventId, senderEmail, recipientEmail);
+    const isConnected = await checkIsConnected(supabase, eventId, eventUuid, senderEmail, recipientEmail);
     if (!isConnected) {
       return NextResponse.json(
         {
@@ -171,15 +230,18 @@ export async function POST(request, { params }) {
       );
     }
 
-    const msgId = `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    const msgId = crypto.randomUUID();
+    const senderUuid = toValidUuid(sender.id, senderEmail);
+    const recipientUuid = toValidUuid(recipient.id, recipientEmail);
+
     const newMsg = {
       id: msgId,
-      event_id: eventId,
-      sender_id: sender.id || null,
+      event_id: eventUuid || eventId,
+      sender_id: senderUuid,
       sender_email: senderEmail,
       sender_name: sender.name || sender.fullName || "Delegate",
       sender_avatar: sender.avatar || sender.image || "",
-      recipient_id: recipient.id || null,
+      recipient_id: recipientUuid,
       recipient_email: recipientEmail,
       recipient_name: recipient.name || recipient.fullName || "Delegate",
       recipient_avatar: recipient.avatar || recipient.image || "",
@@ -192,21 +254,29 @@ export async function POST(request, { params }) {
     memoryList.push(newMsg);
     setEventMessages(eventId, memoryList);
 
-    // Persist to Supabase if available
+    // Persist to Supabase database (with UUIDs for Postgres)
     try {
-      const supabase = getServiceSupabase();
-      await supabase.from("messages").insert({
+      const { error: insertErr } = await supabase.from("messages").insert({
         id: msgId,
-        sender_id: sender.id && sender.id.length === 36 ? sender.id : null,
-        recipient_id: recipient.id && recipient.id.length === 36 ? recipient.id : null,
+        event_id: eventUuid || null,
+        sender_id: senderUuid,
+        recipient_id: recipientUuid,
         content: JSON.stringify(newMsg),
-        event: eventId,
         created_at: newMsg.created_at,
         is_read: false,
       });
-    } catch (e) {}
 
-    return NextResponse.json({ success: true, message: newMsg });
+      if (insertErr) {
+        console.error("Supabase messages insert error:", insertErr);
+      }
+    } catch (e) {
+      console.error("Supabase messages insert exception:", e);
+    }
+
+    return NextResponse.json(
+      { success: true, message: newMsg },
+      { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } }
+    );
   } catch (err) {
     console.error("Chat API error:", err);
     return NextResponse.json({ error: err.message || "Server error" }, { status: 500 });
