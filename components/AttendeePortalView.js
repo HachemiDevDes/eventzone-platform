@@ -2539,8 +2539,7 @@ export default function AttendeePortalView({
             {/* 1. Sponsors Section */}
             {filteredSponsors.length > 0 && (
               <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Sparkles size={18} className="text-amber-500" />
+                <div>
                   <h3 className="text-base font-black text-slate-900">{t("portal.officialSponsors", "Official Conference Sponsors")}</h3>
                 </div>
 
@@ -2598,8 +2597,7 @@ export default function AttendeePortalView({
             {/* 2. Exhibitors Section */}
             {filteredExhibitors.length > 0 && (
               <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Store size={18} className="text-blue-600" />
+                <div>
                   <h3 className="text-base font-black text-slate-900">{t("portal.exhibitionDemoPods", "Exhibition Hall Demo Pods")}</h3>
                 </div>
 
