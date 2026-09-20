@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { 
   ArrowLeft, Save, Share2, Download, Plus, Trash2, 
   GripVertical, Check, Upload, Copy, FileText, 
