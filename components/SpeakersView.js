@@ -984,7 +984,7 @@ export default function SpeakersView({
           {canEdit && (
             <button
               onClick={handleExportCSV}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition-all shadow-2xs cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition-all shadow-2xs cursor-pointer"
               title="Export Speakers Roster to CSV"
             >
               <Download size={13} />
@@ -995,7 +995,7 @@ export default function SpeakersView({
           {onSwitchView && (
             <button
               onClick={() => onSwitchView("calendar")}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100 text-indigo-700 transition-all cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100 text-indigo-700 transition-all cursor-pointer"
             >
               <Calendar size={13} />
               <span>{t("speakers.agendaTimeline", "Agenda Timeline")}</span>
@@ -1008,7 +1008,7 @@ export default function SpeakersView({
                 setAddMode("attendee");
                 setShowAddModal(true);
               }}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-indigo-650 hover:bg-indigo-700 text-white transition-all shadow-sm cursor-pointer"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold bg-indigo-650 hover:bg-indigo-700 text-white transition-all shadow-sm cursor-pointer"
             >
               <Plus size={14} />
               <span>{t("speakers.addSpeaker", "Add / Assign Speaker")}</span>

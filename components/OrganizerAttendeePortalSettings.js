@@ -245,7 +245,7 @@ export default function OrganizerAttendeePortalSettings({
 
           <button
             onClick={onPreviewAttendeePortal}
-            className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl text-xs sm:text-sm transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+            className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-full text-xs sm:text-sm transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
             title={t("portalSettings.openPreviewTooltip", "Open Attendee Preview")}
           >
             <Eye size={14} />
@@ -257,7 +257,7 @@ export default function OrganizerAttendeePortalSettings({
             <button
               onClick={handleSaveSettings}
               disabled={isSaving}
-              className="bg-indigo-650 hover:bg-indigo-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs sm:text-sm shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              className="bg-indigo-650 hover:bg-indigo-700 text-white font-bold py-2.5 px-5 rounded-full text-xs sm:text-sm shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
             >
               {isSaving ? (
                 <RefreshCw size={14} className="animate-spin" />

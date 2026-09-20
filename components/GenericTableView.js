@@ -1836,7 +1836,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                   type="button"
                   onClick={() => setExportMenuOpen(prev => !prev)}
                   disabled={isExportingPdf}
-                  className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 px-3.5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
+                  className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 px-3.5 py-2.5 rounded-full font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
                 >
                   {isExportingPdf ? (
                     <Loader2 size={14} className="animate-spin text-blue-600" />
@@ -1880,7 +1880,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
               <button 
                 type="button"
                 onClick={() => setIsEasyUploadOpen(true)}
-                className="bg-white hover:bg-slate-50 text-blue-600 hover:text-blue-700 border border-blue-200/90 hover:border-blue-300 px-3.5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
+                className="bg-white hover:bg-slate-50 text-blue-600 hover:text-blue-700 border border-blue-200/90 hover:border-blue-300 px-3.5 py-2.5 rounded-full font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
               >
                 <Upload size={14} />
                 <span>Easy Upload</span>
@@ -1890,7 +1890,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
               <button 
                 type="button"
                 onClick={() => onOpenModal("attendee")}
-                className="bg-indigo-650 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                className="bg-indigo-650 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-full font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
               >
                 <Plus size={15} />
                 <span>{t("table.addAttendee", "Add Attendee")}</span>
@@ -4086,14 +4086,14 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
               <button 
                 type="button"
                 onClick={handleOpenManageTiersModal}
-                className="bg-white hover:bg-slate-50 text-slate-700 font-bold py-2.5 px-3.5 rounded-xl text-xs border border-slate-200 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs hover:border-slate-300 shrink-0"
+                className="bg-white hover:bg-slate-50 text-slate-700 font-bold py-2.5 px-3.5 rounded-full text-xs border border-slate-200 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs hover:border-slate-300 shrink-0"
               >
                 <Pencil size={13} className="text-slate-500" />
                 <span>{t("table.editTiers", "Edit Tiers")}</span>
               </button>
               <button 
                 onClick={() => onOpenModal("sponsor")}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-4 rounded-xl text-xs transition-all hover:shadow-md hover:-translate-y-0.5 flex items-center gap-2 cursor-pointer shadow-xs shadow-blue-100 shrink-0"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-4 rounded-full text-xs transition-all hover:shadow-md hover:-translate-y-0.5 flex items-center gap-2 cursor-pointer shadow-xs shadow-blue-100 shrink-0"
               >
                 <Plus size={16} />
                 <span>Add Sponsor</span>
@@ -4687,7 +4687,7 @@ function ExhibitorsView({ state, onUpdateState, onOpenModal }) {
         {canEdit ? (
           <button 
             onClick={() => onOpenModal("exhibitor")}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-4 rounded-xl text-xs transition-all hover:shadow-md hover:-translate-y-0.5 flex items-center gap-2 cursor-pointer shadow-xs shadow-blue-100 shrink-0"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-4 rounded-full text-xs transition-all hover:shadow-md hover:-translate-y-0.5 flex items-center gap-2 cursor-pointer shadow-xs shadow-blue-100 shrink-0"
           >
             <Plus size={16} />
             <span>{t("table.addExhibitor", "Add Exhibitor")}</span>
@@ -5113,7 +5113,7 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
           {canEdit && (
             <button 
               onClick={() => onSwitchView && onSwitchView("forms")}
-              className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl text-sm transition-all shadow-xs cursor-pointer"
+              className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-full text-sm transition-all shadow-xs cursor-pointer"
             >
               {t("tickets.customizeForms", "Customize Registration Forms")}
             </button>
@@ -5121,7 +5121,7 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
           {canEdit ? (
             <button 
               onClick={() => onOpenModal("ticket")}
-              className="bg-indigo-650 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-xl text-sm transition-all hover:shadow duration-200 cursor-pointer"
+              className="bg-indigo-650 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-full text-sm transition-all hover:shadow duration-200 cursor-pointer"
             >
               {t("tickets.addTicketTier", "Add Ticket Tier")}
             </button>
