@@ -1193,11 +1193,11 @@ export default function EventDetailsView({
 
       {/* Clean Segmented Tab Selector */}
       <div className="flex items-center justify-start">
-        <div className="flex items-center gap-1 p-1 bg-white border border-slate-200 rounded-2xl w-full sm:w-auto shadow-2xs overflow-x-auto">
+        <div className="flex items-center gap-1 p-1 bg-white border border-slate-200 rounded-full w-full sm:w-auto shadow-2xs overflow-x-auto">
           <button
             type="button"
             onClick={() => setActiveTab("general")}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+            className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer shrink-0 ${
               activeTab === "general"
                 ? "bg-blue-600 text-white shadow-xs"
                 : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
@@ -1208,7 +1208,7 @@ export default function EventDetailsView({
           <button
             type="button"
             onClick={() => setActiveTab("schedule")}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+            className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer shrink-0 ${
               activeTab === "schedule"
                 ? "bg-blue-600 text-white shadow-xs"
                 : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
@@ -1219,7 +1219,7 @@ export default function EventDetailsView({
           <button
             type="button"
             onClick={() => setActiveTab("media")}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+            className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer shrink-0 ${
               activeTab === "media"
                 ? "bg-blue-600 text-white shadow-xs"
                 : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
@@ -1230,7 +1230,7 @@ export default function EventDetailsView({
           <button
             type="button"
             onClick={() => setActiveTab("contact")}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+            className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer shrink-0 ${
               activeTab === "contact"
                 ? "bg-blue-600 text-white shadow-xs"
                 : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
