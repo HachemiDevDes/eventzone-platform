@@ -1497,6 +1497,42 @@ export default function EventPublicLandingPage({
     }
   };
 
+  const getGoogleMapsUrl = () => {
+    if (type === "Virtual") return null;
+    try {
+      const parts = [
+        cleanVenue,
+        effectiveDetails?.venueAddress,
+        eventCity ? cleanWilayaPrefix(eventCity) : "",
+        eventCountry
+      ].filter(Boolean);
+
+      let query = "";
+      if (parts.length > 0) {
+        const seen = new Set();
+        const uniqueTokens = [];
+        parts.forEach(p => {
+          String(p).split(/,\s*/).forEach(sub => {
+            const s = cleanWilayaPrefix(sub).trim();
+            const key = s.toLowerCase();
+            if (s && !seen.has(key)) {
+              seen.add(key);
+              uniqueTokens.push(s);
+            }
+          });
+        });
+        query = uniqueTokens.join(", ");
+      } else if (location) {
+        query = location.replace(/\s*\(Hybrid\)/i, "").trim();
+      }
+
+      if (!query) return null;
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+    } catch {
+      return "https://maps.google.com";
+    }
+  };
+
   const formatSessionTime = (timeStr) => {
     if (!timeStr) return "";
     const trimmed = String(timeStr).trim();
@@ -2001,6 +2037,19 @@ export default function EventPublicLandingPage({
                           <MapPin size={20} className="text-slate-400 shrink-0 mt-0.5" />
                           <span className="leading-snug">{location}</span>
                         </div>
+                        {type !== "Virtual" && getGoogleMapsUrl() && (
+                          <div className="flex items-center gap-2.5 pt-0.5">
+                            <ExternalLink size={18} className="text-blue-600 shrink-0" />
+                            <a
+                              href={getGoogleMapsUrl()}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-700 hover:underline font-semibold text-sm cursor-pointer"
+                            >
+                              {t("event.showOnGoogleMaps", "Show on Google Maps")}
+                            </a>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </>
