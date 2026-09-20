@@ -4645,19 +4645,12 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
           onSaveBlueprintState={() => {}}
           onSaveFloors={() => {}}
           onSaveFontFamily={() => {}}
-          onBack={() => {
-            if (eventDetails?.slug) {
-              window.location.href = `/${eventDetails.slug}`;
-            } else if (activeEventId) {
-              setCurrentView("event-landing");
-            } else {
-              setCurrentView("home");
-            }
-          }}
+          onBack={null}
           onRename={() => {}}
           onUploadFile={() => {}}
           saveStatus="saved"
           initialPreviewMode={true}
+          isPreviewLink={true}
           isReadOnly={true}
           effectivePermissions={{ permissions: {}, isAdmin: false, isOwner: false }}
         />

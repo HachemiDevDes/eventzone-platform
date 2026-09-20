@@ -496,6 +496,7 @@ export default function FloorPlanModifier({
   floorPlanId,
   saveStatus = "saved",
   initialPreviewMode = false,
+  isPreviewLink = false,
   initialFloors = [],
   onSaveFloors,
   isReadOnly = false,
@@ -503,6 +504,7 @@ export default function FloorPlanModifier({
 }) {
   const { t, lang, isRTL } = useLanguage();
   const canEdit = !isReadOnly && canEditModule("floor-plan", effectivePermissions);
+  const isStandalonePreview = initialPreviewMode || isPreviewLink;
   const effectivePreviewMode = !canEdit || initialPreviewMode;
 
   const localizedFilterOptions = useMemo(() => [
@@ -3619,7 +3621,7 @@ export default function FloorPlanModifier({
         {/* Top row */}
         <div className="flex items-center justify-between w-full gap-3 select-none">
           <div className="flex items-center gap-2.5 min-w-0">
-            {onBack && (
+            {!isStandalonePreview && onBack && (
               <button
                 onClick={handleBackClick}
                 className="text-slate-400 hover:text-indigo-650 transition-colors duration-150 cursor-pointer p-1.5 flex items-center justify-center shrink-0"
@@ -3727,7 +3729,7 @@ export default function FloorPlanModifier({
         ) : (
           <>
             <div className="flex items-center gap-3">
-              {onBack && (
+              {!isStandalonePreview && onBack && (
                 <button
                   onClick={handleBackClick}
                   className="text-slate-400 hover:text-indigo-650 transition-colors duration-150 cursor-pointer p-1.5 flex items-center justify-center"
@@ -3770,7 +3772,7 @@ export default function FloorPlanModifier({
                     >
                       {planName}
                     </h2>
-                    {!canEdit && (
+                    {!canEdit && !isStandalonePreview && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
                         <Eye size={12} />
                         Viewer Mode (Read-Only)

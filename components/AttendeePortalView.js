@@ -1882,7 +1882,6 @@ export default function AttendeePortalView({
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
-                      <Mail size={16} className="text-blue-600" />
                       <span>{t("portal.receivedInvitations", "Received Connection Invitations")}</span>
                       <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs font-bold">
                         {pendingReceived.length}
@@ -1956,7 +1955,6 @@ export default function AttendeePortalView({
                 <div className="space-y-3 pt-4 border-t border-slate-200">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
-                      <Clock size={16} className="text-amber-600" />
                       <span>{t("portal.sentInvitations", "Sent Invitations (Awaiting Acceptance)")}</span>
                       <span className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-xs font-bold">
                         {pendingSent.length}
