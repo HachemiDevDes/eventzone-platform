@@ -490,7 +490,7 @@ export default function RSVPView({
           {canEdit && (
             <button
               onClick={() => setIsManualModalOpen(true)}
-              className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
             >
               <Plus size={14} />
               <span>{t("rsvp.manualAdd", "Add Guest RSVP")}</span>
@@ -499,7 +499,7 @@ export default function RSVPView({
 
           <button
             onClick={() => setIsShareModalOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-xs transition-colors cursor-pointer shadow-2xs"
+            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-full bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-xs transition-colors cursor-pointer shadow-2xs"
           >
             <Share2 size={13} />
             <span>{t("rsvp.shareLink", "Share RSVP Link")}</span>
@@ -508,7 +508,7 @@ export default function RSVPView({
           {canEdit && (
             <button
               onClick={handleExportCSV}
-              className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-xs transition-colors cursor-pointer shadow-2xs"
+              className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-full bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-xs transition-colors cursor-pointer shadow-2xs"
               title={t("rsvp.exportCsv", "Export CSV")}
             >
               <Download size={13} />
@@ -518,7 +518,7 @@ export default function RSVPView({
 
           <button
             onClick={() => setIsSettingsOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-xs transition-colors cursor-pointer shadow-2xs"
+            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-full bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-xs transition-colors cursor-pointer shadow-2xs"
             title={t("rsvp.rsvpSettings", "RSVP Settings")}
           >
             <Settings size={14} />
@@ -527,7 +527,7 @@ export default function RSVPView({
           {onRefreshData && (
             <button
               onClick={onRefreshData}
-              className="p-2.5 rounded-2xl bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 transition-colors cursor-pointer shadow-2xs"
+              className="p-2.5 rounded-full bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 transition-colors cursor-pointer shadow-2xs"
               title={t("rsvp.refreshData", "Refresh Data")}
             >
               <RefreshCw size={14} />

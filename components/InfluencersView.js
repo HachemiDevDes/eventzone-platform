@@ -640,7 +640,7 @@ export default function InfluencersView({
             <button
               onClick={handleExportCsv}
               disabled={filteredInfluencers.length === 0}
-              className="flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-2.5 px-4 rounded-xl text-xs transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+              className="flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-2.5 px-4 rounded-full text-xs transition-all shadow-xs disabled:opacity-50 cursor-pointer"
             >
               <Download size={14} className="text-slate-500" />
               <span>{t("inf.exportCSV", "Export CSV")}</span>
@@ -648,7 +648,7 @@ export default function InfluencersView({
 
             <button
               onClick={handleOpenAdd}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-4 rounded-xl text-xs transition-all shadow-sm hover:shadow cursor-pointer"
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-4 rounded-full text-xs transition-all shadow-sm hover:shadow cursor-pointer"
             >
               <Plus size={15} />
               <span>{t("inf.addInfluencer", "Add Influencer")}</span>

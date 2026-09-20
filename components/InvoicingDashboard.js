@@ -308,7 +308,7 @@ export default function InvoicingDashboard({
           {canEdit && (
             <button
               onClick={handleExportCSV}
-              className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl text-xs sm:text-sm transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+              className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-full text-xs sm:text-sm transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
               title={t("invoicing.exportCsv", "Exporter en CSV")}
             >
               <Download size={14} />
@@ -320,7 +320,7 @@ export default function InvoicingDashboard({
           {canEdit && (
             <button
               onClick={onOpenSettings}
-              className="p-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-colors cursor-pointer bg-white shadow-xs"
+              className="p-2.5 rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-colors cursor-pointer bg-white shadow-xs"
               title={t("invoicing.fiscalSettings", "Paramètres fiscaux & profil")}
             >
               <Settings size={16} />
@@ -332,7 +332,7 @@ export default function InvoicingDashboard({
             <div className="relative">
               <button
                 onClick={() => setIsNewDocMenuOpen(!isNewDocMenuOpen)}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs sm:text-sm shadow-sm transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-full text-xs sm:text-sm shadow-sm transition-all flex items-center gap-2 cursor-pointer active:scale-95"
               >
                 <Plus size={16} />
                 <span>

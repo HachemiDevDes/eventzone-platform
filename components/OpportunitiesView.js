@@ -652,7 +652,7 @@ export default function OpportunitiesView({
           {canEdit && (
             <button
               onClick={handleExportCSV}
-              className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl text-sm transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+              className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-full text-sm transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
               title="Export CSV"
             >
               <Download size={14} />
@@ -666,7 +666,7 @@ export default function OpportunitiesView({
                 setEditingOpp(null);
                 setShowDrawer(true);
               }}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-xl text-sm transition-all hover:shadow duration-200 cursor-pointer flex items-center gap-1.5"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-full text-sm transition-all hover:shadow duration-200 cursor-pointer flex items-center gap-1.5"
             >
               <Plus size={15} />
               <span>{t("opp.addProspect", "Add Prospect")}</span>

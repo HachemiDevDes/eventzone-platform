@@ -496,7 +496,7 @@ export default function DocumentsView({
           {canEdit && (
             <button
               onClick={handleExportCSV}
-              className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl text-xs sm:text-sm transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+              className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-full text-xs sm:text-sm transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
               title="Export CSV Manifest"
             >
               <Download size={14} />
@@ -508,7 +508,7 @@ export default function DocumentsView({
             <button
               onClick={onRefreshData}
               title="Refresh Data"
-              className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold p-2.5 rounded-xl text-xs transition-all shadow-xs cursor-pointer"
+              className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold p-2.5 rounded-full text-xs transition-all shadow-xs cursor-pointer"
             >
               <RefreshCw size={14} />
             </button>

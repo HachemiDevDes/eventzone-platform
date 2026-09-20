@@ -2368,7 +2368,7 @@ function generateUuid() {
                   <button
                     onClick={handleExportCSV}
                     disabled={activeSubmissions.length === 0}
-                    className="px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-50 text-slate-800 rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                    className="px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-50 text-slate-800 rounded-full text-xs font-bold shadow-xs transition-colors cursor-pointer"
                   >
                     {t("forms.exportCsv", "Export CSV")}
                   </button>
