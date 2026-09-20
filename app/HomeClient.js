@@ -5,7 +5,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback, Suspense } fr
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { 
-  CheckCircle2, Ticket, ShieldAlert, ShieldCheck,
+  CheckCircle2, Ticket, ShieldAlert, ShieldCheck, Lock,
   ChevronDown, LayoutDashboard, Calendar, Clock,
   Users2, UserCheck, BarChart3, X, Globe, Map, Sparkles, Upload, Mail,
   Building2, Plus, ArrowLeft, ArrowRight, Layers, LogOut, Compass, ExternalLink, ChevronRight, Home as HomeIcon, User,
@@ -69,7 +69,7 @@ import SearchableSelect from "../components/SearchableSelect";
 import OrganizerAttendeePortalSettings from "../components/OrganizerAttendeePortalSettings";
 import AttendeePortalView from "../components/AttendeePortalView";
 import ErrorBoundary from "../components/ErrorBoundary";
-import { getEffectivePermissions, canViewModule, canEditModule, getModulePermission, EVENT_MODULES } from "../lib/permissions";
+import { getEffectivePermissions, hasEventAccess, canViewModule, canEditModule, getModulePermission, EVENT_MODULES } from "../lib/permissions";
 import { LanguageProvider, useLanguage } from "../lib/i18n";
 
 import {
@@ -1367,6 +1367,92 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
       };
 
       try {
+        // ── Security Authorization Pre-flight Check ──
+        // If this is a real event that is NOT in the user's fetched events and user is not super admin:
+        // verify ownership/membership before fetching any private event data.
+        const isDemoEvent = activeEventId === "default-summit-2025" ||
+          activeEventId === "myevent" ||
+          activeEventId === "00000000-0000-0000-0000-000000000001" ||
+          activeEventId === DEFAULT_EVENT_ID;
+
+        const isSuperAdmin = currentUser && (
+          currentUser.isVerifiedAdmin === true ||
+          isPlatformSuperAdminEmail(currentUser.email) ||
+          (currentUser.role === "super_admin" && (currentUser.isAdmin === true || currentUser.is_admin === true))
+        );
+
+        const matchedInUserEvents = Array.isArray(userEvents) && userEvents.some(ev => ev && String(ev.id) === String(activeEventId));
+
+        let hasPreVerifiedAccess = isDemoEvent || isSuperAdmin || matchedInUserEvents;
+
+        if (!hasPreVerifiedAccess && currentUser) {
+          try {
+            const [preDetails, preTeam] = await Promise.all([
+              fetchEventDetails(activeEventId).catch(() => null),
+              fetchTeam(activeEventId).catch(() => []).then(res => Array.isArray(res) ? res : [])
+            ]);
+
+            const userEmailLower = (currentUser.email || "").toLowerCase().trim();
+            const userIdStr = currentUser.id ? String(currentUser.id).toLowerCase().trim() : "";
+
+            const isOwnerMatch = preDetails && (
+              (preDetails.organizer_id && String(preDetails.organizer_id).toLowerCase().trim() === userIdStr) ||
+              (preDetails.organizerId && String(preDetails.organizerId).toLowerCase().trim() === userIdStr) ||
+              (preDetails.owner_id && String(preDetails.owner_id).toLowerCase().trim() === userIdStr) ||
+              (preDetails.user_id && String(preDetails.user_id).toLowerCase().trim() === userIdStr) ||
+              (preDetails.contact_email && preDetails.contact_email.toLowerCase().trim() === userEmailLower) ||
+              (preDetails.host_email && preDetails.host_email.toLowerCase().trim() === userEmailLower) ||
+              (preDetails.organizer_email && preDetails.organizer_email.toLowerCase().trim() === userEmailLower)
+            );
+
+            const isTeamMatch = Array.isArray(preTeam) && preTeam.some(m => {
+              if (!m) return false;
+              const mEmail = (m.email || "").toLowerCase().trim();
+              if (userEmailLower && mEmail && mEmail === userEmailLower) return true;
+              const mUid = m.userId || m.user_id || m.id;
+              if (userIdStr && mUid && String(mUid).toLowerCase().trim() === userIdStr) return true;
+              return false;
+            });
+
+            if (isOwnerMatch || isTeamMatch) {
+              hasPreVerifiedAccess = true;
+              if (preDetails) {
+                setEventDetails(preDetails);
+                safeLocalStorageSet(`eventzone_cached_event_${activeEventId}`, preDetails);
+              }
+              if (preTeam) setTeam(preTeam);
+            } else {
+              // Unauthorized user!
+              if (preDetails) setEventDetails(preDetails);
+              // Clear sensitive state to prevent data leak
+              setAttendees([]);
+              setPending([]);
+              setTickets([]);
+              setFloorPlans([]);
+              setForms([]);
+              setFormSubmissions([]);
+              setRsvps([]);
+              setLogisticsData({});
+              setDocuments([]);
+              setInfluencers([]);
+              setOpportunities([]);
+              setOrganizations([]);
+              setSponsors([]);
+              setExhibitors([]);
+              setSessions([]);
+              setIsLoading(false);
+              return;
+            }
+          } catch (preErr) {
+            console.warn("Authorization verification failed:", preErr);
+            setIsLoading(false);
+            return;
+          }
+        } else if (!hasPreVerifiedAccess && !currentUser) {
+          setIsLoading(false);
+          return;
+        }
+
         const triggerGranularFetches = () => {
           fetchAndSet(fetchEventDetails(activeEventId), (val) => {
             setEventDetails(val);
@@ -4448,8 +4534,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
   // ==========================================================================
   const isFloorPlanView = currentView === "floor-plan" || currentView === "floor_plan";
   const isPublicPreviewRequested = initialPreviewMode || (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("preview"));
-  const isNonOrganizerUser = !effectivePermissions?.isOwner && !effectivePermissions?.isAdmin && !effectivePermissions?.member;
-  const isStandalonePublicFloorPlan = isFloorPlanView && (isPublicPreviewRequested || isNonOrganizerUser || !currentUser);
+  const isStandalonePublicFloorPlan = isFloorPlanView && isPublicPreviewRequested;
 
   if (isStandalonePublicFloorPlan) {
     const previewPlan = (activeFloorPlanId && floorPlans.find(p => p.id === activeFloorPlanId)) || floorPlans[0] || null;
@@ -4603,16 +4688,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
   // 4.1. ORGANIZER DASHBOARD AUTHORIZATION GUARD
   // Prevent unauthorized users / attendees / other organizers from accessing private event dashboards
   // ==========================================================================
-  const isAuthorizedForEventDashboard = !!(
-    effectivePermissions?.isOwner ||
-    effectivePermissions?.isAdmin ||
-    effectivePermissions?.member ||
-    activeEventId === DEFAULT_EVENT_ID ||
-    activeEventId === "default-summit-2025" ||
-    activeEventId === "myevent" ||
-    activeEventId === "00000000-0000-0000-0000-000000000001" ||
-    (Array.isArray(userEvents) && userEvents.some(e => e && String(e.id) === String(activeEventId)))
-  );
+  const isAuthorizedForEventDashboard = hasEventAccess(effectivePermissions);
 
   if (isLoading && !isAuthorizedForEventDashboard && (!Array.isArray(userEvents) || userEvents.length === 0)) {
     return <OverviewSkeleton />;
@@ -4620,42 +4696,85 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
 
   if (!isAuthorizedForEventDashboard) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mb-4 shadow-xs">
-          <ShieldAlert size={32} />
-        </div>
-        <h2 className="text-lg font-bold text-slate-900 mb-1">{t("dash.accessRestrictedTitle", "Access Restricted")}</h2>
-        <p className="text-xs text-slate-500 max-w-md mb-6 leading-relaxed">
-          {t("dash.notAuthorizedForDashboard", "You are not authorized to access the organizer management dashboard for this event.")}
-        </p>
-        <div className="flex items-center gap-3">
-          {eventDetails?.title && (
+      <div className="min-h-screen bg-slate-50 flex flex-col justify-between" dir={dir}>
+        {/* Top Header */}
+        <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-xl font-black tracking-tight text-blue-600">eventzone</span>
+          </div>
+          <div className="flex items-center gap-3">
             <button
-              onClick={() => {
-                if (eventDetails?.slug) {
-                  window.location.href = `/${eventDetails.slug}`;
-                } else {
-                  setCurrentView("event-landing");
-                }
-              }}
-              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+              onClick={() => setCurrentView("events-hub")}
+              className="px-3.5 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-all cursor-pointer"
             >
-              {t("dash.viewPublicEvent", "View Public Event Page")}
+              {t("dash.myEvents", "My Events")}
             </button>
-          )}
-          <button
-            onClick={() => {
-              if (currentUser.role === "organizer" || (Array.isArray(userEvents) && userEvents.length > 0)) {
-                setCurrentView("events-hub");
-              } else {
-                setCurrentView("home");
-              }
-            }}
-            className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
-          >
-            {currentUser.role === "organizer" || (Array.isArray(userEvents) && userEvents.length > 0) ? t("dash.backToEventsHub", "Back to My Events") : t("common.goToHome", "Go to Home")}
-          </button>
-        </div>
+            <button
+              onClick={() => setCurrentView("home")}
+              className="px-3.5 py-1.5 rounded-xl bg-blue-600 text-xs font-semibold text-white hover:bg-blue-700 transition-all cursor-pointer"
+            >
+              {t("common.home", "Home")}
+            </button>
+          </div>
+        </header>
+
+        {/* Main Content */}
+        <main className="flex-1 flex items-center justify-center p-6">
+          <div className="max-w-md w-full bg-white rounded-3xl border border-slate-200 shadow-xl p-8 text-center flex flex-col items-center">
+            <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mb-5 shadow-xs">
+              <ShieldAlert size={32} />
+            </div>
+
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200 mb-3">
+              <Lock size={12} />
+              {t("dash.accessRestrictedBadge", "Restricted Event")}
+            </span>
+
+            <h1 className="text-2xl font-bold text-slate-900 mb-2">
+              {t("dash.accessDeniedTitle", "Access Denied")}
+            </h1>
+
+            <p className="text-xs text-slate-500 leading-relaxed mb-6">
+              {t("dash.accessDeniedDesc", "You do not have permission to access or view this event dashboard. If you need access, ask the event organizer to invite your account as a team member.")}
+            </p>
+
+            {eventDetails?.title && (
+              <div className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-600 mb-6 flex items-center justify-center gap-2">
+                <span className="text-slate-400 font-medium">{t("dash.eventLabel", "Event")}:</span>
+                <span className="font-bold text-slate-800 truncate max-w-[260px]">{eventDetails.title}</span>
+              </div>
+            )}
+
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full">
+              <button
+                onClick={() => setCurrentView("events-hub")}
+                className="w-full sm:flex-1 py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center justify-center gap-2"
+              >
+                <LayoutDashboard size={14} />
+                <span>{t("dash.backToEventsHub", "Back to My Events")}</span>
+              </button>
+              {eventDetails?.slug && (
+                <button
+                  onClick={() => {
+                    if (eventDetails?.slug) {
+                      window.location.href = `/${eventDetails.slug}`;
+                    } else {
+                      setCurrentView("event-landing");
+                    }
+                  }}
+                  className="w-full sm:flex-1 py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <Eye size={14} />
+                  <span>{t("dash.viewPublicPage", "View Public Page")}</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </main>
+
+        <footer className="py-4 text-center text-[11px] text-slate-400">
+          Eventzone &copy; {new Date().getFullYear()} · All rights reserved
+        </footer>
       </div>
     );
   }
