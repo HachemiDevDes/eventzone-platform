@@ -111,6 +111,7 @@ export default function AttendeePortalView({
   const portalStatus = String(rawPortalStatus || "open").toLowerCase().trim();
   const portalOpenTimeStr = eventDetails.portalOpenTime || eventDetails.portal_open_time || eventDetails.portalSettings?.portal_open_time || eventDetails.portal_settings?.portal_open_time || eventDetails.portalSettings?.portalOpenTime;
   const portalMessage = eventDetails.portalMessage || eventDetails.portal_message || eventDetails.portalSettings?.portal_message || eventDetails.portal_settings?.portal_message || "";
+  const portalNoticeMessage = portalMessage;
 
   const [countdown, setCountdown] = useState({
     days: 0,
@@ -588,14 +589,14 @@ export default function AttendeePortalView({
           </div>
 
           {/* Organizer Custom Note */}
-          {(portalNoticeMessage || eventDetails.portalMessage || eventDetails.portal_message) && (
+          {Boolean(portalMessage) && (
             <div className="p-5 bg-white/5 border border-white/10 rounded-2xl max-w-lg w-full text-start text-xs space-y-2 backdrop-blur-md">
               <div className="flex items-center gap-2 text-rose-300 font-bold">
                 <Megaphone size={14} />
                 <span>{t("portal.noticeFromOrganizer", "Notice from Event Organizer")}</span>
               </div>
               <p className="text-slate-300 leading-relaxed font-medium">
-                {portalNoticeMessage || eventDetails.portalMessage || eventDetails.portal_message}
+                {portalMessage}
               </p>
             </div>
           )}
@@ -708,14 +709,14 @@ export default function AttendeePortalView({
           </div>
 
           {/* Organizer Announcement */}
-          {eventDetails.portalMessage && (
+          {Boolean(portalMessage) && (
             <div className="p-5 bg-white/5 border border-white/10 rounded-2xl max-w-lg w-full text-start text-xs space-y-2 backdrop-blur-md">
               <div className="flex items-center gap-2 text-indigo-300 font-bold">
                 <Megaphone size={14} />
                 <span>{t("portal.organizerAnnouncement", "Organizer Announcement")}</span>
               </div>
               <p className="text-slate-300 leading-relaxed font-medium">
-                {eventDetails.portalMessage}
+                {portalMessage}
               </p>
             </div>
           )}
@@ -1125,7 +1126,7 @@ export default function AttendeePortalView({
           <div className="space-y-8 animate-fade-in">
             
             {/* Welcome Announcement from Organizer */}
-            {eventDetails.portalMessage && (
+            {Boolean(portalMessage) && (
               <div className="p-6 sm:p-7 bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.03)] flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                 <div className="space-y-1.5 max-w-2xl">
                   <div className="flex items-center gap-2 text-blue-600 text-xs font-bold uppercase tracking-wider">
@@ -1133,7 +1134,7 @@ export default function AttendeePortalView({
                     <span>{t("portal.welcomeTo", "Welcome to {title}", { title: eventDetails.title || "Summit" })}</span>
                   </div>
                   <p className="text-sm text-slate-700 font-normal leading-relaxed">
-                    {eventDetails.portalMessage}
+                    {portalMessage}
                   </p>
                 </div>
 
