@@ -2236,7 +2236,7 @@ export default function AttendeePortalView({
                         <button
                           key={contact.email || contact.id}
                           onClick={() => setActiveChatContact(contact)}
-                          className={`w-full p-3 rounded-2xl text-start transition-all flex items-center gap-3 cursor-pointer ${
+                          className={`w-full p-2.5 sm:p-3 rounded-xl text-start transition-all flex items-center gap-3 cursor-pointer ${
                             isSelected 
                               ? "bg-blue-600 text-white shadow-sm" 
                               : "bg-white hover:bg-slate-100/80 text-slate-800 border border-slate-150"
