@@ -265,7 +265,12 @@ export default function AttendeePortalView({
     try {
       const msgs = await fetchEventChatMessages(currentUser, eventDetails.id);
       if (msgs && Array.isArray(msgs)) {
-        setChatMessages(msgs);
+        setChatMessages(prev => {
+          if (prev.length === msgs.length && prev[prev.length - 1]?.id === msgs[msgs.length - 1]?.id) {
+            return prev;
+          }
+          return msgs;
+        });
       }
     } catch (err) {
       console.warn("Error loading chat messages:", err);
@@ -441,14 +446,9 @@ export default function AttendeePortalView({
   const [chatInputText, setChatInputText] = useState("");
   const [chatContactSearch, setChatContactSearch] = useState("");
   const [isSendingMessage, setIsSendingMessage] = useState(false);
-  const chatMessagesEndRef = useRef(null);
-
-  // Scroll to bottom of message thread
-  useEffect(() => {
-    if (activeTab === "chat" && chatMessagesEndRef.current) {
-      chatMessagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [chatMessages, activeChatContact, activeTab]);
+  const chatContainerRef = useRef(null);
+  const prevMsgCountRef = useRef(0);
+  const prevContactRef = useRef(null);
 
   // Send message handler
   const handleSendMessage = async (e) => {
@@ -508,6 +508,38 @@ export default function AttendeePortalView({
       );
     });
   }, [chatMessages, activeChatContact, currentUser]);
+
+  // Scroll inner chat container only (preventing the browser page window from scrolling down on its own)
+  useEffect(() => {
+    if (activeTab !== "chat" || !activeChatContact) return;
+
+    const currentContactEmail = activeChatContact.email?.toLowerCase();
+    const contactChanged = prevContactRef.current !== currentContactEmail;
+    const currentMsgCount = activeConversationMessages.length;
+    const hasNewMessages = currentMsgCount > prevMsgCountRef.current;
+
+    prevContactRef.current = currentContactEmail;
+    prevMsgCountRef.current = currentMsgCount;
+
+    if (contactChanged) {
+      const timer = setTimeout(() => {
+        if (chatContainerRef.current) {
+          chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    } else if (hasNewMessages) {
+      const timer = setTimeout(() => {
+        if (chatContainerRef.current) {
+          chatContainerRef.current.scrollTo({
+            top: chatContainerRef.current.scrollHeight,
+            behavior: "smooth"
+          });
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [activeConversationMessages.length, activeChatContact?.email, activeTab]);
 
   // List of contacts with whom the user can chat (STRICTLY accepted connections)
   const chatContactsList = useMemo(() => {
@@ -2336,7 +2368,7 @@ export default function AttendeePortalView({
                     )}
 
                     {/* Chat Messages Body */}
-                    <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-slate-50/30">
+                    <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-slate-50/30">
                       {activeConversationMessages.length === 0 ? (
                         <div className="py-10 text-center space-y-4 max-w-md mx-auto">
                           <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
@@ -2405,7 +2437,6 @@ export default function AttendeePortalView({
                           );
                         })
                       )}
-                      <div ref={chatMessagesEndRef} />
                     </div>
 
                     {/* Chat Input Bar */}
