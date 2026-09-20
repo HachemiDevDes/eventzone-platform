@@ -43,6 +43,23 @@ textarea,
   font-family: var(--font-plus-jakarta-sans), 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
+/* Prevent iOS & mobile browser auto-zoom when focusing form inputs */
+@media screen and (max-width: 768px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="color"]):not([type="image"]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* Optimize touch responsiveness and prevent double-tap zoom delay */
+input,
+textarea,
+select,
+button {
+  touch-action: manipulation;
+}
+
 .rich-text-editor-content,
 .rich-text-editor-content *,
 .description-rendered-content,
