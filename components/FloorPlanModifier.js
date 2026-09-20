@@ -1491,14 +1491,14 @@ export default function FloorPlanModifier({
 
       if (!publicUrl) return;
 
-      const img = new window.Image();
-      img.src = publicUrl;
-      img.onload = () => {
+      const applyBlueprint = (w, h) => {
+        const bpWidth = Math.max(10, Number(w) || 800);
+        const bpHeight = Math.max(10, Number(h) || 600);
         const nextBlueprint = {
           url: publicUrl,
           name: file.name || "Venue Blueprint",
-          width: img.width,
-          height: img.height,
+          width: bpWidth,
+          height: bpHeight,
           x: 0,
           y: 0,
           rotation: 0,
@@ -1507,6 +1507,15 @@ export default function FloorPlanModifier({
         };
         commitHistoryState(elements, nextBlueprint);
       };
+
+      const img = new window.Image();
+      img.onload = () => {
+        applyBlueprint(img.naturalWidth || img.width, img.naturalHeight || img.height);
+      };
+      img.onerror = () => {
+        applyBlueprint(800, 600);
+      };
+      img.src = publicUrl;
     } catch (err) {
       console.error("Failed to upload blueprint image:", err);
       alert("Failed to upload blueprint image to Supabase Storage");

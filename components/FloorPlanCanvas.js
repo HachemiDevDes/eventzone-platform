@@ -55,18 +55,109 @@ const getSidesStatus = (openSides) => {
   };
 };
 
+/**
+ * Safe image loader for HTML5 / Konva Canvas
+ * Handles CORS issues, Cloudflare R2 lack of CORS headers, and provides fallback loading
+ * without tainting the canvas when possible.
+ */
+export function loadSafeCanvasImage(url, onLoaded, onError) {
+  if (!url || typeof window === "undefined") return () => {};
+
+  let cancelled = false;
+
+  // 1. Data URLs or Blob URLs: load directly without crossOrigin
+  if (url.startsWith("data:") || url.startsWith("blob:")) {
+    const img = new window.Image();
+    img.onload = () => {
+      if (!cancelled) onLoaded(img);
+    };
+    img.onerror = (err) => {
+      if (!cancelled && onError) onError(err);
+    };
+    img.src = url;
+    return () => { cancelled = true; };
+  }
+
+  // 2. Relative URLs (same origin): load directly with crossOrigin anonymous
+  if (url.startsWith("/")) {
+    const img = new window.Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      if (!cancelled) onLoaded(img);
+    };
+    img.onerror = () => {
+      if (cancelled) return;
+      const fallback = new window.Image();
+      fallback.onload = () => { if (!cancelled) onLoaded(fallback); };
+      if (onError) fallback.onerror = onError;
+      fallback.src = url;
+    };
+    img.src = url;
+    return () => { cancelled = true; };
+  }
+
+  // 3. Remote URLs:
+  const proxyUrl = `/api/storage/proxy?url=${encodeURIComponent(url)}`;
+  const isKnownNonCorsDomain = url.includes(".r2.dev") || url.includes("pub-");
+
+  const tryDirectWithoutCors = () => {
+    if (cancelled) return;
+    const fallbackImg = new window.Image();
+    fallbackImg.onload = () => {
+      if (!cancelled) onLoaded(fallbackImg);
+    };
+    fallbackImg.onerror = (err) => {
+      console.error("All canvas image load attempts failed for:", url, err);
+      if (!cancelled && onError) onError(err);
+    };
+    fallbackImg.src = url;
+  };
+
+  const tryProxy = () => {
+    if (cancelled) return;
+    const proxyImg = new window.Image();
+    proxyImg.crossOrigin = "anonymous";
+    proxyImg.onload = () => {
+      if (!cancelled) onLoaded(proxyImg);
+    };
+    proxyImg.onerror = () => {
+      tryDirectWithoutCors();
+    };
+    proxyImg.src = proxyUrl;
+  };
+
+  // If known to lack CORS (like Cloudflare R2 public dev bucket), immediately use proxy to avoid CORS errors
+  if (isKnownNonCorsDomain) {
+    tryProxy();
+    return () => { cancelled = true; };
+  }
+
+  // For other external URLs, try direct CORS first, then proxy, then non-CORS
+  const primaryImg = new window.Image();
+  primaryImg.crossOrigin = "anonymous";
+  primaryImg.onload = () => {
+    if (!cancelled) onLoaded(primaryImg);
+  };
+  primaryImg.onerror = () => {
+    tryProxy();
+  };
+  primaryImg.src = url;
+
+  return () => {
+    cancelled = true;
+  };
+}
+
 // Asynchronous Avatar/Attendee Image Loader for Seats
 function SeatAttendeeAvatar({ src, shape, seatProps, width, height, stroke, strokeWidth }) {
   const [imageObj, setImageObj] = useState(null);
 
   useEffect(() => {
-    if (!src) return;
-    const img = new window.Image();
-    img.crossOrigin = "anonymous";
-    img.src = src;
-    img.onload = () => {
-      setImageObj(img);
-    };
+    if (!src) {
+      setImageObj(null);
+      return;
+    }
+    return loadSafeCanvasImage(src, setImageObj);
   }, [src]);
 
   const radius = Math.min(width, height) / 2;
@@ -177,13 +268,11 @@ function CanvasImageElement({ el, isSelected, isHovered, toolMode, commonProps, 
   const [imageObj, setImageObj] = useState(null);
 
   useEffect(() => {
-    if (!el.src) return;
-    const img = new window.Image();
-    img.crossOrigin = "anonymous";
-    img.src = el.src;
-    img.onload = () => {
-      setImageObj(img);
-    };
+    if (!el.src) {
+      setImageObj(null);
+      return;
+    }
+    return loadSafeCanvasImage(el.src, setImageObj);
   }, [el.src]);
 
   const isMobile = typeof window !== "undefined" && window.innerWidth < 1025;
@@ -278,10 +367,11 @@ function CanvasQRCode({ qrUrl, x, y, size = 40 }) {
   const [imageObj, setImageObj] = useState(null);
 
   useEffect(() => {
-    if (!qrUrl) return;
-    const img = new window.Image();
-    img.src = qrUrl;
-    img.onload = () => setImageObj(img);
+    if (!qrUrl) {
+      setImageObj(null);
+      return;
+    }
+    return loadSafeCanvasImage(qrUrl, setImageObj);
   }, [qrUrl]);
 
   if (!imageObj) return null;
@@ -918,7 +1008,7 @@ const FloorPlanCanvas = React.forwardRef(({
     };
   }, []);
 
-  // Load blueprint background image
+  // Load blueprint background image safely (handles CORS, R2, and fallbacks)
   const [bgImage, setBgImage] = useState(null);
   useEffect(() => {
     if (!blueprintUrl) {
@@ -927,13 +1017,17 @@ const FloorPlanCanvas = React.forwardRef(({
       return;
     }
     isInitializedRef.current = false;
-    const img = new window.Image();
-    img.crossOrigin = "anonymous";
-    img.src = blueprintUrl;
-    img.onload = () => {
+    return loadSafeCanvasImage(blueprintUrl, (img) => {
       setBgImage(img);
-    };
+    });
   }, [blueprintUrl]);
+
+  // Request redraw when bgImage finishes loading
+  useEffect(() => {
+    if (bgImage && stageRef.current) {
+      stageRef.current.batchDraw();
+    }
+  }, [bgImage]);
 
   const handleZoomToFit = React.useCallback(() => {
     if (stageWidth <= 0 || stageHeight <= 0 || canvasWidth <= 0 || canvasHeight <= 0) return;
@@ -979,23 +1073,23 @@ const FloorPlanCanvas = React.forwardRef(({
       selectedIds.forEach(id => {
         if (id === "blueprint") {
           if (!blueprintIsLocked) {
-            const blueprintNode = stageRef.current.findOne("#blueprint-node");
+            const blueprintNode = stageRef.current?.findOne("#blueprint-node");
             if (blueprintNode) nodes.push(blueprintNode);
           }
         } else {
           const el = elements.find(item => item.id === id);
           if (el && !el.isLocked) {
-            const node = stageRef.current.findOne(`#el-${id}`);
+            const node = stageRef.current?.findOne(`#el-${id}`);
             if (node) nodes.push(node);
           }
         }
       });
       transformer.nodes(nodes);
-      transformer.getLayer().batchDraw();
+      transformer.getLayer()?.batchDraw();
     } else {
       transformer.nodes([]);
     }
-  }, [selectedIds, elements, toolMode, blueprintIsLocked]);
+  }, [selectedIds, elements, toolMode, blueprintIsLocked, bgImage]);
 
   // Set cursor styles based on toolMode
   useEffect(() => {
@@ -5483,12 +5577,12 @@ const FloorPlanCanvas = React.forwardRef(({
                 id="blueprint-node"
                 name="blueprint-image"
                 image={bgImage} 
-                x={blueprintX} 
-                y={blueprintY} 
-                width={blueprintWidth || bgImage.width}
-                height={blueprintHeight || bgImage.height}
-                rotation={blueprintRotation}
-                opacity={blueprintOpacity}
+                x={Number.isFinite(blueprintX) ? blueprintX : 0} 
+                y={Number.isFinite(blueprintY) ? blueprintY : 0} 
+                width={Math.max(10, Number(blueprintWidth) || bgImage.naturalWidth || bgImage.width || 800)}
+                height={Math.max(10, Number(blueprintHeight) || bgImage.naturalHeight || bgImage.height || 600)}
+                rotation={Number.isFinite(blueprintRotation) ? blueprintRotation : 0}
+                opacity={typeof blueprintOpacity === "number" ? blueprintOpacity : 0.8}
                 listening={false}
               />
             )}
@@ -5501,12 +5595,12 @@ const FloorPlanCanvas = React.forwardRef(({
                 id="blueprint-node"
                 name="blueprint-image"
                 image={bgImage} 
-                x={blueprintX} 
-                y={blueprintY} 
-                width={blueprintWidth || bgImage.width}
-                height={blueprintHeight || bgImage.height}
-                rotation={blueprintRotation}
-                opacity={blueprintOpacity}
+                x={Number.isFinite(blueprintX) ? blueprintX : 0} 
+                y={Number.isFinite(blueprintY) ? blueprintY : 0} 
+                width={Math.max(10, Number(blueprintWidth) || bgImage.naturalWidth || bgImage.width || 800)}
+                height={Math.max(10, Number(blueprintHeight) || bgImage.naturalHeight || bgImage.height || 600)}
+                rotation={Number.isFinite(blueprintRotation) ? blueprintRotation : 0}
+                opacity={typeof blueprintOpacity === "number" ? blueprintOpacity : 0.8}
                 listening={toolMode === "select"}
                 draggable={toolMode === "select"}
                 onClick={(e) => {
