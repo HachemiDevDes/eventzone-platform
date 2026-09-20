@@ -476,9 +476,107 @@ export async function POST(request, { params }) {
       );
     }
 
+    if (action === "remove" || action === "delete" || action === "cancel") {
+      const { partnerEmail, myEmail } = body;
+      const cleanPartner = cleanEmail(partnerEmail);
+      const cleanMy = cleanEmail(myEmail);
+
+      // 1. Remove from in-memory store
+      let updatedList = memoryList.filter((m) => {
+        if (connectionId && m.id === connectionId) return false;
+        if (cleanPartner) {
+          const s = cleanEmail(m.sender_email);
+          const r = cleanEmail(m.recipient_email);
+          if (cleanMy) {
+            if ((s === cleanMy && r === cleanPartner) || (s === cleanPartner && r === cleanMy)) return false;
+          } else {
+            if (s === cleanPartner || r === cleanPartner) return false;
+          }
+        }
+        return true;
+      });
+      setEventConnections(eventId, updatedList);
+
+      // 2. Remove from Supabase database
+      try {
+        if (connectionId && isValidUuid(connectionId)) {
+          const { error: delErr } = await supabase.from("connections").delete().eq("id", connectionId);
+          if (delErr) {
+            console.warn("Supabase connection delete by id error:", delErr);
+          }
+        } else if (cleanPartner) {
+          let q = supabase.from("connections").delete();
+          if (eventUuid) q = q.eq("event_id", eventUuid);
+          q = q.or(`email.ilike.${cleanPartner},notes.ilike.%${cleanPartner}%`);
+          await q;
+        }
+      } catch (e) {
+        console.warn("Supabase connection delete exception:", e);
+      }
+
+      return NextResponse.json(
+        { success: true, removed: connectionId || cleanPartner },
+        { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } }
+      );
+    }
+
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (err) {
     console.error("Connections API error:", err);
+    return NextResponse.json({ error: err.message || "Server error" }, { status: 500 });
+  }
+}
+
+export async function DELETE(request, { params }) {
+  const { id: eventId } = await params;
+  try {
+    const { searchParams } = new URL(request.url);
+    let connectionId = searchParams.get("connectionId");
+    let partnerEmail = searchParams.get("partnerEmail");
+
+    if (!connectionId && !partnerEmail) {
+      try {
+        const body = await request.json();
+        connectionId = body?.connectionId;
+        partnerEmail = body?.partnerEmail;
+      } catch (e) {}
+    }
+
+    const cleanPartner = cleanEmail(partnerEmail);
+    const supabase = getServiceSupabase();
+    const eventUuid = await resolveEventUuid(supabase, eventId);
+    let memoryList = getEventConnections(eventId);
+
+    let updatedList = memoryList.filter((m) => {
+      if (connectionId && m.id === connectionId) return false;
+      if (cleanPartner) {
+        const s = cleanEmail(m.sender_email);
+        const r = cleanEmail(m.recipient_email);
+        if (s === cleanPartner || r === cleanPartner) return false;
+      }
+      return true;
+    });
+    setEventConnections(eventId, updatedList);
+
+    try {
+      if (connectionId && isValidUuid(connectionId)) {
+        await supabase.from("connections").delete().eq("id", connectionId);
+      } else if (cleanPartner) {
+        let q = supabase.from("connections").delete();
+        if (eventUuid) q = q.eq("event_id", eventUuid);
+        q = q.or(`email.ilike.${cleanPartner},notes.ilike.%${cleanPartner}%`);
+        await q;
+      }
+    } catch (e) {
+      console.warn("DELETE connection exception:", e);
+    }
+
+    return NextResponse.json(
+      { success: true, removed: connectionId || cleanPartner },
+      { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } }
+    );
+  } catch (err) {
+    console.error("DELETE connection API error:", err);
     return NextResponse.json({ error: err.message || "Server error" }, { status: 500 });
   }
 }

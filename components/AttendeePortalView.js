@@ -10,7 +10,7 @@ import {
   MessageSquare, UserCheck, ShieldCheck, Lock, Unlock, Eye,
   Compass, Megaphone, Store, Mic, Tag, ChevronDown, ChevronRight,
   Info, AlertCircle, Heart, Smartphone, RefreshCw, LogIn, UserPlus,
-  Send, MessageCircle, Smile, User, Loader2
+  Send, MessageCircle, Smile, User, Loader2, UserMinus, UserX, Trash2
 } from "lucide-react";
 import QRCode from "qrcode";
 import { useLanguage } from "../lib/i18n";
@@ -22,6 +22,8 @@ import {
   sendAttendeeConnectionRequest,
   acceptAttendeeConnectionRequest,
   declineAttendeeConnectionRequest,
+  removeAttendeeConnection,
+  cancelAttendeeConnectionRequest,
   fetchSessionBookmarks,
   toggleSessionBookmark,
   fetchEventChatMessages,
@@ -230,6 +232,10 @@ export default function AttendeePortalView({
   const [isSendingRequest, setIsSendingRequest] = useState(false);
   const [requestSentTargetId, setRequestSentTargetId] = useState(null);
 
+  // Remove Connection Confirmation Dialog
+  const [disconnectModalTarget, setDisconnectModalTarget] = useState(null);
+  const [isRemovingConnection, setIsRemovingConnection] = useState(false);
+
   // Edit My Profile Drawer
   const [isEditingMyProfile, setIsEditingMyProfile] = useState(false);
   const [myHeadline, setMyHeadline] = useState(currentUser?.jobTitle || matchingAttendee?.jobTitle || "");
@@ -330,6 +336,55 @@ export default function AttendeePortalView({
       }
     } catch (err) {
       console.warn("Error declining connection:", err);
+    } finally {
+      setIsProcessingAction(false);
+    }
+  };
+
+  const handleOpenDisconnectModal = (attendee, connectionId = null) => {
+    if (!attendee) return;
+    const foundConn = connections.find(c => isMatchingEmail(c.email, attendee.email) || (c.partnerId && c.partnerId === attendee.id));
+    const targetConnId = connectionId || foundConn?.connectionId || foundConn?.id || attendee.connectionId || attendee.id;
+    setDisconnectModalTarget({
+      connectionId: targetConnId,
+      attendee,
+      name: attendee.name || attendee.fullName || `${attendee.firstName || ""} ${attendee.lastName || ""}`.trim() || "Delegate",
+      email: attendee.email
+    });
+  };
+
+  const handleConfirmRemoveConnection = async () => {
+    if (!disconnectModalTarget || !eventDetails?.id) return;
+    setIsRemovingConnection(true);
+    try {
+      const { connectionId, attendee, email } = disconnectModalTarget;
+      await removeAttendeeConnection(connectionId, eventDetails.id, email);
+
+      if (activeChatContact && (isMatchingEmail(activeChatContact.email, email) || activeChatContact.id === attendee?.id)) {
+        setActiveChatContact(null);
+      }
+
+      if (selectedAttendeeForModal && (isMatchingEmail(selectedAttendeeForModal.email, email) || selectedAttendeeForModal.id === attendee?.id)) {
+        setSelectedAttendeeForModal(null);
+      }
+
+      await loadConnectionsData();
+      setDisconnectModalTarget(null);
+    } catch (err) {
+      console.warn("Error removing connection:", err);
+    } finally {
+      setIsRemovingConnection(false);
+    }
+  };
+
+  const handleCancelSentInvitation = async (invitationId, recipientEmail) => {
+    if (!invitationId || !eventDetails?.id) return;
+    setIsProcessingAction(true);
+    try {
+      await cancelAttendeeConnectionRequest(invitationId, eventDetails.id, recipientEmail);
+      await loadConnectionsData();
+    } catch (err) {
+      console.warn("Error cancelling sent invitation:", err);
     } finally {
       setIsProcessingAction(false);
     }
@@ -1947,14 +2002,20 @@ export default function AttendeePortalView({
                               </div>
                             </div>
 
-                            <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                            <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
                               <span className="px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl text-xs font-bold flex items-center gap-1.5">
                                 <Clock size={12} />
                                 <span>{t("portal.awaitingAcceptance", "Awaiting acceptance")}</span>
                               </span>
-                              <span className="text-[10px] text-slate-400 font-medium">
-                                {req.created_at ? new Date(req.created_at).toLocaleDateString() : ""}
-                              </span>
+                              <button
+                                onClick={() => handleCancelSentInvitation(req.id, req.recipient_email)}
+                                disabled={isProcessingAction}
+                                className="px-2.5 py-1.5 bg-slate-100 hover:bg-red-50 text-slate-600 hover:text-red-600 border border-slate-200 hover:border-red-200 rounded-xl text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                                title={t("portal.cancelSentInvitation", "Cancel Request")}
+                              >
+                                <X size={12} />
+                                <span>{t("portal.cancelSentInvitation", "Cancel")}</span>
+                              </button>
                             </div>
                           </div>
                         );
@@ -2049,6 +2110,13 @@ export default function AttendeePortalView({
                                 <CheckCircle2 size={13} />
                                 <span>{t("portal.connectedBadge", "Connected")}</span>
                               </div>
+                              <button
+                                onClick={() => handleOpenDisconnectModal(att)}
+                                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 rounded-xl transition-all cursor-pointer shrink-0"
+                                title={t("portal.removeConnectionBtn", "Remove Connection")}
+                              >
+                                <UserMinus size={14} />
+                              </button>
                             </>
                           ) : pendingRec ? (
                             <div className="flex items-center gap-1.5 shrink-0">
@@ -2239,6 +2307,14 @@ export default function AttendeePortalView({
                         >
                           <User size={12} className="text-blue-600" />
                           <span>{t("portal.viewProfileBtn", "View Profile")}</span>
+                        </button>
+                        <button
+                          onClick={() => handleOpenDisconnectModal(activeChatContact)}
+                          className="px-2.5 py-1.5 bg-white hover:bg-red-50 text-slate-500 hover:text-red-600 border border-slate-200 hover:border-red-200 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
+                          title={t("portal.removeConnectionBtn", "Remove Connection")}
+                        >
+                          <UserMinus size={12} />
+                          <span className="hidden sm:inline">{t("portal.disconnectBtn", "Disconnect")}</span>
                         </button>
                       </div>
                     </div>
@@ -3103,19 +3179,28 @@ export default function AttendeePortalView({
                 ) : (
                   <>
                     {isConn ? (
-                      <>
-                        <button
-                          onClick={() => handleStartChatWith(att)}
-                          className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-xs font-bold shadow-md shadow-blue-600/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                        >
-                          <MessageCircle size={14} />
-                          <span>{t("portal.startOneOnOneChat", "Start 1-on-1 Chat")}</span>
-                        </button>
-                        <div className="px-4 py-3 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-2xl text-xs font-bold flex items-center gap-1.5 shrink-0">
-                          <CheckCircle2 size={14} />
-                          <span>{t("portal.connectedStatus", "Connected")}</span>
+                      <div className="flex flex-col gap-2.5 w-full">
+                        <div className="flex items-center gap-2 w-full">
+                          <button
+                            onClick={() => handleStartChatWith(att)}
+                            className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-xs font-bold shadow-md shadow-blue-600/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                          >
+                            <MessageCircle size={14} />
+                            <span>{t("portal.startOneOnOneChat", "Start 1-on-1 Chat")}</span>
+                          </button>
+                          <div className="px-4 py-3 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-2xl text-xs font-bold flex items-center gap-1.5 shrink-0">
+                            <CheckCircle2 size={14} />
+                            <span>{t("portal.connectedStatus", "Connected")}</span>
+                          </div>
                         </div>
-                      </>
+                        <button
+                          onClick={() => handleOpenDisconnectModal(att)}
+                          className="w-full py-2.5 bg-slate-50 hover:bg-red-50 text-slate-500 hover:text-red-600 border border-slate-200 hover:border-red-200 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <UserMinus size={13} />
+                          <span>{t("portal.removeConnectionBtn", "Remove Connection")}</span>
+                        </button>
+                      </div>
                     ) : pendingRec ? (
                       <div className="flex items-center gap-2 flex-1 w-full">
                         <button
@@ -3224,6 +3309,62 @@ export default function AttendeePortalView({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ==================================================================== */}
+      {/* MODAL 2.5: REMOVE CONNECTION CONFIRMATION                            */}
+      {/* ==================================================================== */}
+      {disconnectModalTarget && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-fade-in font-sans">
+          <div className="bg-white border border-slate-200 w-full max-w-md rounded-2xl shadow-2xl p-6 sm:p-7 text-start space-y-5 animate-scale-up relative">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-150">
+              <div className="flex items-center gap-2 text-red-600">
+                <UserMinus size={18} />
+                <h3 className="text-base font-black text-slate-900">{t("portal.removeConnectionTitle", "Remove Connection")}</h3>
+              </div>
+              <button
+                onClick={() => setDisconnectModalTarget(null)}
+                disabled={isRemovingConnection}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 cursor-pointer font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 font-medium leading-relaxed">
+              {t("portal.removeConnectionConfirm", "Are you sure you want to remove your connection with {name}? You will no longer be connected and 1-on-1 direct messaging will be disabled.", { name: disconnectModalTarget.name })}
+            </p>
+
+            <div className="pt-2 border-t border-slate-100 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setDisconnectModalTarget(null)}
+                disabled={isRemovingConnection}
+                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+              >
+                {t("portal.cancelBtn", "Cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmRemoveConnection}
+                disabled={isRemovingConnection}
+                className="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-md shadow-red-600/20 disabled:opacity-50"
+              >
+                {isRemovingConnection ? (
+                  <>
+                    <Loader2 size={13} className="animate-spin" />
+                    <span>{t("portal.removingConnection", "Removing...")}</span>
+                  </>
+                ) : (
+                  <>
+                    <UserMinus size={13} />
+                    <span>{t("portal.confirmRemoveConnection", "Remove Connection")}</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
