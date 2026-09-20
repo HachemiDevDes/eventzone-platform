@@ -20,6 +20,8 @@ import A4BadgeSheet, { printA4BadgeDocument } from "./A4BadgeSheet";
 import {
   fetchAttendeeConnections,
   sendAttendeeConnectionRequest,
+  acceptAttendeeConnectionRequest,
+  declineAttendeeConnectionRequest,
   fetchSessionBookmarks,
   toggleSessionBookmark,
   fetchEventChatMessages,
@@ -214,8 +216,12 @@ export default function AttendeePortalView({
   // ─────────────────────────────────────────────
   const [networkingSearch, setNetworkingSearch] = useState("");
   const [selectedIndustry, setSelectedIndustry] = useState("all");
-  const [networkingTab, setNetworkingTab] = useState("all"); // "all" | "connections"
+  const [networkingTab, setNetworkingTab] = useState("all"); // "all" | "connections" | "invitations"
   const [connections, setConnections] = useState([]);
+  const [pendingSent, setPendingSent] = useState([]);
+  const [pendingReceived, setPendingReceived] = useState([]);
+  const [isProcessingAction, setIsProcessingAction] = useState(false);
+  const [chatNoticeError, setChatNoticeError] = useState("");
   const [selectedAttendeeForModal, setSelectedAttendeeForModal] = useState(null);
   
   // Connection Request Dialog
@@ -232,14 +238,47 @@ export default function AttendeePortalView({
   const [myLookingFor, setMyLookingFor] = useState(currentUser?.what_im_looking_for || currentUser?.whatImLookingFor || "");
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
-  // Load Connections
-  useEffect(() => {
-    if (currentUser?.id && eventDetails?.id) {
-      fetchAttendeeConnections(currentUser.id, eventDetails.id).then(data => {
-        setConnections(data || []);
-      });
+  // Load & Refresh Connections & Invitations
+  const loadConnectionsData = async () => {
+    if (!currentUser || !eventDetails?.id) return;
+    try {
+      const data = await fetchAttendeeConnections(currentUser, eventDetails.id);
+      if (data) {
+        setConnections(Array.isArray(data.connections) ? data.connections : (Array.isArray(data) ? data : []));
+        setPendingSent(Array.isArray(data.pendingSent) ? data.pendingSent : []);
+        setPendingReceived(Array.isArray(data.pendingReceived) ? data.pendingReceived : []);
+      }
+    } catch (err) {
+      console.warn("Error loading connections:", err);
     }
-  }, [currentUser, eventDetails]);
+  };
+
+  // Load & Refresh Chat Messages
+  const loadChatData = async () => {
+    if (!currentUser || !eventDetails?.id) return;
+    try {
+      const msgs = await fetchEventChatMessages(currentUser, eventDetails.id);
+      if (msgs && Array.isArray(msgs)) {
+        setChatMessages(msgs);
+      }
+    } catch (err) {
+      console.warn("Error loading chat messages:", err);
+    }
+  };
+
+  // Real-time 3s interval polling for connections and chat
+  useEffect(() => {
+    if (!currentUser || !eventDetails?.id) return;
+    loadConnectionsData();
+    loadChatData();
+
+    const interval = setInterval(() => {
+      loadConnectionsData();
+      loadChatData();
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [currentUser?.id, currentUser?.email, eventDetails?.id]);
 
   const handleSendConnection = async (e) => {
     e.preventDefault();
@@ -248,8 +287,8 @@ export default function AttendeePortalView({
     try {
       const res = await sendAttendeeConnectionRequest(currentUser, connectModalTarget, eventDetails.id, connectNote);
       if (res) {
-        setConnections(prev => [res, ...prev.filter(c => c.id !== res.id)]);
         setRequestSentTargetId(connectModalTarget.id || connectModalTarget.email);
+        await loadConnectionsData();
         setTimeout(() => {
           setConnectModalTarget(null);
           setConnectNote("");
@@ -259,6 +298,40 @@ export default function AttendeePortalView({
       console.warn("Connect error:", err);
     } finally {
       setIsSendingRequest(false);
+    }
+  };
+
+  const handleAcceptConnection = async (connectionId, attendee) => {
+    if (!connectionId || !eventDetails?.id) return;
+    setIsProcessingAction(true);
+    try {
+      const res = await acceptAttendeeConnectionRequest(connectionId, eventDetails.id);
+      if (res) {
+        await loadConnectionsData();
+        if (selectedAttendeeForModal?.id === attendee?.id || isMatchingEmail(selectedAttendeeForModal?.email, attendee?.email)) {
+          setSelectedAttendeeForModal(null);
+        }
+      }
+    } catch (err) {
+      console.warn("Error accepting connection:", err);
+    } finally {
+      setIsProcessingAction(false);
+    }
+  };
+
+  const handleDeclineConnection = async (connectionId) => {
+    if (!connectionId || !eventDetails?.id) return;
+    setIsProcessingAction(true);
+    try {
+      const res = await declineAttendeeConnectionRequest(connectionId, eventDetails.id);
+      if (res) {
+        await loadConnectionsData();
+        setSelectedAttendeeForModal(null);
+      }
+    } catch (err) {
+      console.warn("Error declining connection:", err);
+    } finally {
+      setIsProcessingAction(false);
     }
   };
 
@@ -315,16 +388,6 @@ export default function AttendeePortalView({
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const chatMessagesEndRef = useRef(null);
 
-  // Load chat messages from DB & localStorage
-  useEffect(() => {
-    if (currentUser?.id || currentUser?.email) {
-      const uid = currentUser.id || currentUser.email;
-      fetchEventChatMessages(uid, eventDetails.id).then(msgs => {
-        if (msgs) setChatMessages(msgs);
-      });
-    }
-  }, [currentUser, eventDetails.id]);
-
   // Scroll to bottom of message thread
   useEffect(() => {
     if (activeTab === "chat" && chatMessagesEndRef.current) {
@@ -337,6 +400,19 @@ export default function AttendeePortalView({
     if (e) e.preventDefault();
     if (!chatInputText.trim() || !activeChatContact || !currentUser) return;
     
+    // Connection Guard: only accepted connections can exchange messages
+    const contactEmail = (activeChatContact.email || "").toLowerCase();
+    const isConn = connections.some(c => 
+      (c.email || "").toLowerCase() === contactEmail || 
+      (c.partnerId && c.partnerId === activeChatContact.id)
+    );
+
+    if (!isConn) {
+      setChatNoticeError(t("portal.mustConnectBeforeMessaging", "You can only message delegates you are connected with. Please send an invitation to connect first."));
+      return;
+    }
+    setChatNoticeError("");
+
     setIsSendingMessage(true);
     const text = chatInputText.trim();
     setChatInputText("");
@@ -348,6 +424,9 @@ export default function AttendeePortalView({
       }
     } catch (err) {
       console.warn("Failed to send message:", err);
+      if (err.notConnected) {
+        setChatNoticeError(err.message || t("portal.mustConnectBeforeMessaging", "You can only message delegates you are connected with."));
+      }
     } finally {
       setIsSendingMessage(false);
     }
@@ -375,49 +454,25 @@ export default function AttendeePortalView({
     });
   }, [chatMessages, activeChatContact, currentUser]);
 
-  // List of contacts with whom the user has conversations or connections
+  // List of contacts with whom the user can chat (STRICTLY accepted connections)
   const chatContactsList = useMemo(() => {
     const map = new Map();
 
-    // 1. Add all confirmed connections
+    // Only add confirmed accepted connections
     connections.forEach(c => {
       if (c.email) {
+        const foundAttendee = attendees.find(a => isMatchingEmail(a.email, c.email));
         map.set(c.email.toLowerCase(), {
-          ...c,
-          isConnection: true,
-          name: c.name || "Delegate"
+          id: c.partnerId || foundAttendee?.id || c.id,
+          email: c.email.toLowerCase(),
+          name: c.name || foundAttendee?.name || `${foundAttendee?.firstName || ""} ${foundAttendee?.lastName || ""}`.trim() || "Delegate",
+          avatar: c.avatar || foundAttendee?.avatar || foundAttendee?.image || "",
+          jobTitle: c.jobTitle || foundAttendee?.jobTitle || foundAttendee?.role || "Delegate",
+          company: c.company || foundAttendee?.company || "",
+          isConnection: true
         });
       }
     });
-
-    // 2. Add attendees with whom there are chat messages
-    const myEmail = currentUser?.email?.toLowerCase();
-    chatMessages.forEach(m => {
-      const otherEmail = m.sender_email?.toLowerCase() === myEmail ? m.recipient_email?.toLowerCase() : m.sender_email?.toLowerCase();
-      if (otherEmail && !map.has(otherEmail)) {
-        const foundAttendee = attendees.find(a => isMatchingEmail(a.email, otherEmail));
-        map.set(otherEmail, {
-          email: otherEmail,
-          name: m.sender_email?.toLowerCase() === myEmail ? m.recipient_name : m.sender_name,
-          avatar: m.sender_email?.toLowerCase() === myEmail ? m.recipient_avatar : m.sender_avatar,
-          jobTitle: foundAttendee?.jobTitle || foundAttendee?.role || "Delegate",
-          company: foundAttendee?.company || "",
-          isConnection: false
-        });
-      }
-    });
-
-    // 3. Fallback: if list is empty, populate from event attendees
-    if (map.size === 0) {
-      attendees.forEach(a => {
-        if (!currentUser?.email || !isMatchingEmail(a.email, currentUser.email)) {
-          map.set((a.email || "").toLowerCase(), {
-            ...a,
-            name: a.name || `${a.firstName || ""} ${a.lastName || ""}`.trim() || "Delegate"
-          });
-        }
-      });
-    }
 
     const arr = Array.from(map.values());
     if (!chatContactSearch) return arr;
@@ -428,11 +483,16 @@ export default function AttendeePortalView({
       (c.jobTitle || "").toLowerCase().includes(q) ||
       (c.email || "").toLowerCase().includes(q)
     );
-  }, [connections, chatMessages, attendees, currentUser, chatContactSearch]);
+  }, [connections, attendees, chatContactSearch]);
 
-  // Set initial active chat contact if none selected
+  // Set initial active chat contact or keep synced with valid connections
   useEffect(() => {
-    if (!activeChatContact && chatContactsList.length > 0) {
+    if (activeChatContact) {
+      const exists = chatContactsList.some(c => isMatchingEmail(c.email, activeChatContact.email));
+      if (!exists) {
+        setActiveChatContact(chatContactsList[0] || null);
+      }
+    } else if (chatContactsList.length > 0) {
       setActiveChatContact(chatContactsList[0]);
     }
   }, [activeChatContact, chatContactsList]);
@@ -1347,46 +1407,76 @@ export default function AttendeePortalView({
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {attendees.slice(0, 4).map((att) => (
-                    <div
-                      key={att.id}
-                      className="p-4 bg-slate-50/70 hover:bg-slate-50 border border-slate-200/70 rounded-xl flex flex-col justify-between gap-3 transition-all hover:border-slate-300"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
-                          {(att.name || att.fullName || "A").charAt(0).toUpperCase()}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h4 className="text-xs font-bold text-slate-900 truncate">
-                            {att.name || att.fullName || t("portal.defaultDelegate", "Delegate")}
-                          </h4>
-                          <p className="text-[11px] text-slate-500 truncate">
-                            {att.jobTitle || att.title || att.role || t("portal.defaultAttendee", "Attendee")}
-                            {att.company ? ` • ${att.company}` : ""}
-                          </p>
-                        </div>
-                      </div>
+                  {attendees.slice(0, 4).map((att) => {
+                    const isConn = connections.some(c => isMatchingEmail(c.email, att.email) || (c.partnerId && c.partnerId === att.id));
+                    const pendingRec = pendingReceived.find(p => isMatchingEmail(p.sender_email, att.email));
+                    const pendingSnt = pendingSent.find(p => isMatchingEmail(p.recipient_email, att.email)) || requestSentTargetId === (att.id || att.email);
 
-                      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200/60">
-                        <button
-                          onClick={() => setSelectedAttendeeForModal(att)}
-                          className="py-1.5 px-2 bg-white hover:bg-slate-100 text-slate-700 rounded-lg text-[11px] font-semibold border border-slate-200/80 transition-colors text-center cursor-pointer"
-                        >
-                          {t("portal.profileBtn", "Profile")}
-                        </button>
-                        <button
-                          onClick={() => {
-                            setActiveChatContact(att);
-                            setActiveTab("chat");
-                          }}
-                          className="py-1.5 px-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[11px] font-bold transition-colors text-center cursor-pointer flex items-center justify-center gap-1"
-                        >
-                          <MessageCircle size={11} />
-                          <span>{t("portal.chatBtn", "Chat")}</span>
-                        </button>
+                    return (
+                      <div
+                        key={att.id}
+                        className="p-4 bg-slate-50/70 hover:bg-slate-50 border border-slate-200/70 rounded-xl flex flex-col justify-between gap-3 transition-all hover:border-slate-300"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
+                            {(att.name || att.fullName || "A").charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h4 className="text-xs font-bold text-slate-900 truncate">
+                              {att.name || att.fullName || t("portal.defaultDelegate", "Delegate")}
+                            </h4>
+                            <p className="text-[11px] text-slate-500 truncate">
+                              {att.jobTitle || att.title || att.role || t("portal.defaultAttendee", "Attendee")}
+                              {att.company ? ` • ${att.company}` : ""}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200/60">
+                          <button
+                            onClick={() => setSelectedAttendeeForModal(att)}
+                            className="py-1.5 px-2 bg-white hover:bg-slate-100 text-slate-700 rounded-lg text-[11px] font-semibold border border-slate-200/80 transition-colors text-center cursor-pointer"
+                          >
+                            {t("portal.profileBtn", "Profile")}
+                          </button>
+                          {isConn ? (
+                            <button
+                              onClick={() => {
+                                setActiveChatContact(att);
+                                setActiveTab("chat");
+                              }}
+                              className="py-1.5 px-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[11px] font-bold transition-colors text-center cursor-pointer flex items-center justify-center gap-1"
+                            >
+                              <MessageCircle size={11} />
+                              <span>{t("portal.chatBtn", "Chat")}</span>
+                            </button>
+                          ) : pendingRec ? (
+                            <button
+                              onClick={() => handleAcceptConnection(pendingRec.id, att)}
+                              disabled={isProcessingAction}
+                              className="py-1.5 px-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold transition-colors text-center cursor-pointer flex items-center justify-center gap-1 disabled:opacity-50"
+                            >
+                              <Check size={11} />
+                              <span>{t("portal.acceptBtn", "Accept")}</span>
+                            </button>
+                          ) : pendingSnt ? (
+                            <div className="py-1.5 px-2 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg text-[10px] font-bold text-center flex items-center justify-center gap-1">
+                              <Clock size={11} />
+                              <span>{t("portal.requestedBadge", "Requested")}</span>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setConnectModalTarget(att)}
+                              className="py-1.5 px-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[11px] font-bold transition-colors text-center cursor-pointer flex items-center justify-center gap-1"
+                            >
+                              <UserCheck size={11} />
+                              <span>{t("portal.connectBtn", "Connect")}</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -1703,7 +1793,7 @@ export default function AttendeePortalView({
                 />
               </div>
 
-              <div className="flex items-center gap-1.5 w-full sm:w-auto">
+              <div className="flex items-center gap-1.5 w-full sm:w-auto flex-wrap">
                 <button
                   onClick={() => setNetworkingTab("all")}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
@@ -1721,112 +1811,285 @@ export default function AttendeePortalView({
                   <UserCheck size={13} />
                   <span>{t("portal.myConnectionsTab", "My Connections")} ({connections.length})</span>
                 </button>
+                <button
+                  onClick={() => setNetworkingTab("invitations")}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 relative ${
+                    networkingTab === "invitations" ? "bg-amber-600 text-white shadow-2xs" : "text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  <Clock size={13} />
+                  <span>{t("portal.invitationsTab", "Invitations")} ({pendingReceived.length + pendingSent.length})</span>
+                  {pendingReceived.length > 0 && (
+                    <span className="ml-1 px-1.5 py-0.2 bg-red-500 text-white text-[10px] font-black rounded-full animate-pulse">
+                      {pendingReceived.length}
+                    </span>
+                  )}
+                </button>
               </div>
             </div>
 
-            {/* Attendees Grid */}
-            {filteredAttendees.length === 0 ? (
-              <div className="p-12 text-center bg-white rounded-2xl border border-slate-200 shadow-xs space-y-3">
-                <Users size={32} className="text-slate-300 mx-auto" />
-                <h3 className="text-base font-bold text-slate-800">{t("portal.noAttendeesMatch", "No attendees match your filter")}</h3>
-                <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                  {networkingTab === "connections" 
-                    ? t("portal.noConnectionsHelp", "You haven't established any connections yet. Connect with attendees below to build your conference contact book!")
-                    : t("portal.noAttendeesSearchHelp", "Try searching with a different name or organization keyword.")}
-                </p>
-                {networkingTab === "connections" && (
-                  <button
-                    onClick={() => setNetworkingTab("all")}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
-                  >
-                    {t("portal.browseAllAttendees", "Browse All Attendees")}
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredAttendees.map(att => {
-                  const name = att.name || `${att.firstName || ""} ${att.lastName || ""}`.trim() || "Attendee";
-                  const company = att.company || att.organization || "Organization";
-                  const job = att.jobTitle || att.job_title || att.role || "Delegate";
-                  const isConn = connections.some(c => isMatchingEmail(c.email, att.email));
-                  const isPending = requestSentTargetId === (att.id || att.email);
+            {/* Invitations View OR Attendees Grid */}
+            {networkingTab === "invitations" ? (
+              <div className="space-y-6">
+                {/* Received Invitations */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                      <Mail size={16} className="text-blue-600" />
+                      <span>{t("portal.receivedInvitations", "Received Connection Invitations")}</span>
+                      <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs font-bold">
+                        {pendingReceived.length}
+                      </span>
+                    </h3>
+                  </div>
 
-                  return (
-                    <div
-                      key={att.id || att.email}
-                      className="bg-white border border-slate-200 hover:border-blue-300 rounded-2xl p-6 shadow-xs hover:shadow-md transition-all flex flex-col justify-between group"
-                    >
-                      <div className="space-y-4">
-                        {/* Avatar & Badges */}
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-center gap-3">
-                            {att.avatar || att.image ? (
-                              <img src={att.avatar || att.image} alt={name} className="w-12 h-12 rounded-2xl object-cover border border-slate-200 shadow-2xs" />
-                            ) : (
-                              <div className="w-12 h-12 rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center font-black text-base shadow-2xs">
-                                {name.charAt(0).toUpperCase()}
+                  {pendingReceived.length === 0 ? (
+                    <div className="p-8 text-center bg-white rounded-2xl border border-slate-200 shadow-xs space-y-2">
+                      <CheckCircle2 size={28} className="text-slate-300 mx-auto" />
+                      <p className="text-xs font-bold text-slate-700">{t("portal.noReceivedInvitations", "No pending invitations received")}</p>
+                      <p className="text-[11px] text-slate-400 max-w-sm mx-auto">
+                        {t("portal.noReceivedInvitationsHelp", "When other delegates invite you to connect, their invitations will appear here for your approval.")}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {pendingReceived.map((req) => {
+                        const name = req.sender_name || "Delegate";
+                        const job = req.sender_title || "Delegate";
+                        const comp = req.sender_company || "";
+                        return (
+                          <div key={req.id} className="bg-white border border-blue-200 rounded-2xl p-5 shadow-xs flex flex-col justify-between space-y-4">
+                            <div className="flex items-start gap-3">
+                              {req.sender_avatar ? (
+                                <img src={req.sender_avatar} alt={name} className="w-12 h-12 rounded-2xl object-cover border border-slate-200 shadow-2xs shrink-0" />
+                              ) : (
+                                <div className="w-12 h-12 rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center font-black text-base shadow-2xs shrink-0">
+                                  {name.charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                              <div className="min-w-0 flex-1">
+                                <h4 className="text-sm font-black text-slate-900 truncate">{name}</h4>
+                                <p className="text-xs text-slate-500 font-semibold truncate">{job}</p>
+                                {comp && <p className="text-[11px] text-blue-600 font-bold truncate">{comp}</p>}
+                              </div>
+                            </div>
+
+                            {req.notes && (
+                              <div className="p-2.5 bg-slate-50 border border-slate-150 rounded-xl text-xs text-slate-700 italic">
+                                &ldquo;{req.notes}&rdquo;
                               </div>
                             )}
-                            <div className="text-start min-w-0">
-                              <h4 className="text-sm font-black text-slate-900 group-hover:text-blue-600 transition-colors truncate">{name}</h4>
-                              <p className="text-xs text-slate-500 font-semibold truncate">{job}</p>
-                              <p className="text-[11px] text-blue-600 font-bold truncate">{company}</p>
+
+                            <div className="pt-2 border-t border-slate-100 flex items-center gap-2">
+                              <button
+                                onClick={() => handleAcceptConnection(req.id, { email: req.sender_email, name: req.sender_name })}
+                                disabled={isProcessingAction}
+                                className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50"
+                              >
+                                <Check size={13} />
+                                <span>{t("portal.acceptBtn", "Accept")}</span>
+                              </button>
+                              <button
+                                onClick={() => handleDeclineConnection(req.id)}
+                                disabled={isProcessingAction}
+                                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
+                              >
+                                <X size={13} />
+                                <span>{t("portal.declineBtn", "Decline")}</span>
+                              </button>
                             </div>
                           </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Sent Invitations */}
+                <div className="space-y-3 pt-4 border-t border-slate-200">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                      <Clock size={16} className="text-amber-600" />
+                      <span>{t("portal.sentInvitations", "Sent Invitations (Awaiting Acceptance)")}</span>
+                      <span className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-xs font-bold">
+                        {pendingSent.length}
+                      </span>
+                    </h3>
+                  </div>
+
+                  {pendingSent.length === 0 ? (
+                    <div className="p-6 text-center bg-white rounded-2xl border border-slate-200 shadow-xs space-y-1">
+                      <p className="text-xs font-bold text-slate-700">{t("portal.noSentInvitations", "No sent invitations pending")}</p>
+                      <p className="text-[11px] text-slate-400">
+                        {t("portal.noSentInvitationsHelp", "When you invite delegates to connect, pending requests will be tracked here.")}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {pendingSent.map((req) => {
+                        const name = req.recipient_name || "Delegate";
+                        const job = req.recipient_title || "Delegate";
+                        const comp = req.recipient_company || "";
+                        return (
+                          <div key={req.id} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex flex-col justify-between space-y-4">
+                            <div className="flex items-start gap-3">
+                              {req.recipient_avatar ? (
+                                <img src={req.recipient_avatar} alt={name} className="w-12 h-12 rounded-2xl object-cover border border-slate-200 shadow-2xs shrink-0" />
+                              ) : (
+                                <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center font-black text-base shadow-2xs shrink-0">
+                                  {name.charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                              <div className="min-w-0 flex-1">
+                                <h4 className="text-sm font-black text-slate-900 truncate">{name}</h4>
+                                <p className="text-xs text-slate-500 font-semibold truncate">{job}</p>
+                                {comp && <p className="text-[11px] text-blue-600 font-bold truncate">{comp}</p>}
+                              </div>
+                            </div>
+
+                            <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                              <span className="px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl text-xs font-bold flex items-center gap-1.5">
+                                <Clock size={12} />
+                                <span>{t("portal.awaitingAcceptance", "Awaiting acceptance")}</span>
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-medium">
+                                {req.created_at ? new Date(req.created_at).toLocaleDateString() : ""}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              /* Attendees Grid */
+              filteredAttendees.length === 0 ? (
+                <div className="p-12 text-center bg-white rounded-2xl border border-slate-200 shadow-xs space-y-3">
+                  <Users size={32} className="text-slate-300 mx-auto" />
+                  <h3 className="text-base font-bold text-slate-800">{t("portal.noAttendeesMatch", "No attendees match your filter")}</h3>
+                  <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                    {networkingTab === "connections" 
+                      ? t("portal.noConnectionsHelp", "You haven't established any connections yet. Connect with attendees below to build your conference contact book!")
+                      : t("portal.noAttendeesSearchHelp", "Try searching with a different name or organization keyword.")}
+                  </p>
+                  {networkingTab === "connections" && (
+                    <button
+                      onClick={() => setNetworkingTab("all")}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
+                    >
+                      {t("portal.browseAllAttendees", "Browse All Attendees")}
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredAttendees.map(att => {
+                    const name = att.name || `${att.firstName || ""} ${att.lastName || ""}`.trim() || "Attendee";
+                    const company = att.company || att.organization || "Organization";
+                    const job = att.jobTitle || att.job_title || att.role || "Delegate";
+                    const isConn = connections.some(c => isMatchingEmail(c.email, att.email) || (c.partnerId && c.partnerId === att.id));
+                    const pendingRec = pendingReceived.find(p => isMatchingEmail(p.sender_email, att.email));
+                    const pendingSnt = pendingSent.find(p => isMatchingEmail(p.recipient_email, att.email)) || requestSentTargetId === (att.id || att.email);
+
+                    return (
+                      <div
+                        key={att.id || att.email}
+                        className="bg-white border border-slate-200 hover:border-blue-300 rounded-2xl p-6 shadow-xs hover:shadow-md transition-all flex flex-col justify-between group"
+                      >
+                        <div className="space-y-4">
+                          {/* Avatar & Badges */}
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-3">
+                              {att.avatar || att.image ? (
+                                <img src={att.avatar || att.image} alt={name} className="w-12 h-12 rounded-2xl object-cover border border-slate-200 shadow-2xs" />
+                              ) : (
+                                <div className="w-12 h-12 rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center font-black text-base shadow-2xs">
+                                  {name.charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                              <div className="text-start min-w-0">
+                                <h4 className="text-sm font-black text-slate-900 group-hover:text-blue-600 transition-colors truncate">{name}</h4>
+                                <p className="text-xs text-slate-500 font-semibold truncate">{job}</p>
+                                <p className="text-[11px] text-blue-600 font-bold truncate">{company}</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Bio or Interests */}
+                          {att.bio && (
+                            <p className="text-xs text-slate-600 line-clamp-2 font-medium leading-relaxed">
+                              {att.bio}
+                            </p>
+                          )}
                         </div>
 
-                        {/* Bio or Interests */}
-                        {att.bio && (
-                          <p className="text-xs text-slate-600 line-clamp-2 font-medium leading-relaxed">
-                            {att.bio}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Card Action Buttons */}
-                      <div className="pt-4 border-t border-slate-100 flex items-center gap-2 mt-3">
-                        <button
-                          onClick={() => setSelectedAttendeeForModal(att)}
-                          className="flex-1 py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center justify-center gap-1"
-                        >
-                          <User size={12} className="text-slate-500" />
-                          <span>{t("portal.profileBtn", "Profile")}</span>
-                        </button>
-
-                        <button
-                          onClick={() => handleStartChatWith(att)}
-                          className="py-2 px-3 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
-                          title={`Message ${name}`}
-                        >
-                          <MessageCircle size={13} />
-                          <span>{t("portal.chatBtn", "Chat")}</span>
-                        </button>
-
-                        {isConn ? (
-                          <div className="px-3 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold flex items-center gap-1">
-                            <CheckCircle2 size={13} />
-                            <span>{t("portal.connectedBadge", "Connected")}</span>
-                          </div>
-                        ) : isPending ? (
-                          <div className="px-3 py-2 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl text-xs font-bold flex items-center gap-1">
-                            <Clock size={13} />
-                            <span>{t("portal.requestedBadge", "Requested")}</span>
-                          </div>
-                        ) : (
+                        {/* Card Action Buttons */}
+                        <div className="pt-4 border-t border-slate-100 flex items-center gap-2 mt-3">
                           <button
-                            onClick={() => setConnectModalTarget(att)}
-                            className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-xs transition-all flex items-center gap-1 cursor-pointer"
+                            onClick={() => setSelectedAttendeeForModal(att)}
+                            className="flex-1 py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center justify-center gap-1"
                           >
-                            <UserCheck size={13} />
-                            <span>{t("portal.connectBtn", "Connect")}</span>
+                            <User size={12} className="text-slate-500" />
+                            <span>{t("portal.profileBtn", "Profile")}</span>
                           </button>
-                        )}
+
+                          {isConn ? (
+                            <>
+                              <button
+                                onClick={() => handleStartChatWith(att)}
+                                className="py-2 px-3 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
+                                title={`Message ${name}`}
+                              >
+                                <MessageCircle size={13} />
+                                <span>{t("portal.chatBtn", "Chat")}</span>
+                              </button>
+                              <div className="px-3 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold flex items-center gap-1 shrink-0">
+                                <CheckCircle2 size={13} />
+                                <span>{t("portal.connectedBadge", "Connected")}</span>
+                              </div>
+                            </>
+                          ) : pendingRec ? (
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                onClick={() => handleAcceptConnection(pendingRec.id, att)}
+                                disabled={isProcessingAction}
+                                className="px-2.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                                title="Accept connection"
+                              >
+                                <Check size={12} />
+                                <span>{t("portal.acceptBtn", "Accept")}</span>
+                              </button>
+                              <button
+                                onClick={() => handleDeclineConnection(pendingRec.id)}
+                                disabled={isProcessingAction}
+                                className="px-2 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                                title="Decline"
+                              >
+                                <X size={12} />
+                              </button>
+                            </div>
+                          ) : pendingSnt ? (
+                            <div className="px-3 py-2 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl text-xs font-bold flex items-center gap-1 shrink-0">
+                              <Clock size={13} />
+                              <span>{t("portal.requestedBadge", "Requested")}</span>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setConnectModalTarget(att)}
+                              className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-xs transition-all flex items-center gap-1 cursor-pointer shrink-0"
+                            >
+                              <UserCheck size={13} />
+                              <span>{t("portal.connectBtn", "Connect")}</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )
             )}
 
           </div>
@@ -1883,12 +2146,15 @@ export default function AttendeePortalView({
                   {chatContactsList.length === 0 ? (
                     <div className="p-8 text-center text-slate-400 space-y-2">
                       <Users size={24} className="mx-auto text-slate-300" />
-                      <p className="text-xs font-semibold">{t("portal.noContactsFound", "No contacts found")}</p>
+                      <p className="text-xs font-semibold">{t("portal.noConnectedDelegates", "No connected delegates yet")}</p>
+                      <p className="text-[11px] text-slate-400 leading-relaxed">
+                        {t("portal.connectToChatHelp", "You can only message delegates you have connected with.")}
+                      </p>
                       <button
                         onClick={() => setActiveTab("networking")}
-                        className="text-[11px] text-blue-600 font-bold hover:underline"
+                        className="mt-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all cursor-pointer inline-block"
                       >
-                        {t("portal.browseAttendees", "Browse Attendees")}
+                        {t("portal.browseDirectory", "Browse Directory")}
                       </button>
                     </div>
                   ) : (
@@ -1976,6 +2242,22 @@ export default function AttendeePortalView({
                         </button>
                       </div>
                     </div>
+
+                    {/* Chat Notice Error Banner */}
+                    {chatNoticeError && (
+                      <div className="mx-4 mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between gap-3 text-xs text-amber-800 font-medium animate-fade-in">
+                        <div className="flex items-center gap-2">
+                          <AlertCircle size={15} className="text-amber-600 shrink-0" />
+                          <span>{chatNoticeError}</span>
+                        </div>
+                        <button
+                          onClick={() => setChatNoticeError("")}
+                          className="text-amber-600 hover:text-amber-800 font-bold p-1 cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
 
                     {/* Chat Messages Body */}
                     <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-slate-50/30">
@@ -2095,10 +2377,24 @@ export default function AttendeePortalView({
                 ) : (
                   <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-400 space-y-3">
                     <MessageCircle size={36} className="text-slate-300" />
-                    <h3 className="text-base font-black text-slate-800">{t("portal.noConversationSelected", "No Conversation Selected")}</h3>
-                    <p className="text-xs text-slate-400 max-w-xs">
-                      {t("portal.chooseAttendeeChatHelp", "Choose an attendee from the contact list or directory to start chatting.")}
+                    <h3 className="text-base font-black text-slate-800">
+                      {chatContactsList.length === 0 
+                        ? t("portal.connectToChatTitle", "Connect to Start Chatting")
+                        : t("portal.noConversationSelected", "No Conversation Selected")}
+                    </h3>
+                    <p className="text-xs text-slate-500 max-w-sm">
+                      {chatContactsList.length === 0 
+                        ? t("portal.connectToChatNotice", "Send connection invitations in the Attendee Directory. Once accepted, you can exchange 1-on-1 messages in real time!")
+                        : t("portal.chooseAttendeeChatHelp", "Choose a connected delegate from the list on the left to start messaging.")}
                     </p>
+                    {chatContactsList.length === 0 && (
+                      <button
+                        onClick={() => setActiveTab("networking")}
+                        className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
+                      >
+                        {t("portal.browseDirectory", "Browse Directory")}
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -2623,7 +2919,9 @@ export default function AttendeePortalView({
         const job = att.jobTitle || att.job_title || att.role || "Delegate";
         const comp = att.company || att.organization || "";
         const location = att.location || att.city || "Algiers";
-        const isConn = connections.some(c => isMatchingEmail(c.email, att.email));
+        const isConn = connections.some(c => isMatchingEmail(c.email, att.email) || (c.partnerId && c.partnerId === att.id));
+        const pendingRec = pendingReceived.find(p => isMatchingEmail(p.sender_email, att.email));
+        const pendingSnt = pendingSent.find(p => isMatchingEmail(p.recipient_email, att.email)) || (requestSentTargetId === (att.id || att.email));
 
         // Parse looking for
         let lookingForList = [];
@@ -2804,31 +3102,61 @@ export default function AttendeePortalView({
                   </button>
                 ) : (
                   <>
-                    <button
-                      onClick={() => handleStartChatWith(att)}
-                      className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-xs font-bold shadow-md shadow-blue-600/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                    >
-                      <MessageCircle size={14} />
-                      <span>{t("portal.startOneOnOneChat", "Start 1-on-1 Chat")}</span>
-                    </button>
-
                     {isConn ? (
-                      <div className="px-4 py-3 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-2xl text-xs font-bold flex items-center gap-1.5 shrink-0">
-                        <CheckCircle2 size={14} />
-                        <span>{t("portal.connectedStatus", "Connected")}</span>
+                      <>
+                        <button
+                          onClick={() => handleStartChatWith(att)}
+                          className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-xs font-bold shadow-md shadow-blue-600/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <MessageCircle size={14} />
+                          <span>{t("portal.startOneOnOneChat", "Start 1-on-1 Chat")}</span>
+                        </button>
+                        <div className="px-4 py-3 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-2xl text-xs font-bold flex items-center gap-1.5 shrink-0">
+                          <CheckCircle2 size={14} />
+                          <span>{t("portal.connectedStatus", "Connected")}</span>
+                        </div>
+                      </>
+                    ) : pendingRec ? (
+                      <div className="flex items-center gap-2 flex-1 w-full">
+                        <button
+                          onClick={() => handleAcceptConnection(pendingRec.id, att)}
+                          disabled={isProcessingAction}
+                          className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-emerald-600/20 disabled:opacity-50"
+                        >
+                          <Check size={14} />
+                          <span>{t("portal.acceptInvitation", "Accept Connection")}</span>
+                        </button>
+                        <button
+                          onClick={() => handleDeclineConnection(pendingRec.id)}
+                          disabled={isProcessingAction}
+                          className="px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                        >
+                          <X size={14} />
+                          <span>{t("portal.decline", "Decline")}</span>
+                        </button>
+                      </div>
+                    ) : pendingSnt ? (
+                      <div className="flex-1 py-3 bg-amber-50 text-amber-800 border border-amber-200 rounded-2xl text-xs font-bold flex items-center justify-center gap-1.5">
+                        <Clock size={14} />
+                        <span>{t("portal.invitationPending", "Connection Request Sent (Pending)")}</span>
                       </div>
                     ) : (
-                      <button
-                        onClick={() => {
-                          const target = att;
-                          setSelectedAttendeeForModal(null);
-                          setConnectModalTarget(target);
-                        }}
-                        className="px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-2xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
-                      >
-                        <UserCheck size={14} />
-                        <span>{t("portal.connectAction", "Connect")}</span>
-                      </button>
+                      <div className="flex flex-col gap-2 flex-1 w-full">
+                        <button
+                          onClick={() => {
+                            const target = att;
+                            setSelectedAttendeeForModal(null);
+                            setConnectModalTarget(target);
+                          }}
+                          className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-blue-600/20"
+                        >
+                          <UserCheck size={14} />
+                          <span>{t("portal.connectAction", "Connect to Message")}</span>
+                        </button>
+                        <p className="text-[11px] text-slate-400 text-center font-medium">
+                          {t("portal.connectRequiredNotice", "Connect with this delegate to unlock 1-on-1 direct messaging.")}
+                        </p>
+                      </div>
                     )}
                   </>
                 )}
