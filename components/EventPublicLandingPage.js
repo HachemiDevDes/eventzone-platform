@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { 
   Calendar, CalendarPlus, MapPin, Sparkles, ArrowRight, ArrowLeft, ArrowUp,
   Layers, Users, Clock, Ticket, Award, CheckCircle2, 
@@ -248,7 +248,10 @@ export default function EventPublicLandingPage({
   const [showRsvpModal, setShowRsvpModal] = useState(false);
   const [selectedTier, setSelectedTier] = useState(() => {
     if (tickets && tickets.length > 0) {
-      return tickets[0].name || tickets[0].tier || "Standard Admission";
+      const activeOnly = tickets.filter(t => !t.isArchived && String(t.status || '').toLowerCase() !== 'archived');
+      if (activeOnly.length > 0) {
+        return activeOnly[0].name || activeOnly[0].tier || "Standard Admission";
+      }
     }
     return "";
   });
@@ -313,10 +316,11 @@ export default function EventPublicLandingPage({
     if (!tickets || tickets.length === 0) {
       fetchTickets(currentEventId).then((data) => {
         if (isMounted && data && Array.isArray(data)) {
-          setInternalTickets(data);
+          const activeOnly = data.filter(t => !t.isArchived && String(t.status || '').toLowerCase() !== 'archived');
+          setInternalTickets(activeOnly);
           if (typeof window !== "undefined") {
             try {
-              localStorage.setItem(`eventzone_cache_tickets_${currentEventId}`, JSON.stringify(data));
+              localStorage.setItem(`eventzone_cache_tickets_${currentEventId}`, JSON.stringify(activeOnly));
             } catch (e) {}
           }
         }
@@ -639,6 +643,63 @@ export default function EventPublicLandingPage({
   // Real Database Sessions
   const eventSessions = sessions || [];
 
+  // Helper to extract clean YYYY-MM-DD from a session's date field
+  const getSessionDateStr = (s) => {
+    const d = s?.date || s?.session_date || s?.sessionDate;
+    if (!d) return "";
+    if (typeof d === "string") return d.split("T")[0].split(" ")[0].trim();
+    try {
+      return new Date(d).toISOString().split("T")[0];
+    } catch {
+      return String(d).trim();
+    }
+  };
+
+  // Compute distinct event agenda days dynamically from sessions and event dates
+  const distinctDays = useMemo(() => {
+    const datesSet = new Set();
+
+    // 1. Gather all unique dates from real database sessions
+    eventSessions.forEach(s => {
+      const d = getSessionDateStr(s);
+      if (d) datesSet.add(d);
+    });
+
+    // 2. If event has startDate, include it
+    if (startDate && typeof startDate === "string" && startDate.trim()) {
+      datesSet.add(startDate.split("T")[0].trim());
+    }
+
+    // 3. If endDate is present and differs from startDate
+    if (endDate && typeof endDate === "string" && endDate.trim()) {
+      const cleanEnd = endDate.split("T")[0].trim();
+      const cleanStart = startDate ? startDate.split("T")[0].trim() : "";
+
+      try {
+        const startD = new Date(cleanStart);
+        const endD = new Date(cleanEnd);
+        const diffDays = Math.round((endD - startD) / (1000 * 60 * 60 * 24));
+        // Fill consecutive days for standard short multi-day ranges (up to 7 days)
+        if (diffDays > 0 && diffDays <= 7) {
+          for (let i = 1; i <= diffDays; i++) {
+            const nextDate = new Date(startD);
+            nextDate.setDate(startD.getDate() + i);
+            const yyyy = nextDate.getFullYear();
+            const mm = String(nextDate.getMonth() + 1).padStart(2, '0');
+            const dd = String(nextDate.getDate()).padStart(2, '0');
+            datesSet.add(`${yyyy}-${mm}-${dd}`);
+          }
+        } else if (cleanEnd) {
+          datesSet.add(cleanEnd);
+        }
+      } catch {
+        if (cleanEnd) datesSet.add(cleanEnd);
+      }
+    }
+
+    return Array.from(datesSet).filter(Boolean).sort();
+  }, [eventSessions, startDate, endDate]);
+
   // Real Database Speakers extracted from real sessions
   const eventSpeakers = [];
   const speakerNames = new Set();
@@ -673,11 +734,22 @@ export default function EventPublicLandingPage({
   // Real Database Exhibitors, Sponsors & Tickets
   const eventExhibitors = exhibitors || [];
   const eventSponsors = sponsors || [];
-  const eventTickets = (tickets && tickets.length > 0) 
+  const rawTickets = (tickets && tickets.length > 0) 
     ? tickets 
     : (internalTickets && internalTickets.length > 0 
       ? internalTickets 
       : (cachedTickets || []));
+  const eventTickets = rawTickets.filter(t => !t.isArchived && String(t.status || '').toLowerCase() !== 'archived');
+
+  // Keep selectedTier synchronized with active tickets
+  useEffect(() => {
+    if (eventTickets.length > 0) {
+      const isValid = eventTickets.some(tk => (tk.name || tk.tier) === selectedTier || tk.id === selectedTier);
+      if (!isValid) {
+        setSelectedTier(eventTickets[0].name || eventTickets[0].tier || "");
+      }
+    }
+  }, [eventTickets, selectedTier]);
 
   const handleShare = () => {
     if (typeof window !== "undefined") {
@@ -1280,7 +1352,7 @@ export default function EventPublicLandingPage({
       const cleanDetails = encodeURIComponent(detailsBody);
       const cleanLocation = encodeURIComponent(session.room || session.location || location || "");
 
-      const sessionDate = session.date || startDate;
+      const sessionDate = session.date || session.session_date || session.sessionDate || startDate;
       if (!sessionDate) {
         return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${cleanTitle}&details=${cleanDetails}&location=${cleanLocation}`;
       }
@@ -1909,17 +1981,23 @@ export default function EventPublicLandingPage({
             </div>
 
             {/* Day Filters */}
-            {startDate && (
-              <div className="flex items-center bg-white p-1 rounded-2xl border border-slate-200 shadow-xs">
-                {["All", startDate, endDate].filter((v, i, a) => v && a.indexOf(v) === i).map((day, idx) => (
+            {distinctDays.length > 0 && (
+              <div className="flex items-center bg-white p-1 rounded-full border border-slate-200 shadow-xs">
+                {["All", ...distinctDays].map((day, idx) => (
                   <button
-                    key={idx}
+                    key={day}
                     onClick={() => setSelectedDay(day)}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
                       selectedDay === day ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
-                    {day === "All" ? t("event.allDays", "All Days") : (idx === 1 ? t("event.day1", "Day 1") : (idx === 2 ? t("event.day2", "Day 2") : t("event.dayNum", `Day ${idx}`).replace("{num}", idx)))}
+                    {day === "All" 
+                      ? t("event.allDays", "All Days") 
+                      : (idx === 1 
+                        ? t("event.day1", "Day 1") 
+                        : (idx === 2 
+                          ? t("event.day2", "Day 2") 
+                          : t("event.dayNum", `Day ${idx}`).replace("{num}", idx)))}
                   </button>
                 ))}
               </div>
@@ -1929,7 +2007,14 @@ export default function EventPublicLandingPage({
           {/* Sessions List */}
           <div className="space-y-4">
             {eventSessions
-              .filter(s => selectedDay === "All" || s.date === selectedDay)
+              .filter(s => {
+                if (selectedDay === "All") return true;
+                const sDate = getSessionDateStr(s);
+                if (!sDate) {
+                  return selectedDay === distinctDays[0];
+                }
+                return sDate === selectedDay;
+              })
               .map((session, idx) => {
                 const isBookmarked = bookmarkedSessions.has(session.id);
 
@@ -1947,9 +2032,9 @@ export default function EventPublicLandingPage({
                         </span>
                       </span>
 
-                      {session.date && (
+                      {(session.date || session.session_date || session.sessionDate) && (
                         <span className="px-2.5 py-1.5 rounded-xl bg-slate-100 text-slate-600 text-xs font-semibold">
-                          {session.date}
+                          {getSessionDateStr(session)}
                         </span>
                       )}
                     </div>
@@ -2103,66 +2188,79 @@ export default function EventPublicLandingPage({
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {eventExhibitors.map((ex, idx) => (
-                <div 
-                  key={ex.id || idx}
-                  className="group bg-white border border-slate-200/80 hover:border-blue-400/80 rounded-3xl p-6 text-start rtl:text-right text-left flex flex-col justify-between space-y-4 hover:shadow-xl hover:shadow-blue-600/5 transition-all duration-300 relative"
-                >
-                  <div className="space-y-4">
-                    <div className="flex items-start justify-between gap-3">
-                      {ex.logo ? (
-                        <div className="w-14 h-14 rounded-2xl overflow-hidden flex items-center justify-center shrink-0">
-                          <img 
-                            src={ex.logo} 
-                            alt={ex.name} 
-                            className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" 
-                          />
+            <div className="space-y-8">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
+                {eventExhibitors.map((ex, idx) => {
+                  const org = organizations?.find(o => String(o.id) === String(ex.orgId || ex.org_id || ex.organizationId || ex.organization_id));
+                  const logoUrl = ex.logo || ex.image || ex.image_url || ex.logo_url || ex.imageUrl || ex.logoUrl || org?.logo || org?.image || org?.image_url || "";
+
+                  return (
+                    <div 
+                      key={ex.id || idx}
+                      className="group bg-white border border-slate-200/80 hover:border-blue-400/80 rounded-2xl sm:rounded-3xl p-5 sm:p-6 flex flex-col items-center justify-between text-center shadow-xs hover:shadow-xl hover:shadow-blue-600/5 transition-all duration-300 relative min-h-[190px]"
+                    >
+                      <div className="flex flex-col items-center w-full space-y-3">
+                        {/* Exhibitor Logo Area */}
+                        <div className="w-full h-16 sm:h-20 flex items-center justify-center">
+                          {logoUrl ? (
+                            <img 
+                              src={logoUrl} 
+                              alt={ex.name} 
+                              className="max-h-14 sm:max-h-16 max-w-[85%] w-auto h-auto object-contain group-hover:scale-105 transition-transform duration-300" 
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                const fallback = e.currentTarget.parentElement?.querySelector('.exhibitor-fallback');
+                                if (fallback) fallback.classList.remove('hidden');
+                              }}
+                            />
+                          ) : null}
+                          <div className={`exhibitor-fallback w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 items-center justify-center font-black text-lg ${logoUrl ? 'hidden' : 'flex'}`}>
+                            <Building2 size={24} className="text-blue-600" />
+                          </div>
                         </div>
-                      ) : (
-                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white font-black text-xl flex items-center justify-center shadow-sm shrink-0">
-                          {ex.name?.charAt(0)?.toUpperCase() || "E"}
+
+                        {/* Exhibitor Name & Optional Industry */}
+                        <div className="w-full px-1 space-y-1">
+                          <h4 className="text-sm sm:text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-2 tracking-tight">
+                            {ex.name}
+                          </h4>
+                          {(ex.industry || getLocalizedIndustry(ex.industry, t)) && (
+                            <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider truncate">
+                              {getLocalizedIndustry(ex.industry, t) || ex.industry}
+                            </p>
+                          )}
                         </div>
-                      )}
+                      </div>
 
-                      {(ex.booth || ex.boothNumber) && (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50/90 border border-blue-100 text-blue-700 text-[11px] font-extrabold uppercase tracking-wide shrink-0">
-                          <MapPin size={12} className="text-blue-600" />
-                          <span>{ex.booth || ex.boothNumber}</span>
-                        </span>
-                      )}
-                    </div>
+                      {/* Booth Badge & Optional Website */}
+                      <div className="pt-3 w-full flex flex-col items-center gap-1.5 border-t border-slate-100/80 mt-2">
+                        {(ex.booth || ex.boothNumber) ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200/80">
+                            <MapPin size={10} className="text-blue-600 shrink-0" />
+                            <span className="truncate max-w-[120px]">{ex.booth || ex.boothNumber}</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200">
+                            {t("dash.exhibitor", "Exhibitor")}
+                          </span>
+                        )}
 
-                    <div className="space-y-1.5 pt-1">
-                      <h4 className="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors tracking-tight line-clamp-1">
-                        {ex.name}
-                      </h4>
-                      <span className="inline-flex items-center text-[11px] font-bold text-blue-600 tracking-wide uppercase">
-                        {getLocalizedIndustry(ex.industry, t) || t("public.industryPartner", "Industry Partner")}
-                      </span>
-                      {ex.description && (
-                        <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed pt-1">
-                          {ex.description}
-                        </p>
-                      )}
+                        {ex.website && (
+                          <a
+                            href={ex.website.startsWith("http") ? ex.website : `https://${ex.website}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:text-blue-700 transition-colors mt-0.5"
+                          >
+                            <span>{t("common.visitWebsite", "Visit Website")}</span>
+                            <ExternalLink size={11} />
+                          </a>
+                        )}
+                      </div>
                     </div>
-                  </div>
-
-                  {ex.website && (
-                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                      <a
-                        href={ex.website.startsWith("http") ? ex.website : `https://${ex.website}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors"
-                      >
-                        <span>{t("common.visitWebsite", "Visit Website")}</span>
-                        <ExternalLink size={13} />
-                      </a>
-                    </div>
-                  )}
-                </div>
-              ))}
+                  );
+                })}
+              </div>
             </div>
           </div>
         </section>
@@ -2327,13 +2425,12 @@ export default function EventPublicLandingPage({
                     <div className="pt-6 mt-6 border-t border-slate-200/80">
                       <button
                         onClick={() => openRegistration(ticket.name || ticket.tier)}
-                        className={`w-full py-3.5 rounded-2xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                        className={`w-full py-3.5 rounded-2xl font-bold text-xs shadow-md transition-all flex items-center justify-center cursor-pointer ${
                           isPop
                             ? "bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/30"
                             : "bg-slate-900 hover:bg-slate-800 text-white"
                         }`}
                       >
-                        <Ticket size={15} />
                         <span>{t("event.selectAndRegister", "Select & Register")}</span>
                       </button>
                     </div>

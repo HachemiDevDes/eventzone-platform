@@ -153,8 +153,12 @@ export default function EventLandingClient({ slug: propSlug, initialEvent = null
         }
       }
 
-      // Parallel non-blocking fetches for public landing page modules
-      fetchTickets(eventId).then(res => isMounted && setTickets(res || [])).catch(() => {});
+      fetchTickets(eventId).then(res => {
+        if (isMounted) {
+          const activeOnly = (res || []).filter(t => !t.isArchived && String(t.status || '').toLowerCase() !== 'archived');
+          setTickets(activeOnly);
+        }
+      }).catch(() => {});
       fetchSessions(eventId).then(res => isMounted && setSessions(res || [])).catch(() => {});
       fetchSponsors(eventId).then(res => isMounted && setSponsors(res || [])).catch(() => {});
       fetchExhibitors(eventId).then(res => isMounted && setExhibitors(res || [])).catch(() => {});

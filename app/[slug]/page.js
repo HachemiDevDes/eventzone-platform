@@ -62,8 +62,9 @@ export async function generateMetadata(props) {
   if ((!cleanTicketName || /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanTicketName)) && isRegisterView) {
     try {
       const eventTickets = await fetchTickets(event.id);
-      if (Array.isArray(eventTickets) && eventTickets.length > 0) {
-        const matchedTicket = eventTickets.find(t => t.id === rawTicketParam) || eventTickets[0];
+      const activeTickets = Array.isArray(eventTickets) ? eventTickets.filter(t => !t.isArchived && String(t.status || '').toLowerCase() !== 'archived') : [];
+      if (activeTickets.length > 0) {
+        const matchedTicket = activeTickets.find(t => t.id === rawTicketParam) || activeTickets[0];
         if (matchedTicket && matchedTicket.name) {
           cleanTicketName = stripHtml(matchedTicket.name).replace(/\s+/g, " ").trim();
         }
