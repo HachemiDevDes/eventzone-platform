@@ -159,7 +159,12 @@ export default function EventLandingClient({ slug: propSlug, initialEvent = null
           setTickets(activeOnly);
         }
       }).catch(() => {});
-      fetchSessions(eventId).then(res => isMounted && setSessions(res || [])).catch(() => {});
+      fetchSessions(eventId).then(res => {
+        if (isMounted) {
+          const activeOnly = (res || []).filter(s => !s.isArchived && String(s.status || '').toLowerCase() !== 'archived');
+          setSessions(activeOnly);
+        }
+      }).catch(() => {});
       fetchSponsors(eventId).then(res => isMounted && setSponsors(res || [])).catch(() => {});
       fetchExhibitors(eventId).then(res => isMounted && setExhibitors(res || [])).catch(() => {});
       fetchOrganizations(eventId).then(res => isMounted && setOrganizations(res || [])).catch(() => {});

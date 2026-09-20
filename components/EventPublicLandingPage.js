@@ -640,12 +640,14 @@ export default function EventPublicLandingPage({
     return () => clearInterval(interval);
   }, [startDate, endDate]);
 
-  // Real Database Sessions
-  const eventSessions = sessions || [];
+  // Real Database Sessions (excluding archived)
+  const eventSessions = useMemo(() => {
+    return (sessions || []).filter(s => !s.isArchived && String(s.status || "").toLowerCase() !== "archived");
+  }, [sessions]);
 
   // Helper to extract clean YYYY-MM-DD from a session's date field
   const getSessionDateStr = (s) => {
-    const d = s?.date || s?.session_date || s?.sessionDate;
+    const d = s?.date || s?.session_date || s?.sessionDate || s?.start_time || s?.startTime;
     if (!d) return "";
     if (typeof d === "string") return d.split("T")[0].split(" ")[0].trim();
     try {
@@ -655,50 +657,28 @@ export default function EventPublicLandingPage({
     }
   };
 
-  // Compute distinct event agenda days dynamically from sessions and event dates
+  // Compute distinct event agenda days dynamically from actual scheduled sessions
   const distinctDays = useMemo(() => {
     const datesSet = new Set();
 
-    // 1. Gather all unique dates from real database sessions
+    // 1. Gather all unique dates from real scheduled database sessions
     eventSessions.forEach(s => {
       const d = getSessionDateStr(s);
       if (d) datesSet.add(d);
     });
 
-    // 2. If event has startDate, include it
+    const sortedDates = Array.from(datesSet).filter(Boolean).sort();
+    if (sortedDates.length > 0) {
+      return sortedDates;
+    }
+
+    // 2. Fallback only if sessions exist but have no specific date field set
     if (startDate && typeof startDate === "string" && startDate.trim()) {
-      datesSet.add(startDate.split("T")[0].trim());
+      return [startDate.split("T")[0].trim()];
     }
 
-    // 3. If endDate is present and differs from startDate
-    if (endDate && typeof endDate === "string" && endDate.trim()) {
-      const cleanEnd = endDate.split("T")[0].trim();
-      const cleanStart = startDate ? startDate.split("T")[0].trim() : "";
-
-      try {
-        const startD = new Date(cleanStart);
-        const endD = new Date(cleanEnd);
-        const diffDays = Math.round((endD - startD) / (1000 * 60 * 60 * 24));
-        // Fill consecutive days for standard short multi-day ranges (up to 7 days)
-        if (diffDays > 0 && diffDays <= 7) {
-          for (let i = 1; i <= diffDays; i++) {
-            const nextDate = new Date(startD);
-            nextDate.setDate(startD.getDate() + i);
-            const yyyy = nextDate.getFullYear();
-            const mm = String(nextDate.getMonth() + 1).padStart(2, '0');
-            const dd = String(nextDate.getDate()).padStart(2, '0');
-            datesSet.add(`${yyyy}-${mm}-${dd}`);
-          }
-        } else if (cleanEnd) {
-          datesSet.add(cleanEnd);
-        }
-      } catch {
-        if (cleanEnd) datesSet.add(cleanEnd);
-      }
-    }
-
-    return Array.from(datesSet).filter(Boolean).sort();
-  }, [eventSessions, startDate, endDate]);
+    return [];
+  }, [eventSessions, startDate]);
 
   // Real Database Speakers extracted from real sessions
   const eventSpeakers = [];
@@ -750,6 +730,13 @@ export default function EventPublicLandingPage({
       }
     }
   }, [eventTickets, selectedTier]);
+
+  // Keep selectedDay synchronized with active distinctDays
+  useEffect(() => {
+    if (selectedDay !== "All" && distinctDays.length > 0 && !distinctDays.includes(selectedDay)) {
+      setSelectedDay("All");
+    }
+  }, [distinctDays, selectedDay]);
 
   const handleShare = () => {
     if (typeof window !== "undefined") {
