@@ -78,9 +78,15 @@ export function CitySelect({
     };
   }, [country]);
 
+  // Strip any legacy numbering prefix like "01 - Adrar" -> "Adrar"
+  const cleanValue = useMemo(() => {
+    if (!value || typeof value !== "string") return "";
+    return value.replace(/^\d{1,2}\s*[-–]\s*/, "").trim();
+  }, [value]);
+
   const cityOptions = useMemo(() => {
     const list = dynamicCities.length > 0 ? dynamicCities : getCitiesForCountry(country || "Algeria");
-    return list;
+    return list.map(c => typeof c === "string" ? c.replace(/^\d{1,2}\s*[-–]\s*/, "").trim() : c);
   }, [dynamicCities, country]);
 
   if (cityOptions.length > 0 && !isCustomCity) {
@@ -89,13 +95,14 @@ export function CitySelect({
     return (
       <div className={`relative ${className}`}>
         <SearchableSelect
-          value={value}
+          value={cleanValue}
           onChange={(val) => {
             if (val === otherCustomLabel || val === "Other (Type custom city)") {
               setIsCustomCity(true);
               if (onChange) onChange("");
             } else {
-              if (onChange) onChange(val);
+              const cleanVal = typeof val === "string" ? val.replace(/^\d{1,2}\s*[-–]\s*/, "").trim() : val;
+              if (onChange) onChange(cleanVal);
             }
           }}
           options={fullOptions}
@@ -119,7 +126,7 @@ export function CitySelect({
       <input
         type="text"
         list="cities-datalist"
-        value={value}
+        value={cleanValue}
         onChange={(e) => onChange && onChange(e.target.value)}
         placeholder={placeholder || (country ? `e.g. City in ${country}` : "e.g. Algiers, Paris, New York...")}
         required={required}
