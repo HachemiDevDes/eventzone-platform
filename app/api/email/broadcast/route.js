@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { sendBroadcastEmail } from "@/lib/mailer";
 import { getServiceSupabase, verifyOrganizerSession } from "@/lib/apiAuth";
 import QRCode from "qrcode";
@@ -138,7 +138,22 @@ export async function POST(request) {
         .replace(/\{\{organizerName\}\}/gi, organizerName);
     };
 
-    // 1. Create parent communication entry in Supabase (only existing schema columns)
+    // 1. De-duplicate recipients by email address
+    const seenEmails = new Set();
+    const uniqueRecipients = [];
+    for (const rec of normalizedRecipients) {
+      const emailKey = rec.email.toLowerCase().trim();
+      if (!seenEmails.has(emailKey)) {
+        seenEmails.add(emailKey);
+        uniqueRecipients.push(rec);
+      }
+    }
+
+    if (uniqueRecipients.length === 0) {
+      return NextResponse.json({ error: "No valid recipient email addresses." }, { status: 400 });
+    }
+
+    // 2. Create parent communication entry in Supabase with 'Sending' status
     let commRecord = null;
     try {
       const { data: createdComm, error: commError } = await supabase
@@ -147,8 +162,8 @@ export async function POST(request) {
           event_id: validEventId,
           subject: formatEventLevelVars(cleanSubject),
           body: formatEventLevelVars(rawBody),
-          recipient_count: normalizedRecipients.length,
-          status: "Sent",
+          recipient_count: uniqueRecipients.length,
+          status: "Sending",
           sent_at: new Date().toISOString(),
         })
         .select()
@@ -161,17 +176,17 @@ export async function POST(request) {
       console.warn("Could not write communication row to DB:", dbErr);
     }
 
-    // 2. Create recipient rows in communication_recipients table
+    // 3. Create initial queued recipient rows in communication_recipients table
     const recipientLogMap = new Map();
     if (commRecord && commRecord.id) {
       try {
-        const rowsToInsert = normalizedRecipients.map((rec) => ({
+        const rowsToInsert = uniqueRecipients.map((rec) => ({
           communication_id: commRecord.id,
           event_id: validEventId,
           recipient_email: rec.email,
           recipient_name: rec.name || "",
           recipient_role: rec.role || "attendee",
-          status: "sent",
+          status: "queued",
           open_count: 0,
         }));
 
@@ -190,175 +205,193 @@ export async function POST(request) {
       }
     }
 
-    // 1. De-duplicate recipients by email address
-    const seenEmails = new Set();
-    const uniqueRecipients = [];
-    for (const rec of normalizedRecipients) {
-      const emailKey = rec.email.toLowerCase().trim();
-      if (!seenEmails.has(emailKey)) {
-        seenEmails.add(emailKey);
-        uniqueRecipients.push(rec);
-      }
-    }
-
-    if (uniqueRecipients.length === 0) {
-      return NextResponse.json({ error: "No valid recipient email addresses." }, { status: 400 });
-    }
-
-    const results = {
-      total: uniqueRecipients.length,
-      sent: 0,
-      failed: 0,
-      errors: [],
-      communicationId: commRecord?.id || null,
-    };
-
     const SUPABASE_EDGE_TRACK_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/track-email` : "";
     const isPublicHttps = origin.startsWith("https://") && !origin.includes("localhost") && !origin.includes("127.0.0.1");
     const trackEndpoint = isPublicHttps ? `${origin}/api/email/track` : (SUPABASE_EDGE_TRACK_URL || `${origin}/api/email/track`);
 
-    // 2. Dispatch emails with anti-spam batching, connection pooling & pacing
-    const BATCH_SIZE = 3;
-    for (let i = 0; i < uniqueRecipients.length; i += BATCH_SIZE) {
-      const batch = uniqueRecipients.slice(i, i + BATCH_SIZE);
-      await Promise.all(
-        batch.map(async (recipient) => {
-          const recipientLogId = recipientLogMap.get(recipient.email.toLowerCase()) || "";
-          const trackingPixelUrl = commRecord?.id
-            ? `${trackEndpoint}?cid=${commRecord.id}${recipientLogId ? `&rid=${recipientLogId}` : ""}&em=${encodeURIComponent(recipient.email)}`
-            : "";
+    // 4. Define async delivery loop that runs in the background
+    const runDeliveryLoop = async () => {
+      const results = {
+        total: uniqueRecipients.length,
+        sent: 0,
+        failed: 0,
+        errors: [],
+      };
 
-          // Trackify Action Buttons for click-redirect open tracking
-          const trackify = (url) => {
-            if (!url || !commRecord?.id) return url;
-            return `${trackEndpoint}?cid=${commRecord.id}${recipientLogId ? `&rid=${recipientLogId}` : ""}&em=${encodeURIComponent(recipient.email)}&url=${encodeURIComponent(url)}`;
-          };
+      const BATCH_SIZE = 3;
+      for (let i = 0; i < uniqueRecipients.length; i += BATCH_SIZE) {
+        const batch = uniqueRecipients.slice(i, i + BATCH_SIZE);
+        await Promise.all(
+          batch.map(async (recipient) => {
+            const recipientLogId = recipientLogMap.get(recipient.email.toLowerCase()) || "";
+            const trackingPixelUrl = commRecord?.id
+              ? `${trackEndpoint}?cid=${commRecord.id}${recipientLogId ? `&rid=${recipientLogId}` : ""}&em=${encodeURIComponent(recipient.email)}`
+              : "";
 
-          const trackedButtonConfig = {
-            ...effectiveButtonConfig,
-            formUrl: effectiveButtonConfig?.formUrl ? trackify(effectiveButtonConfig.formUrl) : undefined,
-            ticketUrl: effectiveButtonConfig?.ticketUrl ? trackify(effectiveButtonConfig.ticketUrl) : undefined,
-            customButtonUrl: effectiveButtonConfig?.customButtonUrl ? trackify(effectiveButtonConfig.customButtonUrl) : undefined,
-          };
+            // Trackify Action Buttons for click-redirect open tracking
+            const trackify = (url) => {
+              if (!url || !commRecord?.id) return url;
+              return `${trackEndpoint}?cid=${commRecord.id}${recipientLogId ? `&rid=${recipientLogId}` : ""}&em=${encodeURIComponent(recipient.email)}&url=${encodeURIComponent(url)}`;
+            };
 
-          // Dynamic variable interpolation
-          const firstName = (recipient.name || "Attendee").split(" ")[0] || "Attendee";
-          const replaceVars = (str) => {
-            if (!str) return "";
-            return str
-              .replace(/\{\{name\}\}/gi, recipient.name || "Attendee")
-              .replace(/\{\{first_name\}\}/gi, firstName)
-              .replace(/\{\{firstName\}\}/gi, firstName)
-              .replace(/\{\{company\}\}/gi, recipient.company || "")
-              .replace(/\{\{jobTitle\}\}/gi, recipient.jobTitle || "")
-              .replace(/\{\{ticketTier\}\}/gi, recipient.ticketTier || "Standard Admission")
-              .replace(/\{\{badgeCode\}\}/gi, recipient.badgeCode || "EZ-PASS")
-              .replace(/\{\{eventTitle\}\}/gi, eventTitle)
-              .replace(/\{\{eventDate\}\}/gi, eventDate || "")
-              .replace(/\{\{eventLocation\}\}/gi, eventLocation || "")
-              .replace(/\{\{venue\}\}/gi, eventLocation || "")
-              .replace(/\{\{date\}\}/gi, eventDate || "")
-              .replace(/\{\{organizerName\}\}/gi, organizerName)
-              .replace(/\{\{formLink\}\}/gi, effectiveButtonConfig?.formUrl || "")
-              .replace(/\{\{ticketLink\}\}/gi, effectiveButtonConfig?.ticketUrl || "")
-              .replace(/\{\{portalLink\}\}/gi, effectiveButtonConfig?.customButtonUrl || directPortalLink || "");
-          };
+            const trackedButtonConfig = {
+              ...effectiveButtonConfig,
+              formUrl: effectiveButtonConfig?.formUrl ? trackify(effectiveButtonConfig.formUrl) : undefined,
+              ticketUrl: effectiveButtonConfig?.ticketUrl ? trackify(effectiveButtonConfig.ticketUrl) : undefined,
+              customButtonUrl: effectiveButtonConfig?.customButtonUrl ? trackify(effectiveButtonConfig.customButtonUrl) : undefined,
+            };
 
-          const personalizedSubject = replaceVars(subject);
-          const personalizedBody = replaceVars(rawBody);
-          const personalizedPreheader = replaceVars(preheader);
+            // Dynamic variable interpolation
+            const firstName = (recipient.name || "Attendee").split(" ")[0] || "Attendee";
+            const replaceVars = (str) => {
+              if (!str) return "";
+              return str
+                .replace(/\{\{name\}\}/gi, recipient.name || "Attendee")
+                .replace(/\{\{first_name\}\}/gi, firstName)
+                .replace(/\{\{firstName\}\}/gi, firstName)
+                .replace(/\{\{company\}\}/gi, recipient.company || "")
+                .replace(/\{\{jobTitle\}\}/gi, recipient.jobTitle || "")
+                .replace(/\{\{ticketTier\}\}/gi, recipient.ticketTier || "Standard Admission")
+                .replace(/\{\{badgeCode\}\}/gi, recipient.badgeCode || "EZ-PASS")
+                .replace(/\{\{eventTitle\}\}/gi, eventTitle)
+                .replace(/\{\{eventDate\}\}/gi, eventDate || "")
+                .replace(/\{\{eventLocation\}\}/gi, eventLocation || "")
+                .replace(/\{\{venue\}\}/gi, eventLocation || "")
+                .replace(/\{\{date\}\}/gi, eventDate || "")
+                .replace(/\{\{organizerName\}\}/gi, organizerName)
+                .replace(/\{\{formLink\}\}/gi, effectiveButtonConfig?.formUrl || "")
+                .replace(/\{\{ticketLink\}\}/gi, effectiveButtonConfig?.ticketUrl || "")
+                .replace(/\{\{portalLink\}\}/gi, effectiveButtonConfig?.customButtonUrl || directPortalLink || "");
+            };
 
-          // Generate individual QR code buffer if enabled
-          let qrBuffer = null;
-          let qrDataUrl = "";
-          if (includeQr) {
-            try {
-              const checkinPayload = JSON.stringify({
-                action: "checkin",
-                badgeCode: recipient.badgeCode,
-                name: recipient.name,
-                email: recipient.email,
-                tier: recipient.ticketTier,
-                eventId: validEventId || "",
-                event: eventTitle,
-              });
-              qrBuffer = await QRCode.toBuffer(checkinPayload, {
-                type: "png",
-                width: 340,
-                margin: 1,
-                color: { dark: "#0f172a", light: "#ffffff" },
-              });
-            } catch (qrErr) {
-              console.warn("QR code generation error for", recipient.email, qrErr);
-            }
-          }
+            const personalizedSubject = replaceVars(subject);
+            const personalizedBody = replaceVars(rawBody);
+            const personalizedPreheader = replaceVars(preheader);
 
-          // Dispatch with single retry on transient error
-          let attempt = 0;
-          let sentSuccessfully = false;
-          let lastError = null;
-
-          while (attempt < 2 && !sentSuccessfully) {
-            attempt++;
-            try {
-              await sendBroadcastEmail({
-                to: recipient.email,
-                recipientName: recipient.name,
-                subject: personalizedSubject,
-                body: personalizedBody,
-                preheader: personalizedPreheader,
-                eventTitle,
-                organizerName,
-                eventLogo,
-                eventDate,
-                eventLocation,
-                headerTag,
-                buttonConfig: trackedButtonConfig,
-                includeQr: Boolean(includeQr),
-                qrBuffer,
-                qrDataUrl,
-                includeEventCard: true,
-                trackingPixelUrl,
-              });
-              sentSuccessfully = true;
-              results.sent++;
-            } catch (err) {
-              lastError = err;
-              if (attempt < 2) {
-                // Short 300ms pause before single retry
-                await new Promise((r) => setTimeout(r, 300));
+            // Generate individual QR code buffer if enabled
+            let qrBuffer = null;
+            let qrDataUrl = "";
+            if (includeQr) {
+              try {
+                const checkinPayload = JSON.stringify({
+                  action: "checkin",
+                  badgeCode: recipient.badgeCode,
+                  name: recipient.name,
+                  email: recipient.email,
+                  tier: recipient.ticketTier,
+                  eventId: validEventId || "",
+                  event: eventTitle,
+                });
+                qrBuffer = await QRCode.toBuffer(checkinPayload, {
+                  type: "png",
+                  width: 340,
+                  margin: 1,
+                  color: { dark: "#0f172a", light: "#ffffff" },
+                });
+              } catch (qrErr) {
+                console.warn("QR code generation error for", recipient.email, qrErr);
               }
             }
-          }
 
-          if (!sentSuccessfully) {
-            results.failed++;
-            results.errors.push({ email: recipient.email, error: lastError?.message || "Send failed" });
-            if (recipientLogMap.has(recipient.email.toLowerCase())) {
+            // Dispatch with single retry on transient error
+            let attempt = 0;
+            let sentSuccessfully = false;
+            let lastError = null;
+
+            while (attempt < 2 && !sentSuccessfully) {
+              attempt++;
               try {
-                const rid = recipientLogMap.get(recipient.email.toLowerCase());
-                await supabase
-                  .from("communication_recipients")
-                  .update({ status: "failed" })
-                  .eq("id", rid);
-              } catch (e) {}
+                await sendBroadcastEmail({
+                  to: recipient.email,
+                  recipientName: recipient.name,
+                  subject: personalizedSubject,
+                  body: personalizedBody,
+                  preheader: personalizedPreheader,
+                  eventTitle,
+                  organizerName,
+                  eventLogo,
+                  eventDate,
+                  eventLocation,
+                  headerTag,
+                  buttonConfig: trackedButtonConfig,
+                  includeQr: Boolean(includeQr),
+                  qrBuffer,
+                  qrDataUrl,
+                  includeEventCard: true,
+                  trackingPixelUrl,
+                });
+                sentSuccessfully = true;
+                results.sent++;
+                if (recipientLogMap.has(recipient.email.toLowerCase())) {
+                  try {
+                    const rid = recipientLogMap.get(recipient.email.toLowerCase());
+                    await supabase
+                      .from("communication_recipients")
+                      .update({ status: "sent" })
+                      .eq("id", rid);
+                  } catch (e) {}
+                }
+              } catch (err) {
+                lastError = err;
+                if (attempt < 2) {
+                  // Short 300ms pause before single retry
+                  await new Promise((r) => setTimeout(r, 300));
+                }
+              }
             }
-          }
-        })
-      );
 
-      // Anti-Spam Pacing: Small jittered pause between batches to prevent spam heuristic triggers
-      if (i + BATCH_SIZE < uniqueRecipients.length) {
-        const jitterDelay = 200 + Math.floor(Math.random() * 150); // 200ms - 350ms
-        await new Promise((resolve) => setTimeout(resolve, jitterDelay));
+            if (!sentSuccessfully) {
+              results.failed++;
+              results.errors.push({ email: recipient.email, error: lastError?.message || "Send failed" });
+              if (recipientLogMap.has(recipient.email.toLowerCase())) {
+                try {
+                  const rid = recipientLogMap.get(recipient.email.toLowerCase());
+                  await supabase
+                    .from("communication_recipients")
+                    .update({ status: "failed" })
+                    .eq("id", rid);
+                } catch (e) {}
+              }
+            }
+          })
+        );
+
+        // Anti-Spam Pacing: Small jittered pause between batches to prevent spam heuristic triggers
+        if (i + BATCH_SIZE < uniqueRecipients.length) {
+          const jitterDelay = 200 + Math.floor(Math.random() * 150); // 200ms - 350ms
+          await new Promise((resolve) => setTimeout(resolve, jitterDelay));
+        }
       }
+
+      // Mark the parent communications row as Sent or Failed
+      if (commRecord && commRecord.id) {
+        try {
+          const finalStatus = (results.sent > 0 || results.failed === 0) ? "Sent" : "Failed";
+          await supabase
+            .from("communications")
+            .update({ status: finalStatus })
+            .eq("id", commRecord.id);
+        } catch (e) {
+          console.warn("Could not update final communication status:", e);
+        }
+      }
+    };
+
+    // 5. Schedule background delivery: use after() if available, else fire detached promise
+    if (typeof after === "function") {
+      after(runDeliveryLoop);
+    } else {
+      runDeliveryLoop().catch((bgErr) => console.error("Detached background broadcast error:", bgErr));
     }
 
-    const isSuccess = results.sent > 0 || (results.failed === 0 && results.total > 0);
+    // 6. Return immediate response to the client
     return NextResponse.json({
-      success: isSuccess,
-      ...results,
-    }, { status: isSuccess ? 200 : 500 });
+      success: true,
+      queued: true,
+      message: "Emails are being sent in the background.",
+      total: uniqueRecipients.length,
+      communicationId: commRecord?.id || null,
+    }, { status: 200 });
   } catch (error) {
     console.error("Broadcast email API error:", error);
     return NextResponse.json(

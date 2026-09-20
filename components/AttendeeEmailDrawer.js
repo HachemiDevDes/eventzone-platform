@@ -423,6 +423,141 @@ export default function AttendeeEmailDrawer({
       return;
     }
 
+    if (isBulk) {
+      // Immediate reactive response for batch dispatch:
+      // Close drawer immediately, notify organizer, and run delivery in background
+      onClose();
+      if (onEmailSent) {
+        onEmailSent(validRecipients.length);
+      }
+
+      // Run the delivery loop in the background without blocking the organizer
+      (async () => {
+        const tmpl = EMAIL_TEMPLATES.find(t => t.id === selectedTemplateId);
+        let successCount = 0;
+        let failCount = 0;
+
+        for (let i = 0; i < validRecipients.length; i++) {
+          const curAtt = validRecipients[i];
+          const curData = getAttendeeData(curAtt);
+
+          try {
+            // Generate individual QR code for each attendee
+            let curQrDataUrl = "";
+            if (includeQr) {
+              try {
+                const checkinPayload = JSON.stringify({
+                  action: "checkin",
+                  attendeeId: curAtt.id || curData.badgeCode || "",
+                  badgeCode: curData.badgeCode || "EZ-PASS",
+                  name: curData.name || "",
+                  email: curData.email || "",
+                  tier: curData.ticketTier || "",
+                  eventId: activeEventId || eventDetails.id || "",
+                  event: curData.eventTitle || ""
+                });
+                curQrDataUrl = await QRCode.toDataURL(checkinPayload, {
+                  width: 360,
+                  margin: 0,
+                  color: { dark: "#0f172a", light: "#00000000" },
+                  errorCorrectionLevel: 'M'
+                });
+              } catch (err) {
+                console.warn("QR code generation failed:", err);
+              }
+            }
+
+            // Personalize subject and body variables for this specific attendee
+            const personalizedSubject = subject
+              .replace(/\{\{name\}\}/g, curData.name)
+              .replace(/\{\{eventTitle\}\}/g, curData.eventTitle)
+              .replace(/\{\{ticketTier\}\}/g, curData.ticketTier)
+              .replace(/\{\{badgeCode\}\}/g, curData.badgeCode)
+              .replace(/\{\{venue\}\}/g, curData.eventLocation)
+              .replace(/\{\{date\}\}/g, curData.eventDate)
+              .replace(/\{\{company\}\}/g, curData.company || "")
+              .replace(/\{\{formLink\}\}/g, resolvedFormUrl || "");
+
+            const personalizedBody = body
+              .replace(/\{\{name\}\}/g, curData.name)
+              .replace(/\{\{eventTitle\}\}/g, curData.eventTitle)
+              .replace(/\{\{ticketTier\}\}/g, curData.ticketTier)
+              .replace(/\{\{badgeCode\}\}/g, curData.badgeCode)
+              .replace(/\{\{venue\}\}/g, curData.eventLocation)
+              .replace(/\{\{date\}\}/g, curData.eventDate)
+              .replace(/\{\{company\}\}/g, curData.company || "")
+              .replace(/\{\{formLink\}\}/g, resolvedFormUrl || "");
+
+            let payload;
+            if (tmpl && tmpl.id === "badge_pass") {
+              const matchedTicket = (tickets || []).find(t => (t.name || t.tier || "").trim().toLowerCase() === (curData.ticketTier || "").trim().toLowerCase()) || {};
+              payload = {
+                type: "ticket_confirmation",
+                to: curData.email,
+                subject: personalizedSubject.trim(),
+                attendeeName: curData.name,
+                ticketTier: curData.ticketTier,
+                eventTitle: curData.eventTitle,
+                eventDate: curData.eventDate,
+                eventLocation: curData.eventLocation,
+                company: curData.company || curAtt.company || "",
+                badgeCode: curData.badgeCode,
+                qrDataUrl: includeQr ? curQrDataUrl : undefined,
+                passId: curAtt.id,
+                eventId: activeEventId || eventDetails.id || "",
+                templateUrl: matchedTicket.badgeUrl || eventDetails.badgeUrl || "",
+                badgeSettings: matchedTicket.badgeSettings || eventDetails.badgeSettings || {},
+                attendeePhoto: curData.avatar || curAtt.photo || curAtt.avatar || "",
+                formUrl: includeFormLink && resolvedFormUrl ? resolvedFormUrl : undefined,
+                formButtonText: includeFormLink && resolvedFormUrl ? (formButtonText.trim() || "Open Form") : undefined,
+                eventLogo: curData.eventLogo,
+                organizerName: curData.organizerName
+              };
+            } else {
+              payload = {
+                type: "custom",
+                to: curData.email,
+                subject: personalizedSubject.trim(),
+                text: personalizedBody.trim(),
+                html: generateCustomEmailHtml(curData, personalizedBody, curQrDataUrl)
+              };
+            }
+
+            const res = await fetch("/api/email/send", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+              successCount++;
+              try {
+                await logCommunication({
+                  eventId: activeEventId || eventDetails.id || "default",
+                  recipientEmail: curData.email,
+                  recipientName: curData.name,
+                  subject: personalizedSubject.trim(),
+                  type: "email",
+                  channel: tmpl?.id || "custom_message",
+                  status: "delivered",
+                  preview: personalizedBody.slice(0, 120),
+                  sentBy: "Organizer"
+                });
+              } catch (e) {}
+            } else {
+              failCount++;
+            }
+          } catch (err) {
+            console.error(`Failed to send email to ${curData.email}:`, err);
+            failCount++;
+          }
+          await new Promise(r => setTimeout(r, 200));
+        }
+      })().catch(err => console.error("Background attendee email send error:", err));
+
+      return;
+    }
+
     setIsSending(true);
     setErrorMsg(null);
     setSuccessMsg(null);

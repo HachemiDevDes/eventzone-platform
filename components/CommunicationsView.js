@@ -773,6 +773,23 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
     loadCustomTemplates();
   }, [activeEventId]);
 
+  // Auto-refresh history periodically while any campaign is actively sending in the background
+  useEffect(() => {
+    const hasActiveSending = history.some(item => item.status === "Sending");
+    if (!hasActiveSending) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const data = await fetchCommunicationsWithStats(activeEventId);
+        if (data) setHistory(data);
+      } catch (e) {
+        console.warn("Background history poll failed:", e);
+      }
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [history, activeEventId]);
+
   // Load initial template
   useEffect(() => {
     const tmpl = PRESET_TEMPLATES.find(t => t.id === selectedTemplateId) || PRESET_TEMPLATES[0];
@@ -1197,6 +1214,11 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
       return;
     }
 
+    // Immediate reactive response: Close confirm modal right away and switch to history
+    setIsConfirmModalOpen(false);
+    setActiveTab("history");
+    showToast("info", t("comm.sendingInBackground", "Emails are being sent in the background. You can continue working!"));
+
     setIsSending(true);
     setSendingProgress(0);
 
@@ -1251,12 +1273,8 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
 
       const data = await res.json();
       if (res.ok && data.success) {
-        showToast("success", `Broadcast successfully dispatched to ${data.sent || targetRecipients.length} recipients!`);
-        setIsConfirmModalOpen(false);
-        // Refresh history
+        // Refresh history to show the queued/sending campaign
         await loadHistory();
-        // Switch to history tab to view results
-        setActiveTab("history");
       } else {
         showToast("error", data.error || "Failed to dispatch broadcast announcement.");
       }
@@ -2809,6 +2827,20 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
                           <span className="text-[10px] font-bold text-slate-400">
                             {sentDate.toLocaleDateString()} at {sentDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
+                          {item.status === "Sending" ? (
+                            <span className="text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1.5 animate-pulse">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                              {t("comm.statusSending", "Sending in Background...")}
+                            </span>
+                          ) : item.status === "Failed" ? (
+                            <span className="text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
+                              {t("comm.statusFailed", "Failed")}
+                            </span>
+                          ) : (
+                            <span className="text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60 flex items-center gap-1">
+                              <CheckCircle2 size={10} /> {t("comm.statusSent", "Sent")}
+                            </span>
+                          )}
                           {item.include_qr && (
                             <span className="text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60 flex items-center gap-1">
                               <QrIcon size={10} /> {t("comm.qrPassBadge", "QR Pass")}

@@ -233,127 +233,96 @@ export default function SendPlanModal({
       return;
     }
 
-    setLoading(true);
-
-    try {
-      // 1. Save any updated/new emails in parallel to the directory
-      setSendingProgress(t("sendPlan.updatingDirectory", "Updating contact directory..."));
-      const emailUpdates = targetPartners.map(p => {
-        const currentEmail = (partnerEmails[p.id] || "").trim();
-        if (currentEmail && currentEmail !== p.email) {
-          if (p.category === "exhibitor") {
-            return upsertExhibitor({ 
-              ...p.raw, 
-              email: currentEmail, 
-              contactEmail: currentEmail 
-            }, eventId).catch(err => {
-              console.warn("Could not sync exhibitor email update:", err);
-            });
-          } else if (p.category === "sponsor") {
-            return upsertSponsor({ 
-              ...p.raw, 
-              email: currentEmail, 
-              contactEmail: currentEmail 
-            }, eventId).catch(err => {
-              console.warn("Could not sync sponsor email update:", err);
-            });
-          }
-        }
-        return Promise.resolve(null);
-      });
-      await Promise.all(emailUpdates);
-
-      // 2. If sending PDF, simulate compiling PDF layout
-      if (deliveryFormat === "pdf" || deliveryFormat === "both") {
-        setSendingProgress(t("sendPlan.generatingPdf", "Generating high-resolution vector PDF floor plan layout..."));
-        await new Promise(r => setTimeout(r, 600));
-      }
-
-      // 3. Send real emails via /api/email/send
-      let sentCount = 0;
-      const sendErrors = [];
-
-      for (let i = 0; i < targetPartners.length; i++) {
-        const p = targetPartners[i];
-        const email = (partnerEmails[p.id] || "").trim();
-        
-        setSendingProgress(
-          t("sendPlan.sendingTo", "Sending floor plan to {name} ({email})...")
-            .replace("{name}", p.name)
-            .replace("{email}", email)
-        );
-
-        try {
-          const res = await fetch("/api/email/send", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              type: "floor_plan",
-              to: email,
-              recipientName: p.name,
-              exhibitorName: p.name,
-              recipientType: p.category,
-              boothNumber: p.booth || "",
-              booth: p.booth || "",
-              tier: p.tier || "",
-              eventTitle: eventName || planName || "Eventzone Summit",
-              eventId: eventId || undefined,
-              deliveryFormat: deliveryFormat, // 'pdf' | 'link' | 'both'
-              floorPlanUrl: floorPlanUrl,
-              subject: subject,
-              message: message,
-            }),
-          });
-
-          const data = await res.json().catch(() => ({}));
-          if (!res.ok || data.error) {
-            sendErrors.push(`${p.name} (${email}): ${data.error || res.statusText || "Dispatch failed"}`);
-          } else {
-            sentCount++;
-          }
-        } catch (dispatchErr) {
-          sendErrors.push(`${p.name} (${email}): ${dispatchErr.message || "Network error"}`);
-        }
-      }
-
-      // 4. Log communication broadcast in Supabase
-      if (sentCount > 0) {
-        setSendingProgress(t("sendPlan.loggingBroadcast", "Logging email broadcast to event communications..."));
-        await logCommunication({
-          subject,
-          body: message,
-          recipientCount: sentCount,
-        }, eventId).catch(console.warn);
-      }
-
-      setLoading(false);
-
-      // 5. User feedback
-      if (sendErrors.length > 0) {
-        if (sentCount === 0) {
-          alert(`Failed to send floor plan emails:\n\n${sendErrors.join("\n")}`);
-          return;
-        } else {
-          alert(`Sent to ${sentCount} recipient(s), but ${sendErrors.length} failed:\n\n${sendErrors.join("\n")}`);
-          onSuccess(
-            t("sendPlan.partialSent", "Floor plan sent to {count} recipient(s) with some warnings.")
-              .replace("{count}", sentCount)
-          );
-          onClose();
-          return;
-        }
-      }
-
+    // Immediate reactive response: close modal and notify organizer that sending is running in the background
+    onClose();
+    if (onSuccess) {
       onSuccess(
-        t("sendPlan.successSent", "Floor plan successfully sent to {count} partner(s)!")
-          .replace("{count}", sentCount)
+        t("sendPlan.sendingInBackground", "Floor plans are being sent in the background to {count} partner(s). You can continue working!")
+          .replace("{count}", targetPartners.length)
       );
-      onClose();
-    } catch (err) {
-      console.error("SendPlanModal send error:", err);
-      alert(t("sendPlan.failedToSend", "Failed to send floor plan. Please verify network and try again."));
-      setLoading(false);
     }
+
+    // Run background dispatch loop without blocking organizer
+    (async () => {
+      try {
+        // 1. Save any updated/new emails in parallel to the directory
+        const emailUpdates = targetPartners.map(p => {
+          const currentEmail = (partnerEmails[p.id] || "").trim();
+          if (currentEmail && currentEmail !== p.email) {
+            if (p.category === "exhibitor") {
+              return upsertExhibitor({
+                ...p.raw,
+                email: currentEmail,
+                contactEmail: currentEmail
+              }, eventId).catch(err => {
+                console.warn("Could not sync exhibitor email update:", err);
+              });
+            } else if (p.category === "sponsor") {
+              return upsertSponsor({
+                ...p.raw,
+                email: currentEmail,
+                contactEmail: currentEmail
+              }, eventId).catch(err => {
+                console.warn("Could not sync sponsor email update:", err);
+              });
+            }
+          }
+          return Promise.resolve(null);
+        });
+        await Promise.all(emailUpdates);
+
+        // 2. Send real emails via /api/email/send
+        let sentCount = 0;
+
+        for (let i = 0; i < targetPartners.length; i++) {
+          const p = targetPartners[i];
+          const email = (partnerEmails[p.id] || "").trim();
+
+          try {
+            const res = await fetch("/api/email/send", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                type: "floor_plan",
+                to: email,
+                recipientName: p.name,
+                exhibitorName: p.name,
+                recipientType: p.category,
+                boothNumber: p.booth || "",
+                booth: p.booth || "",
+                tier: p.tier || "",
+                eventTitle: eventName || planName || "Eventzone Summit",
+                eventId: eventId || undefined,
+                deliveryFormat: deliveryFormat, // 'pdf' | 'link' | 'both'
+                floorPlanUrl: floorPlanUrl,
+                subject: subject,
+                message: message,
+              }),
+            });
+
+            if (res.ok) {
+              sentCount++;
+            }
+          } catch (dispatchErr) {
+            console.warn(`Floor plan dispatch error for ${email}:`, dispatchErr);
+          }
+
+          // Anti-spam pause
+          await new Promise(r => setTimeout(r, 250));
+        }
+
+        // 3. Log communication broadcast in Supabase
+        if (sentCount > 0) {
+          await logCommunication({
+            subject,
+            body: message,
+            recipientCount: sentCount,
+          }, eventId).catch(console.warn);
+        }
+      } catch (err) {
+        console.error("Background SendPlanModal dispatch error:", err);
+      }
+    })();
   };
 
   const exhibitorsCount = exhibitors.length;

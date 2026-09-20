@@ -881,7 +881,7 @@ export default function OrganizerAttendeePortalSettings({
                   ) : broadcastDone ? (
                     <>
                       <CheckCircle2 size={16} className="text-emerald-300" />
-                      <span>{t("portalSettings.broadcastSuccess", "Broadcast Sent Successfully!")}</span>
+                      <span>{t("portalSettings.broadcastSuccess", "Emails are sending in the background!")}</span>
                     </>
                   ) : (
                     <span>{t("portalSettings.sendBroadcastBtn", "Send Portal Access Email to {count} Attendees", { count: attendees.length })}</span>

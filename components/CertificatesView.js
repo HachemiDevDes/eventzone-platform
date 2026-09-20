@@ -201,6 +201,7 @@ export default function CertificatesView({
   const [batchEmailProgress, setBatchEmailProgress] = useState({ current: 0, total: 0, sent: 0, failed: 0, activeName: "" });
   const [batchEmailResults, setBatchEmailResults] = useState(null);
   const [batchCaptureRecipient, setBatchCaptureRecipient] = useState(null);
+  const [showBatchCompleteNotification, setShowBatchCompleteNotification] = useState(false);
 
   // Draggable Category Row & Custom Saved Templates State
   const categoryRowRef = useRef(null);
@@ -970,7 +971,11 @@ export default function CertificatesView({
 
     if (!list || list.length === 0) return;
 
+    // Immediately close modal to be reactive and non-blocking
+    setIsBatchEmailModalOpen(false);
     setIsBatchSendingEmail(true);
+    setShowBatchCompleteNotification(false);
+
     let sentCount = 0;
     let failedCount = 0;
     let skippedNoEmail = 0;
@@ -980,105 +985,113 @@ export default function CertificatesView({
       total: list.length,
       sent: 0,
       failed: 0,
-      activeName: "Initializing batch delivery...",
+      activeName: "Initializing batch delivery in background...",
     });
 
-    for (let i = 0; i < list.length; i++) {
-      const rec = list[i];
-      const email = (rec.email || "").trim();
+    // Run batch dispatch in background
+    (async () => {
+      for (let i = 0; i < list.length; i++) {
+        const rec = list[i];
+        const email = (rec.email || "").trim();
 
-      if (!email || !email.includes("@")) {
-        skippedNoEmail++;
+        if (!email || !email.includes("@")) {
+          skippedNoEmail++;
+          setBatchEmailProgress(prev => ({
+            ...prev,
+            current: i + 1,
+            activeName: `${rec.name} (Skipped - No email)`,
+          }));
+          continue;
+        }
+
         setBatchEmailProgress(prev => ({
           ...prev,
           current: i + 1,
-          activeName: `${rec.name} (Skipped - No email)`,
+          activeName: `${rec.name} (${email})`,
         }));
-        continue;
-      }
 
-      setBatchEmailProgress(prev => ({
-        ...prev,
-        current: i + 1,
-        activeName: `${rec.name} (${email})`,
-      }));
+        try {
+          // Capture exact rendered certificate image for recipient
+          let certificateImage = null;
+          if (currentPreviewRecipient.name === rec.name) {
+            certificateImage = await captureCertificateImage("printable-a4-certificate");
+          } else {
+            setBatchCaptureRecipient(rec);
+            await new Promise(r => setTimeout(r, 120));
+            certificateImage = await captureCertificateImage("batch-capture-certificate");
+          }
 
-      try {
-        // Capture exact rendered certificate image for recipient
-        let certificateImage = null;
-        if (currentPreviewRecipient.name === rec.name) {
-          certificateImage = await captureCertificateImage("printable-a4-certificate");
-        } else {
-          setBatchCaptureRecipient(rec);
-          await new Promise(r => setTimeout(r, 120));
-          certificateImage = await captureCertificateImage("batch-capture-certificate");
-        }
+          const certId = rec.certId || rec.certificateId || `EZ-CERT-${rec.id}`;
+          const interpolatedSubject = (batchEmailSubject || `Certificate for ${eventDetails?.title || "Event"}`)
+            .replace(/\{\{name\}\}/gi, rec.name || "")
+            .replace(/\{\{event_name\}\}/gi, eventDetails?.title || "")
+            .replace(/\{\{certificate_id\}\}/gi, certId);
 
-        const certId = rec.certId || rec.certificateId || `EZ-CERT-${rec.id}`;
-        const interpolatedSubject = (batchEmailSubject || `Certificate for ${eventDetails?.title || "Event"}`)
-          .replace(/\{\{name\}\}/gi, rec.name || "")
-          .replace(/\{\{event_name\}\}/gi, eventDetails?.title || "")
-          .replace(/\{\{certificate_id\}\}/gi, certId);
+          const interpolatedMessage = (batchEmailMessage || "")
+            .replace(/\{\{name\}\}/gi, rec.name || "")
+            .replace(/\{\{event_name\}\}/gi, eventDetails?.title || "")
+            .replace(/\{\{certificate_id\}\}/gi, certId)
+            .replace(/\{\{role\}\}/gi, rec.role || "Attendee");
 
-        const interpolatedMessage = (batchEmailMessage || "")
-          .replace(/\{\{name\}\}/gi, rec.name || "")
-          .replace(/\{\{event_name\}\}/gi, eventDetails?.title || "")
-          .replace(/\{\{certificate_id\}\}/gi, certId)
-          .replace(/\{\{role\}\}/gi, rec.role || "Attendee");
+          const payload = {
+            type: "certificate",
+            to: email,
+            recipientName: rec.name,
+            recipientRole: rec.role || "Attendee",
+            company: rec.company || "",
+            jobTitle: rec.jobTitle || "",
+            certificateTitle: activeTemplate.certificateTitle || "Certificate of Attendance",
+            certificateId: certId,
+            eventTitle: eventDetails?.title || "Eventzone Summit",
+            eventDate: eventDetails?.date_range_formatted || "",
+            eventLocation: eventDetails?.location || eventDetails?.venue_name || "",
+            organizerName: eventDetails?.organizer_name || "Eventzone Organizing Committee",
+            subject: interpolatedSubject,
+            message: interpolatedMessage,
+            eventId: targetEventId,
+            template: activeTemplate,
+            subtitleText: activeTemplate.subtitleText,
+            recipientSubtext: activeTemplate.recipientSubtext,
+            bodyText: activeTemplate.bodyText,
+            certificateImage,
+          };
 
-        const payload = {
-          type: "certificate",
-          to: email,
-          recipientName: rec.name,
-          recipientRole: rec.role || "Attendee",
-          company: rec.company || "",
-          jobTitle: rec.jobTitle || "",
-          certificateTitle: activeTemplate.certificateTitle || "Certificate of Attendance",
-          certificateId: certId,
-          eventTitle: eventDetails?.title || "Eventzone Summit",
-          eventDate: eventDetails?.date_range_formatted || "",
-          eventLocation: eventDetails?.location || eventDetails?.venue_name || "",
-          organizerName: eventDetails?.organizer_name || "Eventzone Organizing Committee",
-          subject: interpolatedSubject,
-          message: interpolatedMessage,
-          eventId: targetEventId,
-          template: activeTemplate,
-          subtitleText: activeTemplate.subtitleText,
-          recipientSubtext: activeTemplate.recipientSubtext,
-          bodyText: activeTemplate.bodyText,
-          certificateImage,
-        };
+          const res = await fetch("/api/email/send", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
 
-        const res = await fetch("/api/email/send", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-
-        if (res.ok) {
-          sentCount++;
-          setBatchEmailProgress(prev => ({ ...prev, sent: sentCount }));
-        } else {
+          if (res.ok) {
+            sentCount++;
+            setBatchEmailProgress(prev => ({ ...prev, sent: sentCount }));
+          } else {
+            failedCount++;
+            setBatchEmailProgress(prev => ({ ...prev, failed: failedCount }));
+          }
+        } catch (err) {
+          console.error("Failed to email recipient:", rec.name, err);
           failedCount++;
           setBatchEmailProgress(prev => ({ ...prev, failed: failedCount }));
         }
-      } catch (err) {
-        console.error("Failed to email recipient:", rec.name, err);
-        failedCount++;
-        setBatchEmailProgress(prev => ({ ...prev, failed: failedCount }));
+
+        // Small pause between emails to avoid SMTP burst rate limits
+        await new Promise(res => setTimeout(res, 200));
       }
 
-      // Small pause between emails to avoid SMTP burst rate limits
-      await new Promise(res => setTimeout(res, 200));
-    }
-
-    setBatchCaptureRecipient(null);
-    setIsBatchSendingEmail(false);
-    setBatchEmailResults({
-      sent: sentCount,
-      failed: failedCount,
-      skippedNoEmail,
-      total: list.length,
+      setBatchCaptureRecipient(null);
+      setIsBatchSendingEmail(false);
+      setBatchEmailResults({
+        sent: sentCount,
+        failed: failedCount,
+        skippedNoEmail,
+        total: list.length,
+      });
+      setShowBatchCompleteNotification(true);
+      setTimeout(() => setShowBatchCompleteNotification(false), 5000);
+    })().catch((err) => {
+      console.error("Background batch email delivery failed:", err);
+      setIsBatchSendingEmail(false);
     });
   };
 
@@ -4088,6 +4101,42 @@ export default function CertificatesView({
           />
         )}
       </div>
+
+      {/* Floating background email progress pill */}
+      {(isBatchSendingEmail || showBatchCompleteNotification) && (
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900/95 backdrop-blur-md text-white border border-slate-700/60 shadow-2xl rounded-2xl px-5 py-3.5 flex items-center gap-3.5 animate-slide-up max-w-md">
+          {isBatchSendingEmail ? (
+            <>
+              <div className="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
+                <Loader2 size={16} className="animate-spin" />
+              </div>
+              <div className="flex flex-col min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black tracking-wide">{t("cert.sendingBgTitle", "Sending Certificates in Background")}</span>
+                  <span className="text-[10px] font-bold text-blue-400 bg-blue-500/20 px-1.5 py-0.5 rounded-md">
+                    {batchEmailProgress.current} / {batchEmailProgress.total}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400 truncate max-w-xs mt-0.5">
+                  {batchEmailProgress.activeName}
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                <CheckCircle2 size={16} />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs font-black text-emerald-300">{t("cert.allSentTitle", "All Certificates Sent!")}</span>
+                <p className="text-[11px] text-slate-300">
+                  {t("cert.allSentDesc", "Delivered {count} certificate(s) in background.", { count: batchEmailProgress.sent })}
+                </p>
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
     </div>
   );
