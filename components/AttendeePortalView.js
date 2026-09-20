@@ -2268,23 +2268,27 @@ export default function AttendeePortalView({
                         <button
                           key={contact.email || contact.id}
                           onClick={() => setActiveChatContact(contact)}
-                          className={`w-full p-2.5 sm:p-3 rounded-xl text-start transition-all flex items-center gap-3 cursor-pointer ${
+                          className={`w-full p-2.5 sm:p-3 rounded-lg text-start transition-all flex items-center gap-3 cursor-pointer ${
                             isSelected 
-                              ? "bg-blue-600 text-white shadow-sm" 
-                              : "bg-white hover:bg-slate-100/80 text-slate-800 border border-slate-150"
+                              ? "bg-slate-900 text-white shadow-xs" 
+                              : "bg-white hover:bg-slate-100/80 text-slate-800 border border-slate-200"
                           }`}
                         >
                           <div className="relative shrink-0">
                             {contact.avatar || contact.image ? (
-                              <img src={contact.avatar || contact.image} alt={contactDisplayName} className="w-11 h-11 rounded-xl object-cover border border-white/20 shadow-xs" />
+                              <img src={contact.avatar || contact.image} alt={contactDisplayName} className={`w-11 h-11 rounded-lg object-cover shadow-xs ${
+                                isSelected ? "border border-white/20" : "border border-slate-200"
+                              }`} />
                             ) : (
-                              <div className={`w-11 h-11 rounded-xl flex items-center justify-center font-black text-sm shadow-xs ${
-                                isSelected ? "bg-white/20 text-white" : "bg-blue-100 text-blue-700"
+                              <div className={`w-11 h-11 rounded-lg flex items-center justify-center font-black text-sm shadow-xs ${
+                                isSelected ? "bg-white/15 text-white" : "bg-slate-100 text-slate-700"
                               }`}>
                                 {contactDisplayName.charAt(0).toUpperCase()}
                               </div>
                             )}
-                            <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" />
+                            <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 rounded-full ${
+                              isSelected ? "border-slate-900" : "border-white"
+                            }`} />
                           </div>
 
                           <div className="min-w-0 flex-1">
@@ -2293,7 +2297,7 @@ export default function AttendeePortalView({
                                 {contactDisplayName}
                               </h4>
                             </div>
-                            <p className={`text-[11px] truncate font-medium ${isSelected ? "text-blue-100" : "text-slate-500"}`}>
+                            <p className={`text-[11px] truncate font-medium ${isSelected ? "text-slate-300" : "text-slate-500"}`}>
                               {contactJob} {contactCompany ? `• ${contactCompany}` : ""}
                             </p>
                           </div>
