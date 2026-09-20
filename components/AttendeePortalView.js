@@ -1272,35 +1272,6 @@ export default function AttendeePortalView({
         {activeTab === "overview" && (
           <div className="space-y-8 animate-fade-in">
             
-            {/* Welcome Announcement from Organizer */}
-            {Boolean(portalMessage) && (
-              <div className="p-6 sm:p-7 bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.03)] flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-                <div className="space-y-1.5 max-w-2xl">
-                  <div className="flex items-center gap-2 text-blue-600 text-xs font-bold uppercase tracking-wider">
-                    <Megaphone size={15} />
-                    <span>{t("portal.welcomeTo", "Welcome to {title}", { title: eventDetails.title || "Summit" })}</span>
-                  </div>
-                  <p className="text-sm text-slate-700 font-normal leading-relaxed">
-                    {portalMessage}
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap gap-2.5 shrink-0">
-                  <button
-                    onClick={() => setActiveTab("agenda")}
-                    className="px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-800 rounded-xl text-xs font-bold border border-slate-200 transition-all cursor-pointer"
-                  >
-                    {t("portal.viewAgenda", "View Agenda")}
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("networking")}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
-                  >
-                    {t("portal.startNetworking", "Start Networking")}
-                  </button>
-                </div>
-              </div>
-            )}
 
             {/* Quick Action Navigation Cards (Cohesive, Unified Design System) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -1849,24 +1820,6 @@ export default function AttendeePortalView({
         {activeTab === "networking" && (
           <div className="space-y-6 animate-fade-in">
             
-            {/* Networking Header & Profile Editor Card */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-              <div>
-                <h2 className="text-xl font-black text-slate-900 tracking-tight">{t("portal.networkingTitle", "Attendee Directory & B2B Networking")}</h2>
-                <p className="text-xs text-slate-500 font-medium">{t("portal.networkingSubtitle", "Discover delegates, send direct connection requests, and grow your professional network.")}</p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setIsEditingMyProfile(true)}
-                  className="px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-2xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
-                >
-                  <Sparkles size={13} className="text-blue-600" />
-                  <span>{t("portal.editMyProfile", "Edit My Networking Profile")}</span>
-                </button>
-              </div>
-            </div>
-
             {/* Search & Tab Switcher */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-xs">
               <div className="relative flex-1 w-full sm:w-auto">
@@ -1911,6 +1864,13 @@ export default function AttendeePortalView({
                       {pendingReceived.length}
                     </span>
                   )}
+                </button>
+                <button
+                  onClick={() => setIsEditingMyProfile(true)}
+                  className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs ml-auto sm:ml-0"
+                >
+                  <Sparkles size={13} className="text-blue-600" />
+                  <span>{t("portal.editMyProfile", "Edit My Profile")}</span>
                 </button>
               </div>
             </div>
@@ -2201,27 +2161,6 @@ export default function AttendeePortalView({
         {activeTab === "chat" && (
           <div className="space-y-6 animate-fade-in max-w-6xl mx-auto">
             
-            {/* Header / Intro */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-              <div>
-                <h2 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                  <MessageCircle className="text-blue-600" size={22} />
-                  <span>{t("portal.chatTitle", "Delegate Direct Chat & 1-on-1 Messages")}</span>
-                </h2>
-                <p className="text-xs text-slate-500 font-medium">{t("portal.chatSubtitle", "Connect and message verified delegates in real time during {title}.", { title: eventDetails.title || "the summit" })}</p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setActiveTab("networking")}
-                  className="px-3.5 py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
-                >
-                  <Users size={13} className="text-blue-600" />
-                  <span>{t("portal.browseDirectory", "Browse Directory")}</span>
-                </button>
-              </div>
-            </div>
-
             {/* Chat Workspace Box */}
             <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex flex-col md:flex-row min-h-[580px] max-h-[700px]">
               
@@ -2665,30 +2604,23 @@ export default function AttendeePortalView({
         {activeTab === "floorplan" && (
           <div className="space-y-6 animate-fade-in">
             
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-              <div>
-                <h2 className="text-xl font-black text-slate-900 tracking-tight">{t("portal.floorPlansTitle", "Interactive Venue Floor Plans")}</h2>
-                <p className="text-xs text-slate-500 font-medium">{t("portal.floorPlansSubtitle", "Explore expo halls, keynote stages, networking lounges, and exhibitor booths.")}</p>
+            {floorPlans.length > 1 && (
+              <div className="flex items-center gap-2 overflow-x-auto bg-white p-3 rounded-2xl border border-slate-200 shadow-xs">
+                {floorPlans.map((plan, idx) => (
+                  <button
+                    key={plan.id || idx}
+                    onClick={() => setActiveFloorIndex(idx)}
+                    className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      activeFloorIndex === idx
+                        ? "bg-blue-600 text-white shadow-xs"
+                        : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                    }`}
+                  >
+                    {plan.name || `${t("portal.floorPlanPrefix", "Floor Plan")} ${idx + 1}`}
+                  </button>
+                ))}
               </div>
-
-              {floorPlans.length > 1 && (
-                <div className="flex items-center gap-2 overflow-x-auto">
-                  {floorPlans.map((plan, idx) => (
-                    <button
-                      key={plan.id || idx}
-                      onClick={() => setActiveFloorIndex(idx)}
-                      className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                        activeFloorIndex === idx
-                          ? "bg-blue-600 text-white shadow-xs"
-                          : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                      }`}
-                    >
-                      {plan.name || `${t("portal.floorPlanPrefix", "Floor Plan")} ${idx + 1}`}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            )}
 
             {/* Active Floor Plan Canvas / Image */}
             {activePlan ? (
