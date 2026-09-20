@@ -383,10 +383,10 @@ export default function EventPublicLandingPage({
     location = effectiveDetails?.virtualPlatform 
       ? `${effectiveDetails.virtualPlatform} (Online)` 
       : "Online Virtual Event";
-  } else if (effectiveDetails?.scheduleMode === "multiple" && Array.isArray(effectiveDetails?.multiLocations) && effectiveDetails.multiLocations.length > 1) {
-    const firstStop = effectiveDetails.multiLocations[0];
-    const firstStopParts = [firstStop?.country, firstStop?.city, firstStop?.venueName || firstStop?.name].filter(Boolean);
-    location = `${effectiveDetails.multiLocations.length} Locations (${firstStopParts.join(", ")})`;
+  } else if ((effectiveDetails?.scheduleMode === "multiple" || eventDetails?.scheduleMode === "multiple") && Array.isArray(effectiveDetails?.multiLocations || eventDetails?.multiLocations) && (effectiveDetails?.multiLocations || eventDetails?.multiLocations).length > 0) {
+    const rawStops = effectiveDetails?.multiLocations || eventDetails?.multiLocations || [];
+    const stopLabels = rawStops.map(s => s.city || s.venueName || s.name).filter(Boolean);
+    location = `${rawStops.length} ${rawStops.length === 1 ? "Tour Stop" : "Tour Stops"} (${stopLabels.slice(0, 3).join(" • ")}${stopLabels.length > 3 ? "..." : ""})`;
   } else {
     // Format: Country + city + venue name
     const parts = [eventCountry, eventCity, cleanVenue].filter(Boolean);
@@ -583,6 +583,77 @@ export default function EventPublicLandingPage({
     }
 
     return `${startMonth} ${startDay}, ${startYear} – ${endMonth} ${endDay}, ${endYear}`;
+  };
+
+  // Multi-Stop / Tour Configuration
+  const isMultiStop = Boolean(
+    (effectiveDetails?.scheduleMode === "multiple" || eventDetails?.scheduleMode === "multiple") &&
+    Array.isArray(effectiveDetails?.multiLocations || eventDetails?.multiLocations) &&
+    (effectiveDetails?.multiLocations || eventDetails?.multiLocations).length > 0
+  );
+
+  const multiLocations = useMemo(() => {
+    return (effectiveDetails?.multiLocations || eventDetails?.multiLocations || []);
+  }, [effectiveDetails?.multiLocations, eventDetails?.multiLocations]);
+
+  const [showAllStops, setShowAllStops] = useState(false);
+
+  const tourDateRange = useMemo(() => {
+    if (!isMultiStop || multiLocations.length === 0) return "";
+    const allDates = [];
+    multiLocations.forEach(stop => {
+      if (stop.date) allDates.push(String(stop.date).split("T")[0].trim());
+      if (stop.endDate) allDates.push(String(stop.endDate).split("T")[0].trim());
+    });
+    allDates.sort();
+    if (allDates.length === 0) return formatEventDateRange(startDate, endDate);
+    const earliest = allDates[0];
+    const latest = allDates[allDates.length - 1];
+    return formatEventDateRange(earliest, latest);
+  }, [isMultiStop, multiLocations, startDate, endDate]);
+
+  const formatStopDateRange = (sDate, eDate) => {
+    if (!sDate) return "";
+    const cleanStart = String(sDate).split("T")[0].trim();
+    const cleanEnd = eDate ? String(eDate).split("T")[0].trim() : cleanStart;
+    return formatEventDateRange(cleanStart, cleanEnd);
+  };
+
+  const getStopGoogleCalendarUrl = (stop) => {
+    try {
+      const stopTitle = `${title || "Event"} - ${stop.name || stop.city || "Tour Stop"}`;
+      const stopLoc = [stop.venueName, stop.venueAddress, stop.city, stop.country].filter(Boolean).join(", ");
+      const cleanTitle = encodeURIComponent(stopTitle);
+      const cleanDetails = encodeURIComponent(
+        `${eventDetails?.description || title || ""}\n\nTour Stop: ${stop.name || "Tour Stop"}\nEvent Link: https://eventzone.pro/${eventDetails?.slug || "myevent"}\nVenue: ${stopLoc || ""}`
+      );
+      const cleanLocation = encodeURIComponent(stopLoc || "");
+
+      const formatGCalDate = (dStr, isEnd = false) => {
+        if (!dStr) return "";
+        const clean = String(dStr).split("T")[0].trim();
+        const parts = clean.split("-");
+        if (parts.length === 3) {
+          const y = parseInt(parts[0], 10);
+          const m = parseInt(parts[1], 10) - 1;
+          const d = parseInt(parts[2], 10) + (isEnd ? 1 : 0);
+          const dt = new Date(Date.UTC(y, m, d));
+          const yyyy = dt.getUTCFullYear();
+          const mm = String(dt.getUTCMonth() + 1).padStart(2, "0");
+          const dd = String(dt.getUTCDate()).padStart(2, "0");
+          return `${yyyy}${mm}${dd}`;
+        }
+        return String(dStr).replace(/[^0-9]/g, "");
+      };
+
+      const startG = formatGCalDate(stop.date);
+      const endG = formatGCalDate(stop.endDate || stop.date, true);
+      const datesParam = startG && endG ? `&dates=${startG}/${endG}` : "";
+
+      return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${cleanTitle}&details=${cleanDetails}&location=${cleanLocation}${datesParam}`;
+    } catch {
+      return "https://calendar.google.com";
+    }
   };
 
   // Event Countdown Timer State
@@ -1399,6 +1470,9 @@ export default function EventPublicLandingPage({
         {/* Center: In-Page Navigation Quick Links */}
         <nav className="hidden lg:flex items-center justify-center gap-7 text-xs font-bold text-slate-600 absolute left-1/2 -translate-x-1/2">
           <a href="#about" onClick={handleScrollTo("#about")} className="hover:text-blue-600 transition-colors cursor-pointer">{t("event.about", "About")}</a>
+          {isMultiStop && (
+            <a href="#tour-stops" onClick={handleScrollTo("#tour-stops")} className="hover:text-blue-600 transition-colors cursor-pointer">{t("details.multiStopTour", "Tour Stops")}</a>
+          )}
           {eventSpeakers.length > 0 && (
             <a href="#speakers" onClick={handleScrollTo("#speakers")} className="hover:text-blue-600 transition-colors cursor-pointer">{t("event.speakers", "Speakers")}</a>
           )}
@@ -1591,48 +1665,211 @@ export default function EventPublicLandingPage({
               </h1>
 
               {/* Clean Date, Time & Location Block */}
-              <div className="space-y-6 pt-2">
+              <div id="tour-stops" className="space-y-6 pt-2">
                 
-                {/* Dates & Horaires */}
-                <div className="space-y-3">
-                  <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                    {t("event.datesTime", "Date & time")}
-                  </h3>
-                  <div className="space-y-2.5 text-sm sm:text-base text-slate-700 font-medium">
-                    <div className="flex items-center gap-2.5">
-                      <Calendar size={20} className="text-slate-400 shrink-0" />
-                      <span>{formatEventDateRange(startDate, endDate)}</span>
+                {isMultiStop ? (
+                  /* ── MULTI-STOP / TOUR DATES & VENUES ── */
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200/80 text-blue-700 text-xs font-bold uppercase tracking-wide">
+                        <Layers size={13} className="text-blue-600 shrink-0" />
+                        <span>{t("details.multiStopTour", "Multi-Stop / Tour")} • {multiLocations.length} {multiLocations.length === 1 ? t("details.stop", "Stop") : t("details.stops", "Stops")}</span>
+                      </div>
+                      <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1">
+                        <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                          {t("event.tourDatesVenues", "Tour Dates & Venues")}
+                        </h3>
+                        {tourDateRange && (
+                          <span className="text-xs sm:text-sm font-bold text-blue-600">
+                            {tourDateRange}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-500 font-normal">
+                        {t("event.tourDatesSubtitle", "This summit tours across multiple venues and dates. Review the scheduled stops below:")}
+                      </p>
                     </div>
-                    <div className="flex items-center gap-2.5">
-                      <Clock size={20} className="text-slate-400 shrink-0" />
-                      <span>{eventDetails?.scheduleTime || "08:00 AM - 05:00 PM"}</span>
-                    </div>
-                    <div className="flex items-center gap-2.5 pt-0.5">
-                      <CalendarPlus size={18} className="text-blue-600 shrink-0" />
-                      <a
-                        href={getGoogleCalendarUrl()}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-700 hover:underline font-semibold text-sm"
-                      >
-                        {t("event.addToCalendar", "Add to Calendar")}
-                      </a>
-                    </div>
-                  </div>
-                </div>
 
-                {/* Localisation */}
-                <div className="space-y-3">
-                  <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                    {t("event.location", "Location")}
-                  </h3>
-                  <div className="space-y-2.5 text-sm sm:text-base text-slate-700 font-medium">
-                    <div className="flex items-start gap-2.5">
-                      <MapPin size={20} className="text-slate-400 shrink-0 mt-0.5" />
-                      <span className="leading-snug">{location}</span>
+                    {/* Tour Stops Cards List */}
+                    <div className="space-y-3.5">
+                      {(showAllStops ? multiLocations : multiLocations.slice(0, 3)).map((stop, idx) => {
+                        const stopFormat = stop.format || type || "In-Person";
+                        const stopLocationText = [stop.venueName, stop.venueAddress, stop.city, stop.country].filter(Boolean).join(", ");
+                        const mapsUrl = stopLocationText ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(stopLocationText)}` : null;
+
+                        return (
+                          <div 
+                            key={stop.id || idx}
+                            className="bg-slate-50/70 hover:bg-white border border-slate-200/90 hover:border-blue-300 rounded-2xl p-4 sm:p-5 shadow-2xs hover:shadow-md transition-all space-y-3 text-start rtl:text-right text-left"
+                          >
+                            {/* Stop Header */}
+                            <div className="flex items-center justify-between gap-2.5 flex-wrap">
+                              <div className="flex items-center gap-3">
+                                <div className="w-7 h-7 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
+                                  {idx + 1}
+                                </div>
+                                <div>
+                                  <h4 className="text-sm sm:text-base font-bold text-slate-900">
+                                    {stop.name || `${t("details.stop", "Stop")} ${idx + 1}`}
+                                  </h4>
+                                  {(stop.city || stop.country) && (
+                                    <p className="text-xs font-semibold text-slate-500">
+                                      {[stop.city, stop.country].filter(Boolean).join(", ")}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+
+                              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide border shrink-0 ${
+                                stopFormat === "Virtual"
+                                  ? "bg-purple-50 border-purple-200 text-purple-700"
+                                  : stopFormat === "Hybrid"
+                                  ? "bg-blue-50 border-blue-200 text-blue-700"
+                                  : "bg-emerald-50 border-emerald-200 text-emerald-700"
+                              }`}>
+                                {stopFormat}
+                              </span>
+                            </div>
+
+                            {/* Details Grid */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-600 font-medium pt-0.5">
+                              {/* Date */}
+                              <div className="flex items-center gap-2">
+                                <Calendar size={15} className="text-slate-400 shrink-0" />
+                                <span className="font-bold text-slate-800">
+                                  {formatStopDateRange(stop.date, stop.endDate)}
+                                </span>
+                              </div>
+
+                              {/* Time */}
+                              {stop.time && (
+                                <div className="flex items-center gap-2">
+                                  <Clock size={15} className="text-slate-400 shrink-0" />
+                                  <span>{stop.time}</span>
+                                </div>
+                              )}
+
+                              {/* Physical Venue / Location */}
+                              {(stopFormat === "In-Person" || stopFormat === "Hybrid") && stopLocationText && (
+                                <div className="flex items-start gap-2 sm:col-span-2">
+                                  <MapPin size={15} className="text-slate-400 shrink-0 mt-0.5" />
+                                  <span className="leading-relaxed font-normal text-slate-700">
+                                    {stopLocationText}
+                                  </span>
+                                </div>
+                              )}
+
+                              {/* Virtual Details */}
+                              {stopFormat === "Virtual" && (
+                                <div className="flex items-center gap-2 sm:col-span-2 text-purple-700 font-mono">
+                                  <Video size={15} className="shrink-0" />
+                                  <span>{stop.virtualPlatform || "Virtual Stream"}</span>
+                                  {stop.virtualUrl && (
+                                    <a href={stop.virtualUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline font-sans text-xs ml-1">
+                                      {t("details.joinStream", "Join link")}
+                                    </a>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Stop Notes */}
+                              {stop.notes && (
+                                <p className="text-[11px] text-slate-500 italic sm:col-span-2 leading-relaxed">
+                                  {stop.notes}
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Actions Bar */}
+                            <div className="pt-2.5 border-t border-slate-200/60 flex items-center justify-between gap-3 flex-wrap">
+                              <a
+                                href={getStopGoogleCalendarUrl(stop)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline cursor-pointer"
+                              >
+                                <CalendarPlus size={14} className="text-blue-600 shrink-0" />
+                                <span>{t("event.addStopToCalendar", "Add to Google Calendar")}</span>
+                              </a>
+
+                              {mapsUrl && (
+                                <a
+                                  href={mapsUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+                                >
+                                  <ExternalLink size={12} className="shrink-0" />
+                                  <span>{t("event.viewOnMap", "Directions / Map")}</span>
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
+
+                    {/* Show all / fewer toggle if > 3 stops */}
+                    {multiLocations.length > 3 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowAllStops(prev => !prev)}
+                        className="w-full py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                      >
+                        <span>
+                          {showAllStops 
+                            ? t("event.showFewerStops", "Show Fewer Stops") 
+                            : t("event.showAllStops", "Show All {count} Stops").replace("{count}", multiLocations.length)}
+                        </span>
+                        {showAllStops ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                      </button>
+                    )}
                   </div>
-                </div>
+                ) : (
+                  /* ── STANDARD EVENT (Single Date & Time / Unified Location) ── */
+                  <>
+                    {/* Dates & Horaires */}
+                    <div className="space-y-3">
+                      <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                        {t("event.datesTime", "Date & time")}
+                      </h3>
+                      <div className="space-y-2.5 text-sm sm:text-base text-slate-700 font-medium">
+                        <div className="flex items-center gap-2.5">
+                          <Calendar size={20} className="text-slate-400 shrink-0" />
+                          <span>{formatEventDateRange(startDate, endDate)}</span>
+                        </div>
+                        <div className="flex items-center gap-2.5">
+                          <Clock size={20} className="text-slate-400 shrink-0" />
+                          <span>{eventDetails?.scheduleTime || "08:00 AM - 05:00 PM"}</span>
+                        </div>
+                        <div className="flex items-center gap-2.5 pt-0.5">
+                          <CalendarPlus size={18} className="text-blue-600 shrink-0" />
+                          <a
+                            href={getGoogleCalendarUrl()}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-700 hover:underline font-semibold text-sm"
+                          >
+                            {t("event.addToCalendar", "Add to Calendar")}
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Localisation */}
+                    <div className="space-y-3">
+                      <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                        {t("event.location", "Location")}
+                      </h3>
+                      <div className="space-y-2.5 text-sm sm:text-base text-slate-700 font-medium">
+                        <div className="flex items-start gap-2.5">
+                          <MapPin size={20} className="text-slate-400 shrink-0 mt-0.5" />
+                          <span className="leading-snug">{location}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
 
               </div>
             </div>
