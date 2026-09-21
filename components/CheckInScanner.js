@@ -21,7 +21,9 @@ import {
   Clock,
   Check,
   X,
-  User
+  User,
+  ScanLine,
+  Barcode
 } from "lucide-react";
 import { enqueueOfflineAction } from "../lib/offlineSync";
 
@@ -127,6 +129,19 @@ export default function CheckInScanner({
   const isScanningRef = useRef(true);
   const lastScannedCodeRef = useRef("");
   const lastScanTimestampRef = useRef(0);
+
+  const [scanInputMode, setScanInputMode] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        return localStorage.getItem("ez_checkin_scan_mode") || "camera";
+      } catch {}
+    }
+    return "camera";
+  });
+  const [hardwareInputCode, setHardwareInputCode] = useState("");
+  const hardwareInputRef = useRef(null);
+  const keyBufferRef = useRef([]);
+  const lastKeyTimeRef = useRef(0);
 
   const [cameraPermission, setCameraPermission] = useState("prompt"); // "prompt" | "granted" | "denied"
   const [errorMessage, setErrorMessage] = useState("");
@@ -421,10 +436,12 @@ export default function CheckInScanner({
     setActiveResult(null);
     lastScannedCodeRef.current = "";
     isScanningRef.current = true;
-    if (scanVideoFrameRef.current) {
+    if (scanInputMode === "camera" && scanVideoFrameRef.current) {
       animFrameIdRef.current = requestAnimationFrame(scanVideoFrameRef.current);
+    } else if (hardwareInputRef.current) {
+      hardwareInputRef.current.focus();
     }
-  }, []);
+  }, [scanInputMode]);
 
   handleScanNextRef.current = handleScanNext;
 
@@ -546,13 +563,86 @@ export default function CheckInScanner({
     setFacingMode((prev) => (prev === "environment" ? "user" : "environment"));
   };
 
+  // Switch scan mode helper (Camera vs Hardware Scanner)
+  const handleSwitchScanMode = useCallback((mode) => {
+    setScanInputMode(mode);
+    try {
+      localStorage.setItem("ez_checkin_scan_mode", mode);
+    } catch {}
+    if (mode === "hardware") {
+      stopCamera();
+      setTimeout(() => {
+        if (hardwareInputRef.current) hardwareInputRef.current.focus();
+      }, 150);
+    }
+  }, [stopCamera]);
+
+  // Handle hardware input form submit
+  const handleHardwareSubmit = useCallback((e) => {
+    if (e) e.preventDefault();
+    const code = (hardwareInputCode || "").trim();
+    if (code) {
+      setActiveResult(null);
+      handleScannedPayload(code);
+      setHardwareInputCode("");
+    }
+  }, [hardwareInputCode, handleScannedPayload]);
+
   // Lifecycle
   useEffect(() => {
-    startCamera();
+    if (scanInputMode === "camera") {
+      startCamera();
+    } else {
+      stopCamera();
+    }
     return () => {
       stopCamera();
     };
-  }, [facingMode]);
+  }, [facingMode, scanInputMode, startCamera, stopCamera]);
+
+  // Global Keydown Listener for Hardware Barcode / QR Scanners (e.g. Henex)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const activeEl = typeof document !== "undefined" ? document.activeElement : null;
+      const isOurInput = activeEl === hardwareInputRef.current;
+      const isOtherInput = activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA") && !isOurInput;
+      if (isOtherInput) return;
+
+      if (e.key === "Enter") {
+        const bufferStr = keyBufferRef.current.join("").trim();
+        const inputStr = (hardwareInputCode || "").trim();
+        const codeToScan = bufferStr || (isOurInput ? inputStr : "");
+
+        keyBufferRef.current = [];
+        if (codeToScan && codeToScan.length >= 2) {
+          e.preventDefault();
+          e.stopPropagation();
+          setHardwareInputCode("");
+          setActiveResult(null);
+          handleScannedPayload(codeToScan);
+        }
+        return;
+      }
+
+      if (e.key && e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        const now = Date.now();
+        if (now - lastKeyTimeRef.current > 300 && !isOurInput) {
+          keyBufferRef.current = [];
+        }
+        lastKeyTimeRef.current = now;
+        keyBufferRef.current.push(e.key);
+
+        if (scanInputMode === "hardware" && hardwareInputRef.current && !isOurInput) {
+          hardwareInputRef.current.focus();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [handleScannedPayload, hardwareInputCode, scanInputMode]);
 
   return (
     <div className="absolute inset-0 w-full h-full flex flex-col bg-black text-white overflow-hidden select-none font-sans">
@@ -561,26 +651,36 @@ export default function CheckInScanner({
 
       {/* Main Viewfinder Area */}
       <div className="relative flex-1 w-full h-full flex items-center justify-center overflow-hidden bg-black">
-        {/* Live video feed */}
-        <video
-          ref={videoRef}
-          className="absolute inset-0 w-full h-full object-cover z-0"
-          muted
-          playsInline
-          autoPlay
-        />
+        {/* Live video feed (only active in camera mode) */}
+        {scanInputMode === "camera" && (
+          <video
+            ref={videoRef}
+            className="absolute inset-0 w-full h-full object-cover z-0"
+            muted
+            playsInline
+            autoPlay
+          />
+        )}
 
         {/* Top Controls Floating Bar */}
-        <div className="absolute top-0 inset-x-0 z-20 p-3 sm:p-4 flex items-center justify-between pointer-events-auto bg-gradient-to-b from-black/80 via-black/40 to-transparent">
+        <div className="absolute top-0 inset-x-0 z-20 p-2.5 sm:p-4 flex items-center justify-between pointer-events-auto bg-gradient-to-b from-black/85 via-black/50 to-transparent gap-2">
           {/* Status Pill */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/90 border border-white/10 backdrop-blur-md shadow-lg">
-            <div className={`w-2.5 h-2.5 rounded-full ${cameraPermission === "granted" ? "bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]" : "bg-amber-400"}`} />
-            <span className="text-[11px] font-black tracking-wide uppercase text-white">
-              {cameraPermission === "granted" ? "Live Scanner" : "Camera Ready"}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/90 border border-white/10 backdrop-blur-md shadow-lg shrink-0">
+            <div className={`w-2.5 h-2.5 rounded-full ${
+              scanInputMode === "hardware"
+                ? "bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]"
+                : cameraPermission === "granted"
+                ? "bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]"
+                : "bg-amber-400"
+            }`} />
+            <span className="text-[11px] font-black tracking-wide uppercase text-white hidden sm:inline">
+              {scanInputMode === "hardware"
+                ? t("checkin.scannerGunActive", "Scanner Gun Active")
+                : cameraPermission === "granted" ? "Live Scanner" : "Camera Ready"}
             </span>
             {totalCount > 0 && (
               <>
-                <span className="text-white/30">&bull;</span>
+                <span className="text-white/30 hidden sm:inline">&bull;</span>
                 <span className="text-[11px] font-bold text-emerald-400 font-mono">
                   {checkedInCount}/{totalCount}
                 </span>
@@ -588,61 +688,170 @@ export default function CheckInScanner({
             )}
           </div>
 
-          {/* Right Tools: Flashlight & Camera Switch */}
-          <div className="flex items-center gap-2">
-            {torchAvailable && (
-              <button
-                onClick={toggleTorch}
-                type="button"
-                aria-label="Toggle Flashlight"
-                className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
-                  torchOn
-                    ? "bg-amber-400 text-slate-950 shadow-lg shadow-amber-400/50 scale-105"
-                    : "bg-slate-900/80 text-white border border-white/10 hover:bg-slate-800 backdrop-blur-md"
-                }`}
-              >
-                {torchOn ? <Zap size={16} className="fill-current" /> : <ZapOff size={16} />}
-              </button>
-            )}
-
+          {/* Mode Switcher: Camera vs Scanner Gun (Henex) */}
+          <div className="flex items-center bg-slate-900/95 border border-white/15 rounded-full p-1 shadow-xl backdrop-blur-md">
             <button
-              onClick={switchCamera}
               type="button"
-              aria-label="Switch Camera"
-              className="w-9 h-9 rounded-xl bg-slate-900/80 text-white border border-white/10 flex items-center justify-center hover:bg-slate-800 backdrop-blur-md transition-all cursor-pointer active:scale-95"
+              onClick={() => handleSwitchScanMode("camera")}
+              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer select-none ${
+                scanInputMode === "camera"
+                  ? "bg-blue-600 text-white shadow-md shadow-blue-600/40"
+                  : "text-slate-400 hover:text-white"
+              }`}
+              title="Scan using device camera / webcam"
             >
-              <RefreshCw size={15} />
+              <Camera size={13} />
+              <span>{t("checkin.modeCamera", "Camera")}</span>
             </button>
+            <button
+              type="button"
+              onClick={() => handleSwitchScanMode("hardware")}
+              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer select-none ${
+                scanInputMode === "hardware"
+                  ? "bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/40 font-black"
+                  : "text-slate-400 hover:text-white"
+              }`}
+              title="Scan with Henex / USB / Bluetooth barcode scanner gun"
+            >
+              <ScanLine size={13} className={scanInputMode === "hardware" ? "text-slate-950" : "text-emerald-400"} />
+              <span>{t("checkin.modeScannerGun", "Scanner Gun")}</span>
+            </button>
+          </div>
+
+          {/* Right Tools */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {scanInputMode === "camera" ? (
+              <>
+                {torchAvailable && (
+                  <button
+                    onClick={toggleTorch}
+                    type="button"
+                    aria-label="Toggle Flashlight"
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+                      torchOn
+                        ? "bg-amber-400 text-slate-950 shadow-lg shadow-amber-400/50 scale-105"
+                        : "bg-slate-900/80 text-white border border-white/10 hover:bg-slate-800 backdrop-blur-md"
+                    }`}
+                  >
+                    {torchOn ? <Zap size={16} className="fill-current" /> : <ZapOff size={16} />}
+                  </button>
+                )}
+
+                <button
+                  onClick={switchCamera}
+                  type="button"
+                  aria-label="Switch Camera"
+                  className="w-9 h-9 rounded-xl bg-slate-900/80 text-white border border-white/10 flex items-center justify-center hover:bg-slate-800 backdrop-blur-md transition-all cursor-pointer active:scale-95"
+                >
+                  <RefreshCw size={15} />
+                </button>
+              </>
+            ) : (
+              <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[11px] font-bold text-emerald-400">
+                <Barcode size={14} />
+                <span>Henex Ready</span>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Viewfinder Reticle Overlay */}
-        {cameraPermission !== "denied" && !activeResult && (
+        {/* VIEW 1: Camera Viewfinder Reticle Overlay */}
+        {scanInputMode === "camera" && cameraPermission !== "denied" && !activeResult && (
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10">
-            {/* Target Reticle Box */}
             <div className="relative w-64 h-64 sm:w-72 sm:h-72 max-w-[76vw] max-h-[76vw] flex items-center justify-center rounded-3xl">
-              {/* Neon Corner Brackets */}
               <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-emerald-400 rounded-tl-2xl shadow-[0_0_15px_#34d399]" />
               <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-emerald-400 rounded-tr-2xl shadow-[0_0_15px_#34d399]" />
               <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-emerald-400 rounded-bl-2xl shadow-[0_0_15px_#34d399]" />
               <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-emerald-400 rounded-br-2xl shadow-[0_0_15px_#34d399]" />
-
-              {/* Glowing Animated Laser Scan Beam */}
               <div className="absolute inset-x-2 h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_15px_#34d399] animate-pulse" />
-
-              {/* Center Watermark Guide */}
               <QrCode className="text-white/20 w-20 h-20" />
             </div>
 
-            {/* Hint below target */}
             <div className="mt-6 px-4 py-1.5 rounded-full bg-slate-950/75 border border-white/10 text-[11px] font-semibold text-slate-300 backdrop-blur-md shadow-lg">
               {t("checkin.scannerPointCamera", "Point camera at delegate QR code")}
             </div>
           </div>
         )}
 
+        {/* VIEW 2: Hardware Scanner Mode (Henex / USB / Bluetooth Gun) */}
+        {scanInputMode === "hardware" && !activeResult && (
+          <div className="relative z-10 w-full max-w-xl mx-auto px-4 flex flex-col items-center justify-center text-center animate-in fade-in zoom-in-95 duration-200">
+            {/* Animated Scanner Gun Reticle Graphic */}
+            <div className="relative w-36 h-36 sm:w-44 sm:h-44 mb-5 flex items-center justify-center">
+              <div className="absolute inset-0 rounded-full border border-emerald-500/20 animate-ping duration-1000" />
+              <div className="absolute inset-3 rounded-full bg-gradient-to-tr from-emerald-500/10 via-teal-500/5 to-transparent border border-emerald-500/30 shadow-[0_0_50px_rgba(16,185,129,0.15)] flex items-center justify-center" />
+              
+              <div className="absolute top-2 left-2 w-6 h-6 border-t-2 border-l-2 border-emerald-400 rounded-tl-lg" />
+              <div className="absolute top-2 right-2 w-6 h-6 border-t-2 border-r-2 border-emerald-400 rounded-tr-lg" />
+              <div className="absolute bottom-2 left-2 w-6 h-6 border-b-2 border-l-2 border-emerald-400 rounded-bl-lg" />
+              <div className="absolute bottom-2 right-2 w-6 h-6 border-b-2 border-r-2 border-emerald-400 rounded-br-lg" />
+
+              <div className="absolute inset-x-4 h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_12px_#34d399] animate-pulse" />
+
+              <div className="relative z-10 flex flex-col items-center">
+                <ScanLine size={46} className="text-emerald-400 drop-shadow-[0_0_12px_rgba(52,211,153,0.6)]" />
+              </div>
+            </div>
+
+            {/* Heading & Subtitle */}
+            <div className="space-y-2 mb-6 max-w-md">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-black tracking-wide uppercase">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                {t("checkin.scannerGunReady", "Ready for Henex / Barcode Scanner")}
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                {t("checkin.hardwareScannerTitle", "Scan QR with Scanner Gun")}
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                {t("checkin.scannerGunDesc", "Point your Henex or USB scanner gun at the attendee's QR code and pull the trigger. Direct check-in is immediate.")}
+              </p>
+            </div>
+
+            {/* Scanner Input Form */}
+            <form
+              onSubmit={handleHardwareSubmit}
+              className="w-full max-w-md space-y-3"
+            >
+              <div className="relative">
+                <input
+                  ref={hardwareInputRef}
+                  type="text"
+                  autoFocus
+                  value={hardwareInputCode}
+                  onChange={(e) => setHardwareInputCode(e.target.value)}
+                  placeholder={t("checkin.scannerInputPlaceholder", "Ready to scan! Pull Henex trigger or enter code...")}
+                  className="w-full pl-11 pr-24 py-4 bg-slate-900/90 border-2 border-emerald-500/50 rounded-2xl text-sm font-mono font-bold text-white placeholder:text-slate-500 placeholder:font-sans placeholder:font-normal focus:outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/20 shadow-2xl transition-all"
+                />
+                <ScanLine size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-400 animate-pulse" />
+                <button
+                  type="submit"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-black text-xs rounded-xl shadow-md transition-all cursor-pointer"
+                >
+                  {t("checkin.btnCheckin", "Check In")}
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between text-[11px] text-slate-500 px-1">
+                <span className="flex items-center gap-1.5 text-emerald-400 font-semibold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  {t("checkin.listeningForHardware", "Plug & Play: Henex / USB / Bluetooth")}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (hardwareInputRef.current) hardwareInputRef.current.focus();
+                  }}
+                  className="text-slate-400 hover:text-white underline cursor-pointer"
+                >
+                  {t("checkin.focusScanner", "Click to Focus")}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
         {/* Camera Permission Denied / Desktop Fallback Screen */}
-        {cameraPermission === "denied" && !activeResult && (
+        {scanInputMode === "camera" && cameraPermission === "denied" && !activeResult && (
           <div className="relative z-20 px-6 py-8 mx-4 bg-slate-900/95 border border-white/15 rounded-3xl text-center max-w-sm shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95">
             <div className="w-14 h-14 mx-auto rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center mb-4 shadow-inner">
               <CameraOff size={28} />
@@ -656,8 +865,16 @@ export default function CheckInScanner({
 
             <div className="space-y-2.5">
               <button
+                onClick={() => handleSwitchScanMode("hardware")}
+                className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 active:scale-98 text-white rounded-2xl font-bold text-xs shadow-lg shadow-emerald-600/30 transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                <ScanLine size={16} />
+                <span>{t("checkin.useScannerGunInstead", "Use Henex / Barcode Scanner Gun Instead")}</span>
+              </button>
+
+              <button
                 onClick={startCamera}
-                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white rounded-2xl font-bold text-xs shadow-lg shadow-blue-600/30 transition-all cursor-pointer flex items-center justify-center gap-2"
+                className="w-full py-3 bg-white/10 hover:bg-white/15 active:scale-98 text-slate-200 rounded-2xl font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-2"
               >
                 <RefreshCw size={15} />
                 <span>{t("checkin.btnEnableCamera", "Try Enabling Camera")}</span>

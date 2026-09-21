@@ -244,6 +244,15 @@ export default function AttendeePortalView({
   const [myLookingFor, setMyLookingFor] = useState(currentUser?.what_im_looking_for || currentUser?.whatImLookingFor || "");
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
+  const [chatMessages, setChatMessages] = useState([]);
+  const [activeChatContact, setActiveChatContact] = useState(null);
+  const [chatInputText, setChatInputText] = useState("");
+  const [chatContactSearch, setChatContactSearch] = useState("");
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const chatContainerRef = useRef(null);
+  const prevMsgCountRef = useRef(0);
+  const prevContactRef = useRef(null);
+
   // Load & Refresh Connections & Invitations
   const loadConnectionsData = async () => {
     if (!currentUser || !eventDetails?.id) return;
@@ -277,19 +286,54 @@ export default function AttendeePortalView({
     }
   };
 
-  // Real-time 3s interval polling for connections and chat
+  // Zero-egress intelligent visibility & on-demand polling
   useEffect(() => {
     if (!currentUser || !eventDetails?.id) return;
+
+    // Initial load
     loadConnectionsData();
-    loadChatData();
-
-    const interval = setInterval(() => {
-      loadConnectionsData();
+    if (activeChatContact) {
       loadChatData();
-    }, 3000);
+    }
 
-    return () => clearInterval(interval);
-  }, [currentUser?.id, currentUser?.email, eventDetails?.id]);
+    // Refresh immediately when returning to tab
+    const handleVisibilityChange = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        loadConnectionsData();
+        if (activeChatContact) {
+          loadChatData();
+        }
+      }
+    };
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+    }
+
+    // Chat polling: Only if an active chat session is open and tab is visible (10s throttle)
+    let chatInterval = null;
+    if (activeChatContact) {
+      chatInterval = setInterval(() => {
+        if (typeof document !== "undefined" && document.visibilityState === "visible") {
+          loadChatData();
+        }
+      }, 10000);
+    }
+
+    // Connections polling: Background update every 60 seconds, only when tab is visible
+    const connInterval = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        loadConnectionsData();
+      }
+    }, 60000);
+
+    return () => {
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", handleVisibilityChange);
+      }
+      if (chatInterval) clearInterval(chatInterval);
+      clearInterval(connInterval);
+    };
+  }, [currentUser?.id, currentUser?.email, eventDetails?.id, activeChatContact?.id, activeChatContact?.email]);
 
   const handleSendConnection = async (e) => {
     e.preventDefault();
@@ -441,14 +485,7 @@ export default function AttendeePortalView({
   // ─────────────────────────────────────────────
   // 3.5. STATE: DIRECT CHAT & 1-ON-1 MESSAGING
   // ─────────────────────────────────────────────
-  const [chatMessages, setChatMessages] = useState([]);
-  const [activeChatContact, setActiveChatContact] = useState(null);
-  const [chatInputText, setChatInputText] = useState("");
-  const [chatContactSearch, setChatContactSearch] = useState("");
-  const [isSendingMessage, setIsSendingMessage] = useState(false);
-  const chatContainerRef = useRef(null);
-  const prevMsgCountRef = useRef(0);
-  const prevContactRef = useRef(null);
+  // Direct chat & 1-on-1 messaging state declared above with loadChatData
 
   // Send message handler
   const handleSendMessage = async (e) => {

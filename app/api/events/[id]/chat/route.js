@@ -10,6 +10,9 @@ export const fetchCache = "force-no-store";
 if (!global._eventzoneChatStore) {
   global._eventzoneChatStore = new Map();
 }
+if (!global._eventzoneChatLastSync) {
+  global._eventzoneChatLastSync = new Map();
+}
 
 function getEventMessages(eventId) {
   if (!global._eventzoneChatStore.has(eventId)) {
@@ -126,42 +129,47 @@ export async function GET(request, { params }) {
   const supabase = getServiceSupabase();
   const eventUuid = await resolveEventUuid(supabase, eventId);
 
-  // 1. Sync from Supabase messages database
-  try {
-    let query = supabase.from("messages").select("*").order("created_at", { ascending: true });
-    if (eventUuid) {
-      query = query.or(`event_id.eq.${eventUuid},event_id.is.null`);
+  // 1. Sync from Supabase messages database (Throttled to 15s to eliminate redundant database egress)
+  const lastSync = global._eventzoneChatLastSync?.get(eventId);
+  const shouldSyncDb = !lastSync || Date.now() - lastSync > 15000 || memoryList.length === 0;
+
+  if (shouldSyncDb) {
+    try {
+      let query = supabase.from("messages").select("id, event_id, sender_id, recipient_id, content, created_at, is_read").order("created_at", { ascending: true });
+      if (eventUuid) {
+        query = query.or(`event_id.eq.${eventUuid},event_id.is.null`);
+      }
+      const { data: dbData, error } = await query;
+      if (!error && Array.isArray(dbData)) {
+        global._eventzoneChatLastSync?.set(eventId, Date.now());
+        dbData.forEach((row) => {
+          let meta = {};
+          if (row.content && row.content.startsWith("{") && row.content.includes('"content":')) {
+            try { meta = JSON.parse(row.content); } catch (e) {}
+          }
+
+          const item = {
+            id: row.id,
+            event_id: row.event_id || eventUuid || eventId,
+            sender_id: row.sender_id || meta.sender_id || null,
+            sender_email: cleanEmail(meta.sender_email || ""),
+            sender_name: meta.sender_name || "Delegate",
+            sender_avatar: meta.sender_avatar || "",
+            recipient_id: row.recipient_id || meta.recipient_id || null,
+            recipient_email: cleanEmail(meta.recipient_email || ""),
+            recipient_name: meta.recipient_name || "Delegate",
+            recipient_avatar: meta.recipient_avatar || "",
+            content: meta.content || row.content || "",
+            created_at: row.created_at || new Date().toISOString(),
+            is_read: row.is_read || false,
+          };
+
+          allMessagesMap.set(row.id, item);
+        });
+      }
+    } catch (err) {
+      console.warn("Error syncing messages from Supabase:", err);
     }
-    const { data: dbData, error } = await query;
-
-    if (!error && Array.isArray(dbData)) {
-      dbData.forEach((row) => {
-        let meta = {};
-        if (row.content && row.content.startsWith("{") && row.content.includes('"content":')) {
-          try { meta = JSON.parse(row.content); } catch (e) {}
-        }
-
-        const item = {
-          id: row.id,
-          event_id: row.event_id || eventUuid || eventId,
-          sender_id: row.sender_id || meta.sender_id || null,
-          sender_email: cleanEmail(meta.sender_email || ""),
-          sender_name: meta.sender_name || "Delegate",
-          sender_avatar: meta.sender_avatar || "",
-          recipient_id: row.recipient_id || meta.recipient_id || null,
-          recipient_email: cleanEmail(meta.recipient_email || ""),
-          recipient_name: meta.recipient_name || "Delegate",
-          recipient_avatar: meta.recipient_avatar || "",
-          content: meta.content || row.content || "",
-          created_at: row.created_at || new Date().toISOString(),
-          is_read: row.is_read || false,
-        };
-
-        allMessagesMap.set(row.id, item);
-      });
-    }
-  } catch (err) {
-    console.warn("Error syncing messages from Supabase:", err);
   }
 
   // 2. Merge memory messages (authoritative database rows take precedence)
@@ -272,6 +280,8 @@ export async function POST(request, { params }) {
     } catch (e) {
       console.error("Supabase messages insert exception:", e);
     }
+
+    global._eventzoneChatLastSync?.delete(eventId);
 
     return NextResponse.json(
       { success: true, message: newMsg },

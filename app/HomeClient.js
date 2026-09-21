@@ -1748,92 +1748,122 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
       }
     });
 
-    // 2. Supabase Realtime Postgres Changes Channel
+    // 2. Supabase Realtime Postgres Changes Channel (Debounced to stop cascade query storms)
     let eventChannel = null;
+    const realtimeDebounceMap = new Map();
+    const debouncedRefetch = (key, fn, delay = 2500) => {
+      if (realtimeDebounceMap.has(key)) {
+        clearTimeout(realtimeDebounceMap.get(key));
+      }
+      realtimeDebounceMap.set(key, setTimeout(fn, delay));
+    };
+
     try {
       eventChannel = supabase
         .channel(`event-live-sync-${activeEventId}`)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'events', filter: `id=eq.${activeEventId}` }, async () => {
-          const updatedEv = await fetchEventDetails(activeEventId);
-          if (updatedEv) {
-            setEventDetails(prev => ({ ...(prev || {}), ...updatedEv }));
-            setPublicEvents(prev => prev.map(e => String(e.id) === String(activeEventId) ? { ...e, ...updatedEv } : e));
-            setUserEvents(prev => prev.map(e => String(e.id) === String(activeEventId) ? { ...e, ...updatedEv } : e));
-          }
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'events', filter: `id=eq.${activeEventId}` }, () => {
+          debouncedRefetch('events', async () => {
+            const updatedEv = await fetchEventDetails(activeEventId);
+            if (updatedEv) {
+              setEventDetails(prev => ({ ...(prev || {}), ...updatedEv }));
+              setPublicEvents(prev => prev.map(e => String(e.id) === String(activeEventId) ? { ...e, ...updatedEv } : e));
+              setUserEvents(prev => prev.map(e => String(e.id) === String(activeEventId) ? { ...e, ...updatedEv } : e));
+            }
+          });
         })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'forms', filter: `event_id=eq.${activeEventId}` }, async () => {
-          const updatedForms = await fetchForms(activeEventId);
-          if (updatedForms) setForms(updatedForms);
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'forms', filter: `event_id=eq.${activeEventId}` }, () => {
+          debouncedRefetch('forms', async () => {
+            const updatedForms = await fetchForms(activeEventId);
+            if (updatedForms) setForms(updatedForms);
+          });
         })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'form_submissions', filter: `event_id=eq.${activeEventId}` }, async () => {
-          const updatedSubs = await fetchFormSubmissions(activeEventId);
-          if (updatedSubs) setFormSubmissions(updatedSubs);
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'form_submissions', filter: `event_id=eq.${activeEventId}` }, () => {
+          debouncedRefetch('form_submissions', async () => {
+            const updatedSubs = await fetchFormSubmissions(activeEventId);
+            if (updatedSubs) setFormSubmissions(updatedSubs);
+          });
         })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'rsvps', filter: `event_id=eq.${activeEventId}` }, async () => {
-          const updatedRsvps = await fetchRSVPs(activeEventId);
-          if (updatedRsvps) setRsvps(updatedRsvps);
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'rsvps', filter: `event_id=eq.${activeEventId}` }, () => {
+          debouncedRefetch('rsvps', async () => {
+            const updatedRsvps = await fetchRSVPs(activeEventId);
+            if (updatedRsvps) setRsvps(updatedRsvps);
+          });
         })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'rsvp_settings', filter: `event_id=eq.${activeEventId}` }, async () => {
-          const updatedSettings = await fetchRSVPSettings(activeEventId);
-          if (updatedSettings) setRsvpSettings(updatedSettings);
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'rsvp_settings', filter: `event_id=eq.${activeEventId}` }, () => {
+          debouncedRefetch('rsvp_settings', async () => {
+            const updatedSettings = await fetchRSVPSettings(activeEventId);
+            if (updatedSettings) setRsvpSettings(updatedSettings);
+          });
         })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'participants', filter: `event_id=eq.${activeEventId}` }, async () => {
-          const updatedAttendees = await fetchAttendees(activeEventId);
-          if (updatedAttendees) {
-            const seen = new Set();
-            const deduped = updatedAttendees.filter(a => {
-              if (seen.has(a.id)) return false;
-              seen.add(a.id);
-              return true;
-            });
-            // Union merge: never drop locally-known attendees
-            setAttendees(prev => {
-              const mergeIds = new Set(deduped.map(a => a.id));
-              const mergeEmails = new Set(deduped.filter(a => a.email).map(a => a.email.toLowerCase()));
-              const localOnly = prev.filter(a => {
-                if (mergeIds.has(a.id)) return false;
-                if (a.email && mergeEmails.has(a.email.toLowerCase())) return false;
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'participants', filter: `event_id=eq.${activeEventId}` }, () => {
+          debouncedRefetch('participants', async () => {
+            const updatedAttendees = await fetchAttendees(activeEventId);
+            if (updatedAttendees) {
+              const seen = new Set();
+              const deduped = updatedAttendees.filter(a => {
+                if (seen.has(a.id)) return false;
+                seen.add(a.id);
                 return true;
               });
-              const merged = [...deduped, ...localOnly];
-              safeLocalStorageSet(`eventzone_cache_attendees_${activeEventId}`, merged);
-              return merged;
-            });
-          }
+              // Union merge: never drop locally-known attendees
+              setAttendees(prev => {
+                const mergeIds = new Set(deduped.map(a => a.id));
+                const mergeEmails = new Set(deduped.filter(a => a.email).map(a => a.email.toLowerCase()));
+                const localOnly = prev.filter(a => {
+                  if (mergeIds.has(a.id)) return false;
+                  if (a.email && mergeEmails.has(a.email.toLowerCase())) return false;
+                  return true;
+                });
+                const merged = [...deduped, ...localOnly];
+                safeLocalStorageSet(`eventzone_cache_attendees_${activeEventId}`, merged);
+                return merged;
+              });
+            }
+          });
         })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'pending_registrations', filter: `event_id=eq.${activeEventId}` }, async () => {
-          const updatedPending = await fetchPending(activeEventId);
-          if (updatedPending) {
-            const seen = new Set();
-            const deduped = updatedPending.filter(p => {
-              if (seen.has(p.id)) return false;
-              seen.add(p.id);
-              return true;
-            });
-            setPending(deduped);
-          }
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'pending_registrations', filter: `event_id=eq.${activeEventId}` }, () => {
+          debouncedRefetch('pending_registrations', async () => {
+            const updatedPending = await fetchPending(activeEventId);
+            if (updatedPending) {
+              const seen = new Set();
+              const deduped = updatedPending.filter(p => {
+                if (seen.has(p.id)) return false;
+                seen.add(p.id);
+                return true;
+              });
+              setPending(deduped);
+            }
+          });
         })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets', filter: `event_id=eq.${activeEventId}` }, async () => {
-          const updatedTickets = await fetchTickets(activeEventId);
-          if (updatedTickets) setTickets(updatedTickets);
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets', filter: `event_id=eq.${activeEventId}` }, () => {
+          debouncedRefetch('tickets', async () => {
+            const updatedTickets = await fetchTickets(activeEventId);
+            if (updatedTickets) setTickets(updatedTickets);
+          });
         })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'event_logistics', filter: `event_id=eq.${activeEventId}` }, async () => {
-          const updatedLogistics = await fetchLogistics(activeEventId);
-          if (updatedLogistics) setLogisticsData(updatedLogistics);
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'event_logistics', filter: `event_id=eq.${activeEventId}` }, () => {
+          debouncedRefetch('event_logistics', async () => {
+            const updatedLogistics = await fetchLogistics(activeEventId);
+            if (updatedLogistics) setLogisticsData(updatedLogistics);
+          });
         })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'influencers', filter: `event_id=eq.${activeEventId}` }, async () => {
-          const updatedInfs = await fetchInfluencers(activeEventId);
-          if (updatedInfs) {
-            setInfluencers(updatedInfs);
-            safeLocalStorageSet(`eventzone_cache_influencers_${activeEventId}`, updatedInfs);
-          }
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'influencers', filter: `event_id=eq.${activeEventId}` }, () => {
+          debouncedRefetch('influencers', async () => {
+            const updatedInfs = await fetchInfluencers(activeEventId);
+            if (updatedInfs) {
+              setInfluencers(updatedInfs);
+              safeLocalStorageSet(`eventzone_cache_influencers_${activeEventId}`, updatedInfs);
+            }
+          });
         })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'opportunities', filter: `event_id=eq.${activeEventId}` }, async () => {
-          const updatedOpps = await fetchOpportunities(activeEventId);
-          if (updatedOpps) {
-            setOpportunities(updatedOpps);
-            safeLocalStorageSet(`eventzone_cache_opportunities_${activeEventId}`, updatedOpps);
-          }
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'opportunities', filter: `event_id=eq.${activeEventId}` }, () => {
+          debouncedRefetch('opportunities', async () => {
+            const updatedOpps = await fetchOpportunities(activeEventId);
+            if (updatedOpps) {
+              setOpportunities(updatedOpps);
+              safeLocalStorageSet(`eventzone_cache_opportunities_${activeEventId}`, updatedOpps);
+            }
+          });
         })
         .subscribe();
     } catch (e) {
@@ -1870,6 +1900,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
 
     return () => {
       unsubscribeSync();
+      realtimeDebounceMap.forEach(t => clearTimeout(t));
       if (eventChannel) supabase.removeChannel(eventChannel);
       if (typeof window !== "undefined") {
         window.removeEventListener("eventzone:attendee-synced", handleAttendeeSynced);

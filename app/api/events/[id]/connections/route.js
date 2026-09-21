@@ -10,6 +10,9 @@ export const fetchCache = "force-no-store";
 if (!global._eventzoneConnectionsStore) {
   global._eventzoneConnectionsStore = new Map();
 }
+if (!global._eventzoneConnectionsLastSync) {
+  global._eventzoneConnectionsLastSync = new Map();
+}
 
 function getEventConnections(eventId) {
   if (!global._eventzoneConnectionsStore.has(eventId)) {
@@ -61,21 +64,26 @@ export async function GET(request, { params }) {
   const memoryList = getEventConnections(eventId);
   const allRecordsMap = new Map();
 
-  // 1. Sync from Supabase database (central source of truth across all serverless containers)
-  try {
-    const supabase = getServiceSupabase();
-    const eventUuid = await resolveEventUuid(supabase, eventId);
+  // 1. Sync from Supabase database (Throttled to 20s to eliminate redundant database egress)
+  const lastSync = global._eventzoneConnectionsLastSync?.get(eventId);
+  const shouldSyncDb = !lastSync || Date.now() - lastSync > 20000 || memoryList.length === 0;
 
-    let query = supabase.from("connections").select("*");
-    if (eventUuid) {
-      query = query.eq("event_id", eventUuid);
-    } else if (email) {
-      query = query.or(`email.ilike.${email},notes.ilike.%${email}%`);
-    }
+  if (shouldSyncDb) {
+    try {
+      const supabase = getServiceSupabase();
+      const eventUuid = await resolveEventUuid(supabase, eventId);
 
-    const { data: dbData, error } = await query;
+      let query = supabase.from("connections").select("id, event_id, status, notes, tags, email, name, avatar_url, company, title, created_at, source");
+      if (eventUuid) {
+        query = query.eq("event_id", eventUuid);
+      } else if (email) {
+        query = query.or(`email.ilike.${email},notes.ilike.%${email}%`);
+      }
 
-    if (!error && Array.isArray(dbData)) {
+      const { data: dbData, error } = await query;
+
+      if (!error && Array.isArray(dbData)) {
+        global._eventzoneConnectionsLastSync?.set(eventId, Date.now());
       dbData.forEach((row) => {
         let meta = {};
         if (row.notes && row.notes.startsWith("{")) {
@@ -129,6 +137,7 @@ export async function GET(request, { params }) {
     }
   } catch (err) {
     console.warn("Error syncing connections from Supabase:", err);
+  }
   }
 
   // 2. Merge any in-memory records (in case database replication is slightly delayed)
@@ -203,6 +212,7 @@ export async function POST(request, { params }) {
     const memoryList = getEventConnections(eventId);
     const supabase = getServiceSupabase();
     const eventUuid = await resolveEventUuid(supabase, eventId);
+    global._eventzoneConnectionsLastSync?.delete(eventId);
 
     if (action === "send") {
       if (!sender?.email || !recipient?.email) {
