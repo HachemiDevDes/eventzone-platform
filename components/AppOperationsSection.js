@@ -13,7 +13,6 @@ import SearchableSelect from "./SearchableSelect";
 import { COUNTRY_CITIES_MAP } from "../lib/formPresets";
 import {
   updateUserProfileSubscription,
-  updateUserProfileRoleAndAdmin,
   createPromoCodeAdmin,
   togglePromoCodeStatusAdmin,
   deletePromoCodeAdmin,
@@ -229,33 +228,6 @@ export default function AppOperationsSection({
       }
     } catch (err) {
       showToast?.(err.message || "Failed to update subscription", "error");
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  // ─────────────────────────────────────────────
-  //  TOGGLE ADMIN ACCESS
-  // ─────────────────────────────────────────────
-  const handleToggleAdmin = async (user) => {
-    const targetStatus = !user.is_admin;
-    const confirmMsg = targetStatus
-      ? `Promote ${user.full_name} (${user.email}) to App Administrator?`
-      : `Revoke Administrator privileges from ${user.full_name}?`;
-
-    if (!confirm(confirmMsg)) return;
-    setIsProcessing(true);
-
-    try {
-      const res = await updateUserProfileRoleAndAdmin(user.id, { isAdmin: targetStatus });
-      if (res.success) {
-        showToast?.(`${user.full_name} is now ${targetStatus ? "an Administrator" : "a standard user"}`);
-        onRefresh?.();
-      } else {
-        showToast?.(res.error || "Failed to update admin role", "error");
-      }
-    } catch (err) {
-      showToast?.(err.message || "Error changing admin status", "error");
     } finally {
       setIsProcessing(false);
     }
@@ -732,19 +704,6 @@ export default function AppOperationsSection({
                               >
                                 <Zap className="w-3 h-3" />
                                 <span>Extend</span>
-                              </button>
-
-                              {/* Toggle Admin */}
-                              <button
-                                onClick={() => handleToggleAdmin(user)}
-                                title={user.is_admin ? "Revoke Admin Access" : "Promote to Admin"}
-                                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                                  user.is_admin
-                                    ? "bg-purple-100 hover:bg-purple-200 text-purple-700"
-                                    : "bg-slate-100 hover:bg-slate-200 text-slate-600"
-                                }`}
-                              >
-                                <Shield className="w-3.5 h-3.5" />
                               </button>
 
                               {/* View Profile Drawer */}
