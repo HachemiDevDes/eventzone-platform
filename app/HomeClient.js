@@ -7,7 +7,7 @@ import dynamic from "next/dynamic";
 import { 
   CheckCircle2, Ticket, ShieldAlert, ShieldCheck, Lock,
   ChevronDown, LayoutDashboard, Calendar, Clock,
-  Users2, UserCheck, BarChart3, X, Globe, Map, Sparkles, Upload, Mail,
+  Users2, UserCheck, BarChart3, X, Globe, Map as MapIcon, Sparkles, Upload, Mail,
   Building2, Plus, ArrowLeft, ArrowRight, Layers, LogOut, Compass, ExternalLink, ChevronRight, Home as HomeIcon, User,
   FileText, ClipboardList, QrCode, Store, Mic2, Check, TrendingUp, Share2, Boxes, Truck, Package, Files, Code2, Award, Eye,
   Plane, ClipboardCheck, Receipt, Search
@@ -4582,7 +4582,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
       return (
         <div className="fixed inset-0 z-50 bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
           <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-650 flex items-center justify-center mb-4 shadow-xs">
-            <Map size={32} />
+            <MapIcon size={32} />
           </div>
           <h2 className="text-lg font-bold text-slate-900 mb-1">{t("floor.noPlanAvailable", "Floor Plan Not Available")}</h2>
           <p className="text-xs text-slate-500 max-w-sm mb-6 leading-relaxed">
