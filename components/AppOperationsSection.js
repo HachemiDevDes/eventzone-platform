@@ -7,7 +7,7 @@ import {
   Calendar, Clock, DollarSign, Search, Filter, RefreshCw, Plus,
   Check, X, Copy, Trash2, Edit3, ChevronRight, User, Mail, Phone,
   Sparkles, ExternalLink, Sliders, AlertCircle, ArrowUpRight,
-  CreditCard, Tag, TrendingUp, Award, Layers, Zap
+  CreditCard, Tag, TrendingUp, Award, Layers, Zap, Bell, Send, Radio
 } from "lucide-react";
 import SearchableSelect from "./SearchableSelect";
 import { COUNTRY_CITIES_MAP } from "../lib/formPresets";
@@ -16,6 +16,7 @@ import {
   createPromoCodeAdmin,
   togglePromoCodeStatusAdmin,
   deletePromoCodeAdmin,
+  sendCustomPushNotification,
 } from "../lib/db";
 
 const ALGERIA_WILAYAS = COUNTRY_CITIES_MAP["Algeria"] || [];
@@ -76,6 +77,18 @@ export default function AppOperationsSection({
   const [paymentSearch, setPaymentSearch] = useState("");
   const [paymentStatusFilter, setPaymentStatusFilter] = useState("All");
   const [paymentMethodFilter, setPaymentMethodFilter] = useState("All");
+
+  // Push Notification Composer states
+  const [pushTarget, setPushTarget] = useState("All Users");
+  const [pushTitle, setPushTitle] = useState("");
+  const [pushMessage, setPushMessage] = useState("");
+  const [isSendingPush, setIsSendingPush] = useState(false);
+  const [pushHistory, setPushHistory] = useState([]);
+
+  // Direct Push Modal state (for individual user from table or drawer)
+  const [directPushUser, setDirectPushUser] = useState(null);
+  const [directPushTitle, setDirectPushTitle] = useState("");
+  const [directPushMessage, setDirectPushMessage] = useState("");
 
   // Copy feedback state
   const [copiedId, setCopiedId] = useState(null);
@@ -292,6 +305,115 @@ export default function AppOperationsSection({
     }
   };
 
+  // ─────────────────────────────────────────────
+  //  PUSH NOTIFICATION HANDLERS
+  // ─────────────────────────────────────────────
+  const pushTargetOptions = useMemo(() => {
+    const defaultTargets = [
+      { value: "All Users", label: "📢 All Users (Global Broadcast)" },
+      { value: "Paid Users", label: "⭐ Active Paid Subscribers Only" },
+      { value: "Free Users", label: "🎁 Free & Trial Users (Promotional)" },
+    ];
+
+    const userTargets = (appUsers || []).map((u) => ({
+      value: u.id,
+      label: `👤 ${u.full_name || 'Attendee'} (${u.email || 'No email'})`,
+    }));
+
+    return [...defaultTargets, ...userTargets];
+  }, [appUsers]);
+
+  const handleSendPush = async (e) => {
+    if (e) e.preventDefault();
+    if (!pushTitle.trim() || !pushMessage.trim()) {
+      showToast?.("Title and message are required", "error");
+      return;
+    }
+
+    const targetLabel = pushTarget === "All Users"
+      ? "All Users (Broadcast)"
+      : pushTarget === "Paid Users"
+      ? "Active Paid Subscribers"
+      : pushTarget === "Free Users"
+      ? "Free / Trial Users"
+      : (appUsers.find(u => u.id === pushTarget)?.full_name || "targeted user");
+
+    if (!confirm(`Dispatch push notification to ${targetLabel}?\n\nTitle: "${pushTitle}"\nBody: "${pushMessage}"`)) {
+      return;
+    }
+
+    setIsSendingPush(true);
+    try {
+      const res = await sendCustomPushNotification({
+        target: pushTarget,
+        title: pushTitle,
+        message: pushMessage,
+      });
+
+      if (res.success) {
+        showToast?.(res.message || "Push notification dispatched successfully!");
+        setPushHistory(prev => [
+          {
+            id: Date.now(),
+            target: targetLabel,
+            title: pushTitle,
+            message: pushMessage,
+            sentAt: new Date().toISOString(),
+          },
+          ...prev.slice(0, 19),
+        ]);
+        setPushTitle("");
+        setPushMessage("");
+      } else {
+        showToast?.(res.error || "Failed to dispatch push notification", "error");
+      }
+    } catch (err) {
+      showToast?.(err.message || "Error sending push notification", "error");
+    } finally {
+      setIsSendingPush(false);
+    }
+  };
+
+  const handleSendDirectPush = async (e) => {
+    if (e) e.preventDefault();
+    if (!directPushUser || !directPushTitle.trim() || !directPushMessage.trim()) {
+      showToast?.("Title and message are required", "error");
+      return;
+    }
+
+    setIsSendingPush(true);
+    try {
+      const res = await sendCustomPushNotification({
+        target: directPushUser.id,
+        title: directPushTitle,
+        message: directPushMessage,
+      });
+
+      if (res.success) {
+        showToast?.(`Notification sent to ${directPushUser.full_name}!`);
+        setPushHistory(prev => [
+          {
+            id: Date.now(),
+            target: directPushUser.full_name,
+            title: directPushTitle,
+            message: directPushMessage,
+            sentAt: new Date().toISOString(),
+          },
+          ...prev.slice(0, 19),
+        ]);
+        setDirectPushUser(null);
+        setDirectPushTitle("");
+        setDirectPushMessage("");
+      } else {
+        showToast?.(res.error || "Failed to send notification", "error");
+      }
+    } catch (err) {
+      showToast?.(err.message || "Error sending push notification", "error");
+    } finally {
+      setIsSendingPush(false);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* ─────────────────────────────────────────────
@@ -322,6 +444,13 @@ export default function AppOperationsSection({
           >
             <RefreshCw className="w-3.5 h-3.5" />
             <span>Sync Live DB</span>
+          </button>
+          <button
+            onClick={() => setActiveSubTab("notifications")}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-2xs cursor-pointer"
+          >
+            <Bell className="w-3.5 h-3.5" />
+            <span>Send Push</span>
           </button>
           <button
             onClick={() => setShowPromoModal(true)}
@@ -469,6 +598,23 @@ export default function AppOperationsSection({
             activeSubTab === "promos" ? "bg-white/20 text-white" : "bg-slate-100 text-slate-700"
           }`}>
             {promoCodes.length}
+          </span>
+        </button>
+
+        <button
+          onClick={() => setActiveSubTab("notifications")}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            activeSubTab === "notifications"
+              ? "bg-blue-600 text-white shadow-xs"
+              : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+          }`}
+        >
+          <Bell className="w-3.5 h-3.5" />
+          <span>Push Notifications</span>
+          <span className={`text-[10px] font-extrabold px-1.5 py-0.2 rounded-full ${
+            activeSubTab === "notifications" ? "bg-white/20 text-white" : "bg-slate-100 text-slate-700"
+          }`}>
+            Broadcast
           </span>
         </button>
       </div>
@@ -704,6 +850,20 @@ export default function AppOperationsSection({
                               >
                                 <Zap className="w-3 h-3" />
                                 <span>Extend</span>
+                              </button>
+
+                              {/* Direct Push Button */}
+                              <button
+                                onClick={() => {
+                                  setDirectPushUser(user);
+                                  setDirectPushTitle("");
+                                  setDirectPushMessage("");
+                                }}
+                                title={`Send push notification to ${user.full_name || 'user'}`}
+                                className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
+                              >
+                                <Bell className="w-3 h-3" />
+                                <span>Push</span>
                               </button>
 
                               {/* View Profile Drawer */}
@@ -1057,6 +1217,340 @@ export default function AppOperationsSection({
         </div>
       )}
 
+      {/* ═════════════════════════════════════════════
+          TAB 5: PUSH NOTIFICATIONS BROADCAST & AUDIENCE
+      ═════════════════════════════════════════════ */}
+      {activeSubTab === "notifications" && (
+        <div className="space-y-6">
+          {/* Header Banner */}
+          <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white rounded-3xl p-6 shadow-md relative overflow-hidden">
+            <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-radial from-white/10 to-transparent pointer-events-none" />
+            <div className="relative z-10 max-w-2xl">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-blue-200 text-xs font-bold mb-3">
+                <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                <span>Real-Time Mobile Push Engine (FCM)</span>
+              </div>
+              <h3 className="text-xl font-black tracking-tight text-white">
+                Dispatch Custom Push Notifications
+              </h3>
+              <p className="text-xs text-blue-100/80 mt-1.5 leading-relaxed">
+                Broadcast announcements, promotions, or reminders straight to attendee smartphone lockscreens. Select segmented audiences or target individual attendees directly.
+              </p>
+            </div>
+          </div>
+
+          {/* Composer & Phone Mockup Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Left: Push Composer Form */}
+            <div className="lg:col-span-7 bg-white border border-slate-200/90 rounded-3xl p-6 shadow-2xs space-y-5">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                    <Send className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900">Push Composer</h4>
+                    <p className="text-[11px] text-slate-400">Craft and broadcast instant mobile push notifications</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Target Audience Selector */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Target Audience / Recipient
+                </label>
+                <SearchableSelect
+                  value={pushTarget}
+                  onChange={setPushTarget}
+                  options={pushTargetOptions}
+                  isClearable={false}
+                  showSearch={true}
+                  searchPlaceholder="Filter target audience or search user..."
+                  buttonClassName="bg-slate-50! border-slate-200! text-slate-900! text-xs! font-bold! rounded-xl!"
+                />
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-[10px] text-slate-400">Quick Filters:</span>
+                  <button
+                    type="button"
+                    onClick={() => setPushTarget("All Users")}
+                    className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-colors cursor-pointer ${
+                      pushTarget === "All Users"
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                    }`}
+                  >
+                    All Users ({metrics.totalUsers})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPushTarget("Paid Users")}
+                    className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-colors cursor-pointer ${
+                      pushTarget === "Paid Users"
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                    }`}
+                  >
+                    Paid Users ({metrics.activeSubs})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPushTarget("Free Users")}
+                    className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-colors cursor-pointer ${
+                      pushTarget === "Free Users"
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                    }`}
+                  >
+                    Free / Trial ({metrics.trialUsers + metrics.expiredUsers})
+                  </button>
+                </div>
+              </div>
+
+              {/* Quick Message Templates */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Quick Message Templates
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    {
+                      label: "📢 Global Announcement",
+                      title: "📢 Eventzone Live Update",
+                      message: "The main hall keynote is beginning in 15 minutes! Explore the full interactive schedule in the app.",
+                    },
+                    {
+                      label: "⏰ Trial Ending Notice",
+                      title: "⏰ Your Free Trial Ends Soon",
+                      message: "Keep your high-speed attendee search and direct messaging active by unlocking the Pro pass today!",
+                    },
+                    {
+                      label: "⚡ Exclusive Discount",
+                      title: "⚡ Special 20% Off Pro Pass",
+                      message: "Upgrade your Eventzone experience with code VIP20 for 20% off all membership tiers!",
+                    },
+                    {
+                      label: "👋 Complete Profile",
+                      title: "👋 Get Noticed by Top Exhibitors",
+                      message: "Complete your profile bio and business objectives to receive high-value networking recommendations.",
+                    },
+                  ].map((tpl, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => {
+                        setPushTitle(tpl.title);
+                        setPushMessage(tpl.message);
+                      }}
+                      className="px-2.5 py-1 rounded-xl bg-indigo-50/70 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/60 text-[11px] font-semibold transition-colors cursor-pointer"
+                    >
+                      {tpl.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Push Title */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-bold text-slate-700">Notification Title</label>
+                  <span className="text-[10px] text-slate-400">{pushTitle.length}/60 characters</span>
+                </div>
+                <input
+                  type="text"
+                  maxLength={60}
+                  placeholder="e.g. 📢 Welcome to Eventzone 2026!"
+                  value={pushTitle}
+                  onChange={(e) => setPushTitle(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                />
+              </div>
+
+              {/* Push Message Body */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-bold text-slate-700">Notification Body Message</label>
+                  <span className="text-[10px] text-slate-400">{pushMessage.length}/180 characters</span>
+                </div>
+                <textarea
+                  rows={4}
+                  maxLength={180}
+                  placeholder="Write your push notification message here..."
+                  value={pushMessage}
+                  onChange={(e) => setPushMessage(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none"
+                />
+              </div>
+
+              {/* Send Button */}
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={handleSendPush}
+                  disabled={isSendingPush || !pushTitle.trim() || !pushMessage.trim()}
+                  className="w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-slate-400 text-white text-xs font-black transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
+                >
+                  {isSendingPush ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Transmitting Push via Firebase FCM...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      <span>
+                        Dispatch Push to{" "}
+                        {pushTarget === "All Users"
+                          ? "All Users (Broadcast)"
+                          : pushTarget === "Paid Users"
+                          ? "Active Paid Subscribers"
+                          : pushTarget === "Free Users"
+                          ? "Free & Trial Users"
+                          : "Selected User"}
+                      </span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Right: Interactive Smartphone Lockscreen Mockup */}
+            <div className="lg:col-span-5 flex flex-col items-center">
+              <div className="w-full max-w-[320px]">
+                <div className="text-center mb-3">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center justify-center gap-1.5">
+                    <Smartphone className="w-3.5 h-3.5 text-blue-600" />
+                    Live Smartphone Lockscreen Preview
+                  </span>
+                </div>
+
+                {/* Smartphone Device Frame */}
+                <div className="relative rounded-[44px] p-3.5 bg-slate-900 border-4 border-slate-800 shadow-2xl overflow-hidden aspect-[9/18.5] flex flex-col justify-between text-white select-none">
+                  {/* Lockscreen Background Wallpaper */}
+                  <div className="absolute inset-0 bg-gradient-to-b from-indigo-950 via-slate-900 to-slate-950 opacity-95" />
+                  <div className="absolute -top-20 -left-20 w-48 h-48 bg-blue-600/20 rounded-full blur-3xl pointer-events-none" />
+                  <div className="absolute -bottom-20 -right-20 w-48 h-48 bg-purple-600/20 rounded-full blur-3xl pointer-events-none" />
+
+                  {/* Top Notch / Dynamic Island */}
+                  <div className="relative z-10 flex flex-col items-center pt-1">
+                    <div className="w-24 h-5 bg-black rounded-full mb-3 flex items-center justify-center">
+                      <div className="w-2.5 h-2.5 rounded-full bg-slate-900 mr-2 border border-slate-800" />
+                      <div className="w-2 h-2 rounded-full bg-blue-900/60" />
+                    </div>
+
+                    {/* Status Bar */}
+                    <div className="w-full flex items-center justify-between px-3 text-[10px] font-bold text-slate-300">
+                      <span>09:41</span>
+                      <div className="flex items-center gap-1 text-[9px]">
+                        <span>5G</span>
+                        <div className="w-4 h-2 rounded-xs border border-white/60 p-0.5 flex items-center">
+                          <div className="w-full h-full bg-white rounded-2xs" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Lock Screen Date & Time */}
+                    <div className="text-center mt-6">
+                      <div className="text-[11px] font-medium text-slate-300">
+                        {new Date().toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}
+                      </div>
+                      <div className="text-5xl font-extralight tracking-tight text-white mt-0.5 font-sans">
+                        09:41
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Notification Center Preview */}
+                  <div className="relative z-10 my-auto px-1">
+                    <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-2xl p-3.5 shadow-xl border border-white/20 text-slate-900 transition-all duration-300 hover:scale-102">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-4.5 h-4.5 rounded-md bg-blue-600 flex items-center justify-center text-white shadow-xs">
+                            <span className="text-[9px] font-black tracking-tighter">ez</span>
+                          </div>
+                          <span className="text-[11px] font-extrabold text-slate-800 tracking-tight">Eventzone</span>
+                        </div>
+                        <span className="text-[10px] text-slate-400 font-medium">now</span>
+                      </div>
+
+                      <div className="text-xs font-bold text-slate-900 leading-snug">
+                        {pushTitle.trim() || "Your Push Title Appears Here"}
+                      </div>
+                      <div className="text-[11px] text-slate-600 mt-0.5 leading-relaxed line-clamp-3">
+                        {pushMessage.trim() || "This is a real-time live preview of how attendees will receive your announcement directly on their phone lockscreen."}
+                      </div>
+                    </div>
+
+                    <div className="mt-2 text-center">
+                      <span className="text-[10px] text-slate-400 font-medium">
+                        Targeting:{" "}
+                        <span className="text-blue-300 font-bold">
+                          {pushTarget === "All Users"
+                            ? "All Users"
+                            : pushTarget === "Paid Users"
+                            ? "Paid Subscribers"
+                            : pushTarget === "Free Users"
+                            ? "Free & Trial Users"
+                            : "Single Attendee"}
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Bottom Phone Bar */}
+                  <div className="relative z-10 flex flex-col items-center pb-2">
+                    <div className="w-32 h-1 bg-white/40 rounded-full" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Session Dispatched Notifications Log */}
+          <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-2xs">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-slate-400" />
+                <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                  Session Broadcast Log
+                </h4>
+              </div>
+              <span className="text-[11px] text-slate-400 font-medium">
+                {pushHistory.length} dispatched this session
+              </span>
+            </div>
+
+            {pushHistory.length === 0 ? (
+              <div className="py-8 text-center text-slate-400 text-xs">
+                No push notifications dispatched in this session yet. Compose a message above to broadcast to your users.
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {pushHistory.map((item) => (
+                  <div
+                    key={item.id}
+                    className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-[10px] font-bold">
+                          {item.target}
+                        </span>
+                        <span className="font-bold text-slate-900">{item.title}</span>
+                      </div>
+                      <p className="text-slate-600 text-[11px] line-clamp-2">{item.message}</p>
+                    </div>
+                    <div className="text-[10px] text-slate-400 font-mono shrink-0">
+                      {new Date(item.sentAt).toLocaleTimeString()}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ─────────────────────────────────────────────
           MODAL: GRANT / EXTEND SUBSCRIPTION
       ───────────────────────────────────────────── */}
@@ -1390,21 +1884,161 @@ export default function AppOperationsSection({
 
             {/* Footer */}
             <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-              <button
-                onClick={() => {
-                  setSelectedUserForDrawer(null);
-                  handleOpenSubModal(selectedUserForDrawer);
-                }}
-                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
-              >
-                <Zap className="w-3.5 h-3.5" />
-                <span>Extend Subscription</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    const u = selectedUserForDrawer;
+                    setSelectedUserForDrawer(null);
+                    setDirectPushUser(u);
+                    setDirectPushTitle("");
+                    setDirectPushMessage("");
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Bell className="w-3.5 h-3.5" />
+                  <span>Send Push</span>
+                </button>
+                <button
+                  onClick={() => {
+                    const u = selectedUserForDrawer;
+                    setSelectedUserForDrawer(null);
+                    handleOpenSubModal(u);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Zap className="w-3.5 h-3.5" />
+                  <span>Extend Subscription</span>
+                </button>
+              </div>
               <button
                 onClick={() => setSelectedUserForDrawer(null)}
                 className="px-4 py-2 rounded-xl text-slate-600 hover:text-slate-900 text-xs font-semibold cursor-pointer"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────
+          MODAL: DIRECT PUSH NOTIFICATION (1-to-1)
+      ───────────────────────────────────────────── */}
+      {directPushUser && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full border border-slate-200 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                  <Bell className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm">Send Direct Push Notification</h3>
+                  <p className="text-xs text-slate-500">{directPushUser.full_name || "Selected Attendee"}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setDirectPushUser(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 text-xs">
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-xs">
+                  {(directPushUser.full_name || "U")[0].toUpperCase()}
+                </div>
+                <div>
+                  <div className="font-bold text-slate-800">{directPushUser.full_name}</div>
+                  <div className="text-[11px] text-slate-500">{directPushUser.email || "No email"}</div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Notification Title</label>
+                <input
+                  type="text"
+                  maxLength={60}
+                  placeholder="e.g. 💬 Update on your Eventzone account"
+                  value={directPushTitle}
+                  onChange={(e) => setDirectPushTitle(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Message Body</label>
+                <textarea
+                  rows={4}
+                  maxLength={180}
+                  placeholder="Write a personal message to this attendee..."
+                  value={directPushMessage}
+                  onChange={(e) => setDirectPushMessage(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all resize-none"
+                />
+              </div>
+
+              {/* Quick Presets for 1-to-1 */}
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  {
+                    label: "👋 Welcome",
+                    title: `👋 Welcome to Eventzone, ${directPushUser.full_name?.split(' ')[0] || ''}!`,
+                    message: "We're glad to have you join us. Don't forget to complete your profile to connect with peers.",
+                  },
+                  {
+                    label: "⭐ Access Extended",
+                    title: "⭐ Your Membership Has Been Extended",
+                    message: "Your Eventzone subscription has been extended with full VIP access to all features.",
+                  },
+                  {
+                    label: "💬 Message Reminder",
+                    title: "💬 New Connection Request",
+                    message: "You have pending networking requests waiting for you inside the Eventzone app.",
+                  },
+                ].map((tpl, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => {
+                      setDirectPushTitle(tpl.title);
+                      setDirectPushMessage(tpl.message);
+                    }}
+                    className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-semibold transition-colors cursor-pointer"
+                  >
+                    {tpl.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setDirectPushUser(null)}
+                className="px-4 py-2 rounded-xl text-slate-600 hover:text-slate-800 text-xs font-semibold cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSendDirectPush}
+                disabled={isSendingPush || !directPushTitle.trim() || !directPushMessage.trim()}
+                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-slate-400 text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
+              >
+                {isSendingPush ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Sending...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Send Notification</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
