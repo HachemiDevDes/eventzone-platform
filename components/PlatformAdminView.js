@@ -12,6 +12,7 @@ import {
   Activity, Percent, PieChart, Target, Award, Zap
 } from "lucide-react";
 import SearchableSelect from "./SearchableSelect";
+import AppOperationsSection from "./AppOperationsSection";
 import { COUNTRY_CITIES_MAP } from "../lib/formPresets";
 import { INDUSTRIES, isPlatformSuperAdminEmail } from "../lib/constants";
 import {
@@ -25,7 +26,9 @@ import {
   deleteNewsletterSubscriber,
   fetchAllQuoteRequests,
   updateQuoteRequest,
-  deleteQuoteRequest
+  deleteQuoteRequest,
+  fetchAllAppUsersAdmin,
+  fetchAllPromoCodesAdmin
 } from "../lib/db";
 
 const ALGERIA_WILAYAS = COUNTRY_CITIES_MAP["Algeria"] || [];
@@ -255,6 +258,10 @@ export default function PlatformAdminView({
   // Organizer Events Drawer state
   const [selectedOrgEvents, setSelectedOrgEvents] = useState(null);
 
+  // App Operations states
+  const [appUsers, setAppUsers] = useState([]);
+  const [promoCodes, setPromoCodes] = useState([]);
+
   // Hero Curation search & filter states
   const [heroSearch, setHeroSearch] = useState("");
   const [heroWilayaFilter, setHeroWilayaFilter] = useState("All");
@@ -270,12 +277,14 @@ export default function PlatformAdminView({
   const loadAdminData = async (showLoading = true) => {
     if (showLoading) setIsLoading(true);
     try {
-      const [orgsData, eventsData, paysData, subsData, quotesData] = await Promise.all([
+      const [orgsData, eventsData, paysData, subsData, quotesData, appUsersData, promoCodesData] = await Promise.all([
         fetchAllPlatformOrganizers(),
         fetchAllPlatformEventsAdmin(),
         fetchAllPlatformPayments(),
         fetchAllNewsletterSubscribers(),
-        fetchAllQuoteRequests()
+        fetchAllQuoteRequests(),
+        fetchAllAppUsersAdmin(),
+        fetchAllPromoCodesAdmin()
       ]);
 
       setOrganizers(orgsData);
@@ -284,6 +293,8 @@ export default function PlatformAdminView({
       setPaymentMetrics(paysData.metrics);
       setSubscribers(subsData || []);
       setQuoteRequests(quotesData || []);
+      setAppUsers(appUsersData || []);
+      setPromoCodes(promoCodesData || []);
     } catch (err) {
       console.error("Error loading admin data:", err);
       showToast("Failed to load back-office records", "error");
@@ -1048,6 +1059,7 @@ export default function PlatformAdminView({
       <nav className="bg-white border-b border-slate-200 px-6 flex items-center gap-1 overflow-x-auto scrollbar-none">
         {[
           { id: "overview", label: "Executive Overview" },
+          { id: "app_ops", label: "App Operations", count: appUsers.length },
           { id: "quotes", label: "Quote Requests", count: quoteRequests.length, pendingCount: quoteRequests.filter(q => q.status === "pending").length },
           { id: "organizers", label: "Organizers & Quotas", count: organizers.length },
           { id: "hero", label: "Homepage Hero Curator", count: curatedHeroEvents.length },
@@ -1139,8 +1151,8 @@ export default function PlatformAdminView({
                   </div>
                 </div>
 
-                {/* ─── Row 1: 6 Smart Executive KPI Cards ─── */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5">
+                {/* ─── Row 1: Executive KPI Cards ─── */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7 gap-3.5">
                   {/* 1. Total Settled GMV */}
                   <div 
                     onClick={() => setActiveTab("financials")}
@@ -1192,6 +1204,33 @@ export default function PlatformAdminView({
                     <div className="mt-3 pt-2.5 border-t border-slate-100 text-[11px] text-slate-500 flex items-center justify-between">
                       <span><strong className="text-slate-800">{executiveAnalytics.totalCheckedInAttendees}</strong> verified</span>
                       <span className="font-mono text-indigo-600 font-bold">{executiveAnalytics.checkinTurnoutRate}% turnout</span>
+                    </div>
+                  </div>
+
+                  {/* 3. App Operations & Subscriptions */}
+                  <div 
+                    onClick={() => setActiveTab("app_ops")}
+                    className="bg-white border border-slate-200/90 hover:border-blue-300 rounded-2xl p-4 shadow-2xs hover:shadow-xs transition-all cursor-pointer group flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
+                        <span className="group-hover:text-blue-700 transition-colors">App Operations</span>
+                        <div className="p-1.5 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                          <Smartphone className="w-3.5 h-3.5" />
+                        </div>
+                      </div>
+                      <div className="mt-2.5">
+                        <div className="text-xl font-black text-slate-900 tracking-tight font-mono">
+                          {appUsers.length}
+                        </div>
+                        <div className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mt-0.5">
+                          {appUsers.filter(u => u.subscriptionStatus === "active").length} Active Subscriptions
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-3 pt-2.5 border-t border-slate-100 text-[11px] text-slate-500 flex items-center justify-between">
+                      <span><strong className="text-amber-700">{appUsers.filter(u => u.subscriptionStatus === "trial").length}</strong> in trial</span>
+                      <span className="font-mono text-blue-600 font-bold">{promoCodes.filter(p => p.is_active).length} promos</span>
                     </div>
                   </div>
 
@@ -1752,6 +1791,13 @@ export default function PlatformAdminView({
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <button
+                        onClick={() => setActiveTab("app_ops")}
+                        className="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 text-slate-700 hover:text-blue-700 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                      >
+                        <Smartphone className="w-3.5 h-3.5 text-blue-500" />
+                        <span>App Operations ({appUsers.length})</span>
+                      </button>
+                      <button
                         onClick={() => setActiveTab("quotes")}
                         className="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 text-slate-700 hover:text-rose-700 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
                       >
@@ -1797,6 +1843,20 @@ export default function PlatformAdminView({
                   </div>
                 </div>
               </div>
+            )}
+
+            {/* ═══════════════════════════════════════════
+                TAB: MOBILE APP OPERATIONS & SUBSCRIPTIONS
+            ═══════════════════════════════════════════ */}
+            {activeTab === "app_ops" && (
+              <AppOperationsSection
+                appUsers={appUsers}
+                promoCodes={promoCodes}
+                payments={payments}
+                onRefresh={handleManualRefresh}
+                showToast={showToast}
+                currentUser={currentUser}
+              />
             )}
 
             {/* ═══════════════════════════════════════════
