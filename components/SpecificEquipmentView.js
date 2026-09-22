@@ -4,7 +4,7 @@ import React, { useState, useMemo } from "react";
 import {
   Package, Plus, Search, Filter, Trash2, Edit3, CheckCircle2,
   AlertTriangle, AlertCircle, Info, Zap, Tv, Coffee, X,
-  DollarSign, Layers, Building2, Store, Sparkles, SlidersHorizontal
+  DollarSign, Layers, Building2, Store, SlidersHorizontal
 } from "lucide-react";
 import SearchableSelect from "./SearchableSelect";
 import { useLanguage } from "../lib/i18n";
@@ -364,18 +364,13 @@ export default function SpecificEquipmentView({
       ───────────────────────────────────────────── */}
       <div className="bg-gradient-to-r from-blue-50/70 via-indigo-50/40 to-slate-50 border border-blue-100/80 rounded-3xl p-5 shadow-2xs space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
-              <Sparkles size={16} />
-            </div>
-            <div>
-              <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wide">
-                {t("logistics.presetSuggestions", "Quick Suggestions & Common Presets")}
-              </h3>
-              <p className="text-[11px] text-slate-600">
-                {t("logistics.presetSuggestionsDesc", "Popular equipment elements frequently needed by exhibitors. Click any item to add/customize.")}
-              </p>
-            </div>
+          <div>
+            <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wide">
+              {t("logistics.presetSuggestions", "Quick Suggestions & Common Presets")}
+            </h3>
+            <p className="text-[11px] text-slate-600">
+              {t("logistics.presetSuggestionsDesc", "Popular equipment elements frequently needed by exhibitors. Click any item to add/customize.")}
+            </p>
           </div>
 
           {/* Preset Category Switcher */}
@@ -676,10 +671,7 @@ export default function SpecificEquipmentView({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95">
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
-                  <Package size={17} />
-                </div>
+              <div>
                 <h3 className="text-sm font-black text-slate-900">
                   {editingItem 
                     ? t("logistics.editSpecificEquipment", "Edit Specific Equipment") 
