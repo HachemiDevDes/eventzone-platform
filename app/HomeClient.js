@@ -579,6 +579,25 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
     const syncUserProfile = async (session) => {
       if (!session?.user || !isMounted) return null;
 
+      // Strict Security Invariant: Block platform & dashboard access for unconfirmed accounts
+      const isConfirmed = !!(session.user.confirmed_at || session.user.email_confirmed_at);
+      const isDemo = session.user.email?.endsWith("@eventzone.io") || session.user.id?.startsWith("demo-");
+      if (!isConfirmed && !isDemo) {
+        console.warn("Security Alert: Unconfirmed email account attempted session restoration. Blocking dashboard access.");
+        safeLocalStorageRemove("eventzone_user");
+        if (isMounted) {
+          setCurrentUser(null);
+          setAuthModalInitialMode("signin");
+          setAuthModalOpen(true);
+          setIsAuthProcessing(false);
+          setAuthInitialized(true);
+        }
+        try {
+          await supabase.auth.signOut();
+        } catch (e) {}
+        return null;
+      }
+
       // FAST-PATH FOR OFFLINE MODE:
       // Avoid hanging or failing remote Supabase network queries when offline.
       // Immediately hydrate user object from locally cached profile / session metadata.

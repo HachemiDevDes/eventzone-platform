@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { 
   Building2, Ticket, Sparkles, ArrowRight, 
   CheckCircle2, Lock, Mail, User, ShieldCheck, 
@@ -121,6 +121,184 @@ export default function AuthView({
   const [successMsg, setSuccessMsg] = useState("");
   const [tempUser, setTempUser] = useState(null);
 
+  // 6-digit OTP verification state
+  const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
+  const [otpCountdown, setOtpCountdown] = useState(60);
+  const [isResendingOtp, setIsResendingOtp] = useState(false);
+  const otpInputRefs = useRef([]);
+
+  useEffect(() => {
+    let timer;
+    if ((authMode === "verify-otp" || authMode === "check-email") && otpCountdown > 0) {
+      timer = setInterval(() => {
+        setOtpCountdown((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [authMode, otpCountdown]);
+
+  const handleOtpDigitChange = (index, value) => {
+    const cleanVal = value.replace(/\D/g, "");
+    if (!cleanVal) {
+      const updated = [...otpDigits];
+      updated[index] = "";
+      setOtpDigits(updated);
+      return;
+    }
+
+    if (cleanVal.length > 1) {
+      const chars = cleanVal.slice(0, 6).split("");
+      const updated = [...otpDigits];
+      for (let i = 0; i < 6; i++) {
+        updated[i] = chars[i] || "";
+      }
+      setOtpDigits(updated);
+      const nextFocus = Math.min(chars.length, 5);
+      if (otpInputRefs.current[nextFocus]) {
+        otpInputRefs.current[nextFocus].focus();
+      }
+      return;
+    }
+
+    const updated = [...otpDigits];
+    updated[index] = cleanVal[cleanVal.length - 1];
+    setOtpDigits(updated);
+
+    if (index < 5) {
+      if (otpInputRefs.current[index + 1]) {
+        otpInputRefs.current[index + 1].focus();
+      }
+    }
+  };
+
+  const handleOtpKeyDown = (index, e) => {
+    if (e.key === "Backspace") {
+      if (!otpDigits[index] && index > 0) {
+        const updated = [...otpDigits];
+        updated[index - 1] = "";
+        setOtpDigits(updated);
+        if (otpInputRefs.current[index - 1]) {
+          otpInputRefs.current[index - 1].focus();
+        }
+      }
+    }
+  };
+
+  const handleOtpPaste = (e) => {
+    e.preventDefault();
+    const paste = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (!paste) return;
+    const chars = paste.split("");
+    const updated = ["", "", "", "", "", ""];
+    for (let i = 0; i < chars.length; i++) {
+      updated[i] = chars[i];
+    }
+    setOtpDigits(updated);
+    const focusIdx = Math.min(chars.length, 5);
+    if (otpInputRefs.current[focusIdx]) {
+      otpInputRefs.current[focusIdx].focus();
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (otpCountdown > 0 || isResendingOtp) return;
+    setErrorMsg("");
+    setSuccessMsg("");
+    setIsResendingOtp(true);
+
+    try {
+      const res = await fetch("/api/auth/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim(),
+          fullName: fullName.trim(),
+          role: selectedRole,
+          password: password,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Could not resend verification code.");
+      }
+
+      setOtpDigits(["", "", "", "", "", ""]);
+      setOtpCountdown(60);
+      setSuccessMsg(`A new 6-digit code has been sent to ${email.trim()}`);
+      setTimeout(() => {
+        if (otpInputRefs.current[0]) {
+          otpInputRefs.current[0].focus();
+        }
+      }, 100);
+    } catch (err) {
+      setErrorMsg(err.message || "Failed to resend code.");
+    } finally {
+      setIsResendingOtp(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e) => {
+    if (e) e.preventDefault();
+    const enteredOtp = otpDigits.join("").trim();
+    if (enteredOtp.length !== 6) {
+      setErrorMsg("Please enter all 6 digits of your verification code.");
+      return;
+    }
+
+    setErrorMsg("");
+    setSuccessMsg("");
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim(),
+          otp: enteredOtp,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Verification failed. Please check the code.");
+      }
+
+      // Automatically sign in now that email is verified
+      const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: password,
+      });
+
+      if (signInErr) {
+        console.warn("Auto sign-in notice:", signInErr);
+      }
+
+      const authUser = signInData?.user;
+      const userId = authUser?.id || data?.user?.id;
+      const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName || "User")}&background=0b5cdb&color=fff`;
+
+      const verifiedUser = {
+        id: userId,
+        email: email.trim(),
+        fullName: fullName.trim() || data?.user?.fullName || "Eventzone User",
+        role: selectedRole === "attendee" ? "visitor" : selectedRole,
+        avatar: avatarUrl,
+      };
+
+      safeLocalStorageSet("eventzone_user", sanitizeUserForStorage(verifiedUser));
+      onAuthSuccess(verifiedUser);
+    } catch (err) {
+      console.error("OTP verification error:", err);
+      setErrorMsg(err.message || "Failed to verify code. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleReturnHome = () => {
     if (onClose) onClose();
     else if (onGoToHome) onGoToHome();
@@ -224,92 +402,36 @@ export default function AuthView({
           return;
         }
 
-        // 1. Sign up with Supabase Auth
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email: email.trim(),
-          password: password,
-          options: {
-            emailRedirectTo: typeof window !== "undefined" ? window.location.origin : undefined,
-            data: {
-              full_name: fullName.trim(),
-              role: selectedRole,
-            },
-          },
-        });
-
-        if (authError) {
-          throw authError;
-        }
-
-        const authUser = authData?.user;
-        const userId = authUser?.id || `user-${Date.now()}`;
-        const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=0b5cdb&color=fff`;
-
-        // 2. Create / Upsert Profile in 'public.profiles'
-        const dbRole = selectedRole === "visitor" || selectedRole === "attendee" ? "attendee" : "organizer";
-        const profilePayload = {
-          id: userId,
-          email: email.trim(),
-          full_name: fullName.trim(),
-          role: dbRole,
-          avatar_url: avatarUrl,
-          onboarding_completed: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-
-        try {
-          await supabase.from("profiles").upsert(profilePayload, { onConflict: "id" });
-        } catch (profileErr) {
-          console.warn("Profile sync warning:", profileErr);
-        }
-
-        // Notify super admin when a new organizer registers
-        if (dbRole === "organizer") {
-          try {
-            fetch("/api/email/admin-notify", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                type: "organizer_joined",
-                organizer: {
-                  id: userId,
-                  fullName: fullName.trim(),
-                  email: email.trim(),
-                  role: "organizer",
-                  createdAt: new Date().toISOString(),
-                }
-              })
-            }).catch(e => console.warn("Admin notification dispatch notice:", e));
-          } catch (e) {}
-        }
-
-        // 3. Handle Email Confirmation if required
-        if (authData?.session === null && authUser && !authUser.confirmed_at) {
-          const tempUserData = {
-            id: userId,
+        // Mandatory 6-Digit Email OTP Verification
+        // Do NOT create profile or grant session until OTP is confirmed!
+        const res = await fetch("/api/auth/send-otp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
             email: email.trim(),
             fullName: fullName.trim(),
-            role: selectedRole === "attendee" ? "visitor" : selectedRole,
-            avatar: avatarUrl,
-          };
-          setTempUser(tempUserData);
-          setAuthMode("check-email");
-          setLoading(false);
-          return;
+            role: selectedRole,
+            password: password,
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to send verification code.");
         }
 
-        // Active Session -> Proceed
-        const createdUser = {
-          id: userId,
-          email: email.trim(),
-          fullName: fullName.trim(),
-          role: selectedRole === "attendee" ? "visitor" : selectedRole,
-          avatar: avatarUrl,
-        };
-
-        safeLocalStorageSet("eventzone_user", sanitizeUserForStorage(createdUser));
-        onAuthSuccess(createdUser);
+        setAuthMode("verify-otp");
+        setOtpDigits(["", "", "", "", "", ""]);
+        setOtpCountdown(60);
+        setErrorMsg("");
+        setSuccessMsg(`A 6-digit verification code has been sent to ${email.trim()}`);
+        setLoading(false);
+        setTimeout(() => {
+          if (otpInputRefs.current[0]) {
+            otpInputRefs.current[0].focus();
+          }
+        }, 100);
+        return;
 
       } else {
         // Sign in
@@ -319,11 +441,53 @@ export default function AuthView({
         });
 
         if (authError) {
+          if (authError.message?.toLowerCase().includes("email not confirmed")) {
+            // Trigger 6-digit OTP dispatch and direct to verify-otp view
+            fetch("/api/auth/send-otp", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                email: email.trim(),
+                fullName: fullName.trim() || email.split("@")[0],
+                role: selectedRole,
+                password: password,
+              }),
+            }).catch(() => {});
+
+            setAuthMode("verify-otp");
+            setOtpDigits(["", "", "", "", "", ""]);
+            setOtpCountdown(60);
+            setErrorMsg("Your email is not verified yet. We have sent a 6-digit verification code to your inbox.");
+            setLoading(false);
+            return;
+          }
           throw authError;
         }
 
         const authUser = authData?.user;
         const userId = authUser?.id;
+
+        // Security check: If user account is not confirmed, block dashboard access
+        if (authUser && !authUser.confirmed_at && !authUser.email_confirmed_at) {
+          await supabase.auth.signOut();
+          fetch("/api/auth/send-otp", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: email.trim(),
+              fullName: fullName.trim() || email.split("@")[0],
+              role: selectedRole,
+              password: password,
+            }),
+          }).catch(() => {});
+
+          setAuthMode("verify-otp");
+          setOtpDigits(["", "", "", "", "", ""]);
+          setOtpCountdown(60);
+          setErrorMsg("Your account is not confirmed yet. A 6-digit verification code has been sent to your email.");
+          setLoading(false);
+          return;
+        }
 
         // Fetch User Profile from 'public.profiles'
         let directProfile = null;
@@ -547,41 +711,129 @@ export default function AuthView({
 
       {/* Main Authentication Card */}
       <div className="relative z-10 w-full max-w-[440px] bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-2xl sm:rounded-3xl p-4.5 sm:p-9 shadow-xl sm:shadow-2xl shadow-slate-300/40">
-        {authMode === "check-email" ? (
-          /* Email Verification Notice */
-          <div className="text-center space-y-4 animate-fade-in">
-            <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto border border-blue-100">
-              <Mail size={28} />
+        {authMode === "verify-otp" || authMode === "check-email" ? (
+          /* 6-Digit Email OTP Verification View */
+          <div className="space-y-4 sm:space-y-5 text-start animate-fade-in">
+            <div className="text-center">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto border border-blue-100 shadow-xs mb-3">
+                <ShieldCheck size={28} className="text-blue-600" />
+              </div>
+              <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">
+                {t("auth.verifyEmailTitle", "Verify Your Email")}
+              </h2>
+              <p className="text-slate-500 text-xs mt-1 leading-relaxed">
+                {t("auth.enter6DigitOtp", "Enter the 6-digit verification code sent to")}{" "}
+                <strong className="text-slate-800 font-bold break-all">{email}</strong>
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode("signup");
+                  setErrorMsg("");
+                  setSuccessMsg("");
+                }}
+                className="text-[11px] text-blue-600 hover:underline font-bold mt-1 inline-block cursor-pointer"
+              >
+                Change email address
+              </button>
             </div>
-            <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
-              Check your email
-            </h2>
-            <p className="text-slate-500 text-xs leading-relaxed">
-              We sent a verification link to <strong className="text-slate-800">{email}</strong>. Please check your inbox to activate your account.
-            </p>
 
-            <button
-              type="button"
-              onClick={() => {
-                if (tempUser) {
-                  safeLocalStorageSet("eventzone_user", sanitizeUserForStorage(tempUser));
-                  onAuthSuccess(tempUser);
-                } else {
-                  setAuthMode("signin");
-                }
-              }}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-md shadow-blue-600/20 transition-all cursor-pointer mt-2"
-            >
-              Continue to Eventzone
-            </button>
+            {errorMsg && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 text-xs font-medium flex items-center gap-2">
+                <AlertCircle size={15} className="shrink-0" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
 
-            <button
-              type="button"
-              onClick={() => setAuthMode("signin")}
-              className="text-xs font-semibold text-slate-400 hover:text-slate-700 cursor-pointer block mx-auto pt-2"
-            >
-              Back to Sign In
-            </button>
+            {successMsg && (
+              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium flex items-center gap-2">
+                <CheckCircle2 size={15} className="shrink-0" />
+                <span>{successMsg}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleVerifyOtp} className="space-y-4">
+              <div>
+                <label className="block text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2.5">
+                  6-Digit Verification Code
+                </label>
+                <div 
+                  className="flex items-center justify-center gap-1.5 sm:gap-2.5"
+                  onPaste={handleOtpPaste}
+                >
+                  {otpDigits.map((digit, idx) => (
+                    <input
+                      key={idx}
+                      ref={(el) => (otpInputRefs.current[idx] = el)}
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={1}
+                      value={digit}
+                      onChange={(e) => handleOtpDigitChange(idx, e.target.value)}
+                      onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                      autoFocus={idx === 0}
+                      className="w-10 h-12 sm:w-12 sm:h-14 text-center text-lg sm:text-xl font-extrabold rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-100 text-slate-900 outline-none transition-all"
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading || otpDigits.join("").trim().length !== 6}
+                className="w-full py-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white rounded-xl font-bold text-xs shadow-md shadow-blue-600/25 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Verifying Code...</span>
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck size={16} />
+                    <span>Confirm & Activate Account</span>
+                  </>
+                )}
+              </button>
+
+              <div className="flex items-center justify-between pt-1 text-xs">
+                <span className="text-slate-400 font-medium">
+                  {otpCountdown > 0 ? (
+                    `Resend code in ${otpCountdown}s`
+                  ) : (
+                    "Didn't receive the code?"
+                  )}
+                </span>
+                <button
+                  type="button"
+                  disabled={otpCountdown > 0 || isResendingOtp}
+                  onClick={handleResendOtp}
+                  className={`font-bold transition-all ${
+                    otpCountdown > 0 || isResendingOtp
+                      ? "text-slate-300 cursor-not-allowed"
+                      : "text-blue-600 hover:underline cursor-pointer"
+                  }`}
+                >
+                  {isResendingOtp ? "Sending..." : "Resend Code"}
+                </button>
+              </div>
+
+              <div className="border-t border-slate-100 pt-3 text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode("signin");
+                    setErrorMsg("");
+                    setSuccessMsg("");
+                  }}
+                  className="text-xs font-semibold text-slate-400 hover:text-slate-700 cursor-pointer inline-flex items-center gap-1.5"
+                >
+                  <ArrowLeft size={13} />
+                  <span>Back to Sign In</span>
+                </button>
+              </div>
+            </form>
           </div>
         ) : authMode === "forgot-password" ? (
           /* Forgot Password View */
