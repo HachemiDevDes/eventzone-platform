@@ -118,36 +118,6 @@ export default function SpecificEquipmentView({
     return allocationsMap;
   }, [exhibitors]);
 
-  // Overall KPI metrics
-  const stats = useMemo(() => {
-    let totalStock = 0;
-    let totalStockValue = 0;
-    let totalAllocatedUnits = 0;
-    let totalAllocatedValue = 0;
-
-    (localEquipment || []).forEach(item => {
-      const stock = Number(item.quantity) || 0;
-      const price = Number(item.unitPrice || item.price) || 0;
-      totalStock += stock;
-      totalStockValue += stock * price;
-
-      const alloc = equipmentAllocations[item.id] || equipmentAllocations[item.name];
-      const allocCount = alloc ? alloc.totalAllocated : 0;
-      totalAllocatedUnits += allocCount;
-      totalAllocatedValue += allocCount * price;
-    });
-
-    const remainingStock = Math.max(0, totalStock - totalAllocatedUnits);
-
-    return {
-      typesCount: (localEquipment || []).length,
-      totalStock,
-      totalStockValue,
-      totalAllocatedUnits,
-      totalAllocatedValue,
-      remainingStock
-    };
-  }, [localEquipment, equipmentAllocations]);
 
   // Category translation helper
   const getCategoryLabel = (cat) => {
@@ -354,68 +324,7 @@ export default function SpecificEquipmentView({
   return (
     <div className="space-y-6">
       {/* ─────────────────────────────────────────────
-          1. TOP KPI METRICS
-      ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs">
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-            {t("logistics.totalEquipment", "Total Items")}
-          </span>
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-2xl font-black text-slate-900"><bdi dir="ltr">{stats.typesCount}</bdi></span>
-            <span className="text-xs text-slate-500 font-semibold">{t("common.types", "types")}</span>
-          </div>
-        </div>
-
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs">
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-            {t("logistics.totalStock", "Total Stock Units")}
-          </span>
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-2xl font-black text-blue-600"><bdi dir="ltr">{stats.totalStock}</bdi></span>
-            <span className="text-xs text-slate-500 font-semibold">{t("common.units", "units")}</span>
-          </div>
-        </div>
-
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs">
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-            {t("logistics.allocatedCount", "Allocated to Stands")}
-          </span>
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-2xl font-black text-purple-600"><bdi dir="ltr">{stats.totalAllocatedUnits}</bdi></span>
-            <span className="text-xs text-slate-500 font-semibold">
-              {stats.totalStock > 0 ? `(${Math.round((stats.totalAllocatedUnits / stats.totalStock) * 100)}%)` : ""}
-            </span>
-          </div>
-        </div>
-
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs">
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-            {t("logistics.remainingStock", "Available Remaining")}
-          </span>
-          <div className="flex items-baseline gap-1.5">
-            <span className={`text-2xl font-black ${stats.remainingStock <= 5 ? "text-amber-600" : "text-emerald-600"}`}>
-              <bdi dir="ltr">{stats.remainingStock}</bdi>
-            </span>
-            <span className="text-xs text-slate-500 font-semibold">{t("common.units", "units")}</span>
-          </div>
-        </div>
-
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs col-span-2 sm:col-span-1">
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-            {t("logistics.totalAllocatedValue", "Allocated Value")}
-          </span>
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-xl font-black text-slate-900 font-mono">
-              <bdi dir="ltr">{stats.totalAllocatedValue.toLocaleString()}</bdi>
-            </span>
-            <span className="text-xs font-bold text-blue-600">{currency}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* ─────────────────────────────────────────────
-          2. SEARCH, FILTERS & ACTION TOOLBAR
+          1. SEARCH, FILTERS & ACTION TOOLBAR
       ───────────────────────────────────────────── */}
       <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div className="flex flex-1 items-center gap-2">

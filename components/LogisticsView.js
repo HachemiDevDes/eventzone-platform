@@ -485,9 +485,53 @@ export default function LogisticsView({
       readinessPct,
       completedChecks,
       totalChecks,
-      openIncidentsCount
     };
   }, [inventory, vendors, travel, runOfShow, checklists, incidents]);
+
+  // Specific Equipment stats (exhibitor catalogue)
+  const specificStats = useMemo(() => {
+    let totalStock = 0;
+    let totalStockValue = 0;
+    let totalAllocatedUnits = 0;
+    let totalAllocatedValue = 0;
+
+    const allocationsMap = {};
+    (exhibitors || []).forEach(ex => {
+      if (ex.isArchived || ex.status === "archived") return;
+      const assigned = ex.specificEquipment || ex.specific_equipment || [];
+      if (!Array.isArray(assigned)) return;
+
+      assigned.forEach(item => {
+        const eqId = item.equipmentId || item.id || item.name;
+        const qty = Number(item.quantity) || 1;
+        allocationsMap[eqId] = (allocationsMap[eqId] || 0) + qty;
+      });
+    });
+
+    specificEquipment.forEach(item => {
+      const stock = Number(item.quantity) || 0;
+      const price = Number(item.unitPrice || item.price) || 0;
+      totalStock += stock;
+      totalStockValue += stock * price;
+
+      const allocCount = allocationsMap[item.id] || allocationsMap[item.name] || 0;
+      totalAllocatedUnits += allocCount;
+      totalAllocatedValue += allocCount * price;
+    });
+
+    const remainingStock = Math.max(0, totalStock - totalAllocatedUnits);
+    const allocPct = totalStock > 0 ? Math.min(100, Math.round((totalAllocatedUnits / totalStock) * 100)) : 0;
+
+    return {
+      typesCount: specificEquipment.length,
+      totalStock,
+      totalStockValue,
+      totalAllocatedUnits,
+      totalAllocatedValue,
+      remainingStock,
+      allocPct
+    };
+  }, [specificEquipment, exhibitors]);
 
   // Drawer Title and Action Label Generators
   const getDrawerTitle = () => {
@@ -980,88 +1024,167 @@ export default function LogisticsView({
       {/* ─────────────────────────────────────────────
           2. EXECUTIVE KPI CARDS
       ───────────────────────────────────────────── */}
-      {activeTab !== "specificEquipment" && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {/* Card 1: Equipment */}
-          <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500">{t("logistics.totalEquipment", "Total Equipment")}</span>
-              <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                <Package size={16} />
-              </div>
-            </div>
-            <div className="mt-3">
-              <div className="text-2xl font-black text-slate-900"><bdi dir="ltr">{stats.totalInventoryCount}</bdi></div>
-              <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-slate-500">
-                <span className="text-blue-600 font-bold"><bdi dir="ltr">{stats.inUseInventoryCount}</bdi></span> {t("logistics.inUseAcrossStages", "in-use across stages")}
-              </div>
-            </div>
-          </div>
-
-          {/* Card 2: Vendors */}
-          <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500">{t("logistics.activeVendors", "Suppliers & Load-In")}</span>
-              <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                <Truck size={16} />
-              </div>
-            </div>
-            <div className="mt-3">
-              <div className="text-2xl font-black text-slate-900"><bdi dir="ltr">{vendors.length}</bdi></div>
-              <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-emerald-600">
-                <CheckCircle2 size={12} /> <bdi dir="ltr">{stats.activeVendorsCount}</bdi> {t("logistics.confirmedDeliveries", "confirmed deliveries")}
-              </div>
-            </div>
-          </div>
-
-          {/* Card 3: VIP Hospitality */}
-          <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500">{t("logistics.vipTravelers", "VIP & Speaker Travel")}</span>
-              <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                <Plane size={16} />
-              </div>
-            </div>
-            <div className="mt-3">
-              <div className="text-2xl font-black text-slate-900"><bdi dir="ltr">{stats.vipTravelCount}</bdi></div>
-              <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-indigo-600">
-                {t("logistics.hotelAirportTransfersActive", "Hotel & Airport Transfers Active")}
-              </div>
-            </div>
-          </div>
-
-          {/* Card 4: Readiness / Issues */}
-          <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500">{t("logistics.venueReadiness", "Venue Readiness")}</span>
-              <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${stats.openIncidentsCount > 0 ? "bg-rose-50 text-rose-600" : "bg-teal-50 text-teal-600"}`}>
-                {stats.openIncidentsCount > 0 ? <AlertTriangle size={16} /> : <ShieldCheck size={16} />}
-              </div>
-            </div>
-            <div className="mt-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {activeTab === "specificEquipment" ? (
+          <>
+            {/* Card 1: Equipment */}
+            <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <span className="text-2xl font-black text-slate-900"><bdi dir="ltr">{stats.readinessPct}%</bdi></span>
-                {stats.openIncidentsCount > 0 ? (
-                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700">
-                    <bdi dir="ltr">{stats.openIncidentsCount}</bdi> {t("logistics.openIssues", "Open Issues")}
-                  </span>
-                ) : (
-                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-teal-100 text-teal-700">
-                    {t("logistics.allSystemsClear", "All Systems Clear")}
-                  </span>
-                )}
+                <span className="text-xs font-bold text-slate-500">{t("logistics.totalEquipment", "Total Equipment Items")}</span>
+                <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <Package size={16} />
+                </div>
               </div>
-              {/* Progress Bar */}
-              <div className="w-full bg-slate-150 h-1.5 rounded-full mt-2 overflow-hidden">
-                <div
-                  className={`h-full transition-all duration-500 rounded-full ${stats.readinessPct === 100 ? "bg-teal-500" : "bg-blue-600"}`}
-                  style={{ width: `${stats.readinessPct}%` }}
-                />
+              <div className="mt-3">
+                <div className="text-2xl font-black text-slate-900"><bdi dir="ltr">{specificStats.typesCount}</bdi></div>
+                <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-slate-500">
+                  <span className="text-blue-600 font-bold"><bdi dir="ltr">{specificStats.totalStock}</bdi></span> {t("logistics.totalStockUnits", "total stock units")}
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+
+            {/* Card 2: Allocated to Stands */}
+            <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500">{t("logistics.allocatedCount", "Allocated to Stands")}</span>
+                <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                  <Store size={16} />
+                </div>
+              </div>
+              <div className="mt-3">
+                <div className="text-2xl font-black text-slate-900"><bdi dir="ltr">{specificStats.totalAllocatedUnits}</bdi></div>
+                <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-purple-600">
+                  <CheckCircle2 size={12} /> <bdi dir="ltr">{specificStats.allocPct}%</bdi> {t("logistics.assignedToExhibitors", "allocated to exhibitors")}
+                </div>
+              </div>
+            </div>
+
+            {/* Card 3: Available Remaining */}
+            <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500">{t("logistics.remainingStock", "Available Remaining")}</span>
+                <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <Boxes size={16} />
+                </div>
+              </div>
+              <div className="mt-3">
+                <div className="text-2xl font-black text-slate-900"><bdi dir="ltr">{specificStats.remainingStock}</bdi></div>
+                <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-emerald-600">
+                  <span className="font-bold"><bdi dir="ltr">{specificStats.remainingStock}</bdi></span> {t("common.unitsAvailable", "units ready for booking")}
+                </div>
+              </div>
+            </div>
+
+            {/* Card 4: Allocated Value & Utilization */}
+            <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500">{t("logistics.totalAllocatedValue", "Allocated Value")}</span>
+                <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
+                  <ShieldCheck size={16} />
+                </div>
+              </div>
+              <div className="mt-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-2xl font-black text-slate-900 font-mono">
+                    <bdi dir="ltr">{specificStats.totalAllocatedValue.toLocaleString()}</bdi> <span className="text-xs font-bold text-blue-600">{eventDetails?.currency || "DA"}</span>
+                  </span>
+                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-teal-100 text-teal-700">
+                    <bdi dir="ltr">{specificStats.allocPct}%</bdi> {t("common.booked", "Booked")}
+                  </span>
+                </div>
+                {/* Progress Bar */}
+                <div className="w-full bg-slate-150 h-1.5 rounded-full mt-2 overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-500 rounded-full ${specificStats.allocPct >= 100 ? "bg-rose-500" : specificStats.allocPct >= 75 ? "bg-amber-500" : "bg-teal-500"}`}
+                    style={{ width: `${Math.min(100, specificStats.allocPct)}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Card 1: Equipment */}
+            <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500">{t("logistics.totalEquipment", "Total Equipment")}</span>
+                <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <Package size={16} />
+                </div>
+              </div>
+              <div className="mt-3">
+                <div className="text-2xl font-black text-slate-900"><bdi dir="ltr">{stats.totalInventoryCount}</bdi></div>
+                <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-slate-500">
+                  <span className="text-blue-600 font-bold"><bdi dir="ltr">{stats.inUseInventoryCount}</bdi></span> {t("logistics.inUseAcrossStages", "in-use across stages")}
+                </div>
+              </div>
+            </div>
+
+            {/* Card 2: Vendors */}
+            <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500">{t("logistics.activeVendors", "Suppliers & Load-In")}</span>
+                <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <Truck size={16} />
+                </div>
+              </div>
+              <div className="mt-3">
+                <div className="text-2xl font-black text-slate-900"><bdi dir="ltr">{vendors.length}</bdi></div>
+                <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-emerald-600">
+                  <CheckCircle2 size={12} /> <bdi dir="ltr">{stats.activeVendorsCount}</bdi> {t("logistics.confirmedDeliveries", "confirmed deliveries")}
+                </div>
+              </div>
+            </div>
+
+            {/* Card 3: VIP Hospitality */}
+            <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500">{t("logistics.vipTravelers", "VIP & Speaker Travel")}</span>
+                <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                  <Plane size={16} />
+                </div>
+              </div>
+              <div className="mt-3">
+                <div className="text-2xl font-black text-slate-900"><bdi dir="ltr">{stats.vipTravelCount}</bdi></div>
+                <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-indigo-600">
+                  {t("logistics.hotelAirportTransfersActive", "Hotel & Airport Transfers Active")}
+                </div>
+              </div>
+            </div>
+
+            {/* Card 4: Readiness / Issues */}
+            <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500">{t("logistics.venueReadiness", "Venue Readiness")}</span>
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${stats.openIncidentsCount > 0 ? "bg-rose-50 text-rose-600" : "bg-teal-50 text-teal-600"}`}>
+                  {stats.openIncidentsCount > 0 ? <AlertTriangle size={16} /> : <ShieldCheck size={16} />}
+                </div>
+              </div>
+              <div className="mt-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-2xl font-black text-slate-900"><bdi dir="ltr">{stats.readinessPct}%</bdi></span>
+                  {stats.openIncidentsCount > 0 ? (
+                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700">
+                      <bdi dir="ltr">{stats.openIncidentsCount}</bdi> {t("logistics.openIssues", "Open Issues")}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-teal-100 text-teal-700">
+                      {t("logistics.allSystemsClear", "All Systems Clear")}
+                    </span>
+                  )}
+                </div>
+                {/* Progress Bar */}
+                <div className="w-full bg-slate-150 h-1.5 rounded-full mt-2 overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-500 rounded-full ${stats.readinessPct === 100 ? "bg-teal-500" : "bg-blue-600"}`}
+                    style={{ width: `${stats.readinessPct}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
 
       {/* ─────────────────────────────────────────────
           3. SUB-MODULE TABS NAVIGATION
