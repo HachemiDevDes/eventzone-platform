@@ -3910,13 +3910,17 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
 
   const handleSaveLogisticsItem = async (type, item) => {
     try {
-      const saved = await upsertLogisticsItem(type, item, activeEventId);
-      setLogisticsData(prev => {
-        const list = prev[type] || [];
-        const exists = list.some(x => x.id === saved.id);
-        const updatedList = exists ? list.map(x => x.id === saved.id ? saved : x) : [saved, ...list];
-        return { ...prev, [type]: updatedList };
-      });
+      const targetEventId = activeEventIdRef.current || activeEventId || getActiveEventId();
+      const saved = await upsertLogisticsItem(type, item, targetEventId);
+      if (saved) {
+        setLogisticsData(prev => {
+          const currentData = prev || {};
+          const list = currentData[type] || [];
+          const exists = list.some(x => x.id === saved.id);
+          const updatedList = exists ? list.map(x => x.id === saved.id ? saved : x) : [saved, ...list];
+          return { ...currentData, [type]: updatedList };
+        });
+      }
       return saved;
     } catch (err) {
       console.error("Failed to save logistics item:", err);
@@ -3925,10 +3929,12 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
 
   const handleDeleteLogisticsItem = async (type, itemId) => {
     try {
-      await deleteLogisticsItem(type, itemId, activeEventId);
+      const targetEventId = activeEventIdRef.current || activeEventId || getActiveEventId();
+      await deleteLogisticsItem(type, itemId, targetEventId);
       setLogisticsData(prev => {
-        const list = prev[type] || [];
-        return { ...prev, [type]: list.filter(x => x.id !== itemId) };
+        const currentData = prev || {};
+        const list = currentData[type] || [];
+        return { ...currentData, [type]: list.filter(x => x.id !== itemId) };
       });
     } catch (err) {
       console.error("Failed to delete logistics item:", err);

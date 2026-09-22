@@ -1,11 +1,7 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
-import {
-  Package, Plus, Search, Filter, Trash2, Edit3, CheckCircle2,
-  AlertTriangle, AlertCircle, Info, Zap, Tv, Coffee, X,
-  DollarSign, Layers, Building2, Store, SlidersHorizontal
-} from "lucide-react";
+import React, { useState, useMemo, useEffect } from "react";
+import { Plus, Search, Trash2, Edit3, X } from "lucide-react";
 import SearchableSelect from "./SearchableSelect";
 import { useLanguage } from "../lib/i18n";
 import {
@@ -35,7 +31,14 @@ export default function SpecificEquipmentView({
   isAddModalOpenExternal = false,
   onCloseAddModalExternal
 }) {
-  const { t, language, isRTL } = useLanguage();
+  const { t, language } = useLanguage();
+
+  // Local optimistic state for instant UI feedback
+  const [localEquipment, setLocalEquipment] = useState(specificEquipment || []);
+
+  useEffect(() => {
+    setLocalEquipment(specificEquipment || []);
+  }, [specificEquipment]);
 
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -48,7 +51,19 @@ export default function SpecificEquipmentView({
   const [editingItem, setEditingItem] = useState(null);
   const [itemToDelete, setItemToDelete] = useState(null);
 
-  React.useEffect(() => {
+  // Form State
+  const [formData, setFormData] = useState({
+    name: "",
+    category: "Furniture & Seating",
+    unitPrice: 0,
+    quantity: 10,
+    status: "available",
+    specs: "",
+    powerRequirement: "",
+    notes: ""
+  });
+
+  useEffect(() => {
     if (isAddModalOpenExternal) {
       setEditingItem(null);
       setFormData({
@@ -64,18 +79,6 @@ export default function SpecificEquipmentView({
       setIsModalOpen(true);
     }
   }, [isAddModalOpenExternal]);
-
-  // Form State
-  const [formData, setFormData] = useState({
-    name: "",
-    category: "Furniture & Seating",
-    unitPrice: 0,
-    quantity: 10,
-    status: "available",
-    specs: "",
-    powerRequirement: "",
-    notes: ""
-  });
 
   // Calculate allocation metrics per equipment item from exhibitors
   const equipmentAllocations = useMemo(() => {
@@ -116,7 +119,7 @@ export default function SpecificEquipmentView({
     let totalAllocatedUnits = 0;
     let totalAllocatedValue = 0;
 
-    (specificEquipment || []).forEach(item => {
+    (localEquipment || []).forEach(item => {
       const stock = Number(item.quantity) || 0;
       const price = Number(item.unitPrice || item.price) || 0;
       totalStock += stock;
@@ -131,14 +134,14 @@ export default function SpecificEquipmentView({
     const remainingStock = Math.max(0, totalStock - totalAllocatedUnits);
 
     return {
-      typesCount: specificEquipment.length,
+      typesCount: (localEquipment || []).length,
       totalStock,
       totalStockValue,
       totalAllocatedUnits,
       totalAllocatedValue,
       remainingStock
     };
-  }, [specificEquipment, equipmentAllocations]);
+  }, [localEquipment, equipmentAllocations]);
 
   // Category translation helper
   const getCategoryLabel = (cat) => {
@@ -153,20 +156,9 @@ export default function SpecificEquipmentView({
     }
   };
 
-  const getCategoryIcon = (cat) => {
-    switch (cat) {
-      case "Furniture & Seating": return <Store size={15} className="text-blue-600" />;
-      case "Electrical & Power": return <Zap size={15} className="text-amber-500" />;
-      case "Audiovisual & Screens": return <Tv size={15} className="text-purple-600" />;
-      case "Display & Signage": return <Layers size={15} className="text-emerald-600" />;
-      case "Appliances & Comfort": return <Coffee size={15} className="text-rose-500" />;
-      default: return <Package size={15} className="text-slate-500" />;
-    }
-  };
-
   // Filtered catalogue list
   const filteredEquipment = useMemo(() => {
-    return (specificEquipment || []).filter(item => {
+    return (localEquipment || []).filter(item => {
       const q = searchQuery.toLowerCase().trim();
       const localizedName = getLocalizedEquipmentName(item, t, language).toLowerCase();
       const localizedSpecs = getLocalizedEquipmentSpecs(item, t, language).toLowerCase();
@@ -199,7 +191,7 @@ export default function SpecificEquipmentView({
 
       return matchesSearch && matchesCat && matchesStock;
     });
-  }, [specificEquipment, searchQuery, selectedCategory, selectedStockStatus, equipmentAllocations, t, language]);
+  }, [localEquipment, searchQuery, selectedCategory, selectedStockStatus, equipmentAllocations, t, language]);
 
   // Handle open add/edit modal
   const handleOpenModal = (item = null) => {
@@ -210,7 +202,7 @@ export default function SpecificEquipmentView({
         presetKey: item.presetKey,
         name: item.name || "",
         category: item.category || "Furniture & Seating",
-        unitPrice: item.unitPrice || item.price || 0,
+        unitPrice: item.unitPrice ?? item.price ?? 0,
         quantity: item.quantity || 1,
         status: item.status || "available",
         specs: item.specs || "",
@@ -234,21 +226,52 @@ export default function SpecificEquipmentView({
     setIsModalOpen(true);
   };
 
-  // Handle load preset into form
+  // Handle load preset into modal for customization
   const handleLoadPreset = (preset) => {
     setEditingItem(null);
     setFormData({
       presetKey: preset.presetKey || preset.id,
       name: getLocalizedEquipmentName(preset, t, language),
-      category: preset.category,
-      unitPrice: preset.unitPrice,
+      category: preset.category || "Furniture & Seating",
+      unitPrice: preset.unitPrice || preset.price || 0,
       quantity: preset.quantity || 10,
       status: preset.status || "available",
-      specs: getLocalizedEquipmentSpecs(preset, t, language),
+      specs: getLocalizedEquipmentSpecs(preset, t, language) || "",
       powerRequirement: preset.powerRequirement || "",
       notes: ""
     });
     setIsModalOpen(true);
+  };
+
+  // Handle instant 1-click Quick Add preset directly to organizer catalogue
+  const handleQuickAddPreset = async (preset, e) => {
+    if (e) e.stopPropagation();
+    if (!canEdit) return;
+
+    const itemId = "eq_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
+    const payload = {
+      id: itemId,
+      presetKey: preset.presetKey || preset.id,
+      name: getLocalizedEquipmentName(preset, t, language),
+      category: preset.category || "Furniture & Seating",
+      unitPrice: parseFloat(preset.unitPrice || preset.price) || 0,
+      price: parseFloat(preset.unitPrice || preset.price) || 0,
+      quantity: parseInt(preset.quantity) || 10,
+      status: preset.status || "available",
+      specs: getLocalizedEquipmentSpecs(preset, t, language) || "",
+      powerRequirement: preset.powerRequirement || "",
+      notes: ""
+    };
+
+    setLocalEquipment(prev => [payload, ...prev]);
+
+    if (onSaveItem) {
+      try {
+        await onSaveItem(payload);
+      } catch (err) {
+        console.error("Failed to quick-add preset:", err);
+      }
+    }
   };
 
   const handleCloseModal = () => {
@@ -256,37 +279,63 @@ export default function SpecificEquipmentView({
     if (onCloseAddModalExternal) onCloseAddModalExternal();
   };
 
-  // Handle submit form
+  // Handle submit form (Add or Edit)
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.name.trim()) return;
+    if (!formData.name || !formData.name.trim()) return;
 
+    const itemId = editingItem ? editingItem.id : ("eq_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7));
     const payload = {
-      id: editingItem ? editingItem.id : undefined,
+      id: itemId,
       presetKey: formData.presetKey || (editingItem && editingItem.presetKey) || undefined,
-      name: formData.name.trim(),
-      category: formData.category,
+      name: (formData.name || "").trim(),
+      category: formData.category || "Furniture & Seating",
       unitPrice: parseFloat(formData.unitPrice) || 0,
       price: parseFloat(formData.unitPrice) || 0,
       quantity: parseInt(formData.quantity) || 1,
       status: formData.status || "available",
-      specs: formData.specs.trim(),
-      powerRequirement: formData.powerRequirement.trim(),
-      notes: formData.notes.trim()
+      specs: (formData.specs || "").trim(),
+      powerRequirement: (formData.powerRequirement || "").trim(),
+      notes: (formData.notes || "").trim()
     };
 
-    if (onSaveItem) {
-      await onSaveItem(payload);
-    }
+    // Optimistic instant update
+    setLocalEquipment(prev => {
+      const exists = prev.some(x => x.id === payload.id);
+      return exists ? prev.map(x => x.id === payload.id ? payload : x) : [payload, ...prev];
+    });
+
     handleCloseModal();
+
+    if (onSaveItem) {
+      try {
+        await onSaveItem(payload);
+      } catch (err) {
+        console.error("Failed to save equipment item:", err);
+      }
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!itemToDelete) return;
+    const targetId = itemToDelete.id;
+    setLocalEquipment(prev => prev.filter(x => x.id !== targetId));
+    setItemToDelete(null);
+
+    if (onDeleteItem) {
+      try {
+        await onDeleteItem(targetId);
+      } catch (err) {
+        console.error("Failed to delete equipment item:", err);
+      }
+    }
   };
 
   // SearchableSelect options for categories
   const categoryOptions = useMemo(() => {
     return SPECIFIC_EQUIPMENT_CATEGORIES.map(cat => ({
       value: cat,
-      label: getCategoryLabel(cat),
-      icon: getCategoryIcon(cat)
+      label: getCategoryLabel(cat)
     }));
   }, [t]);
 
@@ -360,76 +409,7 @@ export default function SpecificEquipmentView({
       </div>
 
       {/* ─────────────────────────────────────────────
-          2. READY-MADE ORGANIZER PRESETS STRIP
-      ───────────────────────────────────────────── */}
-      <div className="bg-gradient-to-r from-blue-50/70 via-indigo-50/40 to-slate-50 border border-blue-100/80 rounded-3xl p-5 shadow-2xs space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wide">
-              {t("logistics.presetSuggestions", "Quick Suggestions & Common Presets")}
-            </h3>
-            <p className="text-[11px] text-slate-600">
-              {t("logistics.presetSuggestionsDesc", "Popular equipment elements frequently needed by exhibitors. Click any item to add/customize.")}
-            </p>
-          </div>
-
-          {/* Preset Category Switcher */}
-          <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
-            {["all", "Furniture & Seating", "Electrical & Power", "Audiovisual & Screens", "Display & Signage", "Appliances & Comfort"].map(catKey => (
-              <button
-                key={catKey}
-                type="button"
-                onClick={() => setPresetCategoryFilter(catKey)}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-colors cursor-pointer ${
-                  presetCategoryFilter === catKey 
-                    ? "bg-blue-600 text-white shadow-2xs" 
-                    : "bg-white/80 text-slate-600 hover:bg-white hover:text-slate-900 border border-slate-200/60"
-                }`}
-              >
-                {catKey === "all" ? t("common.all", "All") : getCategoryLabel(catKey)}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5 pt-1">
-          {SPECIFIC_EQUIPMENT_PRESETS
-            .filter(p => presetCategoryFilter === "all" || p.category === presetCategoryFilter)
-            .map((preset, idx) => (
-              <button
-                key={preset.id || idx}
-                type="button"
-                onClick={() => handleLoadPreset(preset)}
-                disabled={!canEdit}
-                className="group p-3 bg-white hover:bg-blue-50/60 border border-slate-200/80 hover:border-blue-300 rounded-2xl text-start transition-all cursor-pointer shadow-2xs hover:shadow-xs flex flex-col justify-between disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="p-1 rounded-lg bg-slate-50 border border-slate-100 group-hover:bg-white">
-                      {getCategoryIcon(preset.category)}
-                    </span>
-                    <span className="text-[10px] font-mono font-bold text-blue-600">
-                      {preset.unitPrice.toLocaleString()} {currency}
-                    </span>
-                  </div>
-                  <h4 className="text-xs font-bold text-slate-800 group-hover:text-blue-700 line-clamp-1">
-                    {getLocalizedEquipmentName(preset, t, language)}
-                  </h4>
-                  <p className="text-[10px] text-slate-500 line-clamp-1 mt-0.5">
-                    {getLocalizedEquipmentSpecs(preset, t, language)}
-                  </p>
-                </div>
-                <div className="mt-2 flex items-center justify-between pt-2 border-t border-slate-100 text-[10px] text-blue-600 font-bold group-hover:underline">
-                  <span>{t("logistics.usePreset", "Use Preset")}</span>
-                  <Plus size={12} />
-                </div>
-              </button>
-            ))}
-        </div>
-      </div>
-
-      {/* ─────────────────────────────────────────────
-          3. SEARCH, FILTERS & ACTION TOOLBAR
+          2. SEARCH, FILTERS & ACTION TOOLBAR
       ───────────────────────────────────────────── */}
       <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div className="flex flex-1 items-center gap-2">
@@ -452,7 +432,7 @@ export default function SpecificEquipmentView({
               onChange={setSelectedCategory}
               options={[
                 { value: "all", label: t("logistics.filterAllCategories", "All Categories") },
-                ...SPECIFIC_EQUIPMENT_CATEGORIES.map(c => ({ value: c, label: getCategoryLabel(c) }))
+                ...categoryOptions
               ]}
               isClearable={false}
               showSearch={false}
@@ -467,9 +447,7 @@ export default function SpecificEquipmentView({
               onChange={setSelectedStockStatus}
               options={[
                 { value: "all", label: t("logistics.filterAllStock", "All Availability") },
-                { value: "available", label: t("logistics.statusAvailable", "In Stock") },
-                { value: "low", label: t("logistics.statusLowStock", "Low Stock") },
-                { value: "out", label: t("logistics.statusOutOfStock", "Fully Allocated") }
+                ...stockStatusOptions
               ]}
               isClearable={false}
               showSearch={false}
@@ -492,21 +470,18 @@ export default function SpecificEquipmentView({
       </div>
 
       {/* ─────────────────────────────────────────────
-          4. EQUIPMENT CATALOGUE LIST / CARDS
+          3. MAIN EQUIPMENT CATALOGUE GRID (ORGANIZERS' ADDED EQUIPMENT)
       ───────────────────────────────────────────── */}
       {filteredEquipment.length === 0 ? (
-        <div className="bg-white border border-slate-200/80 rounded-3xl p-12 text-center shadow-2xs space-y-3">
-          <div className="w-14 h-14 mx-auto rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
-            <Package size={26} />
-          </div>
-          <h3 className="text-base font-bold text-slate-800">
+        <div className="bg-white border border-slate-200/80 rounded-3xl p-10 text-center shadow-2xs space-y-2">
+          <h3 className="text-sm font-bold text-slate-900">
             {t("logistics.noSpecificEquipmentFound", "No specific equipment found")}
           </h3>
           <p className="text-xs text-slate-500 max-w-md mx-auto">
-            {t("logistics.noSpecificEquipmentSubtitle", "Add items or pick from common presets like chairs, tables, TV screens, or power connections.")}
+            {t("logistics.noSpecificEquipmentSubtitle", "Add items manually or choose from the ready-made suggestions below.")}
           </p>
           {canEdit && (
-            <div className="pt-2 flex items-center justify-center gap-2">
+            <div className="pt-3 flex items-center justify-center gap-2">
               <button
                 type="button"
                 onClick={() => handleOpenModal()}
@@ -535,16 +510,11 @@ export default function SpecificEquipmentView({
                 className="bg-white border border-slate-200/80 hover:border-slate-300 rounded-2xl p-4 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between"
               >
                 <div className="space-y-3">
-                  {/* Card Header: Category & Status */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="p-1.5 rounded-lg bg-slate-100 border border-slate-200/60 shrink-0">
-                        {getCategoryIcon(item.category)}
-                      </span>
-                      <span className="text-[11px] font-bold text-slate-600 truncate">
-                        {getCategoryLabel(item.category)}
-                      </span>
-                    </div>
+                  {/* Card Header: Clean Category Badge & Status */}
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200/70 text-[10px] font-bold text-slate-600 truncate">
+                      {getCategoryLabel(item.category)}
+                    </span>
 
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border shrink-0 ${
                       isOutOfStock
@@ -663,6 +633,87 @@ export default function SpecificEquipmentView({
           })}
         </div>
       )}
+
+      {/* ─────────────────────────────────────────────
+          4. READY-MADE ORGANIZER PRESETS STRIP (PLACED BELOW THE CATALOGUE)
+      ───────────────────────────────────────────── */}
+      <div className="bg-gradient-to-r from-blue-50/70 via-indigo-50/40 to-slate-50 border border-blue-100/80 rounded-3xl p-5 shadow-2xs space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wide">
+              {t("logistics.presetSuggestions", "Quick Suggestions & Common Presets")}
+            </h3>
+            <p className="text-[11px] text-slate-600">
+              {t("logistics.presetSuggestionsDesc", "Popular equipment elements frequently needed by exhibitors. Click any item to add or customize.")}
+            </p>
+          </div>
+
+          {/* Preset Category Switcher */}
+          <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
+            {["all", ...SPECIFIC_EQUIPMENT_CATEGORIES.filter(c => c !== "Other Equipment")].map(catKey => (
+              <button
+                key={catKey}
+                type="button"
+                onClick={() => setPresetCategoryFilter(catKey)}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-colors cursor-pointer ${
+                  presetCategoryFilter === catKey 
+                    ? "bg-blue-600 text-white shadow-2xs" 
+                    : "bg-white/80 text-slate-600 hover:bg-white hover:text-slate-900 border border-slate-200/60"
+                }`}
+              >
+                {catKey === "all" ? t("common.all", "All") : getCategoryLabel(catKey)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 pt-1">
+          {SPECIFIC_EQUIPMENT_PRESETS
+            .filter(p => presetCategoryFilter === "all" || p.category === presetCategoryFilter)
+            .map((preset, idx) => (
+              <div
+                key={preset.id || idx}
+                className="p-3 bg-white hover:bg-blue-50/40 border border-slate-200/80 hover:border-blue-300 rounded-2xl text-start transition-all shadow-2xs hover:shadow-xs flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-1.5 gap-2">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
+                      {getCategoryLabel(preset.category)}
+                    </span>
+                    <span className="text-[10px] font-mono font-bold text-blue-600 shrink-0">
+                      {preset.unitPrice.toLocaleString()} {currency}
+                    </span>
+                  </div>
+                  <h4 className="text-xs font-bold text-slate-900 line-clamp-1">
+                    {getLocalizedEquipmentName(preset, t, language)}
+                  </h4>
+                  <p className="text-[10px] text-slate-500 line-clamp-2 mt-0.5">
+                    {getLocalizedEquipmentSpecs(preset, t, language)}
+                  </p>
+                </div>
+                <div className="mt-3 flex items-center justify-between pt-2 border-t border-slate-100 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handleLoadPreset(preset)}
+                    disabled={!canEdit}
+                    className="text-[10px] text-slate-600 hover:text-blue-600 font-semibold cursor-pointer disabled:opacity-50"
+                  >
+                    {t("common.customize", "Customize")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => handleQuickAddPreset(preset, e)}
+                    disabled={!canEdit}
+                    className="px-2 py-1 bg-blue-50 hover:bg-blue-600 text-blue-700 hover:text-white rounded-lg text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    <Plus size={11} />
+                    <span>{t("logistics.usePreset", "Use Preset")}</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+        </div>
+      </div>
 
       {/* ─────────────────────────────────────────────
           5. ADD / EDIT MODAL
@@ -806,9 +857,6 @@ export default function SpecificEquipmentView({
       {itemToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-sm w-full p-6 text-center space-y-4 animate-in fade-in zoom-in-95">
-            <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center mx-auto">
-              <Trash2 size={22} />
-            </div>
             <div>
               <h3 className="text-sm font-black text-slate-900">
                 {t("common.delete", "Delete")} {itemToDelete.name}?
@@ -827,12 +875,7 @@ export default function SpecificEquipmentView({
               </button>
               <button
                 type="button"
-                onClick={async () => {
-                  if (onDeleteItem) {
-                    await onDeleteItem(itemToDelete.id);
-                  }
-                  setItemToDelete(null);
-                }}
+                onClick={handleDeleteConfirm}
                 className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer"
               >
                 {t("common.confirmDelete", "Delete Permanently")}
