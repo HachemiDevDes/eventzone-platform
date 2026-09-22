@@ -134,6 +134,7 @@ export default function GenericTableView({
           team={state.team || []}
           floorPlans={state.floorPlans || []}
           eventDetails={state.eventDetails || {}}
+          exhibitors={state.exhibitors || []}
           onSwitchView={onSwitchView}
           onRefreshData={state.onRefreshLogistics}
           effectivePermissions={state.effectivePermissions}

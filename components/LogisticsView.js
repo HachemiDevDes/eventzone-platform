@@ -7,7 +7,7 @@ import {
   User, ShieldCheck, RefreshCw, Trash2, Edit3, Sparkles,
   Layers, ChevronRight, Check, X, Calendar, DollarSign,
   Info, ExternalLink, HelpCircle, FileText, AlertCircle,
-  Package, ChevronDown, Eye, Store
+  Package, ChevronDown, Eye, Store, BedDouble, Key, Hotel
 } from "lucide-react";
 import { useLanguage } from "../lib/i18n";
 import SearchableSelect from "./SearchableSelect";
@@ -15,6 +15,7 @@ import CountryPhoneInput from "./CountryPhoneInput";
 import { LogisticsSkeleton } from "./SkeletonLoaders";
 import { canEditModule } from "../lib/permissions";
 import SpecificEquipmentView from "./SpecificEquipmentView";
+import HotelsView from "./HotelsView";
 
 // ─────────────────────────────────────────────
 //  CONSTANTS & SELECTOR OPTIONS
@@ -356,6 +357,7 @@ export default function LogisticsView({
   const [modalType, setModalType] = useState(null); // 'inventory' | 'vendor' | 'travel' | 'cue' | 'checklist' | 'incident' | null
   const [editingItem, setEditingItem] = useState(null);
   const [isAddSpecificEquipmentOpen, setIsAddSpecificEquipmentOpen] = useState(false);
+  const [isAddHotelOpen, setIsAddHotelOpen] = useState(false);
 
   // Form states
   const [inventoryForm, setInventoryForm] = useState({
@@ -391,6 +393,8 @@ export default function LogisticsView({
     arrivalTime: "",
     departureTime: "",
     hotelName: "",
+    hotelId: "",
+    roomType: "",
     roomNumber: "",
     checkInDate: "",
     checkOutDate: "",
@@ -432,6 +436,7 @@ export default function LogisticsView({
   const inventory = useMemo(() => logisticsData.inventory || [], [logisticsData.inventory]);
   const specificEquipment = useMemo(() => logisticsData.specificEquipment || [], [logisticsData.specificEquipment]);
   const vendors = useMemo(() => logisticsData.vendors || [], [logisticsData.vendors]);
+  const hotels = useMemo(() => logisticsData.hotels || [], [logisticsData.hotels]);
   const travel = useMemo(() => logisticsData.travel || [], [logisticsData.travel]);
   const runOfShow = useMemo(() => logisticsData.runOfShow || [], [logisticsData.runOfShow]);
   const checklists = useMemo(() => logisticsData.checklists || [], [logisticsData.checklists]);
@@ -533,6 +538,37 @@ export default function LogisticsView({
     };
   }, [specificEquipment, exhibitors]);
 
+  // Partner Hotels stats
+  const hotelStats = useMemo(() => {
+    const list = hotels || [];
+    const totalHotels = list.length;
+    let totalRoomTypes = 0;
+    let totalCapacity = 0;
+    list.forEach(h => {
+      const rooms = Array.isArray(h.roomTypes) ? h.roomTypes : [];
+      totalRoomTypes += rooms.length;
+      rooms.forEach(r => {
+        totalCapacity += Number(r.allottedRooms || 0);
+      });
+    });
+
+    const hotelNames = new Set(list.map(h => (h.name || "").toLowerCase().trim()).filter(Boolean));
+    const assignedVips = (travel || []).filter(t => {
+      const name = (t.hotelName || "").toLowerCase().trim();
+      return name && (hotelNames.has(name) || list.some(h => h.id === t.hotelId));
+    }).length;
+
+    const occupancyRate = totalCapacity > 0 ? Math.min(100, Math.round((assignedVips / totalCapacity) * 100)) : 0;
+
+    return {
+      totalHotels,
+      totalRoomTypes,
+      totalCapacity,
+      assignedVips,
+      occupancyRate
+    };
+  }, [hotels, travel]);
+
   // Drawer Title and Action Label Generators
   const getDrawerTitle = () => {
     if (editingItem) {
@@ -583,6 +619,10 @@ export default function LogisticsView({
       setIsAddSpecificEquipmentOpen(true);
       return;
     }
+    if (activeTab === "hotels") {
+      setIsAddHotelOpen(true);
+      return;
+    }
     if (activeTab === "inventory") {
       setInventoryForm({
         name: "",
@@ -618,7 +658,9 @@ export default function LogisticsView({
         flightNumber: "",
         arrivalTime: "",
         departureTime: "",
-        hotelName: "Grand Hyatt Regency",
+        hotelName: hotels[0]?.name || "",
+        hotelId: hotels[0]?.id || "",
+        roomType: hotels[0]?.roomTypes?.[0]?.name || "",
         roomNumber: "",
         checkInDate: "",
         checkOutDate: "",
@@ -689,6 +731,8 @@ export default function LogisticsView({
         arrivalTime: item.arrivalTime || "",
         departureTime: item.departureTime || "",
         hotelName: item.hotelName || "",
+        hotelId: item.hotelId || "",
+        roomType: item.roomType || "",
         roomNumber: item.roomNumber || "",
         checkInDate: item.checkInDate || "",
         checkOutDate: item.checkOutDate || "",
@@ -839,6 +883,25 @@ export default function LogisticsView({
           `"${v.status || ''}"`,
           v.contractAmount || 0,
           `"${(v.notes || '').replace(/"/g, '""')}"`
+        ]);
+      });
+    } else if (activeTab === "hotels") {
+      rows.push(["Hotel Name", "Star Rating", "Location / Address", "Contact Person", "Phone", "Email", "Website", "Room Types Count", "Total Allotted Rooms", "VIP Guests Lodged"]);
+      hotels.forEach(h => {
+        const rts = Array.isArray(h.roomTypes) ? h.roomTypes : [];
+        const totalAllotted = rts.reduce((sum, r) => sum + (Number(r.allottedRooms) || 0), 0);
+        const bookedCount = (travel || []).filter(t => (t.hotelName || '').toLowerCase().trim() === (h.name || '').toLowerCase().trim() || t.hotelId === h.id).length;
+        rows.push([
+          `"${h.name || ''}"`,
+          `"${h.stars || ''}"`,
+          `"${(h.location || '').replace(/"/g, '""')}"`,
+          `"${h.contactPerson || ''}"`,
+          `"${h.contactPhone || ''}"`,
+          `"${h.contactEmail || ''}"`,
+          `"${h.website || ''}"`,
+          rts.length,
+          totalAllotted,
+          bookedCount
         ]);
       });
     } else if (activeTab === "travel") {
@@ -1012,6 +1075,7 @@ export default function LogisticsView({
                 {activeTab === "inventory" && t("logistics.addItem", "Add Equipment")}
                 {activeTab === "specificEquipment" && t("logistics.addSpecificEquipment", "Add Specific Equipment")}
                 {activeTab === "vendors" && t("logistics.addVendor", "Add Supplier")}
+                {activeTab === "hotels" && t("logistics.addHotel", "Add Partner Hotel")}
                 {activeTab === "travel" && t("logistics.addTravel", "Add VIP Travel")}
                 {activeTab === "runOfShow" && t("logistics.addCue", "Add Run of Show Cue")}
                 {activeTab === "checklists" && t("logistics.addChecklist", "Add Checklist Task")}
@@ -1025,7 +1089,84 @@ export default function LogisticsView({
           2. EXECUTIVE KPI CARDS
       ───────────────────────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {activeTab === "specificEquipment" ? (
+        {activeTab === "hotels" ? (
+          <>
+            {/* Card 1: Partner Hotels */}
+            <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500">{t("logistics.totalHotels", "Partner Hotels")}</span>
+                <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <Building2 size={16} />
+                </div>
+              </div>
+              <div className="mt-3">
+                <div className="text-2xl font-black text-slate-900"><bdi dir="ltr">{hotelStats.totalHotels}</bdi></div>
+                <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-slate-500">
+                  <span className="text-blue-600 font-bold"><bdi dir="ltr">{hotelStats.totalHotels}</bdi></span> {t("logistics.activePartners", "active hotel partners")}
+                </div>
+              </div>
+            </div>
+
+            {/* Card 2: Accommodations Offered */}
+            <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500">{t("logistics.accommodationsOffered", "Accommodations Offered")}</span>
+                <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                  <BedDouble size={16} />
+                </div>
+              </div>
+              <div className="mt-3">
+                <div className="text-2xl font-black text-slate-900"><bdi dir="ltr">{hotelStats.totalRoomTypes}</bdi></div>
+                <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-purple-600">
+                  <CheckCircle2 size={12} /> {hotelStats.totalRoomTypes} {t("logistics.roomCategoriesConfigured", "room categories configured")}
+                </div>
+              </div>
+            </div>
+
+            {/* Card 3: Room Block Capacity */}
+            <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500">{t("logistics.roomBlockCapacity", "Room Block Capacity")}</span>
+                <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <Key size={16} />
+                </div>
+              </div>
+              <div className="mt-3">
+                <div className="text-2xl font-black text-slate-900"><bdi dir="ltr">{hotelStats.totalCapacity}</bdi></div>
+                <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-emerald-600">
+                  <span className="font-bold"><bdi dir="ltr">{hotelStats.totalCapacity}</bdi></span> {t("logistics.roomsAllottedTotal", "total rooms blocked")}
+                </div>
+              </div>
+            </div>
+
+            {/* Card 4: VIPs Accommodated */}
+            <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500">{t("logistics.vipsAccommodated", "VIPs Accommodated")}</span>
+                <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
+                  <ShieldCheck size={16} />
+                </div>
+              </div>
+              <div className="mt-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-2xl font-black text-slate-900">
+                    <bdi dir="ltr">{hotelStats.assignedVips}</bdi> <span className="text-xs font-bold text-slate-400">/ {hotelStats.totalCapacity}</span>
+                  </span>
+                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-teal-100 text-teal-700">
+                    <bdi dir="ltr">{hotelStats.occupancyRate}%</bdi> {t("logistics.lodged", "Lodged")}
+                  </span>
+                </div>
+                {/* Progress Bar */}
+                <div className="w-full bg-slate-150 h-1.5 rounded-full mt-2 overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-500 rounded-full ${hotelStats.occupancyRate >= 100 ? "bg-rose-500" : hotelStats.occupancyRate >= 75 ? "bg-amber-500" : "bg-teal-500"}`}
+                    style={{ width: `${Math.min(100, hotelStats.occupancyRate)}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </>
+        ) : activeTab === "specificEquipment" ? (
           <>
             {/* Card 1: Equipment */}
             <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
@@ -1240,6 +1381,24 @@ export default function LogisticsView({
             <bdi dir="ltr">{vendors.length}</bdi>
           </span>
           {activeTab === "vendors" && (
+            <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-blue-600" />
+          )}
+        </button>
+
+        <button
+          onClick={() => { handleTabChange("hotels"); setCategoryFilter("all"); setStatusFilter("all"); }}
+          className={`relative flex items-center gap-2 px-4 py-3 font-bold text-xs transition-all cursor-pointer !rounded-none ${
+            activeTab === "hotels"
+              ? "text-blue-600 font-black bg-blue-50/50"
+              : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+          }`}
+        >
+          <Building2 size={15} />
+          <span>{t("logistics.tabHotels", "Partner Hotels")}</span>
+          <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${activeTab === "hotels" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"}`}>
+            <bdi dir="ltr">{hotels.length}</bdi>
+          </span>
+          {activeTab === "hotels" && (
             <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-blue-600" />
           )}
         </button>
@@ -1594,89 +1753,70 @@ export default function LogisticsView({
                     key={vendor.id}
                     className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between space-y-4"
                   >
-                    <div className="space-y-3">
-                      <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="flex items-start justify-between">
                         <div>
-                          <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
-                            {getServiceTypeLabel(vendor.serviceType) || t("logistics.typeSupplier", "Supplier")}
+                          <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border uppercase tracking-wider ${statusObj.color}`}>
+                            {getVendorStatusLabel(vendor.status) || statusObj.label}
                           </span>
-                          <h4 className="text-base font-bold text-slate-900 mt-2">
-                            {vendor.name}
-                          </h4>
+                          <h4 className="text-base font-bold text-slate-900 mt-2">{vendor.name}</h4>
+                          <span className="text-xs font-semibold text-slate-500">{getServiceTypeLabel(vendor.serviceType) || vendor.serviceType}</span>
                         </div>
-                        <span className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full border ${statusObj.color}`}>
-                          {getVendorStatusLabel(statusObj.value)}
-                        </span>
+                        {vendor.contractAmount > 0 && (
+                          <span className="text-xs font-bold px-2 py-1 bg-slate-100 rounded-lg text-slate-700 font-mono">
+                            <bdi dir="ltr">{Number(vendor.contractAmount).toLocaleString()}</bdi> {eventDetails?.currency || "DA"}
+                          </span>
+                        )}
                       </div>
 
-                      {/* Details Grid */}
-                      <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                        <div className="space-y-1">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("logistics.loadInSlot", "Load-in Slot")}</span>
-                          <div className="flex items-center gap-1.5 font-bold text-slate-800">
-                            <Clock size={13} className="text-blue-600 shrink-0" />
-                            <span><bdi dir="ltr">{vendor.deliveryTime || "08:00 AM"}</bdi></span>
-                          </div>
+                      <div className="mt-4 space-y-2 text-xs text-slate-600 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                        <div className="flex items-center gap-2">
+                          <Clock size={13} className="text-slate-400" />
+                          <span>{t("logistics.loadInTime", "Load-in:")} <strong className="text-slate-800"><bdi dir="ltr">{vendor.deliveryTime || "TBD"}</bdi></strong> @ {vendor.loadInLocation || "Dock"}</span>
                         </div>
-
-                        <div className="space-y-1">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("logistics.dockVehicle", "Dock & Vehicle")}</span>
-                          <div className="flex items-center gap-1.5 font-bold text-slate-800 truncate">
-                            <MapPin size={13} className="text-emerald-600 shrink-0" />
-                            <span className="truncate">{vendor.loadInLocation || "Dock A"} (<bdi dir="ltr">{vendor.vehiclePlate || "Plate N/A"}</bdi>)</span>
+                        {vendor.vehiclePlate && (
+                          <div className="flex items-center gap-2">
+                            <Truck size={13} className="text-slate-400" />
+                            <span>{t("logistics.plate", "Plate:")} <strong className="text-slate-800 uppercase font-mono"><bdi dir="ltr">{vendor.vehiclePlate}</bdi></strong></span>
                           </div>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <User size={13} className="text-slate-400" />
+                          <span>{vendor.contactName || t("logistics.unassignedLead", "Unassigned Lead")}</span>
                         </div>
-
-                        {vendor.contactName && (
-                          <div className="col-span-2 pt-1 border-t border-slate-200/60 flex items-center justify-between text-slate-600">
-                            <div className="flex items-center gap-1.5">
-                              <User size={12} className="text-slate-400" />
-                              <span className="font-semibold">{vendor.contactName}</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              {vendor.phone && (
-                                <a href={`tel:${vendor.phone}`} className="text-blue-600 hover:underline flex items-center gap-1 font-bold">
-                                  <Phone size={11} className="shrink-0" /> <bdi dir="ltr">{vendor.phone}</bdi>
-                                </a>
-                              )}
-                              {vendor.email && (
-                                <a href={`mailto:${vendor.email}`} className="text-slate-500 hover:text-blue-600">
-                                  <Mail size={12} />
-                                </a>
-                              )}
-                            </div>
+                        {vendor.phone && (
+                          <div className="flex items-center gap-2">
+                            <Phone size={13} className="text-slate-400" />
+                            <a href={`tel:${vendor.phone}`} className="text-blue-600 hover:underline font-bold">
+                              <bdi dir="ltr">{vendor.phone}</bdi>
+                            </a>
                           </div>
                         )}
                       </div>
 
                       {vendor.notes && (
-                        <p className="text-[11px] text-slate-500 italic">
+                        <p className="mt-3 text-[11px] text-slate-500 italic bg-amber-50/50 p-2 rounded-xl border border-amber-100">
                           {vendor.notes}
                         </p>
                       )}
                     </div>
 
-                    {/* Footer Actions */}
                     <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                      <div className="text-xs font-semibold text-slate-500">
-                        {vendor.contractAmount ? (
-                          <span className="font-black text-slate-900"><bdi dir="ltr">${Number(vendor.contractAmount).toLocaleString()}</bdi> {t("logistics.budget", "budget")}</span>
-                        ) : (
-                          <span>{t("logistics.contractOnFile", "Contract on file")}</span>
-                        )}
-                      </div>
-
+                      <span className="text-[10px] text-slate-400 font-medium">
+                        ID: <bdi dir="ltr">{vendor.id ? vendor.id.substring(0, 6) : "VND"}</bdi>
+                      </span>
                       <div className="flex items-center gap-1.5">
                         <button
                           onClick={() => handleEditItem("vendor", vendor)}
                           className="px-2.5 py-1 text-xs font-bold text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
                         >
-                          {canEdit ? t("common.edit", "Edit") : t("common.view", "View")}
+                          {t("common.edit", "Edit")}
                         </button>
                         {canEdit && (
                           <button
                             onClick={() => onDeleteLogisticsItem && onDeleteLogisticsItem("vendors", vendor.id)}
-                            className="p-1 text-slate-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
+                            className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                            title={t("common.delete", "Delete")}
                           >
                             <Trash2 size={13} />
                           </button>
@@ -1689,6 +1829,30 @@ export default function LogisticsView({
             </div>
           )}
         </div>
+      )}
+
+      {/* ─────────────────────────────────────────────
+          TAB: PARTNER HOTELS & ACCOMMODATIONS
+      ───────────────────────────────────────────── */}
+      {activeTab === "hotels" && (
+        <HotelsView
+          hotels={hotels}
+          travel={travel}
+          onSaveHotel={async (hotel) => {
+            if (onSaveLogisticsItem) {
+              await onSaveLogisticsItem("hotels", hotel);
+            }
+          }}
+          onDeleteHotel={async (hotelId) => {
+            if (onDeleteLogisticsItem) {
+              await onDeleteLogisticsItem("hotels", hotelId);
+            }
+          }}
+          canEdit={canEdit}
+          currency={eventDetails?.currency || "DA"}
+          isAddModalOpenExternal={isAddHotelOpen}
+          onCloseAddModalExternal={() => setIsAddHotelOpen(false)}
+        />
       )}
 
       {/* ─────────────────────────────────────────────
@@ -1755,8 +1919,22 @@ export default function LogisticsView({
 
                         {item.hotelName && (
                           <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-slate-600">
-                            <span className="font-medium truncate">{item.hotelName}</span>
-                            <span className="font-bold text-slate-900">{item.roomNumber || t("logistics.reserved", "Reserved")}</span>
+                            <div className="flex items-center gap-1.5 min-w-0 pr-2 rtl:pl-2 rtl:pr-0">
+                              <Building2 size={13} className="text-blue-600 shrink-0" />
+                              <span className="font-semibold truncate text-slate-900">{item.hotelName}</span>
+                              {(() => {
+                                const h = hotels.find(x => x.id === item.hotelId || (x.name && x.name.toLowerCase() === item.hotelName.toLowerCase()));
+                                if (!h) return null;
+                                return (
+                                  <span className="text-[10px] text-amber-500 font-bold shrink-0">
+                                    {h.stars && !isNaN(h.stars) ? "★".repeat(Number(h.stars)) : "★"}
+                                  </span>
+                                );
+                              })()}
+                            </div>
+                            <span className="font-bold text-slate-800 shrink-0 text-[11px] bg-slate-100 px-2 py-0.5 rounded-md">
+                              {item.roomType ? `${item.roomType}${item.roomNumber ? ` (${item.roomNumber})` : ''}` : (item.roomNumber || t("logistics.reserved", "Reserved"))}
+                            </span>
                           </div>
                         )}
 
@@ -2582,26 +2760,96 @@ export default function LogisticsView({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="space-y-1">
                       <label className="font-bold text-slate-700">{t("logistics.hotelPartnerLabel", "Hotel Partner")}</label>
-                      <input
-                        type="text"
+                      <SearchableSelect
                         value={travelForm.hotelName}
-                        onChange={(e) => setTravelForm({ ...travelForm, hotelName: e.target.value })}
-                        placeholder={t("logistics.hotelPartnerPlaceholder", "e.g. Grand Hyatt Regency")}
-                        className="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-none font-medium"
+                        onChange={(val) => {
+                          const matchedHotel = hotels.find(h => h.name === val || h.id === val);
+                          setTravelForm(prev => ({
+                            ...prev,
+                            hotelName: matchedHotel ? matchedHotel.name : val,
+                            hotelId: matchedHotel ? matchedHotel.id : "",
+                            roomType: matchedHotel?.roomTypes?.[0]?.name || prev.roomType || ""
+                          }));
+                        }}
+                        options={[
+                          ...hotels.map(h => ({
+                            value: h.name,
+                            label: h.name,
+                            badge: h.stars ? `${h.stars}★` : undefined,
+                            description: h.location || undefined
+                          }))
+                        ]}
+                        placeholder={t("logistics.selectHotelPartner", "Select or type hotel partner...")}
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="font-bold text-slate-700">{t("logistics.roomSuiteLabel", "Room / Suite #")}</label>
-                      <input
-                        type="text"
-                        value={travelForm.roomNumber}
-                        onChange={(e) => setTravelForm({ ...travelForm, roomNumber: e.target.value })}
-                        placeholder={t("logistics.roomSuitePlaceholder", "e.g. Suite 804")}
-                        className="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-none font-medium"
-                      />
+                      <label className="font-bold text-slate-700">
+                        {t("logistics.accommodationType", "Accommodation Type / Room")}
+                      </label>
+                      {(() => {
+                        const currentHotel = hotels.find(h => h.id === travelForm.hotelId || (h.name && h.name.toLowerCase() === (travelForm.hotelName || "").toLowerCase()));
+                        const rts = Array.isArray(currentHotel?.roomTypes) ? currentHotel.roomTypes : [];
+                        if (rts.length > 0) {
+                          return (
+                            <SearchableSelect
+                              value={travelForm.roomType}
+                              onChange={(val) => {
+                                setTravelForm(prev => ({
+                                  ...prev,
+                                  roomType: val
+                                }));
+                              }}
+                              options={rts.map(r => ({
+                                value: r.name,
+                                label: r.name,
+                                badge: r.price ? `${Number(r.price).toLocaleString()} ${eventDetails?.currency || "DA"}` : undefined,
+                                description: r.desc || (r.allottedRooms ? `${r.allottedRooms} rooms allotted` : undefined)
+                              }))}
+                              placeholder={t("logistics.selectAccommodationType", "Select accommodation type...")}
+                            />
+                          );
+                        }
+                        return (
+                          <input
+                            type="text"
+                            value={travelForm.roomNumber}
+                            onChange={(e) => setTravelForm({ ...travelForm, roomNumber: e.target.value })}
+                            placeholder={t("logistics.roomSuitePlaceholder", "e.g. Suite 804")}
+                            className="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-none font-medium"
+                          />
+                        );
+                      })()}
                     </div>
                   </div>
+
+                  {(() => {
+                    const currentHotel = hotels.find(h => h.id === travelForm.hotelId || (h.name && h.name.toLowerCase() === (travelForm.hotelName || "").toLowerCase()));
+                    const rts = Array.isArray(currentHotel?.roomTypes) ? currentHotel.roomTypes : [];
+                    if (rts.length > 0) {
+                      return (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="font-bold text-slate-700">{t("logistics.roomSuiteLabel", "Specific Room / Suite # (Optional)")}</label>
+                            <input
+                              type="text"
+                              value={travelForm.roomNumber}
+                              onChange={(e) => setTravelForm({ ...travelForm, roomNumber: e.target.value })}
+                              placeholder={t("logistics.roomSuitePlaceholder", "e.g. Suite 804 / Room 201")}
+                              className="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-none font-medium"
+                            />
+                          </div>
+                          {currentHotel.location && (
+                            <div className="p-2.5 bg-blue-50/60 border border-blue-100 rounded-xl flex items-center gap-2 text-xs text-blue-800 self-end mb-0.5">
+                              <MapPin size={14} className="text-blue-600 shrink-0" />
+                              <span className="truncate"><strong>{currentHotel.name}:</strong> {currentHotel.location}</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="space-y-1">
