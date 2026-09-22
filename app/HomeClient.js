@@ -377,7 +377,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
     if (typeof window !== "undefined") {
       const searchParams = new URLSearchParams(window.location.search);
       const tabParam = searchParams.get("tab");
-      if (tabParam && ["inventory", "vendors", "travel", "runOfShow", "checklists"].includes(tabParam)) {
+      if (tabParam && ["inventory", "specificEquipment", "vendors", "hotels", "travel", "runOfShow", "checklists"].includes(tabParam)) {
         return tabParam;
       }
     }
@@ -4866,16 +4866,18 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
   const matchSubInventory = matchesTabQuery(t("logistics.tabInventory", "Inventory & Equipment"), ["Inventory & Equipment", "inventory", "equipment", "items", "assets", "stock"]);
   const matchSubSpecificEquipment = matchesTabQuery(t("logistics.tabSpecificEquipment", "Specific Equipment"), ["Specific Equipment", "specific equipment", "equipement specifique", "exhibitor equipment", "materiel", "chaises", "tables", "electricity", "tv", "stands"]);
   const matchSubVendors = matchesTabQuery(t("logistics.tabVendors", "Vendors & Deliveries"), ["Vendors & Deliveries", "vendors", "suppliers", "deliveries", "catering", "services"]);
+  const matchSubHotels = matchesTabQuery(t("logistics.tabHotels", "Partner Hotels"), ["Partner Hotels", "partner hotels", "hotels", "hotel", "lodging", "accommodations", "rooms", "hebergement"]);
   const matchSubTravel = matchesTabQuery(t("logistics.tabTravel", "VIP Travel & Lodging"), ["VIP Travel & Lodging", "travel", "lodging", "hotel", "flights", "transport", "vip", "accommodation"]);
   const matchSubRunOfShow = matchesTabQuery(t("logistics.tabRunOfShow", "Run of Show & Schedule"), ["Run of Show & Schedule", "run of show", "schedule", "cue", "timing", "rundown", "program"]);
   const matchSubChecklists = matchesTabQuery(t("logistics.tabChecklists", "Checklists & Issues"), ["Checklists & Issues", "checklists", "tasks", "issues", "todos", "action items"]);
 
   const hasLogistics = canViewModule("logistics", effectivePermissions.permissions);
-  const showGroupLogistics = hasLogistics && (!tabQuery || matchGroupLogistics || matchSubInventory || matchSubSpecificEquipment || matchSubVendors || matchSubTravel || matchSubRunOfShow || matchSubChecklists);
-  const isLogisticsExpanded = tabQuery ? (matchGroupLogistics || matchSubInventory || matchSubSpecificEquipment || matchSubVendors || matchSubTravel || matchSubRunOfShow || matchSubChecklists) : logisticsOpen;
+  const showGroupLogistics = hasLogistics && (!tabQuery || matchGroupLogistics || matchSubInventory || matchSubSpecificEquipment || matchSubVendors || matchSubHotels || matchSubTravel || matchSubRunOfShow || matchSubChecklists);
+  const isLogisticsExpanded = tabQuery ? (matchGroupLogistics || matchSubInventory || matchSubSpecificEquipment || matchSubVendors || matchSubHotels || matchSubTravel || matchSubRunOfShow || matchSubChecklists) : logisticsOpen;
   const showSubInventory = !tabQuery || matchGroupLogistics || matchSubInventory;
   const showSubSpecificEquipment = !tabQuery || matchGroupLogistics || matchSubSpecificEquipment;
   const showSubVendors = !tabQuery || matchGroupLogistics || matchSubVendors;
+  const showSubHotels = !tabQuery || matchGroupLogistics || matchSubHotels;
   const showSubTravel = !tabQuery || matchGroupLogistics || matchSubTravel;
   const showSubRunOfShow = !tabQuery || matchGroupLogistics || matchSubRunOfShow;
   const showSubChecklists = !tabQuery || matchGroupLogistics || matchSubChecklists;
@@ -5352,6 +5354,19 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
                           <span className="truncate">{t("logistics.tabVendors", "Vendors & Deliveries")}</span>
                         </div>
                         <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "logistics" && logisticsTab === "vendors" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{logisticsData.vendors?.length || 0}</span>
+                      </button>
+                    )}
+
+                    {showSubHotels && (
+                      <button 
+                        onClick={() => { setCurrentView("logistics"); setLogisticsTab("hotels"); }}
+                        className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "logistics" && logisticsTab === "hotels" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
+                      >
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Building2 size={12} className="shrink-0" />
+                          <span className="truncate">{t("logistics.tabHotels", "Partner Hotels")}</span>
+                        </div>
+                        <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "logistics" && logisticsTab === "hotels" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{logisticsData.hotels?.length || 0}</span>
                       </button>
                     )}
 
