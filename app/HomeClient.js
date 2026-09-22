@@ -3296,7 +3296,8 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
           email: liaisonEmail || existingExhibitor.email || '',
           contactEmail: liaisonEmail || existingExhibitor.contactEmail || '',
           phone: liaisonPhone || existingExhibitor.phone || '',
-          contactPhone: liaisonPhone || existingExhibitor.contactPhone || ''
+          contactPhone: liaisonPhone || existingExhibitor.contactPhone || '',
+          specificEquipment: linkOptions.specificEquipment !== undefined ? linkOptions.specificEquipment : (existingExhibitor.specificEquipment || existingExhibitor.specific_equipment || [])
         };
         try {
           const savedExhibitor = await upsertExhibitor(updatedExhibitor, activeEventId);
@@ -3339,6 +3340,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
           phone: liaisonPhone,
           contactPhone: liaisonPhone,
           logo: saved.logo || '',
+          specificEquipment: linkOptions.specificEquipment || [],
           status: 'active'
         };
         const savedExhibitor = await upsertExhibitor(exhibitorPayload, activeEventId);
@@ -4856,15 +4858,17 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
   // Logistics
   const matchGroupLogistics = matchesTabQuery(t("dash.logistics", "Logistics"), ["Logistics", "operations"]);
   const matchSubInventory = matchesTabQuery(t("logistics.tabInventory", "Inventory & Equipment"), ["Inventory & Equipment", "inventory", "equipment", "items", "assets", "stock"]);
+  const matchSubSpecificEquipment = matchesTabQuery(t("logistics.tabSpecificEquipment", "Specific Equipment"), ["Specific Equipment", "specific equipment", "equipement specifique", "exhibitor equipment", "materiel", "chaises", "tables", "electricity", "tv", "stands"]);
   const matchSubVendors = matchesTabQuery(t("logistics.tabVendors", "Vendors & Deliveries"), ["Vendors & Deliveries", "vendors", "suppliers", "deliveries", "catering", "services"]);
   const matchSubTravel = matchesTabQuery(t("logistics.tabTravel", "VIP Travel & Lodging"), ["VIP Travel & Lodging", "travel", "lodging", "hotel", "flights", "transport", "vip", "accommodation"]);
   const matchSubRunOfShow = matchesTabQuery(t("logistics.tabRunOfShow", "Run of Show & Schedule"), ["Run of Show & Schedule", "run of show", "schedule", "cue", "timing", "rundown", "program"]);
   const matchSubChecklists = matchesTabQuery(t("logistics.tabChecklists", "Checklists & Issues"), ["Checklists & Issues", "checklists", "tasks", "issues", "todos", "action items"]);
 
   const hasLogistics = canViewModule("logistics", effectivePermissions.permissions);
-  const showGroupLogistics = hasLogistics && (!tabQuery || matchGroupLogistics || matchSubInventory || matchSubVendors || matchSubTravel || matchSubRunOfShow || matchSubChecklists);
-  const isLogisticsExpanded = tabQuery ? (matchGroupLogistics || matchSubInventory || matchSubVendors || matchSubTravel || matchSubRunOfShow || matchSubChecklists) : logisticsOpen;
+  const showGroupLogistics = hasLogistics && (!tabQuery || matchGroupLogistics || matchSubInventory || matchSubSpecificEquipment || matchSubVendors || matchSubTravel || matchSubRunOfShow || matchSubChecklists);
+  const isLogisticsExpanded = tabQuery ? (matchGroupLogistics || matchSubInventory || matchSubSpecificEquipment || matchSubVendors || matchSubTravel || matchSubRunOfShow || matchSubChecklists) : logisticsOpen;
   const showSubInventory = !tabQuery || matchGroupLogistics || matchSubInventory;
+  const showSubSpecificEquipment = !tabQuery || matchGroupLogistics || matchSubSpecificEquipment;
   const showSubVendors = !tabQuery || matchGroupLogistics || matchSubVendors;
   const showSubTravel = !tabQuery || matchGroupLogistics || matchSubTravel;
   const showSubRunOfShow = !tabQuery || matchGroupLogistics || matchSubRunOfShow;
@@ -5316,6 +5320,19 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
                           <span className="truncate">{t("logistics.tabInventory", "Inventory & Equipment")}</span>
                         </div>
                         <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "logistics" && logisticsTab === "inventory" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{logisticsData.inventory?.length || 0}</span>
+                      </button>
+                    )}
+
+                    {showSubSpecificEquipment && (
+                      <button 
+                        onClick={() => { setCurrentView("logistics"); setLogisticsTab("specificEquipment"); }}
+                        className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "logistics" && logisticsTab === "specificEquipment" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
+                      >
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Store size={12} className="shrink-0" />
+                          <span className="truncate">{t("logistics.tabSpecificEquipment", "Specific Equipment")}</span>
+                        </div>
+                        <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "logistics" && logisticsTab === "specificEquipment" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{logisticsData.specificEquipment?.length || 0}</span>
                       </button>
                     )}
 
@@ -5903,6 +5920,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               team={team}
               floorPlans={floorPlans}
               eventDetails={eventDetails}
+              exhibitors={exhibitors}
               onSwitchView={setCurrentView}
               effectivePermissions={effectivePermissions}
               onRefreshData={async () => {
@@ -5939,6 +5957,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               opportunities={opportunities}
               sponsors={sponsors}
               exhibitors={exhibitors}
+              logisticsData={logisticsData}
               effectivePermissions={effectivePermissions}
             />
           )}
@@ -6166,6 +6185,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
         onRegisterNewPersonnel={handleRegisterNewPersonnel}
         onUploadFile={uploadFileToBucket}
         activeEventId={activeEventId}
+        logisticsData={logisticsData}
         eventTitle={eventDetails?.title || "Eventzone Summit"}
         eventDetails={eventDetails}
       />

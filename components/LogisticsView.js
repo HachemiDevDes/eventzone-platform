@@ -14,6 +14,7 @@ import SearchableSelect from "./SearchableSelect";
 import CountryPhoneInput from "./CountryPhoneInput";
 import { LogisticsSkeleton } from "./SkeletonLoaders";
 import { canEditModule } from "../lib/permissions";
+import SpecificEquipmentView from "./SpecificEquipmentView";
 
 // ─────────────────────────────────────────────
 //  CONSTANTS & SELECTOR OPTIONS
@@ -144,6 +145,7 @@ export default function LogisticsView({
   team = [],
   floorPlans = [],
   eventDetails = {},
+  exhibitors = [],
   onSwitchView,
   onRefreshData,
   effectivePermissions
@@ -353,6 +355,7 @@ export default function LogisticsView({
   // Modal states
   const [modalType, setModalType] = useState(null); // 'inventory' | 'vendor' | 'travel' | 'cue' | 'checklist' | 'incident' | null
   const [editingItem, setEditingItem] = useState(null);
+  const [isAddSpecificEquipmentOpen, setIsAddSpecificEquipmentOpen] = useState(false);
 
   // Form states
   const [inventoryForm, setInventoryForm] = useState({
@@ -427,6 +430,7 @@ export default function LogisticsView({
 
   // Extract lists safely
   const inventory = useMemo(() => logisticsData.inventory || [], [logisticsData.inventory]);
+  const specificEquipment = useMemo(() => logisticsData.specificEquipment || [], [logisticsData.specificEquipment]);
   const vendors = useMemo(() => logisticsData.vendors || [], [logisticsData.vendors]);
   const travel = useMemo(() => logisticsData.travel || [], [logisticsData.travel]);
   const runOfShow = useMemo(() => logisticsData.runOfShow || [], [logisticsData.runOfShow]);
@@ -531,6 +535,10 @@ export default function LogisticsView({
   const handleOpenAddModal = () => {
     if (!canEdit) return;
     setEditingItem(null);
+    if (activeTab === "specificEquipment") {
+      setIsAddSpecificEquipmentOpen(true);
+      return;
+    }
     if (activeTab === "inventory") {
       setInventoryForm({
         name: "",
@@ -958,6 +966,7 @@ export default function LogisticsView({
               <Plus size={16} />
               <span>
                 {activeTab === "inventory" && t("logistics.addItem", "Add Equipment")}
+                {activeTab === "specificEquipment" && t("logistics.addSpecificEquipment", "Add Specific Equipment")}
                 {activeTab === "vendors" && t("logistics.addVendor", "Add Supplier")}
                 {activeTab === "travel" && t("logistics.addTravel", "Add VIP Travel")}
                 {activeTab === "runOfShow" && t("logistics.addCue", "Add Run of Show Cue")}
@@ -971,86 +980,88 @@ export default function LogisticsView({
       {/* ─────────────────────────────────────────────
           2. EXECUTIVE KPI CARDS
       ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {/* Card 1: Equipment */}
-        <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">{t("logistics.totalEquipment", "Total Equipment")}</span>
-            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-              <Package size={16} />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl font-black text-slate-900"><bdi dir="ltr">{stats.totalInventoryCount}</bdi></div>
-            <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-slate-500">
-              <span className="text-blue-600 font-bold"><bdi dir="ltr">{stats.inUseInventoryCount}</bdi></span> {t("logistics.inUseAcrossStages", "in-use across stages")}
-            </div>
-          </div>
-        </div>
-
-        {/* Card 2: Vendors */}
-        <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">{t("logistics.activeVendors", "Suppliers & Load-In")}</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <Truck size={16} />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl font-black text-slate-900"><bdi dir="ltr">{vendors.length}</bdi></div>
-            <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-emerald-600">
-              <CheckCircle2 size={12} /> <bdi dir="ltr">{stats.activeVendorsCount}</bdi> {t("logistics.confirmedDeliveries", "confirmed deliveries")}
-            </div>
-          </div>
-        </div>
-
-        {/* Card 3: VIP Hospitality */}
-        <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">{t("logistics.vipTravelers", "VIP & Speaker Travel")}</span>
-            <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-              <Plane size={16} />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl font-black text-slate-900"><bdi dir="ltr">{stats.vipTravelCount}</bdi></div>
-            <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-indigo-600">
-              {t("logistics.hotelAirportTransfersActive", "Hotel & Airport Transfers Active")}
-            </div>
-          </div>
-        </div>
-
-        {/* Card 4: Readiness / Issues */}
-        <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">{t("logistics.venueReadiness", "Venue Readiness")}</span>
-            <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${stats.openIncidentsCount > 0 ? "bg-rose-50 text-rose-600" : "bg-teal-50 text-teal-600"}`}>
-              {stats.openIncidentsCount > 0 ? <AlertTriangle size={16} /> : <ShieldCheck size={16} />}
-            </div>
-          </div>
-          <div className="mt-3">
+      {activeTab !== "specificEquipment" && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {/* Card 1: Equipment */}
+          <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
             <div className="flex items-center justify-between">
-              <span className="text-2xl font-black text-slate-900"><bdi dir="ltr">{stats.readinessPct}%</bdi></span>
-              {stats.openIncidentsCount > 0 ? (
-                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700">
-                  <bdi dir="ltr">{stats.openIncidentsCount}</bdi> {t("logistics.openIssues", "Open Issues")}
-                </span>
-              ) : (
-                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-teal-100 text-teal-700">
-                  {t("logistics.allSystemsClear", "All Systems Clear")}
-                </span>
-              )}
+              <span className="text-xs font-bold text-slate-500">{t("logistics.totalEquipment", "Total Equipment")}</span>
+              <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                <Package size={16} />
+              </div>
             </div>
-            {/* Progress Bar */}
-            <div className="w-full bg-slate-150 h-1.5 rounded-full mt-2 overflow-hidden">
-              <div
-                className={`h-full transition-all duration-500 rounded-full ${stats.readinessPct === 100 ? "bg-teal-500" : "bg-blue-600"}`}
-                style={{ width: `${stats.readinessPct}%` }}
-              />
+            <div className="mt-3">
+              <div className="text-2xl font-black text-slate-900"><bdi dir="ltr">{stats.totalInventoryCount}</bdi></div>
+              <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-slate-500">
+                <span className="text-blue-600 font-bold"><bdi dir="ltr">{stats.inUseInventoryCount}</bdi></span> {t("logistics.inUseAcrossStages", "in-use across stages")}
+              </div>
+            </div>
+          </div>
+
+          {/* Card 2: Vendors */}
+          <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-500">{t("logistics.activeVendors", "Suppliers & Load-In")}</span>
+              <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <Truck size={16} />
+              </div>
+            </div>
+            <div className="mt-3">
+              <div className="text-2xl font-black text-slate-900"><bdi dir="ltr">{vendors.length}</bdi></div>
+              <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-emerald-600">
+                <CheckCircle2 size={12} /> <bdi dir="ltr">{stats.activeVendorsCount}</bdi> {t("logistics.confirmedDeliveries", "confirmed deliveries")}
+              </div>
+            </div>
+          </div>
+
+          {/* Card 3: VIP Hospitality */}
+          <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-500">{t("logistics.vipTravelers", "VIP & Speaker Travel")}</span>
+              <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                <Plane size={16} />
+              </div>
+            </div>
+            <div className="mt-3">
+              <div className="text-2xl font-black text-slate-900"><bdi dir="ltr">{stats.vipTravelCount}</bdi></div>
+              <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-indigo-600">
+                {t("logistics.hotelAirportTransfersActive", "Hotel & Airport Transfers Active")}
+              </div>
+            </div>
+          </div>
+
+          {/* Card 4: Readiness / Issues */}
+          <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-500">{t("logistics.venueReadiness", "Venue Readiness")}</span>
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${stats.openIncidentsCount > 0 ? "bg-rose-50 text-rose-600" : "bg-teal-50 text-teal-600"}`}>
+                {stats.openIncidentsCount > 0 ? <AlertTriangle size={16} /> : <ShieldCheck size={16} />}
+              </div>
+            </div>
+            <div className="mt-3">
+              <div className="flex items-center justify-between">
+                <span className="text-2xl font-black text-slate-900"><bdi dir="ltr">{stats.readinessPct}%</bdi></span>
+                {stats.openIncidentsCount > 0 ? (
+                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700">
+                    <bdi dir="ltr">{stats.openIncidentsCount}</bdi> {t("logistics.openIssues", "Open Issues")}
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-teal-100 text-teal-700">
+                    {t("logistics.allSystemsClear", "All Systems Clear")}
+                  </span>
+                )}
+              </div>
+              {/* Progress Bar */}
+              <div className="w-full bg-slate-150 h-1.5 rounded-full mt-2 overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-500 rounded-full ${stats.readinessPct === 100 ? "bg-teal-500" : "bg-blue-600"}`}
+                  style={{ width: `${stats.readinessPct}%` }}
+                />
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* ─────────────────────────────────────────────
           3. SUB-MODULE TABS NAVIGATION
@@ -1070,6 +1081,24 @@ export default function LogisticsView({
             <bdi dir="ltr">{inventory.length}</bdi>
           </span>
           {activeTab === "inventory" && (
+            <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-blue-600" />
+          )}
+        </button>
+
+        <button
+          onClick={() => { handleTabChange("specificEquipment"); setCategoryFilter("all"); setStatusFilter("all"); }}
+          className={`relative flex items-center gap-2 px-4 py-3 font-bold text-xs transition-all cursor-pointer !rounded-none ${
+            activeTab === "specificEquipment"
+              ? "text-blue-600 font-black bg-blue-50/50"
+              : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+          }`}
+        >
+          <Store size={15} />
+          <span>{t("logistics.tabSpecificEquipment", "Specific Equipment")}</span>
+          <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${activeTab === "specificEquipment" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"}`}>
+            <bdi dir="ltr">{specificEquipment.length}</bdi>
+          </span>
+          {activeTab === "specificEquipment" && (
             <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-blue-600" />
           )}
         </button>
@@ -1152,7 +1181,7 @@ export default function LogisticsView({
       {/* ─────────────────────────────────────────────
           4. SEARCH & FILTER TOOLBAR
       ───────────────────────────────────────────── */}
-      {activeTab !== "checklists" && (
+      {activeTab !== "checklists" && activeTab !== "specificEquipment" && (
         <div className="flex flex-col sm:flex-row items-center gap-3 bg-white p-3 rounded-2xl border border-slate-150 shadow-xs">
           {/* Search Input */}
           <div className="relative flex-1 w-full">
@@ -1383,6 +1412,30 @@ export default function LogisticsView({
             </div>
           )}
         </div>
+      )}
+
+      {/* ─────────────────────────────────────────────
+          TAB: SPECIFIC EQUIPMENT (EXHIBITOR CATALOGUE)
+      ───────────────────────────────────────────── */}
+      {activeTab === "specificEquipment" && (
+        <SpecificEquipmentView
+          specificEquipment={specificEquipment}
+          exhibitors={exhibitors}
+          onSaveItem={async (item) => {
+            if (onSaveLogisticsItem) {
+              await onSaveLogisticsItem("specificEquipment", item);
+            }
+          }}
+          onDeleteItem={async (itemId) => {
+            if (onDeleteLogisticsItem) {
+              await onDeleteLogisticsItem("specificEquipment", itemId);
+            }
+          }}
+          canEdit={canEdit}
+          currency={eventDetails?.currency || "DA"}
+          isAddModalOpenExternal={isAddSpecificEquipmentOpen}
+          onCloseAddModalExternal={() => setIsAddSpecificEquipmentOpen(false)}
+        />
       )}
 
       {/* ─────────────────────────────────────────────

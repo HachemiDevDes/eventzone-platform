@@ -6,7 +6,7 @@ import {
   ArrowLeft, Save, Share2, Download, Plus, Trash2, 
   GripVertical, Check, Upload, Copy, FileText, 
   Calendar, CheckCircle2, AlertCircle, Printer, Eye,
-  Building2, X
+  Building2, X, Package, Zap, Tv, Coffee, Search
 } from "lucide-react";
 import SearchableSelect from "./SearchableSelect";
 import InvoicingDocumentPreview from "./InvoicingDocumentPreview";
@@ -24,6 +24,19 @@ import { uploadMedia } from "../lib/storage";
 import { fetchOrganizations } from "../lib/db";
 import { useLanguage } from "../lib/i18n";
 
+const FALLBACK_EQUIPMENT_PRESETS = [
+  { id: "preset_chair", name: "Chaise Standard Exposant / Standard Chair", category: "furniture", price: 1500 },
+  { id: "preset_armchair", name: "Fauteuil VIP / VIP Armchair", category: "furniture", price: 4500 },
+  { id: "preset_table_round", name: "Table Ronde 80cm / Round Table", category: "furniture", price: 3500 },
+  { id: "preset_table_rect", name: "Table Rectangulaire 160cm / Rectangular Table", category: "furniture", price: 4500 },
+  { id: "preset_power_220", name: "Prise Électrique 220V 16A / Electrical Socket 220V", category: "electrical", price: 5000 },
+  { id: "preset_power_380", name: "Branchement Triphasé 380V 32A / 3-Phase Power Hookup", category: "electrical", price: 18000 },
+  { id: "preset_tv_43", name: "Écran Smart TV 43\" sur pied / 43\" Smart TV with Stand", category: "audiovisual", price: 15000 },
+  { id: "preset_tv_55", name: "Écran Smart TV 55\" 4K sur pied / 55\" 4K TV with Stand", category: "audiovisual", price: 25000 },
+  { id: "preset_wifi", name: "Routeur Wi-Fi Dédié Haut Débit / Dedicated Wi-Fi Router", category: "electrical", price: 8000 },
+  { id: "preset_coffee", name: "Machine à Café Espresso / Espresso Coffee Maker", category: "appliances", price: 9000 },
+];
+
 /**
  * InvoicingEditor
  * Split-screen Document Editor with Live A4 Preview matching Images 2 & 3.
@@ -36,6 +49,7 @@ export default function InvoicingEditor({
   opportunities = [],
   sponsors = [],
   exhibitors = [],
+  logisticsData = {},
   invoices = [],
   activeEventId = null,
   onBack,
@@ -129,6 +143,9 @@ export default function InvoicingEditor({
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isEquipmentModalOpen, setIsEquipmentModalOpen] = useState(false);
+  const [equipmentSearchQuery, setEquipmentSearchQuery] = useState("");
+  const [equipmentImportSuccess, setEquipmentImportSuccess] = useState("");
   const { t, isRTL } = useLanguage();
 
   const getDelayLabel = useCallback((del) => {
@@ -285,6 +302,93 @@ export default function InvoicingEditor({
         line_items: prev.line_items.filter((_, i) => i !== index),
       };
     });
+  };
+
+  // Matched Exhibitor for current invoice client (if client matches an exhibitor)
+  const matchedExhibitor = useMemo(() => {
+    if (!doc.client_name) return null;
+    const cleanClient = doc.client_name.trim().toLowerCase();
+    return (exhibitors || []).find(e => 
+      !e.isArchived && e.status !== 'archived' && (
+        (e.name && e.name.trim().toLowerCase() === cleanClient) ||
+        (e.orgName && e.orgName.trim().toLowerCase() === cleanClient)
+      )
+    ) || null;
+  }, [doc.client_name, exhibitors]);
+
+  const matchedExhibitorEquipment = useMemo(() => {
+    if (!matchedExhibitor) return [];
+    const list = Array.isArray(matchedExhibitor.specificEquipment) 
+      ? matchedExhibitor.specificEquipment 
+      : (Array.isArray(matchedExhibitor.specific_equipment) ? matchedExhibitor.specific_equipment : []);
+    return list;
+  }, [matchedExhibitor]);
+
+  const eventSpecificEquipment = useMemo(() => {
+    const list = Array.isArray(logisticsData?.specificEquipment) ? logisticsData.specificEquipment : [];
+    return list.length > 0 ? list : FALLBACK_EQUIPMENT_PRESETS;
+  }, [logisticsData]);
+
+  const filteredEquipmentList = useMemo(() => {
+    const q = equipmentSearchQuery.trim().toLowerCase();
+    if (!q) return eventSpecificEquipment;
+    return eventSpecificEquipment.filter(item => 
+      (item.name && item.name.toLowerCase().includes(q)) ||
+      (item.category && item.category.toLowerCase().includes(q))
+    );
+  }, [eventSpecificEquipment, equipmentSearchQuery]);
+
+  const handleImportEquipmentItem = (item) => {
+    const unitPrice = item.unitPrice !== undefined ? item.unitPrice : (item.price !== undefined ? item.price : 0);
+    const qty = item.quantity && item.quantity > 0 ? item.quantity : 1;
+    const desc = item.name ? (item.category ? `${item.name} (${item.category})` : item.name) : (item.description || "Specific Equipment");
+
+    const newItem = {
+      id: `item-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      description: desc,
+      quantity: qty,
+      unit_price: unitPrice,
+      total_ht: qty * unitPrice
+    };
+
+    setDoc(prev => {
+      const isFirstEmpty = prev.line_items.length === 1 && !prev.line_items[0].description && (prev.line_items[0].unit_price === 0 || !prev.line_items[0].unit_price);
+      return {
+        ...prev,
+        line_items: isFirstEmpty ? [newItem] : [...prev.line_items, newItem]
+      };
+    });
+
+    setEquipmentImportSuccess(t("invoicing.itemImportedNotice", "Equipment item added to invoice items."));
+    setTimeout(() => setEquipmentImportSuccess(""), 3000);
+  };
+
+  const handleImportAllAssignedEquipment = () => {
+    if (!matchedExhibitorEquipment || matchedExhibitorEquipment.length === 0) return;
+    const newItems = matchedExhibitorEquipment.map((eq, i) => {
+      const unitPrice = eq.unitPrice !== undefined ? eq.unitPrice : (eq.price !== undefined ? eq.price : 0);
+      const qty = eq.quantity && eq.quantity > 0 ? eq.quantity : 1;
+      const desc = eq.name ? `${eq.name} (${eq.category || 'Equipment'})` : "Specific Equipment";
+      return {
+        id: `item-${Date.now()}-${i}-${Math.floor(Math.random() * 1000)}`,
+        description: desc,
+        quantity: qty,
+        unit_price: unitPrice,
+        total_ht: qty * unitPrice
+      };
+    });
+
+    setDoc(prev => {
+      const isFirstEmpty = prev.line_items.length === 1 && !prev.line_items[0].description && (prev.line_items[0].unit_price === 0 || !prev.line_items[0].unit_price);
+      return {
+        ...prev,
+        line_items: isFirstEmpty ? newItems : [...prev.line_items, ...newItems]
+      };
+    });
+
+    setIsEquipmentModalOpen(false);
+    setEquipmentImportSuccess(t("invoicing.itemImportedNotice", "Equipment item added to invoice items."));
+    setTimeout(() => setEquipmentImportSuccess(""), 3000);
   };
 
   // Merge prop organizations and directly fetched organizations
@@ -1144,14 +1248,30 @@ export default function InvoicingEditor({
               ))}
             </div>
 
-            <button
-              type="button"
-              onClick={handleAddLineItem}
-              className="px-4 py-2 rounded-xl border border-dashed border-slate-300 hover:border-blue-500 hover:bg-blue-50/50 text-xs font-bold text-blue-600 flex items-center gap-1.5 transition-colors cursor-pointer"
-            >
-              <Plus size={14} />
-              <span>{t("invoicing.addLineItem", "Ajouter une ligne")}</span>
-            </button>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <button
+                type="button"
+                onClick={handleAddLineItem}
+                className="px-4 py-2 rounded-xl border border-dashed border-slate-300 hover:border-blue-500 hover:bg-blue-50/50 text-xs font-bold text-blue-600 flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Plus size={14} />
+                <span>{t("invoicing.addLineItem", "Ajouter une ligne")}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsEquipmentModalOpen(true)}
+                className="px-4 py-2 rounded-xl border border-blue-200 bg-blue-50/70 hover:bg-blue-100 text-xs font-bold text-blue-700 flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+              >
+                <Package size={14} className="text-blue-600" />
+                <span>{t("invoicing.addSpecificEquipment", "Choose Specific Equipment")}</span>
+                {matchedExhibitor && matchedExhibitorEquipment.length > 0 && (
+                  <span className="ms-1 px-1.5 py-0.2 rounded-full text-[10px] font-black bg-blue-600 text-white">
+                    {matchedExhibitorEquipment.length}
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
 
           {/* Card 6: Taxes et réductions */}
@@ -1323,6 +1443,170 @@ export default function InvoicingEditor({
           </div>
         </div>
       </div>
+
+      {/* Specific Equipment Selection Modal */}
+      {isEquipmentModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4 bg-slate-50/50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                  <Package size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900">
+                    {t("invoicing.selectSpecificEquipmentTitle", "Import Specific Equipment")}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {t("invoicing.selectSpecificEquipmentDesc", "Select rental items to add to this invoice with pre-filled prices and names.")}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsEquipmentModalOpen(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Search Bar */}
+            <div className="p-4 border-b border-slate-100 bg-white">
+              <div className="relative">
+                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={equipmentSearchQuery}
+                  onChange={(e) => setEquipmentSearchQuery(e.target.value)}
+                  placeholder={t("logistics.searchPlaceholder", "Search equipment by name or category...")}
+                  className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 text-xs font-medium text-slate-900 focus:outline-hidden focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* Client Assigned Equipment (if matched exhibitor has items) */}
+              {matchedExhibitor && matchedExhibitorEquipment.length > 0 && (
+                <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-200/80 space-y-3">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+                      <h4 className="text-xs font-black text-blue-950 uppercase tracking-wider">
+                        {t("invoicing.assignedToClientSection", "Items Allocated to this Exhibitor")}: <span className="text-blue-700 font-extrabold">{matchedExhibitor.name}</span>
+                      </h4>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleImportAllAssignedEquipment}
+                      className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Plus size={13} />
+                      <span>{t("invoicing.importAllAssigned", "Import All Assigned Items")}</span>
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                    {matchedExhibitorEquipment.map(item => (
+                      <div
+                        key={item.id}
+                        className="p-3 bg-white rounded-xl border border-blue-100 flex items-center justify-between gap-3 shadow-2xs hover:border-blue-300 transition-colors"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold text-slate-900 truncate">{item.name}</p>
+                          <p className="text-[11px] text-slate-500 mt-0.5">
+                            <span className="font-semibold text-blue-700">{item.quantity || 1}x</span> • {(item.unitPrice || 0).toLocaleString()} DZD
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleImportEquipmentItem(item)}
+                          className="px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs transition-colors cursor-pointer shrink-0 flex items-center gap-1"
+                        >
+                          <Plus size={12} />
+                          <span>+</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Event Specific Equipment Catalogue List */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                    {t("invoicing.allEventEquipment", "All Event Specific Equipment")}
+                  </h4>
+                  <span className="text-[11px] font-bold text-slate-400">
+                    {filteredEquipmentList.length} items
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {filteredEquipmentList.map(eq => {
+                    const price = eq.price !== undefined ? eq.price : (eq.unitPrice || 0);
+                    return (
+                      <div
+                        key={eq.id}
+                        className="p-3.5 bg-slate-50/70 border border-slate-200/80 rounded-2xl flex items-center justify-between gap-3 hover:border-blue-300 hover:bg-blue-50/30 transition-all shadow-2xs"
+                      >
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 text-slate-600 flex items-center justify-center shrink-0">
+                            {eq.category === "electrical" ? (
+                              <Zap size={14} className="text-amber-600" />
+                            ) : eq.category === "audiovisual" ? (
+                              <Tv size={14} className="text-indigo-600" />
+                            ) : eq.category === "appliances" ? (
+                              <Coffee size={14} className="text-emerald-600" />
+                            ) : (
+                              <Package size={14} className="text-blue-600" />
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-bold text-slate-900 truncate">{eq.name}</p>
+                            <p className="text-[11px] text-slate-500 font-medium">
+                              <span className="font-bold text-blue-600">{price.toLocaleString()} DZD</span>
+                              {eq.category && <span className="text-slate-400"> • {eq.category}</span>}
+                            </p>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleImportEquipmentItem(eq)}
+                          className="px-3 py-1.5 rounded-xl bg-white hover:bg-blue-600 hover:text-white border border-slate-200 hover:border-blue-600 text-slate-700 font-bold text-xs transition-all flex items-center gap-1 cursor-pointer shrink-0 shadow-2xs"
+                        >
+                          <Plus size={13} />
+                          <span>Import</span>
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <span className="text-xs font-bold text-emerald-600">
+                {equipmentImportSuccess}
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsEquipmentModalOpen(false)}
+                className="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors cursor-pointer"
+              >
+                {t("common.done", "Done")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

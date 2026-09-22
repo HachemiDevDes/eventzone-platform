@@ -31,7 +31,11 @@ import {
   ChevronRight,
   Receipt,
   CreditCard,
-  Eye
+  Eye,
+  Package,
+  Zap,
+  Tv,
+  Coffee
 } from 'lucide-react';
 import { useLanguage } from '../lib/i18n';
 import SearchableSelect from './SearchableSelect';
@@ -157,6 +161,7 @@ export default function CompanyDrawer({
   onRegisterNewPersonnel,
   onUploadFile,
   activeEventId,
+  logisticsData = {},
   eventTitle = "Eventzone Summit",
   eventDetails = null
 }) {
@@ -260,6 +265,14 @@ export default function CompanyDrawer({
   const [exhibitorBoothType, setExhibitorBoothType] = useState("Standard 3x3m (9 m²)");
   const [exhibitorStaffCount, setExhibitorStaffCount] = useState(2);
   const [exhibitorProducts, setExhibitorProducts] = useState("");
+
+  // Specific Equipment assignment state for exhibitors
+  const [assignedEquipment, setAssignedEquipment] = useState([]);
+  const [selectedEquipmentIdToAssign, setSelectedEquipmentIdToAssign] = useState("");
+  const [assignEquipmentQty, setAssignEquipmentQty] = useState(1);
+  const [assignEquipmentCustomPrice, setAssignEquipmentCustomPrice] = useState("");
+  const [assignEquipmentStatus, setAssignEquipmentStatus] = useState("requested");
+  const [assignEquipmentNotes, setAssignEquipmentNotes] = useState("");
 
   // Sub-tabs in Org mode: "profile" | "contact" | "roles" | "personnel"
   const [orgActiveTab, setOrgActiveTab] = useState("profile");
@@ -669,6 +682,97 @@ export default function CompanyDrawer({
     }
   };
 
+  // Specific Equipment Catalogue & Select Options
+  const specificEquipmentCatalogue = useMemo(() => {
+    return Array.isArray(logisticsData?.specificEquipment) ? logisticsData.specificEquipment : [];
+  }, [logisticsData]);
+
+  const [customEquipmentName, setCustomEquipmentName] = useState("");
+  const [customEquipmentCategory, setCustomEquipmentCategory] = useState("furniture");
+
+  const equipmentSelectOptions = useMemo(() => {
+    const list = specificEquipmentCatalogue.map(eq => {
+      const remaining = (eq.quantity || 0) - (eq.assignedQuantity || 0);
+      return {
+        value: String(eq.id),
+        label: `${eq.name} (${eq.category || 'General'})`,
+        description: `${(eq.price || 0).toLocaleString()} DZD • ${t("logistics.totalStock", "Stock")}: ${eq.quantity || 0} (${remaining > 0 ? `${remaining} ${t("logistics.remainingStock", "available")}` : t("logistics.statusOutOfStock", "Full")})`,
+        icon: <Package size={14} className="text-blue-600" />
+      };
+    });
+
+    list.push({
+      value: "custom_item",
+      label: `+ ${t("logistics.addSpecificEquipment", "Custom / Ad-hoc Equipment")}`,
+      description: "Custom non-catalogue item with customized name and price",
+      icon: <Plus size={14} className="text-emerald-600" />
+    });
+
+    return list;
+  }, [specificEquipmentCatalogue, t]);
+
+  const handleSelectEquipmentToAssign = (eqId) => {
+    setSelectedEquipmentIdToAssign(eqId);
+    if (eqId === "custom_item") {
+      setAssignEquipmentCustomPrice("");
+    } else {
+      const matched = specificEquipmentCatalogue.find(e => String(e.id) === String(eqId));
+      if (matched) {
+        setAssignEquipmentCustomPrice(matched.price !== undefined ? String(matched.price) : "");
+      }
+    }
+  };
+
+  const handleAddEquipmentToExhibitor = () => {
+    if (!selectedEquipmentIdToAssign) return;
+
+    let newItem;
+    if (selectedEquipmentIdToAssign === "custom_item") {
+      if (!customEquipmentName.trim()) return;
+      newItem = {
+        id: `eq_assign_${Date.now()}`,
+        equipmentId: null,
+        name: customEquipmentName.trim(),
+        category: customEquipmentCategory,
+        unitPrice: parseFloat(assignEquipmentCustomPrice) || 0,
+        quantity: Math.max(1, parseInt(assignEquipmentQty) || 1),
+        status: assignEquipmentStatus || "requested",
+        notes: assignEquipmentNotes.trim(),
+        assignedAt: new Date().toISOString()
+      };
+    } else {
+      const matched = specificEquipmentCatalogue.find(e => String(e.id) === String(selectedEquipmentIdToAssign));
+      if (!matched) return;
+      newItem = {
+        id: `eq_assign_${Date.now()}`,
+        equipmentId: matched.id,
+        name: matched.name,
+        category: matched.category,
+        unitPrice: assignEquipmentCustomPrice !== "" ? (parseFloat(assignEquipmentCustomPrice) || 0) : (matched.price || 0),
+        quantity: Math.max(1, parseInt(assignEquipmentQty) || 1),
+        status: assignEquipmentStatus || "requested",
+        notes: assignEquipmentNotes.trim(),
+        assignedAt: new Date().toISOString()
+      };
+    }
+
+    setAssignedEquipment(prev => [...prev, newItem]);
+    setSelectedEquipmentIdToAssign("");
+    setCustomEquipmentName("");
+    setAssignEquipmentQty(1);
+    setAssignEquipmentCustomPrice("");
+    setAssignEquipmentStatus("requested");
+    setAssignEquipmentNotes("");
+  };
+
+  const handleRemoveAssignedEquipment = (idToRemove) => {
+    setAssignedEquipment(prev => prev.filter(item => item.id !== idToRemove));
+  };
+
+  const handleUpdateAssignedEquipmentStatus = (id, newStatus) => {
+    setAssignedEquipment(prev => prev.map(item => item.id === id ? { ...item, status: newStatus } : item));
+  };
+
   // Initialize/reset form state whenever item or mode changes
   useEffect(() => {
     if (isOpen) {
@@ -735,12 +839,17 @@ export default function CompanyDrawer({
             setExhibitorBoothType(existingExhibitor.boothType || "Standard 3x3m (9 m²)");
             setExhibitorStaffCount(existingExhibitor.staffCount || existingExhibitor.badgeCount || 2);
             setExhibitorProducts(existingExhibitor.description || existingExhibitor.products || "");
+            const eqList = Array.isArray(existingExhibitor.specificEquipment) 
+              ? existingExhibitor.specificEquipment 
+              : (Array.isArray(existingExhibitor.specific_equipment) ? existingExhibitor.specific_equipment : []);
+            setAssignedEquipment(eqList);
           } else {
             setAlsoCreateExhibitor(false);
             setExhibitorBooth(availableBooths.length > 0 ? availableBooths[0].value : "Booth A-01");
             setExhibitorBoothType("Standard 3x3m (9 m²)");
             setExhibitorStaffCount(2);
             setExhibitorProducts("");
+            setAssignedEquipment([]);
           }
         } else {
           setOrgName("");
@@ -905,6 +1014,10 @@ export default function CompanyDrawer({
           setExhibitorBoothType(item.boothType || "Standard 3x3m (9 m²)");
           setExhibitorStaffCount(item.staffCount || item.badgeCount || 2);
           setExhibitorProducts(item.description || item.products || "");
+          const eqList = Array.isArray(item.specificEquipment) 
+            ? item.specificEquipment 
+            : (Array.isArray(item.specific_equipment) ? item.specific_equipment : []);
+          setAssignedEquipment(eqList);
 
           const matchedOrg = (organizations || []).find(o => 
             (item.orgId && String(o.id) === String(item.orgId)) || 
@@ -961,6 +1074,7 @@ export default function CompanyDrawer({
           setExhibitorBoothType("Standard 3x3m (9 m²)");
           setExhibitorStaffCount(2);
           setExhibitorProducts("");
+          setAssignedEquipment([]);
         }
       }
     }
@@ -1136,7 +1250,8 @@ export default function CompanyDrawer({
             exhibitorBooth,
             exhibitorBoothType,
             exhibitorStaffCount,
-            exhibitorProducts
+            exhibitorProducts,
+            specificEquipment: assignedEquipment
           });
         }
       } else if (currentMode === "sponsor") {
@@ -1219,6 +1334,7 @@ export default function CompanyDrawer({
           badgeCount: parseInt(exhibitorStaffCount) || 2,
           products: exhibitorProducts.trim(),
           description: exhibitorProducts.trim(),
+          specificEquipment: assignedEquipment,
           status: item?.status || "active",
           isArchived: item?.isArchived || false
         };
@@ -1388,6 +1504,26 @@ export default function CompanyDrawer({
                   {maxStaffBadges !== null ? <bdi dir="ltr">{assignedPersonnel.length} / {maxStaffBadges}</bdi> : assignedPersonnel.length}
                 </span>
               </button>
+
+              {(currentMode === "exhibitor" || alsoCreateExhibitor || (currentMode === "org" && (exhibitors || []).some(e => !e.isArchived && (e.orgId === item?.id || e.org_id === item?.id)))) && (
+                <button
+                  type="button"
+                  onClick={() => setOrgActiveTab("equipment")}
+                  className={`py-3 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                    orgActiveTab === "equipment"
+                      ? "border-blue-600 text-blue-600 font-extrabold"
+                      : "border-transparent text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  <Package size={13} className={orgActiveTab === "equipment" ? "text-blue-600" : "text-slate-400"} />
+                  <span>{t("drawer.tabSpecificEquipment", "Specific Equipment")}</span>
+                  {assignedEquipment.length > 0 && (
+                    <span className="ms-1 px-1.5 py-0.2 rounded-full text-[10px] font-black bg-blue-50 text-blue-700 border border-blue-100">
+                      {assignedEquipment.length}
+                    </span>
+                  )}
+                </button>
+              )}
             </div>
           </div>
 
@@ -2284,6 +2420,292 @@ export default function CompanyDrawer({
                                   onClick={() => handleRemovePersonnel(person.id)}
                                   className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                                   title={t("drawer.removePersonnel", "Remove from Company Personnel")}
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ========================================================================= */}
+            {/* TAB 5: SPECIFIC EQUIPMENT ASSIGNMENT                                     */}
+            {/* ========================================================================= */}
+            {orgActiveTab === "equipment" && (
+              <div className="flex flex-col gap-6">
+                {/* Header Card */}
+                <div className="p-4 bg-gradient-to-br from-blue-50/70 via-indigo-50/40 to-slate-50 border border-blue-100/80 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                      <Package size={20} />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-slate-900">
+                        {t("drawer.exhibitorEquipmentTitle", "Exhibitor Specific Equipment")}
+                      </h4>
+                      <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                        {t("drawer.exhibitorEquipmentSubtitle", "Assign furniture, electrical hookups, displays, and booth items for this exhibitor.")}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+                    <div className="px-3 py-1.5 rounded-xl bg-white border border-slate-200/80 shadow-2xs flex flex-col items-end">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        {t("drawer.totalEquipmentCost", "Total Equipment Cost")}
+                      </span>
+                      <span className="text-xs font-black text-blue-600">
+                        {assignedEquipment.reduce((sum, it) => sum + ((it.unitPrice || 0) * (it.quantity || 1)), 0).toLocaleString()} DZD
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Assignment Form */}
+                {!isReadOnly && (
+                  <div className="p-4 bg-slate-50/80 border border-slate-200/70 rounded-2xl flex flex-col gap-3">
+                    <div className="text-xs font-black text-slate-800 flex items-center gap-1.5">
+                      <Plus size={14} className="text-blue-600" />
+                      <span>{t("drawer.assignEquipment", "Assign Equipment to Booth")}</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* Equipment Selector */}
+                      <div className="flex flex-col gap-1 sm:col-span-2">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                          {t("logistics.equipmentName", "Select Equipment Item")}
+                        </label>
+                        <SearchableSelect
+                          value={selectedEquipmentIdToAssign}
+                          onChange={handleSelectEquipmentToAssign}
+                          options={equipmentSelectOptions}
+                          placeholder={t("drawer.selectEquipment", "-- Choose from event equipment catalogue --")}
+                          searchPlaceholder={t("logistics.searchPlaceholder", "Search chairs, tables, power, screens...")}
+                        />
+                      </div>
+
+                      {/* If custom item is selected, show Name and Category */}
+                      {selectedEquipmentIdToAssign === "custom_item" && (
+                        <>
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                              {t("logistics.equipmentName", "Custom Equipment Name")} <span className="text-rose-500">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={customEquipmentName}
+                              onChange={(e) => setCustomEquipmentName(e.target.value)}
+                              placeholder="e.g. VIP Leather Armchair, 380V Plug"
+                              className="px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 focus:outline-hidden focus:border-blue-500 focus:ring-2 focus:ring-blue-100 bg-white"
+                            />
+                          </div>
+
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                              {t("logistics.equipmentCategory", "Category")}
+                            </label>
+                            <SearchableSelect
+                              value={customEquipmentCategory}
+                              onChange={(val) => setCustomEquipmentCategory(val)}
+                              options={[
+                                { value: "furniture", label: t("logistics.catFurniture", "Furniture & Seating") },
+                                { value: "electrical", label: t("logistics.catElectrical", "Electrical & Power") },
+                                { value: "audiovisual", label: t("logistics.catAudiovisual", "Audiovisual & Screens") },
+                                { value: "display", label: t("logistics.catDisplaySignage", "Display & Signage") },
+                                { value: "appliances", label: t("logistics.catAppliances", "Appliances & Comfort") },
+                                { value: "other", label: t("logistics.catOther", "Other Equipment") }
+                              ]}
+                              placeholder="Select Category"
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {/* Quantity */}
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                          {t("invoicing.quantity", "Quantity")}
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={assignEquipmentQty}
+                          onChange={(e) => setAssignEquipmentQty(e.target.value)}
+                          className="px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 focus:outline-hidden focus:border-blue-500 focus:ring-2 focus:ring-blue-100 bg-white"
+                        />
+                      </div>
+
+                      {/* Unit Price */}
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                          {t("logistics.unitPrice", "Unit Price (DZD)")}
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          value={assignEquipmentCustomPrice}
+                          onChange={(e) => setAssignEquipmentCustomPrice(e.target.value)}
+                          placeholder="0 DZD"
+                          className="px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 focus:outline-hidden focus:border-blue-500 focus:ring-2 focus:ring-blue-100 bg-white"
+                        />
+                      </div>
+
+                      {/* Delivery Status */}
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                          {t("logistics.stockStatus", "Delivery / Installation Status")}
+                        </label>
+                        <SearchableSelect
+                          value={assignEquipmentStatus}
+                          onChange={(val) => setAssignEquipmentStatus(val)}
+                          options={[
+                            { value: "requested", label: t("drawer.statusRequested", "Requested") },
+                            { value: "approved", label: t("drawer.statusConfirmed", "Confirmed / Approved") },
+                            { value: "delivered", label: t("drawer.statusDelivered", "Delivered to Booth") },
+                            { value: "returned", label: t("drawer.statusReturned", "Returned") }
+                          ]}
+                          placeholder="Select Status"
+                        />
+                      </div>
+
+                      {/* Location / Installation Notes */}
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                          {t("drawer.equipmentNotes", "Location / Installation Notes")}
+                        </label>
+                        <input
+                          type="text"
+                          value={assignEquipmentNotes}
+                          onChange={(e) => setAssignEquipmentNotes(e.target.value)}
+                          placeholder="e.g. Back wall, near reception desk"
+                          className="px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-medium text-slate-800 focus:outline-hidden focus:border-blue-500 focus:ring-2 focus:ring-blue-100 bg-white"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end pt-2">
+                      <button
+                        type="button"
+                        onClick={handleAddEquipmentToExhibitor}
+                        disabled={!selectedEquipmentIdToAssign || (selectedEquipmentIdToAssign === "custom_item" && !customEquipmentName.trim())}
+                        className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      >
+                        <Plus size={14} />
+                        <span>{t("drawer.assignEquipment", "Assign Equipment to Booth")}</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Assigned Items List */}
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <h5 className="text-xs font-black text-slate-700 uppercase tracking-wider">
+                      {t("drawer.assignedItems", "Assigned Equipment Items")}
+                    </h5>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-50 text-blue-700 border border-blue-100">
+                      {assignedEquipment.length} {t("drawer.assignedCount", "Assigned")}
+                    </span>
+                  </div>
+
+                  {assignedEquipment.length === 0 ? (
+                    <div className="p-8 border border-dashed border-slate-200 rounded-2xl text-center flex flex-col items-center gap-2">
+                      <Package size={28} className="text-slate-300" />
+                      <p className="text-xs font-bold text-slate-700">{t("drawer.noEquipmentAssigned", "No specific equipment assigned to this exhibitor yet.")}</p>
+                      <p className="text-[11px] text-slate-400 max-w-xs">
+                        {t("drawer.exhibitorEquipmentSubtitle", "Assign furniture, electrical hookups, displays, and booth items for this exhibitor.")}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      {assignedEquipment.map(item => {
+                        const subtotal = (item.unitPrice || 0) * (item.quantity || 1);
+                        const statusColors = {
+                          requested: "bg-amber-50 text-amber-800 border-amber-200",
+                          approved: "bg-blue-50 text-blue-700 border-blue-200",
+                          delivered: "bg-emerald-50 text-emerald-700 border-emerald-200",
+                          returned: "bg-slate-100 text-slate-600 border-slate-200"
+                        };
+
+                        return (
+                          <div
+                            key={item.id}
+                            className="p-3.5 bg-white border border-slate-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-slate-300 transition-all shadow-2xs"
+                          >
+                            <div className="flex items-start gap-3 min-w-0">
+                              <div className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 flex items-center justify-center shrink-0">
+                                {item.category === "electrical" ? (
+                                  <Zap size={16} className="text-amber-600" />
+                                ) : item.category === "audiovisual" ? (
+                                  <Tv size={16} className="text-indigo-600" />
+                                ) : item.category === "appliances" ? (
+                                  <Coffee size={16} className="text-emerald-600" />
+                                ) : (
+                                  <Package size={16} className="text-blue-600" />
+                                )}
+                              </div>
+
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-xs font-extrabold text-slate-800 truncate">
+                                    {item.name}
+                                  </span>
+                                  <span className="px-1.5 py-0.2 rounded-md text-[9px] font-bold bg-slate-100 text-slate-600 uppercase tracking-wider">
+                                    {item.category || "General"}
+                                  </span>
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${statusColors[item.status] || statusColors.requested}`}>
+                                    {item.status === "delivered" ? t("drawer.statusDelivered", "Delivered") : item.status === "approved" ? t("drawer.statusConfirmed", "Confirmed") : item.status === "returned" ? t("drawer.statusReturned", "Returned") : t("drawer.statusRequested", "Requested")}
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-2 text-[11px] text-slate-500 font-medium mt-0.5">
+                                  <span className="font-bold text-slate-700">
+                                    {item.quantity || 1} × {(item.unitPrice || 0).toLocaleString()} DZD
+                                  </span>
+                                  <span className="text-slate-300">•</span>
+                                  <span className="font-black text-blue-600">
+                                    = {subtotal.toLocaleString()} DZD
+                                  </span>
+                                </div>
+
+                                {item.notes && (
+                                  <p className="text-[11px] text-slate-500 italic mt-1 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
+                                    {item.notes}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                              {!isReadOnly && (
+                                <div className="w-36">
+                                  <SearchableSelect
+                                    value={item.status || "requested"}
+                                    onChange={(newStatus) => handleUpdateAssignedEquipmentStatus(item.id, newStatus)}
+                                    options={[
+                                      { value: "requested", label: t("drawer.statusRequested", "Requested") },
+                                      { value: "approved", label: t("drawer.statusConfirmed", "Confirmed") },
+                                      { value: "delivered", label: t("drawer.statusDelivered", "Delivered") },
+                                      { value: "returned", label: t("drawer.statusReturned", "Returned") }
+                                    ]}
+                                    placeholder="Status"
+                                  />
+                                </div>
+                              )}
+
+                              {!isReadOnly && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveAssignedEquipment(item.id)}
+                                  className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                  title="Remove equipment from stand"
                                 >
                                   <Trash2 size={14} />
                                 </button>

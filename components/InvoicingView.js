@@ -34,6 +34,7 @@ export default function InvoicingView({
   opportunities = [],
   sponsors = [],
   exhibitors = [],
+  logisticsData = {},
   onSwitchView,
   effectivePermissions = null,
 }) {
@@ -404,6 +405,7 @@ export default function InvoicingView({
           opportunities={opportunities}
           sponsors={sponsors}
           exhibitors={exhibitors}
+          logisticsData={logisticsData}
           invoices={invoices}
           activeEventId={activeEventId}
           onBack={() => {
