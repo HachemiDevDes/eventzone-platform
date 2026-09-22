@@ -23,19 +23,12 @@ import { numberToAlgerianWords } from "../lib/numberToWords";
 import { uploadMedia } from "../lib/storage";
 import { fetchOrganizations } from "../lib/db";
 import { useLanguage } from "../lib/i18n";
+import { 
+  SPECIFIC_EQUIPMENT_PRESETS, 
+  getLocalizedEquipmentName 
+} from "../lib/constants";
 
-const FALLBACK_EQUIPMENT_PRESETS = [
-  { id: "preset_chair", name: "Chaise Standard Exposant / Standard Chair", category: "furniture", price: 1500 },
-  { id: "preset_armchair", name: "Fauteuil VIP / VIP Armchair", category: "furniture", price: 4500 },
-  { id: "preset_table_round", name: "Table Ronde 80cm / Round Table", category: "furniture", price: 3500 },
-  { id: "preset_table_rect", name: "Table Rectangulaire 160cm / Rectangular Table", category: "furniture", price: 4500 },
-  { id: "preset_power_220", name: "Prise Électrique 220V 16A / Electrical Socket 220V", category: "electrical", price: 5000 },
-  { id: "preset_power_380", name: "Branchement Triphasé 380V 32A / 3-Phase Power Hookup", category: "electrical", price: 18000 },
-  { id: "preset_tv_43", name: "Écran Smart TV 43\" sur pied / 43\" Smart TV with Stand", category: "audiovisual", price: 15000 },
-  { id: "preset_tv_55", name: "Écran Smart TV 55\" 4K sur pied / 55\" 4K TV with Stand", category: "audiovisual", price: 25000 },
-  { id: "preset_wifi", name: "Routeur Wi-Fi Dédié Haut Débit / Dedicated Wi-Fi Router", category: "electrical", price: 8000 },
-  { id: "preset_coffee", name: "Machine à Café Espresso / Espresso Coffee Maker", category: "appliances", price: 9000 },
-];
+const FALLBACK_EQUIPMENT_PRESETS = SPECIFIC_EQUIPMENT_PRESETS;
 
 /**
  * InvoicingEditor
@@ -146,7 +139,7 @@ export default function InvoicingEditor({
   const [isEquipmentModalOpen, setIsEquipmentModalOpen] = useState(false);
   const [equipmentSearchQuery, setEquipmentSearchQuery] = useState("");
   const [equipmentImportSuccess, setEquipmentImportSuccess] = useState("");
-  const { t, isRTL } = useLanguage();
+  const { t, language, isRTL } = useLanguage();
 
   const getDelayLabel = useCallback((del) => {
     if (del.id === "reception") return t("invoicing.delayReception", "À réception");
@@ -332,16 +325,21 @@ export default function InvoicingEditor({
   const filteredEquipmentList = useMemo(() => {
     const q = equipmentSearchQuery.trim().toLowerCase();
     if (!q) return eventSpecificEquipment;
-    return eventSpecificEquipment.filter(item => 
-      (item.name && item.name.toLowerCase().includes(q)) ||
-      (item.category && item.category.toLowerCase().includes(q))
-    );
-  }, [eventSpecificEquipment, equipmentSearchQuery]);
+    return eventSpecificEquipment.filter(item => {
+      const localizedName = getLocalizedEquipmentName(item, t, language).toLowerCase();
+      return (
+        (item.name && item.name.toLowerCase().includes(q)) ||
+        localizedName.includes(q) ||
+        (item.category && item.category.toLowerCase().includes(q))
+      );
+    });
+  }, [eventSpecificEquipment, equipmentSearchQuery, t, language]);
 
   const handleImportEquipmentItem = (item) => {
     const unitPrice = item.unitPrice !== undefined ? item.unitPrice : (item.price !== undefined ? item.price : 0);
     const qty = item.quantity && item.quantity > 0 ? item.quantity : 1;
-    const desc = item.name ? (item.category ? `${item.name} (${item.category})` : item.name) : (item.description || "Specific Equipment");
+    const localizedName = getLocalizedEquipmentName(item, t, language);
+    const desc = localizedName ? localizedName : (item.description || "Specific Equipment");
 
     const newItem = {
       id: `item-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
@@ -368,7 +366,8 @@ export default function InvoicingEditor({
     const newItems = matchedExhibitorEquipment.map((eq, i) => {
       const unitPrice = eq.unitPrice !== undefined ? eq.unitPrice : (eq.price !== undefined ? eq.price : 0);
       const qty = eq.quantity && eq.quantity > 0 ? eq.quantity : 1;
-      const desc = eq.name ? `${eq.name} (${eq.category || 'Equipment'})` : "Specific Equipment";
+      const localizedName = getLocalizedEquipmentName(eq, t, language);
+      const desc = localizedName || eq.name || "Specific Equipment";
       return {
         id: `item-${Date.now()}-${i}-${Math.floor(Math.random() * 1000)}`,
         description: desc,
@@ -1517,7 +1516,7 @@ export default function InvoicingEditor({
                         className="p-3 bg-white rounded-xl border border-blue-100 flex items-center justify-between gap-3 shadow-2xs hover:border-blue-300 transition-colors"
                       >
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold text-slate-900 truncate">{item.name}</p>
+                          <p className="text-xs font-bold text-slate-900 truncate">{getLocalizedEquipmentName(item, t, language)}</p>
                           <p className="text-[11px] text-slate-500 mt-0.5">
                             <span className="font-semibold text-blue-700">{item.quantity || 1}x</span> • {(item.unitPrice || 0).toLocaleString()} DZD
                           </p>
@@ -1568,7 +1567,7 @@ export default function InvoicingEditor({
                             )}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="text-xs font-bold text-slate-900 truncate">{eq.name}</p>
+                            <p className="text-xs font-bold text-slate-900 truncate">{getLocalizedEquipmentName(eq, t, language)}</p>
                             <p className="text-[11px] text-slate-500 font-medium">
                               <span className="font-bold text-blue-600">{price.toLocaleString()} DZD</span>
                               {eq.category && <span className="text-slate-400"> • {eq.category}</span>}

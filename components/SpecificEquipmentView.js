@@ -8,6 +8,11 @@ import {
 } from "lucide-react";
 import SearchableSelect from "./SearchableSelect";
 import { useLanguage } from "../lib/i18n";
+import {
+  SPECIFIC_EQUIPMENT_PRESETS,
+  getLocalizedEquipmentName,
+  getLocalizedEquipmentSpecs
+} from "../lib/constants";
 
 export const SPECIFIC_EQUIPMENT_CATEGORIES = [
   "Furniture & Seating",
@@ -18,168 +23,7 @@ export const SPECIFIC_EQUIPMENT_CATEGORIES = [
   "Other Equipment"
 ];
 
-export const POPULAR_EQUIPMENT_PRESETS = [
-  {
-    name: "Standard Conference Chair",
-    category: "Furniture & Seating",
-    unitPrice: 500,
-    quantity: 50,
-    specs: "Stackable padded metal frame chair, black fabric finish",
-    status: "available"
-  },
-  {
-    name: "High Barstool",
-    category: "Furniture & Seating",
-    unitPrice: 1500,
-    quantity: 20,
-    specs: "Adjustable height chrome barstool with backrest, white faux-leather",
-    status: "available"
-  },
-  {
-    name: "Round Meeting Table (80cm)",
-    category: "Furniture & Seating",
-    unitPrice: 2500,
-    quantity: 15,
-    specs: "Diameter 80cm, height 75cm, white wooden top on chrome pedestal base",
-    status: "available"
-  },
-  {
-    name: "Rectangular Draped Table (180cm)",
-    category: "Furniture & Seating",
-    unitPrice: 3000,
-    quantity: 20,
-    specs: "Folding banquet table 180x75cm with navy blue fitted fire-rated drape",
-    status: "available"
-  },
-  {
-    name: "Reception Counter Desk",
-    category: "Furniture & Seating",
-    unitPrice: 8000,
-    quantity: 10,
-    specs: "Curved white laminate counter with lockable internal shelf and logo area",
-    status: "available"
-  },
-  {
-    name: "Lockable Storage Cabinet",
-    category: "Furniture & Seating",
-    unitPrice: 4500,
-    quantity: 12,
-    specs: "Low 2-door steel cabinet with cylinder lock and 2 keys",
-    status: "available"
-  },
-  {
-    name: "Standard 220V / 16A Power Socket",
-    category: "Electrical & Power",
-    unitPrice: 3500,
-    quantity: 60,
-    specs: "Single-phase 220V - 16A (up to 1.5 kW), with ground and safety breaker",
-    status: "available"
-  },
-  {
-    name: "High-Power 3-Phase 380V / 32A",
-    category: "Electrical & Power",
-    unitPrice: 15000,
-    quantity: 8,
-    specs: "3-Phase 380V - 32A industrial connection (up to 18 kW) with distribution box",
-    status: "available"
-  },
-  {
-    name: "5-Way Power Strip Extension (3m)",
-    category: "Electrical & Power",
-    unitPrice: 1000,
-    quantity: 40,
-    specs: "Heavy-duty 5-socket surge protector with 3m cable and illuminated switch",
-    status: "available"
-  },
-  {
-    name: "50W LED Booth Spotlight",
-    category: "Electrical & Power",
-    unitPrice: 2000,
-    quantity: 35,
-    specs: "50W daylight LED track spotlight with mounting clamp for stand walls",
-    status: "available"
-  },
-  {
-    name: "43\" Smart LED TV with Floor Stand",
-    category: "Audiovisual & Screens",
-    unitPrice: 12000,
-    quantity: 12,
-    specs: "Full HD 43\" Smart TV, HDMI/USB ports, with 1.8m height-adjustable heavy base stand",
-    status: "available"
-  },
-  {
-    name: "55\" 4K Display on Rolling Stand",
-    category: "Audiovisual & Screens",
-    unitPrice: 2000,
-    quantity: 8,
-    specs: "4K Ultra HD 55\" commercial display on lockable wheeled floor stand with shelf",
-    status: "available"
-  },
-  {
-    name: "Soundbar & Wireless Microphone",
-    category: "Audiovisual & Screens",
-    unitPrice: 5000,
-    quantity: 6,
-    specs: "Bluetooth soundbar with UHF handheld wireless microphone for booth demos",
-    status: "available"
-  },
-  {
-    name: "Dedicated High-Speed Wi-Fi AP",
-    category: "Audiovisual & Screens",
-    unitPrice: 6000,
-    quantity: 15,
-    specs: "Private encrypted 5GHz SSID with 50 Mbps dedicated bandwidth for the booth",
-    status: "available"
-  },
-  {
-    name: "Brochure & Catalog Rack",
-    category: "Display & Signage",
-    unitPrice: 2500,
-    quantity: 25,
-    specs: "Foldable 6-tier A4 zigzag acrylic/aluminum brochure holder with carry case",
-    status: "available"
-  },
-  {
-    name: "Roll-up Banner Stand (85x200cm)",
-    category: "Display & Signage",
-    unitPrice: 4000,
-    quantity: 30,
-    specs: "Aluminum pull-up cassette mechanism 85x200cm (hardware only without print)",
-    status: "available"
-  },
-  {
-    name: "Lockable Glass Showcase",
-    category: "Display & Signage",
-    unitPrice: 10000,
-    quantity: 6,
-    specs: "Full-vision illuminated tempered glass display cabinet with lockable door",
-    status: "available"
-  },
-  {
-    name: "Water Cooler Dispenser",
-    category: "Appliances & Comfort",
-    unitPrice: 4000,
-    quantity: 10,
-    specs: "Electric water cooler (cold & hot) with cup dispenser, includes 1x 19L bottle",
-    status: "available"
-  },
-  {
-    name: "Capsule Espresso Coffee Machine",
-    category: "Appliances & Comfort",
-    unitPrice: 5000,
-    quantity: 10,
-    specs: "High-pressure 19-bar capsule espresso maker, compact footprint",
-    status: "available"
-  },
-  {
-    name: "Mini-Fridge (50L)",
-    category: "Appliances & Comfort",
-    unitPrice: 6000,
-    quantity: 10,
-    specs: "50L under-counter silent absorption mini-bar refrigerator with small freezer zone",
-    status: "available"
-  }
-];
+export const POPULAR_EQUIPMENT_PRESETS = SPECIFIC_EQUIPMENT_PRESETS;
 
 export default function SpecificEquipmentView({
   specificEquipment = [],
@@ -191,7 +35,7 @@ export default function SpecificEquipmentView({
   isAddModalOpenExternal = false,
   onCloseAddModalExternal
 }) {
-  const { t, isRTL } = useLanguage();
+  const { t, language, isRTL } = useLanguage();
 
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -323,11 +167,19 @@ export default function SpecificEquipmentView({
   // Filtered catalogue list
   const filteredEquipment = useMemo(() => {
     return (specificEquipment || []).filter(item => {
-      const matchesSearch = !searchQuery || 
-        (item.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (item.category || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (item.specs || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (item.notes || "").toLowerCase().includes(searchQuery.toLowerCase());
+      const q = searchQuery.toLowerCase().trim();
+      const localizedName = getLocalizedEquipmentName(item, t, language).toLowerCase();
+      const localizedSpecs = getLocalizedEquipmentSpecs(item, t, language).toLowerCase();
+      const categoryLabel = getCategoryLabel(item.category).toLowerCase();
+
+      const matchesSearch = !q || 
+        (item.name || "").toLowerCase().includes(q) ||
+        localizedName.includes(q) ||
+        (item.category || "").toLowerCase().includes(q) ||
+        categoryLabel.includes(q) ||
+        (item.specs || "").toLowerCase().includes(q) ||
+        localizedSpecs.includes(q) ||
+        (item.notes || "").toLowerCase().includes(q);
 
       const matchesCat = selectedCategory === "all" || item.category === selectedCategory;
 
@@ -347,13 +199,15 @@ export default function SpecificEquipmentView({
 
       return matchesSearch && matchesCat && matchesStock;
     });
-  }, [specificEquipment, searchQuery, selectedCategory, selectedStockStatus, equipmentAllocations]);
+  }, [specificEquipment, searchQuery, selectedCategory, selectedStockStatus, equipmentAllocations, t, language]);
 
   // Handle open add/edit modal
   const handleOpenModal = (item = null) => {
     if (item) {
       setEditingItem(item);
       setFormData({
+        id: item.id,
+        presetKey: item.presetKey,
         name: item.name || "",
         category: item.category || "Furniture & Seating",
         unitPrice: item.unitPrice || item.price || 0,
@@ -366,6 +220,7 @@ export default function SpecificEquipmentView({
     } else {
       setEditingItem(null);
       setFormData({
+        presetKey: null,
         name: "",
         category: "Furniture & Seating",
         unitPrice: 0,
@@ -383,12 +238,13 @@ export default function SpecificEquipmentView({
   const handleLoadPreset = (preset) => {
     setEditingItem(null);
     setFormData({
-      name: preset.name,
+      presetKey: preset.presetKey || preset.id,
+      name: getLocalizedEquipmentName(preset, t, language),
       category: preset.category,
       unitPrice: preset.unitPrice,
       quantity: preset.quantity || 10,
       status: preset.status || "available",
-      specs: preset.specs || "",
+      specs: getLocalizedEquipmentSpecs(preset, t, language),
       powerRequirement: preset.powerRequirement || "",
       notes: ""
     });
@@ -407,6 +263,7 @@ export default function SpecificEquipmentView({
 
     const payload = {
       id: editingItem ? editingItem.id : undefined,
+      presetKey: formData.presetKey || (editingItem && editingItem.presetKey) || undefined,
       name: formData.name.trim(),
       category: formData.category,
       unitPrice: parseFloat(formData.unitPrice) || 0,
@@ -541,11 +398,11 @@ export default function SpecificEquipmentView({
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5 pt-1">
-          {POPULAR_EQUIPMENT_PRESETS
+          {SPECIFIC_EQUIPMENT_PRESETS
             .filter(p => presetCategoryFilter === "all" || p.category === presetCategoryFilter)
             .map((preset, idx) => (
               <button
-                key={idx}
+                key={preset.id || idx}
                 type="button"
                 onClick={() => handleLoadPreset(preset)}
                 disabled={!canEdit}
@@ -561,10 +418,10 @@ export default function SpecificEquipmentView({
                     </span>
                   </div>
                   <h4 className="text-xs font-bold text-slate-800 group-hover:text-blue-700 line-clamp-1">
-                    {preset.name}
+                    {getLocalizedEquipmentName(preset, t, language)}
                   </h4>
                   <p className="text-[10px] text-slate-500 line-clamp-1 mt-0.5">
-                    {preset.specs}
+                    {getLocalizedEquipmentSpecs(preset, t, language)}
                   </p>
                 </div>
                 <div className="mt-2 flex items-center justify-between pt-2 border-t border-slate-100 text-[10px] text-blue-600 font-bold group-hover:underline">
@@ -712,7 +569,7 @@ export default function SpecificEquipmentView({
                   {/* Title & Price */}
                   <div>
                     <h4 className="text-sm font-black text-slate-900 leading-snug">
-                      {item.name}
+                      {getLocalizedEquipmentName(item, t, language)}
                     </h4>
                     <div className="flex items-baseline gap-1 mt-1 text-blue-600">
                       <span className="text-base font-black font-mono">
@@ -758,7 +615,7 @@ export default function SpecificEquipmentView({
                   {item.specs && (
                     <p className="text-[11px] text-slate-600 bg-slate-50/50 p-2 rounded-lg border border-slate-100 line-clamp-2">
                       <span className="font-semibold text-slate-700">{t("logistics.specs", "Specs")}: </span>
-                      {item.specs}
+                      {getLocalizedEquipmentSpecs(item, t, language)}
                     </p>
                   )}
 

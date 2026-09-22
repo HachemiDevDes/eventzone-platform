@@ -41,7 +41,7 @@ import { useLanguage } from '../lib/i18n';
 import SearchableSelect from './SearchableSelect';
 import CountryPhoneInput from './CountryPhoneInput';
 import FormImageUploader from './FormImageUploader';
-import { getLocalizedIndustry } from '../lib/constants';
+import { getLocalizedIndustry, getLocalizedEquipmentName, getLocalizedEquipmentCategory } from '../lib/constants';
 import { canEditModule } from '../lib/permissions';
 
 // Uses getLocalizedIndustry from lib/constants
@@ -165,7 +165,7 @@ export default function CompanyDrawer({
   eventTitle = "Eventzone Summit",
   eventDetails = null
 }) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   // Tier names map from eventDetails or localStorage
   const tierNamesMap = useMemo(() => {
@@ -693,9 +693,11 @@ export default function CompanyDrawer({
   const equipmentSelectOptions = useMemo(() => {
     const list = specificEquipmentCatalogue.map(eq => {
       const remaining = (eq.quantity || 0) - (eq.assignedQuantity || 0);
+      const localizedName = getLocalizedEquipmentName(eq, t, language);
+      const localizedCat = getLocalizedEquipmentCategory(eq.category, t);
       return {
         value: String(eq.id),
-        label: `${eq.name} (${eq.category || 'General'})`,
+        label: `${localizedName} (${localizedCat || 'General'})`,
         description: `${(eq.price || 0).toLocaleString()} DZD • ${t("logistics.totalStock", "Stock")}: ${eq.quantity || 0} (${remaining > 0 ? `${remaining} ${t("logistics.remainingStock", "available")}` : t("logistics.statusOutOfStock", "Full")})`,
         icon: <Package size={14} className="text-blue-600" />
       };
@@ -709,7 +711,7 @@ export default function CompanyDrawer({
     });
 
     return list;
-  }, [specificEquipmentCatalogue, t]);
+  }, [specificEquipmentCatalogue, t, language]);
 
   const handleSelectEquipmentToAssign = (eqId) => {
     setSelectedEquipmentIdToAssign(eqId);
@@ -732,6 +734,7 @@ export default function CompanyDrawer({
       newItem = {
         id: `eq_assign_${Date.now()}`,
         equipmentId: null,
+        presetKey: null,
         name: customEquipmentName.trim(),
         category: customEquipmentCategory,
         unitPrice: parseFloat(assignEquipmentCustomPrice) || 0,
@@ -746,6 +749,7 @@ export default function CompanyDrawer({
       newItem = {
         id: `eq_assign_${Date.now()}`,
         equipmentId: matched.id,
+        presetKey: matched.presetKey || matched.id,
         name: matched.name,
         category: matched.category,
         unitPrice: assignEquipmentCustomPrice !== "" ? (parseFloat(assignEquipmentCustomPrice) || 0) : (matched.price || 0),
@@ -2655,10 +2659,10 @@ export default function CompanyDrawer({
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <span className="text-xs font-extrabold text-slate-800 truncate">
-                                    {item.name}
+                                    {getLocalizedEquipmentName(item, t, language)}
                                   </span>
                                   <span className="px-1.5 py-0.2 rounded-md text-[9px] font-bold bg-slate-100 text-slate-600 uppercase tracking-wider">
-                                    {item.category || "General"}
+                                    {getLocalizedEquipmentCategory(item.category, t) || "General"}
                                   </span>
                                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${statusColors[item.status] || statusColors.requested}`}>
                                     {item.status === "delivered" ? t("drawer.statusDelivered", "Delivered") : item.status === "approved" ? t("drawer.statusConfirmed", "Confirmed") : item.status === "returned" ? t("drawer.statusReturned", "Returned") : t("drawer.statusRequested", "Requested")}
