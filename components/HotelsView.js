@@ -571,31 +571,35 @@ export default function HotelsView({
       )}
 
       {/* ─────────────────────────────────────────────
-          3. ADD / EDIT HOTEL MODAL (PORTALLED TO BODY)
+          3. ADD / EDIT HOTEL DRAWER (SLIDE-OVER FROM RIGHT)
       ───────────────────────────────────────────── */}
       {mounted && isModalOpen && createPortal(
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200"
-          dir={isRTL ? "rtl" : "ltr"}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) handleCloseModal();
-          }}
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex justify-end z-[100] animate-fade-in font-sans"
         >
+          {/* Backdrop Click Dismiss */}
+          <div 
+            className="absolute inset-0 cursor-pointer" 
+            onClick={handleCloseModal} 
+            aria-hidden="true" 
+          />
+
+          {/* Slide-over Panel on the Right */}
           <div
-            className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
-            onClick={(e) => e.stopPropagation()}
+            dir={isRTL ? "rtl" : "ltr"}
+            className="relative bg-white w-full max-w-xl md:max-w-2xl h-full shadow-2xl z-10 flex flex-col justify-between animate-slide-in-right overflow-hidden border-inline-start border-slate-200"
           >
-            {/* Modal Header */}
-            <div className="p-5 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50/50">
+            {/* Drawer Sticky Header */}
+            <header className="p-6 border-b border-slate-150 flex items-center justify-between sticky top-0 bg-white/95 backdrop-blur-md z-10 select-none">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
                   <Building2 size={20} />
                 </div>
                 <div>
-                  <h3 className="text-base font-black text-slate-900">
+                  <h3 className="text-lg font-black text-slate-900 leading-tight">
                     {editingHotel ? t("logistics.editHotel", "Edit Partner Hotel") : t("logistics.addHotel", "Add Partner Hotel")}
                   </h3>
-                  <p className="text-xs text-slate-500 font-medium">
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">
                     {t("logistics.hotelsSubtitle", "Manage collaborator hotels, room quotas, and accommodation pricing.")}
                   </p>
                 </div>
@@ -603,14 +607,15 @@ export default function HotelsView({
               <button
                 type="button"
                 onClick={handleCloseModal}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors cursor-pointer"
+                className="w-9 h-9 rounded-full border border-slate-200 bg-white hover:bg-slate-100 text-slate-400 hover:text-slate-800 flex items-center justify-center transition-colors cursor-pointer"
               >
-                <X size={16} />
+                <X size={18} />
               </button>
-            </div>
+            </header>
 
             {/* Modal Form Content */}
-            <form onSubmit={handleSaveSubmit} className="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
+            <form id="hotel-drawer-form" onSubmit={handleSaveSubmit} className="flex-1 overflow-y-auto p-6 md:p-8 flex flex-col justify-between gap-5 text-xs">
+              <fieldset className="space-y-4" disabled={!canEdit}>
               {/* Hotel Name & Stars */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="sm:col-span-2 space-y-1">
@@ -839,23 +844,29 @@ export default function HotelsView({
                 />
               </div>
 
-              {/* Form Actions Footer */}
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={handleCloseModal}
-                  className="px-4 py-2 border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold rounded-xl transition-colors cursor-pointer"
-                >
-                  {t("common.cancel", "Cancel")}
-                </button>
+              </fieldset>
+            </form>
+
+            {/* Sticky Drawer Footer */}
+            <footer className="p-5 md:p-6 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3 sticky bottom-0 z-10">
+              <button
+                type="button"
+                onClick={handleCloseModal}
+                className="px-5 py-2.5 rounded-xl font-bold text-xs text-slate-600 hover:bg-slate-200 transition-colors cursor-pointer"
+              >
+                {t("common.cancel", "Cancel")}
+              </button>
+              {canEdit && (
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-xs hover:shadow transition-all cursor-pointer"
+                  form="hotel-drawer-form"
+                  className="px-6 py-2.5 rounded-xl font-black text-xs text-white bg-blue-600 hover:bg-blue-700 shadow-md transition-all flex items-center gap-2 cursor-pointer"
                 >
-                  {editingHotel ? t("common.saveChanges", "Save Changes") : t("logistics.addHotel", "Add Partner Hotel")}
+                  <Check size={15} className="stroke-[3]" />
+                  <span>{editingHotel ? t("common.saveChanges", "Save Changes") : t("logistics.addHotel", "Add Partner Hotel")}</span>
                 </button>
-              </div>
-            </form>
+              )}
+            </footer>
           </div>
         </div>,
         document.body

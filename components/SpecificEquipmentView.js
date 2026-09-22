@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Plus, Search, Trash2, Edit3, X } from "lucide-react";
+import { Plus, Search, Trash2, Edit3, X, Check } from "lucide-react";
 import SearchableSelect from "./SearchableSelect";
 import { useLanguage } from "../lib/i18n";
 import {
@@ -631,147 +631,168 @@ export default function SpecificEquipmentView({
       </div>
 
       {/* ─────────────────────────────────────────────
-          5. ADD / EDIT MODAL (PORTALLED TO DOCUMENT.BODY)
+          5. ADD / EDIT DRAWER (SLIDE-OVER FROM RIGHT)
       ───────────────────────────────────────────── */}
       {mounted && typeof document !== "undefined" && isModalOpen && createPortal(
         <div 
-          dir={isRTL ? "rtl" : "ltr"}
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in font-sans"
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex justify-end z-[100] animate-fade-in font-sans"
         >
-          {/* Backdrop Dismiss */}
+          {/* Backdrop Click Dismiss */}
           <div 
             className="absolute inset-0 cursor-pointer" 
             onClick={handleCloseModal} 
             aria-hidden="true" 
           />
 
-          <div className="relative bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full overflow-hidden animate-scale-up z-10">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          {/* Slide-over Panel on the Right */}
+          <div
+            dir={isRTL ? "rtl" : "ltr"}
+            className="relative bg-white w-full max-w-xl md:max-w-2xl h-full shadow-2xl z-10 flex flex-col justify-between animate-slide-in-right overflow-hidden border-inline-start border-slate-200"
+          >
+            {/* Drawer Sticky Header */}
+            <header className="p-6 border-b border-slate-150 flex items-center justify-between sticky top-0 bg-white/95 backdrop-blur-md z-10 select-none">
               <div>
-                <h3 className="text-sm font-black text-slate-900">
+                <h3 className="text-lg font-black text-slate-900 leading-tight">
                   {editingItem 
                     ? t("logistics.editSpecificEquipment", "Edit Specific Equipment") 
                     : t("logistics.addSpecificEquipment", "Add Specific Equipment")}
                 </h3>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">
+                  {t("logistics.specificEquipmentSubtitle", "Catalogue of rental furniture, electrical fixtures, screens, and custom items provided to exhibitors.")}
+                </p>
               </div>
+
               <button
                 type="button"
                 onClick={handleCloseModal}
-                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer"
+                className="w-9 h-9 rounded-full border border-slate-200 bg-white hover:bg-slate-100 text-slate-400 hover:text-slate-800 flex items-center justify-center transition-colors cursor-pointer"
               >
                 <X size={18} />
               </button>
-            </div>
+            </header>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              {/* Item Name */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  {t("logistics.equipmentName", "Equipment Name")} *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g. 55'' 4K Screen with Rolling Stand"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
-                />
-              </div>
-
-              {/* Category (SearchableSelect as required by guidelines) */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  {t("logistics.equipmentCategory", "Category")} *
-                </label>
-                <SearchableSelect
-                  value={formData.category}
-                  onChange={(val) => setFormData({ ...formData, category: val })}
-                  options={categoryOptions}
-                  isClearable={false}
-                  placeholder={t("logistics.equipmentCategory", "Category")}
-                />
-              </div>
-
-              {/* Price & Quantity Row */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    {t("logistics.unitPrice", "Unit Price")} ({currency}) *
+            {/* Scrollable Form Body */}
+            <form
+              id="specific-equipment-drawer-form"
+              onSubmit={handleSubmit}
+              className="flex-1 overflow-y-auto p-6 md:p-8 flex flex-col justify-between gap-5 text-xs"
+            >
+              <fieldset className="space-y-4" disabled={!canEdit}>
+                {/* Equipment Name */}
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-slate-700">
+                    {t("logistics.equipmentName", "Equipment Name")} <span className="text-rose-500">*</span>
                   </label>
                   <input
-                    type="number"
-                    min="0"
-                    step="1"
+                    type="text"
                     required
-                    value={formData.unitPrice}
-                    onChange={(e) => setFormData({ ...formData, unitPrice: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="e.g. 55'' 4K Screen with Rolling Stand"
+                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    {t("logistics.totalStock", "Total Stock Units")} *
+                {/* Category (SearchableSelect as required by guidelines) */}
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-slate-700">
+                    {t("logistics.equipmentCategory", "Category")} <span className="text-rose-500">*</span>
                   </label>
-                  <input
-                    type="number"
-                    min="1"
-                    step="1"
-                    required
-                    value={formData.quantity}
-                    onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
+                  <SearchableSelect
+                    value={formData.category}
+                    onChange={(val) => setFormData({ ...formData, category: val })}
+                    options={categoryOptions}
+                    isClearable={false}
+                    placeholder={t("logistics.equipmentCategory", "Category")}
+                    buttonClassName="py-2.5 text-xs bg-white border-slate-200"
                   />
                 </div>
-              </div>
 
-              {/* Availability Status */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  {t("logistics.stockStatus", "Availability Status")}
-                </label>
-                <SearchableSelect
-                  value={formData.status}
-                  onChange={(val) => setFormData({ ...formData, status: val })}
-                  options={stockStatusOptions}
-                  isClearable={false}
-                  showSearch={false}
-                  placeholder={t("logistics.stockStatus", "Availability Status")}
-                />
-              </div>
+                {/* Price & Quantity Row */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="block text-xs font-bold text-slate-700">
+                      {t("logistics.unitPrice", "Unit Price")} ({currency}) <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      required
+                      value={formData.unitPrice}
+                      onChange={(e) => setFormData({ ...formData, unitPrice: e.target.value })}
+                      className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
+                    />
+                  </div>
 
-              {/* Specs & Dimensions */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  {t("logistics.specs", "Specifications / Dimensions / Power")}
-                </label>
-                <textarea
-                  rows={2}
-                  value={formData.specs}
-                  onChange={(e) => setFormData({ ...formData, specs: e.target.value })}
-                  placeholder="e.g. Dimensions: 180x80cm, includes 3m power cord and protective case"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 resize-y"
-                />
-              </div>
+                  <div className="space-y-1">
+                    <label className="block text-xs font-bold text-slate-700">
+                      {t("logistics.totalStock", "Total Stock Units")} <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      required
+                      value={formData.quantity}
+                      onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                      className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
+                    />
+                  </div>
+                </div>
 
-              {/* Modal Actions */}
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={handleCloseModal}
-                  className="px-4 py-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
-                >
-                  {t("common.cancel", "Cancel")}
-                </button>
+                {/* Availability Status */}
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-slate-700">
+                    {t("logistics.stockStatus", "Availability Status")}
+                  </label>
+                  <SearchableSelect
+                    value={formData.status}
+                    onChange={(val) => setFormData({ ...formData, status: val })}
+                    options={stockStatusOptions}
+                    isClearable={false}
+                    showSearch={false}
+                    placeholder={t("logistics.stockStatus", "Availability Status")}
+                    buttonClassName="py-2.5 text-xs bg-white border-slate-200"
+                  />
+                </div>
+
+                {/* Specs & Dimensions */}
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-slate-700">
+                    {t("logistics.specs", "Specifications / Dimensions / Power")}
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={formData.specs}
+                    onChange={(e) => setFormData({ ...formData, specs: e.target.value })}
+                    placeholder="e.g. Dimensions: 180x80cm, includes 3m power cord and protective case"
+                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 resize-y"
+                  />
+                </div>
+              </fieldset>
+            </form>
+
+            {/* Sticky Drawer Footer */}
+            <footer className="p-5 md:p-6 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3 sticky bottom-0 z-10">
+              <button
+                type="button"
+                onClick={handleCloseModal}
+                className="px-5 py-2.5 rounded-xl font-bold text-xs text-slate-600 hover:bg-slate-200 transition-colors cursor-pointer"
+              >
+                {t("common.cancel", "Cancel")}
+              </button>
+              {canEdit && (
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                  form="specific-equipment-drawer-form"
+                  className="px-6 py-2.5 rounded-xl font-black text-xs text-white bg-blue-600 hover:bg-blue-700 shadow-md transition-all flex items-center gap-2 cursor-pointer"
                 >
-                  {editingItem ? t("common.saveChanges", "Save Changes") : t("common.add", "Add Equipment")}
+                  <Check size={15} className="stroke-[3]" />
+                  <span>{editingItem ? t("common.saveChanges", "Save Changes") : t("common.add", "Add Equipment")}</span>
                 </button>
-              </div>
-            </form>
+              )}
+            </footer>
           </div>
         </div>,
         document.body
