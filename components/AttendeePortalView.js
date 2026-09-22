@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import dynamic from "next/dynamic";
 import {
   Globe, Sparkles, Calendar, Clock, MapPin, Users, Building2,
   Layers, Ticket, FileText, Bookmark, BookmarkCheck, Search,
@@ -10,13 +11,16 @@ import {
   MessageSquare, UserCheck, ShieldCheck, Lock, Unlock, Eye,
   Compass, Megaphone, Store, Mic, Tag, ChevronDown, ChevronRight,
   Info, AlertCircle, Heart, Smartphone, RefreshCw, LogIn, UserPlus,
-  Send, MessageCircle, Smile, User, Loader2, UserMinus, UserX, Trash2
+  Send, MessageCircle, Smile, User, Loader2, UserMinus, UserX, Trash2,
+  ZoomIn, ZoomOut, Maximize, RotateCcw
 } from "lucide-react";
 import QRCode from "qrcode";
 import { useLanguage } from "../lib/i18n";
 import UniversalTopBar from "./UniversalTopBar";
 import SearchableSelect from "./SearchableSelect";
 import A4BadgeSheet, { printA4BadgeDocument } from "./A4BadgeSheet";
+
+const FloorPlanCanvas = dynamic(() => import("./FloorPlanCanvas"), { ssr: false });
 import {
   fetchAttendeeConnections,
   sendAttendeeConnectionRequest,
@@ -111,10 +115,14 @@ export default function AttendeePortalView({
   const effectiveIsOrganizerOrAdmin = isOrganizerOrAdmin && !organizerPreviewAsVisitor;
 
   // Portal Status & Scheduled Countdown
-  const rawPortalStatus = eventDetails.portalStatus || eventDetails.portal_status || eventDetails.portalSettings?.portal_status || eventDetails.portal_settings?.portal_status || eventDetails.portalSettings?.portalStatus || "open";
+  const portalSettings = useMemo(() => {
+    return eventDetails.portalSettings || eventDetails.portal_settings || {};
+  }, [eventDetails]);
+
+  const rawPortalStatus = eventDetails.portalStatus || eventDetails.portal_status || portalSettings.portal_status || portalSettings.portalStatus || "open";
   const portalStatus = String(rawPortalStatus || "open").toLowerCase().trim();
-  const portalOpenTimeStr = eventDetails.portalOpenTime || eventDetails.portal_open_time || eventDetails.portalSettings?.portal_open_time || eventDetails.portal_settings?.portal_open_time || eventDetails.portalSettings?.portalOpenTime;
-  const portalMessage = eventDetails.portalMessage || eventDetails.portal_message || eventDetails.portalSettings?.portal_message || eventDetails.portal_settings?.portal_message || "";
+  const portalOpenTimeStr = eventDetails.portalOpenTime || eventDetails.portal_open_time || portalSettings.portal_open_time || portalSettings.portalOpenTime;
+  const portalMessage = eventDetails.portalMessage || eventDetails.portal_message || portalSettings.portal_message || portalSettings.portalMessage || "";
   const portalNoticeMessage = portalMessage;
 
   const [countdown, setCountdown] = useState({
@@ -648,14 +656,103 @@ export default function AttendeePortalView({
   // ─────────────────────────────────────────────
   // 5. STATE: FLOOR PLANS & VENUE EXPLORER
   // ─────────────────────────────────────────────
-  const [activeFloorIndex, setActiveFloorIndex] = useState(0);
-  const [highlightedBooth, setHighlightedBooth] = useState(null);
+  const isFloorplansEnabled = portalSettings.floorplans !== false;
 
-  const activePlan = floorPlans[activeFloorIndex] || floorPlans[0] || null;
+  // Filter floor plans to only those selected by organizer to show attendees
+  const visibleFloorPlans = useMemo(() => {
+    const validPlans = (floorPlans || []).filter(p => !p.isArchived && p.status !== "archived");
+    if (Array.isArray(portalSettings.visibleFloorPlanIds)) {
+      return validPlans.filter(p => portalSettings.visibleFloorPlanIds.includes(p.id));
+    }
+    return validPlans;
+  }, [floorPlans, portalSettings.visibleFloorPlanIds]);
+
+  const [activeFloorIndex, setActiveFloorIndex] = useState(0);
+  const [subFloorIndex, setSubFloorIndex] = useState(0);
+  const [floorPlanSearch, setFloorPlanSearch] = useState("");
+  const [selectedBoothElementId, setSelectedBoothElementId] = useState(null);
+  const [highlightedBooth, setHighlightedBooth] = useState(null);
+  const canvasRef = useRef(null);
+
+  const activePlan = visibleFloorPlans[activeFloorIndex] || visibleFloorPlans[0] || null;
+
+  // Sub-floors for active plan (e.g. Ground Floor, 1st Floor, etc.)
+  const activePlanFloors = useMemo(() => {
+    if (activePlan?.floors && Array.isArray(activePlan.floors) && activePlan.floors.length > 0) {
+      return activePlan.floors;
+    }
+    return [
+      {
+        id: "default-subfloor",
+        name: activePlan?.name || "Main Floor",
+        elements: activePlan?.elements || [],
+        blueprint: activePlan?.blueprint || null
+      }
+    ];
+  }, [activePlan]);
+
+  const activeSubFloor = activePlanFloors[subFloorIndex] || activePlanFloors[0] || {};
+  const currentElements = activeSubFloor?.elements || activePlan?.elements || [];
+  const currentBlueprint = activeSubFloor?.blueprint || activePlan?.blueprint || {};
+  const blueprintUrl = currentBlueprint?.url || activePlan?.imageUrl || activePlan?.url || activePlan?.background_url || "";
+
+  // Reset sub-floor and selection when active floor plan changes
+  useEffect(() => {
+    setSubFloorIndex(0);
+    setSelectedBoothElementId(null);
+  }, [activeFloorIndex]);
+
+  // Selected element on canvas
+  const selectedElement = useMemo(() => {
+    if (!selectedBoothElementId) return null;
+    return currentElements.find(el => el.id === selectedBoothElementId) || null;
+  }, [selectedBoothElementId, currentElements]);
+
+  // Exhibitor associated with selected booth
+  const selectedBoothExhibitor = useMemo(() => {
+    if (!selectedElement) return null;
+    if (selectedElement.exhibitorId) {
+      return exhibitors.find(ex => String(ex.id) === String(selectedElement.exhibitorId)) || null;
+    }
+    const elLabel = String(selectedElement.label || selectedElement.boothNumber || "").trim().toLowerCase();
+    if (elLabel) {
+      return exhibitors.find(ex => {
+        const exBooth = String(ex.boothNumber || ex.booth_number || ex.booth || "").trim().toLowerCase();
+        return exBooth === elLabel;
+      }) || null;
+    }
+    return null;
+  }, [selectedElement, exhibitors]);
 
   const handleJumpToBooth = (boothNum) => {
+    if (!boothNum) return;
     setHighlightedBooth(boothNum);
     setActiveTab("floorplan");
+
+    const cleanNum = String(boothNum).trim().toLowerCase();
+    for (let pIdx = 0; pIdx < visibleFloorPlans.length; pIdx++) {
+      const plan = visibleFloorPlans[pIdx];
+      const pFloors = (plan.floors && Array.isArray(plan.floors) && plan.floors.length > 0)
+        ? plan.floors
+        : [{ id: "def", elements: plan.elements || [] }];
+
+      for (let sIdx = 0; sIdx < pFloors.length; sIdx++) {
+        const floor = pFloors[sIdx];
+        const match = (floor.elements || []).find(el => {
+          const lbl = String(el.label || el.boothNumber || el.booth_number || "").trim().toLowerCase();
+          return lbl === cleanNum || String(el.id) === cleanNum;
+        });
+        if (match) {
+          setActiveFloorIndex(pIdx);
+          setSubFloorIndex(sIdx);
+          setSelectedBoothElementId(match.id);
+          setTimeout(() => {
+            canvasRef.current?.zoomToElement?.(match.id);
+          }, 350);
+          return;
+        }
+      }
+    }
   };
 
   // ─────────────────────────────────────────────
@@ -1256,7 +1353,7 @@ export default function AttendeePortalView({
             </button>
 
             {/* Tab 5: Floor Plans */}
-            {floorPlans.length > 0 && (
+            {isFloorplansEnabled && visibleFloorPlans.length > 0 && (
               <button
                 onClick={() => setActiveTab("floorplan")}
                 className={`px-3.5 py-2 rounded-xl text-xs whitespace-nowrap transition-all cursor-pointer flex items-center gap-2 ${
@@ -1267,6 +1364,13 @@ export default function AttendeePortalView({
               >
                 <Layers size={14} className={activeTab === "floorplan" ? "text-white" : "text-slate-500"} />
                 <span>{t("portal.floorPlan", "Floor Plans")}</span>
+                {visibleFloorPlans.length > 1 && (
+                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                    activeTab === "floorplan" ? "bg-white/20 text-white" : "bg-slate-100 text-slate-700 border border-slate-200"
+                  }`}>
+                    {visibleFloorPlans.length}
+                  </span>
+                )}
               </button>
             )}
 
@@ -2635,53 +2739,274 @@ export default function AttendeePortalView({
         {activeTab === "floorplan" && (
           <div className="space-y-6 animate-fade-in">
             
-            {floorPlans.length > 1 && (
-              <div className="flex items-center gap-2 overflow-x-auto bg-white p-3 rounded-2xl border border-slate-200 shadow-xs">
-                {floorPlans.map((plan, idx) => (
-                  <button
-                    key={plan.id || idx}
-                    onClick={() => setActiveFloorIndex(idx)}
-                    className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      activeFloorIndex === idx
-                        ? "bg-blue-600 text-white shadow-xs"
-                        : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                    }`}
-                  >
-                    {plan.name || `${t("portal.floorPlanPrefix", "Floor Plan")} ${idx + 1}`}
-                  </button>
-                ))}
+            {/* Top Toolbar: Plan Switcher, Sub-floor Switcher & Search Bar */}
+            <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+              
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Multi-plan switchers if more than 1 floor plan */}
+                {visibleFloorPlans.length > 1 && (
+                  <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-2xl overflow-x-auto max-w-full">
+                    {visibleFloorPlans.map((plan, idx) => (
+                      <button
+                        key={plan.id || idx}
+                        onClick={() => setActiveFloorIndex(idx)}
+                        className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+                          activeFloorIndex === idx
+                            ? "bg-white text-blue-600 shadow-xs"
+                            : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        <Layers size={13} className={activeFloorIndex === idx ? "text-blue-600" : "text-slate-400"} />
+                        <span>{plan.name || `${t("portal.floorPlanPrefix", "Floor Plan")} ${idx + 1}`}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Sub-floors switcher if active plan has multiple floors */}
+                {activePlanFloors.length > 1 && (
+                  <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-2xl overflow-x-auto max-w-full">
+                    {activePlanFloors.map((fl, fIdx) => (
+                      <button
+                        key={fl.id || fIdx}
+                        onClick={() => {
+                          setSubFloorIndex(fIdx);
+                          setSelectedBoothElementId(null);
+                        }}
+                        className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                          subFloorIndex === fIdx
+                            ? "bg-blue-600 text-white shadow-xs"
+                            : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        {fl.name || `${t("portal.levelPrefix", "Level")} ${fIdx + 1}`}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
 
-            {/* Active Floor Plan Canvas / Image */}
+              {/* Real-time search for booths and exhibitors */}
+              <div className="relative w-full md:w-80 shrink-0">
+                <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={floorPlanSearch}
+                  onChange={(e) => setFloorPlanSearch(e.target.value)}
+                  placeholder={t("portal.searchBoothOrExhibitor", "Search booth #, company name, or stage...")}
+                  className="w-full pl-9 pr-8 py-2 rounded-xl text-xs font-medium bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-900"
+                />
+                {floorPlanSearch && (
+                  <button
+                    onClick={() => setFloorPlanSearch("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer"
+                  >
+                    <X size={13} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Active Floor Plan Canvas / Viewer Card */}
             {activePlan ? (
-              <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-black text-slate-800 uppercase tracking-wider">
-                    {activePlan.name || t("portal.mainHall", "Main Exhibition Hall")}
-                  </span>
-                  {highlightedBooth && (
-                    <span className="px-3 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-xl text-xs font-bold animate-pulse">
-                      {t("portal.targetBooth", "Target Booth: #{booth}", { booth: highlightedBooth })}
+              <div className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-6 shadow-xs space-y-4">
+                
+                {/* Card Header: Plan Name, Active Sub-Floor & Target Booth Badge */}
+                <div className="flex flex-wrap items-center justify-between gap-3 pb-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-black text-slate-900 tracking-tight">
+                      {activePlan.name || t("portal.mainHall", "Main Exhibition Hall")}
                     </span>
-                  )}
-                </div>
+                    {activePlanFloors.length > 1 && (
+                      <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-lg">
+                        {activeSubFloor?.name || `${t("portal.levelPrefix", "Level")} ${subFloorIndex + 1}`}
+                      </span>
+                    )}
+                  </div>
 
-                <div className="h-[520px] bg-slate-900/5 rounded-2xl border border-slate-200 flex items-center justify-center overflow-hidden relative">
-                  {activePlan.imageUrl || activePlan.url ? (
-                    <img src={activePlan.imageUrl || activePlan.url} alt="Floor Plan" className="max-w-full max-h-full object-contain p-4" />
-                  ) : (
-                    <div className="p-8 text-center space-y-2">
-                      <Layers size={48} className="text-slate-300 mx-auto" />
-                      <h4 className="text-sm font-bold text-slate-700">{t("portal.visualPlanAvailable", "Visual Plan Available")}</h4>
-                      <p className="text-xs text-slate-400">{t("portal.visualPlanDesc", "Interactive elements configured for this floor plan.")}</p>
+                  {highlightedBooth && (
+                    <div className="flex items-center gap-2 px-3 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-xl text-xs font-bold animate-pulse">
+                      <span>{t("portal.targetBooth", "Target Booth: #{booth}", { booth: highlightedBooth })}</span>
+                      <button
+                        onClick={() => setHighlightedBooth(null)}
+                        className="hover:text-amber-950 p-0.5 rounded cursor-pointer"
+                        title="Dismiss"
+                      >
+                        <X size={12} />
+                      </button>
                     </div>
                   )}
                 </div>
+
+                {/* Canvas Viewport */}
+                <div className="h-[560px] sm:h-[640px] bg-slate-100 rounded-2xl border border-slate-200 overflow-hidden relative shadow-inner flex items-center justify-center">
+                  
+                  {/* Floating Canvas Navigation Toolbar */}
+                  <div className="absolute top-4 right-4 z-20 flex flex-col gap-1.5 bg-white/95 backdrop-blur-md p-1.5 rounded-2xl border border-slate-200 shadow-lg">
+                    <button
+                      onClick={() => canvasRef.current?.zoomIn?.()}
+                      className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+                      title={t("portal.zoomIn", "Zoom In")}
+                      aria-label="Zoom In"
+                    >
+                      <ZoomIn size={16} />
+                    </button>
+                    <button
+                      onClick={() => canvasRef.current?.zoomOut?.()}
+                      className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+                      title={t("portal.zoomOut", "Zoom Out")}
+                      aria-label="Zoom Out"
+                    >
+                      <ZoomOut size={16} />
+                    </button>
+                    <div className="h-px bg-slate-200 mx-1" />
+                    <button
+                      onClick={() => canvasRef.current?.zoomToFit?.()}
+                      className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+                      title={t("portal.fitToScreen", "Fit to Screen")}
+                      aria-label="Fit to Screen"
+                    >
+                      <Maximize size={16} />
+                    </button>
+                    <button
+                      onClick={() => canvasRef.current?.zoomToFit?.()}
+                      className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+                      title={t("portal.resetView", "Reset View")}
+                      aria-label="Reset View"
+                    >
+                      <RotateCcw size={16} />
+                    </button>
+                  </div>
+
+                  {/* Render Konva Canvas */}
+                  {currentElements.length > 0 || blueprintUrl ? (
+                    <FloorPlanCanvas
+                      ref={canvasRef}
+                      elements={currentElements}
+                      blueprintUrl={blueprintUrl}
+                      blueprintOpacity={currentBlueprint.opacity ?? 0.8}
+                      blueprintX={currentBlueprint.x ?? 0}
+                      blueprintY={currentBlueprint.y ?? 0}
+                      blueprintWidth={currentBlueprint.width || activePlan.width || 2400}
+                      blueprintHeight={currentBlueprint.height || activePlan.height || 1500}
+                      blueprintRotation={currentBlueprint.rotation || 0}
+                      blueprintIsLocked={true}
+                      snapToGrid={false}
+                      showGrid={false}
+                      toolMode="preview"
+                      floorPlanFont={activePlan.fontFamily || "Inter"}
+                      exhibitors={exhibitors}
+                      attendees={attendees}
+                      canvasWidth={activePlan.width || 2400}
+                      canvasHeight={activePlan.height || 1500}
+                      previewSearchQuery={floorPlanSearch}
+                      previewFilter="all"
+                      selectedIds={selectedBoothElementId ? [selectedBoothElementId] : []}
+                      onSelectId={(id) => {
+                        const selId = Array.isArray(id) ? id[0] || null : (id || null);
+                        setSelectedBoothElementId(selId);
+                      }}
+                      isPreviewMode={true}
+                      previewDeviceMode="desktop"
+                    />
+                  ) : (
+                    <div className="p-8 text-center space-y-2">
+                      <Layers size={44} className="text-slate-300 mx-auto" />
+                      <h4 className="text-sm font-bold text-slate-700">
+                        {t("portal.noElementsOnPlan", "This floor plan has not been configured with visual elements or blueprint maps yet.")}
+                      </h4>
+                      <p className="text-xs text-slate-400">
+                        {t("portal.visualPlanDesc", "Interactive elements configured for this floor plan.")}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Floating Booth / Exhibitor Details Card */}
+                  {selectedElement && (
+                    <div className="absolute bottom-4 left-4 right-4 sm:right-auto sm:max-w-md z-20 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200 p-4 shadow-xl space-y-3 animate-fade-in">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-black text-slate-900">
+                              {selectedElement.label || selectedElement.boothNumber || `${t("portal.boothPrefix", "Booth")} #${selectedElement.id?.slice(0, 4)}`}
+                            </span>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 uppercase">
+                              {selectedElement.type?.replace("-", " ") || "Booth"}
+                            </span>
+                          </div>
+                          {(selectedElement.size || (selectedElement.width && selectedElement.height)) && (
+                            <p className="text-[11px] text-slate-400 font-medium">
+                              {selectedElement.size || `${Math.round(selectedElement.width / 10)}m × ${Math.round(selectedElement.height / 10)}m`}
+                            </p>
+                          )}
+                        </div>
+
+                        <button
+                          onClick={() => setSelectedBoothElementId(null)}
+                          className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+
+                      {/* Exhibitor Info if assigned */}
+                      {selectedBoothExhibitor ? (
+                        <div className="p-3 bg-slate-50 rounded-xl border border-slate-150 space-y-2">
+                          <div className="flex items-center gap-3">
+                            {selectedBoothExhibitor.logo ? (
+                              <img
+                                src={selectedBoothExhibitor.logo}
+                                alt={selectedBoothExhibitor.name}
+                                className="w-10 h-10 rounded-xl object-contain bg-white p-1 border border-slate-200"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-xl bg-blue-600 text-white font-bold flex items-center justify-center text-sm shadow-xs">
+                                {(selectedBoothExhibitor.name || "E").slice(0, 2).toUpperCase()}
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <h5 className="text-xs font-bold text-slate-900 truncate">
+                                {selectedBoothExhibitor.name}
+                              </h5>
+                              <p className="text-[11px] text-slate-500 truncate">
+                                {selectedBoothExhibitor.industry || selectedBoothExhibitor.category || t("portal.exhibitors", "Exhibitor")}
+                              </p>
+                            </div>
+                          </div>
+
+                          {selectedBoothExhibitor.description && (
+                            <p className="text-[11px] text-slate-600 line-clamp-2 leading-relaxed">
+                              {selectedBoothExhibitor.description}
+                            </p>
+                          )}
+
+                          <button
+                            onClick={() => {
+                              setExhibitorSearch(selectedBoothExhibitor.name || "");
+                              setSelectedExhibitorModal(selectedBoothExhibitor);
+                              setActiveTab("exhibitors");
+                            }}
+                            className="w-full py-1.5 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                          >
+                            <span>{t("portal.viewExhibitorInDirectory", "View Exhibitor in Directory")}</span>
+                            <ArrowRight size={12} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-150 text-slate-500 text-[11px]">
+                          {selectedElement.status === "available"
+                            ? t("portal.availableBooth", "This location is currently available.")
+                            : t("portal.venueFeature", "Venue feature or exhibition stand.")}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                </div>
               </div>
             ) : (
-              <div className="p-12 text-center bg-white rounded-2xl border border-slate-200 shadow-xs space-y-3">
-                <Layers size={32} className="text-slate-300 mx-auto" />
+              <div className="p-12 text-center bg-white rounded-3xl border border-slate-200 shadow-xs space-y-3">
+                <Layers size={36} className="text-slate-300 mx-auto" />
                 <h3 className="text-base font-bold text-slate-800">{t("portal.noFloorPlansYet", "No floor plans published yet")}</h3>
                 <p className="text-xs text-slate-400">{t("portal.noFloorPlansHelp", "The event organizers have not uploaded 2D venue maps yet.")}</p>
               </div>

@@ -81,6 +81,51 @@ export default function OrganizerAttendeePortalSettings({
     return defaultSettings;
   });
 
+  // Active non-archived floor plans
+  const activeFloorPlans = useMemo(() => {
+    return (floorPlans || []).filter(p => !p.isArchived && p.status !== "archived");
+  }, [floorPlans]);
+
+  // Selected floor plans for attendee portal (defaults to all active floor plans)
+  const selectedFloorPlanIds = useMemo(() => {
+    if (Array.isArray(portalSettings.visibleFloorPlanIds)) {
+      return portalSettings.visibleFloorPlanIds;
+    }
+    return activeFloorPlans.map(p => p.id);
+  }, [portalSettings.visibleFloorPlanIds, activeFloorPlans]);
+
+  const handleToggleFloorPlan = (planId) => {
+    if (!canEdit) return;
+    const current = [...selectedFloorPlanIds];
+    const index = current.indexOf(planId);
+    let updated;
+    if (index > -1) {
+      updated = current.filter(id => id !== planId);
+    } else {
+      updated = [...current, planId];
+    }
+    setPortalSettings(prev => ({
+      ...prev,
+      visibleFloorPlanIds: updated
+    }));
+  };
+
+  const handleSelectAllFloorPlans = () => {
+    if (!canEdit) return;
+    setPortalSettings(prev => ({
+      ...prev,
+      visibleFloorPlanIds: (floorPlans || []).map(p => p.id)
+    }));
+  };
+
+  const handleDeselectAllFloorPlans = () => {
+    if (!canEdit) return;
+    setPortalSettings(prev => ({
+      ...prev,
+      visibleFloorPlanIds: []
+    }));
+  };
+
   // Broadcast Modal / Tab State
   const [broadcastSubject, setBroadcastSubject] = useState(`Your Access Link to the ${eventDetails.title || "Summit"} Attendee Portal`);
   const [broadcastNote, setBroadcastNote] = useState(
@@ -126,6 +171,7 @@ export default function OrganizerAttendeePortalSettings({
 
     const resolvedSettings = {
       ...portalSettings,
+      visibleFloorPlanIds: selectedFloorPlanIds,
       portal_status: portalStatus,
       portalStatus: portalStatus,
       portal_open_time: portalStatus === "scheduled" && portalOpenTime ? new Date(portalOpenTime).toISOString() : null,
@@ -735,6 +781,128 @@ export default function OrganizerAttendeePortalSettings({
               </div>
 
             </div>
+
+            {/* Floor Plan Selection for Attendees */}
+            {portalSettings.floorplans !== false && (
+              <div className="mt-6 pt-6 border-t border-slate-200/80 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Layers size={18} className="text-purple-600" />
+                      <h4 className="text-sm font-black text-slate-900">
+                        {t("portalSettings.floorPlanVisibilityTitle", "Attendee Floor Plan Selection")}
+                      </h4>
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
+                        {selectedFloorPlanIds.length} / {floorPlans.length} {t("portalSettings.visibleToAttendees", "Visible")}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 font-medium">
+                      {t("portalSettings.floorPlanVisibilityDesc", "Choose which specific floor plans and venue halls are visible to attendees in their portal.")}
+                    </p>
+                  </div>
+
+                  {floorPlans.length > 0 && (
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={handleSelectAllFloorPlans}
+                        className="text-xs font-bold text-blue-600 hover:text-blue-700 px-2.5 py-1 rounded-lg hover:bg-blue-50 transition-colors cursor-pointer"
+                      >
+                        {t("portalSettings.selectAll", "Select All")}
+                      </button>
+                      <span className="text-slate-300">|</span>
+                      <button
+                        type="button"
+                        onClick={handleDeselectAllFloorPlans}
+                        className="text-xs font-bold text-slate-500 hover:text-slate-700 px-2.5 py-1 rounded-lg hover:bg-slate-200/60 transition-colors cursor-pointer"
+                      >
+                        {t("portalSettings.deselectAll", "Deselect All")}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Floor plans list */}
+                {floorPlans.length === 0 ? (
+                  <div className="p-8 bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-center space-y-2">
+                    <Layers size={28} className="text-slate-300 mx-auto" />
+                    <h5 className="text-xs font-bold text-slate-700">
+                      {t("portalSettings.noFloorPlansFound", "No floor plans created yet for this event.")}
+                    </h5>
+                    <p className="text-[11px] text-slate-400">
+                      {t("portalSettings.createFloorPlanHint", "Create floor plans in the Floor Plan Designer to make them visible to attendees.")}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                    {floorPlans.map((plan, idx) => {
+                      const isSelected = selectedFloorPlanIds.includes(plan.id);
+                      const elementCount = plan.elements?.length || 0;
+                      const floorCount = plan.floors?.length || 1;
+                      const hasBlueprint = Boolean(plan.blueprint?.url || plan.background_url || (plan.floors && plan.floors[0]?.blueprint?.url));
+
+                      return (
+                        <div
+                          key={plan.id || idx}
+                          onClick={() => handleToggleFloorPlan(plan.id)}
+                          className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 select-none ${
+                            isSelected
+                              ? "bg-blue-50/40 border-blue-500/60 shadow-xs ring-2 ring-blue-500/10"
+                              : "bg-slate-50/60 border-slate-200 hover:bg-slate-50 hover:border-slate-300 opacity-75"
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => {}}
+                              className="w-4 h-4 rounded text-blue-600 cursor-pointer accent-blue-600 shrink-0 pointer-events-none"
+                            />
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-black text-slate-900 truncate">
+                                  {plan.name || `Floor Plan ${idx + 1}`}
+                                </span>
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                  plan.status === "archived"
+                                    ? "bg-slate-100 text-slate-600"
+                                    : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                }`}>
+                                  {plan.status === "archived" ? "Archived" : "Published"}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-1">
+                                <span>{elementCount} {elementCount === 1 ? "element" : "elements"}</span>
+                                <span>•</span>
+                                <span>{floorCount} {floorCount === 1 ? "floor" : "floors"}</span>
+                                {hasBlueprint && (
+                                  <>
+                                    <span>•</span>
+                                    <span className="text-purple-600 font-semibold flex items-center gap-1">
+                                      <CheckCircle2 size={11} /> {t("portalSettings.blueprintLoaded", "Blueprint loaded")}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="shrink-0">
+                            <span className={`text-[11px] font-bold px-2.5 py-1 rounded-xl transition-colors ${
+                              isSelected
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                : "bg-slate-100 text-slate-400"
+                            }`}>
+                              {isSelected ? t("portalSettings.visibleToAttendees", "Visible") : t("portalSettings.hiddenFromAttendees", "Hidden")}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
         </fieldset>
