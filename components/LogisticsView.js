@@ -7,7 +7,7 @@ import {
   User, ShieldCheck, RefreshCw, Trash2, Edit3, Sparkles,
   Layers, ChevronRight, Check, X, Calendar, DollarSign,
   Info, ExternalLink, HelpCircle, FileText, AlertCircle,
-  Package, ChevronDown, Eye
+  Package, ChevronDown, Eye, Store
 } from "lucide-react";
 import { useLanguage } from "../lib/i18n";
 import SearchableSelect from "./SearchableSelect";
