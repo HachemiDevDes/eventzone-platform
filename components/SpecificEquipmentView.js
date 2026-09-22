@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Plus, Search, Trash2, Edit3, X } from "lucide-react";
 import SearchableSelect from "./SearchableSelect";
 import { useLanguage } from "../lib/i18n";
@@ -31,7 +32,12 @@ export default function SpecificEquipmentView({
   isAddModalOpenExternal = false,
   onCloseAddModalExternal
 }) {
-  const { t, language } = useLanguage();
+  const { t, language, isRTL } = useLanguage();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Local optimistic state for instant UI feedback
   const [localEquipment, setLocalEquipment] = useState(specificEquipment || []);
@@ -716,11 +722,21 @@ export default function SpecificEquipmentView({
       </div>
 
       {/* ─────────────────────────────────────────────
-          5. ADD / EDIT MODAL
+          5. ADD / EDIT MODAL (PORTALLED TO DOCUMENT.BODY)
       ───────────────────────────────────────────── */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95">
+      {mounted && typeof document !== "undefined" && isModalOpen && createPortal(
+        <div 
+          dir={isRTL ? "rtl" : "ltr"}
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in font-sans"
+        >
+          {/* Backdrop Dismiss */}
+          <div 
+            className="absolute inset-0 cursor-pointer" 
+            onClick={handleCloseModal} 
+            aria-hidden="true" 
+          />
+
+          <div className="relative bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full overflow-hidden animate-scale-up z-10">
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-black text-slate-900">
@@ -848,15 +864,26 @@ export default function SpecificEquipmentView({
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ─────────────────────────────────────────────
-          6. DELETE CONFIRMATION DIALOG
+          6. DELETE CONFIRMATION DIALOG (PORTALLED TO DOCUMENT.BODY)
       ───────────────────────────────────────────── */}
-      {itemToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-sm w-full p-6 text-center space-y-4 animate-in fade-in zoom-in-95">
+      {mounted && typeof document !== "undefined" && itemToDelete && createPortal(
+        <div 
+          dir={isRTL ? "rtl" : "ltr"}
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in font-sans"
+        >
+          {/* Backdrop Dismiss */}
+          <div 
+            className="absolute inset-0 cursor-pointer" 
+            onClick={() => setItemToDelete(null)} 
+            aria-hidden="true" 
+          />
+
+          <div className="relative bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-sm w-full p-6 text-center space-y-4 animate-scale-up z-10">
             <div>
               <h3 className="text-sm font-black text-slate-900">
                 {t("common.delete", "Delete")} {itemToDelete.name}?
@@ -882,7 +909,8 @@ export default function SpecificEquipmentView({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
