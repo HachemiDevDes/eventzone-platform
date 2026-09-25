@@ -12,7 +12,7 @@ import {
   Compass, Megaphone, Store, Mic, Tag, ChevronDown, ChevronRight,
   Info, AlertCircle, Heart, Smartphone, RefreshCw, LogIn, UserPlus,
   Send, MessageCircle, Smile, User, Loader2, UserMinus, UserX, Trash2,
-  ZoomIn, ZoomOut, Maximize, RotateCcw
+  ZoomIn, ZoomOut, Maximize, RotateCcw, CalendarCheck, CalendarPlus, CalendarX
 } from "lucide-react";
 import QRCode from "qrcode";
 import { useLanguage } from "../lib/i18n";
@@ -28,6 +28,12 @@ import {
   declineAttendeeConnectionRequest,
   removeAttendeeConnection,
   cancelAttendeeConnectionRequest,
+  fetchAttendeeMeetings,
+  bookAttendeeMeeting,
+  acceptAttendeeMeeting,
+  declineAttendeeMeeting,
+  cancelAttendeeMeeting,
+  fetchMeetingBookedSlots,
   fetchSessionBookmarks,
   toggleSessionBookmark,
   fetchEventChatMessages,
@@ -261,6 +267,32 @@ export default function AttendeePortalView({
   const prevMsgCountRef = useRef(0);
   const prevContactRef = useRef(null);
 
+  // ─────────────────────────────────────────────
+  // 3.8. STATE: 1-ON-1 ATTENDEE MEETINGS
+  // ─────────────────────────────────────────────
+  const [meetings, setMeetings] = useState([]);
+  const [upcomingMeetings, setUpcomingMeetings] = useState([]);
+  const [pendingMeetings, setPendingMeetings] = useState([]);
+  const [pastMeetings, setPastMeetings] = useState([]);
+  const [meetingsSubTab, setMeetingsSubTab] = useState("upcoming"); // "upcoming" | "pending" | "past"
+  const [isLoadingMeetings, setIsLoadingMeetings] = useState(false);
+  const [isProcessingMeetingAction, setIsProcessingMeetingAction] = useState(false);
+
+  // Meeting Booking Modal
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [bookingTargetAttendee, setBookingTargetAttendee] = useState(null);
+  const [bookingDate, setBookingDate] = useState("");
+  const [bookingStartTime, setBookingStartTime] = useState("");
+  const [bookingDuration, setBookingDuration] = useState(30);
+  const [bookingLocation, setBookingLocation] = useState("Networking Lounge");
+  const [bookingCustomLocation, setBookingCustomLocation] = useState("");
+  const [bookingTitle, setBookingTitle] = useState("1-on-1 Networking Meeting");
+  const [bookingNote, setBookingNote] = useState("");
+  const [bookingError, setBookingError] = useState("");
+  const [isSubmittingMeeting, setIsSubmittingMeeting] = useState(false);
+  const [bookedSlots, setBookedSlots] = useState([]);
+  const [isLoadingBookedSlots, setIsLoadingBookedSlots] = useState(false);
+
   // Load & Refresh Connections & Invitations
   const loadConnectionsData = async () => {
     if (!currentUser || !eventDetails?.id) return;
@@ -294,12 +326,32 @@ export default function AttendeePortalView({
     }
   };
 
+  // Load & Refresh 1-on-1 Meetings
+  const loadMeetingsData = async () => {
+    if (!currentUser || !eventDetails?.id) return;
+    setIsLoadingMeetings(true);
+    try {
+      const data = await fetchAttendeeMeetings(currentUser, eventDetails.id);
+      if (data) {
+        setMeetings(data.meetings || []);
+        setUpcomingMeetings(data.upcoming || []);
+        setPendingMeetings(data.pending || []);
+        setPastMeetings(data.past || []);
+      }
+    } catch (err) {
+      console.warn("Error loading meetings:", err);
+    } finally {
+      setIsLoadingMeetings(false);
+    }
+  };
+
   // Zero-egress intelligent visibility & on-demand polling
   useEffect(() => {
     if (!currentUser || !eventDetails?.id) return;
 
     // Initial load
     loadConnectionsData();
+    loadMeetingsData();
     if (activeChatContact) {
       loadChatData();
     }
@@ -308,6 +360,7 @@ export default function AttendeePortalView({
     const handleVisibilityChange = () => {
       if (typeof document !== "undefined" && document.visibilityState === "visible") {
         loadConnectionsData();
+        loadMeetingsData();
         if (activeChatContact) {
           loadChatData();
         }
@@ -334,12 +387,20 @@ export default function AttendeePortalView({
       }
     }, 60000);
 
+    // Meetings polling: Background update every 30 seconds, only when tab is visible
+    const meetingInterval = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        loadMeetingsData();
+      }
+    }, 30000);
+
     return () => {
       if (typeof document !== "undefined") {
         document.removeEventListener("visibilitychange", handleVisibilityChange);
       }
       if (chatInterval) clearInterval(chatInterval);
       clearInterval(connInterval);
+      clearInterval(meetingInterval);
     };
   }, [currentUser?.id, currentUser?.email, eventDetails?.id, activeChatContact?.id, activeChatContact?.email]);
 
@@ -489,6 +550,235 @@ export default function AttendeePortalView({
       return searchMatch && tabMatch;
     });
   }, [attendees, currentUser, networkingSearch, connections, networkingTab]);
+
+  // ─────────────────────────────────────────────
+  // 3.9. COMPUTED: EVENT DAYS, OPERATING HOURS & MEETING ACTIONS
+  // ─────────────────────────────────────────────
+  const eventAvailableDays = useMemo(() => {
+    const dates = [];
+    const startStr = eventDetails.startDate || eventDetails.start_date || eventDetails.date;
+    const endStr = eventDetails.endDate || eventDetails.end_date || startStr;
+
+    if (startStr) {
+      const startDate = new Date(startStr);
+      const endDate = endStr ? new Date(endStr) : startDate;
+
+      if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+        const cur = new Date(startDate);
+        let count = 0;
+        while (cur <= endDate && count < 30) {
+          dates.push(cur.toISOString().split("T")[0]);
+          cur.setDate(cur.getDate() + 1);
+          count++;
+        }
+      }
+    }
+
+    if (Array.isArray(sessions)) {
+      sessions.forEach(s => {
+        const sDate = s.date || s.session_date;
+        if (sDate && !dates.includes(sDate)) {
+          dates.push(sDate);
+        }
+      });
+    }
+
+    dates.sort();
+    return dates.length > 0 ? dates : [new Date().toISOString().split("T")[0]];
+  }, [eventDetails, sessions]);
+
+  const eventOperatingHours = useMemo(() => {
+    let startHour = 9;
+    let endHour = 18;
+
+    const timeStr = eventDetails.scheduleTime || eventDetails.schedule_time || "";
+    if (timeStr) {
+      const match = timeStr.match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?\s*[-–—to]+\s*(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?/i);
+      if (match) {
+        let sh = parseInt(match[1], 10);
+        const sampm = match[3]?.toUpperCase();
+        if (sampm === "PM" && sh < 12) sh += 12;
+        if (sampm === "AM" && sh === 12) sh = 0;
+
+        let eh = parseInt(match[4], 10);
+        const eampm = match[6]?.toUpperCase();
+        if (eampm === "PM" && eh < 12) eh += 12;
+        if (eampm === "AM" && eh === 12) eh = 0;
+
+        if (sh >= 0 && sh <= 23 && eh > sh && eh <= 24) {
+          startHour = sh;
+          endHour = eh;
+        }
+      }
+    }
+
+    const slots = [];
+    for (let h = startHour; h < endHour; h++) {
+      const hStr = h < 10 ? `0${h}` : `${h}`;
+      slots.push(`${hStr}:00`);
+      slots.push(`${hStr}:30`);
+    }
+    return slots;
+  }, [eventDetails]);
+
+  // Fetch booked slots when booking modal opens or booking date changes
+  useEffect(() => {
+    if (!isBookingModalOpen || !bookingDate || !eventDetails?.id) return;
+
+    let isMounted = true;
+    setIsLoadingBookedSlots(true);
+    const userIds = [
+      currentUser?.id,
+      bookingTargetAttendee?.id || bookingTargetAttendee?.partnerId || bookingTargetAttendee?.connected_user_id
+    ].filter(Boolean);
+
+    fetchMeetingBookedSlots(eventDetails.id, bookingDate, userIds)
+      .then(slots => {
+        if (isMounted) {
+          setBookedSlots(Array.isArray(slots) ? slots : []);
+          setIsLoadingBookedSlots(false);
+        }
+      })
+      .catch(() => {
+        if (isMounted) setIsLoadingBookedSlots(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isBookingModalOpen, bookingDate, eventDetails?.id, currentUser?.id, bookingTargetAttendee?.id, bookingTargetAttendee?.partnerId, bookingTargetAttendee?.connected_user_id]);
+
+  const handleOpenBookingModal = (attendee) => {
+    if (!currentUser) {
+      if (onOpenAuth) onOpenAuth("signin");
+      return;
+    }
+    if (!attendee) return;
+
+    // Check if connected
+    const isConn = connections.some(c => 
+      isMatchingEmail(c.email, attendee.email) || 
+      (c.partnerId && (c.partnerId === attendee.id || c.partnerId === attendee.connected_user_id))
+    );
+
+    if (!isConn) {
+      setSelectedAttendeeForModal(null);
+      setConnectModalTarget(attendee);
+      return;
+    }
+
+    setBookingTargetAttendee(attendee);
+    const initialDate = eventAvailableDays[0] || new Date().toISOString().split("T")[0];
+    setBookingDate(initialDate);
+    setBookingStartTime("");
+    setBookingDuration(30);
+    setBookingLocation("Networking Lounge");
+    setBookingCustomLocation("");
+    setBookingTitle("1-on-1 Networking Meeting");
+    setBookingNote("");
+    setBookingError("");
+    setIsBookingModalOpen(true);
+    setSelectedAttendeeForModal(null);
+  };
+
+  const handleSubmitBooking = async (e) => {
+    e.preventDefault();
+    if (!bookingTargetAttendee || !currentUser || !eventDetails?.id) return;
+
+    if (!bookingDate) {
+      setBookingError(t("portal.errorSelectDate", "Please select an event day for the meeting."));
+      return;
+    }
+    if (!bookingStartTime) {
+      setBookingError(t("portal.errorSelectTime", "Please select a time slot."));
+      return;
+    }
+
+    const [startH, startM] = bookingStartTime.split(":").map(Number);
+    const endMinutesTotal = startH * 60 + startM + Number(bookingDuration || 30);
+    const endH = Math.floor(endMinutesTotal / 60);
+    const endM = endMinutesTotal % 60;
+    const endTime = `${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}`;
+
+    const finalLocation = bookingLocation === "Custom Location" ? (bookingCustomLocation.trim() || "Event Venue") : bookingLocation;
+
+    setIsSubmittingMeeting(true);
+    setBookingError("");
+
+    try {
+      const res = await bookAttendeeMeeting(currentUser, bookingTargetAttendee, eventDetails.id, {
+        date: bookingDate,
+        startTime: bookingStartTime,
+        endTime,
+        duration: Number(bookingDuration || 30),
+        location: finalLocation,
+        title: bookingTitle.trim() || "1-on-1 Networking Meeting",
+        note: bookingNote.trim()
+      });
+
+      if (res.error) {
+        setBookingError(res.error);
+        setIsSubmittingMeeting(false);
+        return;
+      }
+
+      await loadMeetingsData();
+      setIsBookingModalOpen(false);
+      setBookingTargetAttendee(null);
+      setActiveTab("meetings");
+      setMeetingsSubTab("pending");
+    } catch (err) {
+      console.error("Booking error:", err);
+      setBookingError(err.message || "Failed to book meeting. Please try again.");
+    } finally {
+      setIsSubmittingMeeting(false);
+    }
+  };
+
+  const handleAcceptMeeting = async (meetingId) => {
+    if (!meetingId || !eventDetails?.id) return;
+    setIsProcessingMeetingAction(true);
+    try {
+      const ok = await acceptAttendeeMeeting(meetingId, eventDetails.id);
+      if (ok) {
+        await loadMeetingsData();
+      }
+    } catch (err) {
+      console.warn("Error accepting meeting:", err);
+    } finally {
+      setIsProcessingMeetingAction(false);
+    }
+  };
+
+  const handleDeclineMeeting = async (meetingId) => {
+    if (!meetingId || !eventDetails?.id) return;
+    setIsProcessingMeetingAction(true);
+    try {
+      const ok = await declineAttendeeMeeting(meetingId, eventDetails.id);
+      if (ok) {
+        await loadMeetingsData();
+      }
+    } catch (err) {
+      console.warn("Error declining meeting:", err);
+    } finally {
+      setIsProcessingMeetingAction(false);
+    }
+  };
+
+  const handleCancelMeeting = async (meetingId) => {
+    if (!meetingId || !eventDetails?.id) return;
+    setIsProcessingMeetingAction(true);
+    try {
+      const ok = await cancelAttendeeMeeting(meetingId, eventDetails.id);
+      if (ok) {
+        await loadMeetingsData();
+      }
+    } catch (err) {
+      console.warn("Error cancelling meeting:", err);
+    } finally {
+      setIsProcessingMeetingAction(false);
+    }
+  };
 
   // ─────────────────────────────────────────────
   // 3.5. STATE: DIRECT CHAT & 1-ON-1 MESSAGING
@@ -1332,6 +1622,32 @@ export default function AttendeePortalView({
                   {chatMessages.length}
                 </span>
               )}
+            </button>
+
+            {/* Tab 3.8: 1-on-1 Meetings */}
+            <button
+              onClick={() => setActiveTab("meetings")}
+              className={`px-3.5 py-2 rounded-xl text-xs whitespace-nowrap transition-all cursor-pointer flex items-center gap-2 ${
+                activeTab === "meetings"
+                  ? "bg-blue-600 text-white font-bold shadow-xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-semibold"
+              }`}
+            >
+              <CalendarCheck size={14} className={activeTab === "meetings" ? "text-white" : "text-slate-500"} />
+              <span>{t("portal.meetingsTab", "Meetings")}</span>
+              {pendingMeetings.length > 0 ? (
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                  activeTab === "meetings" ? "bg-amber-400 text-slate-950" : "bg-amber-100 text-amber-900 border border-amber-300"
+                }`}>
+                  {pendingMeetings.length}
+                </span>
+              ) : upcomingMeetings.length > 0 ? (
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                  activeTab === "meetings" ? "bg-white/20 text-white" : "bg-blue-50 text-blue-700 border border-blue-200"
+                }`}>
+                  {upcomingMeetings.length}
+                </span>
+              ) : null}
             </button>
 
             {/* Tab 4: Exhibitors & Sponsors */}
@@ -2230,6 +2546,14 @@ export default function AttendeePortalView({
                           {isConn ? (
                             <>
                               <button
+                                onClick={() => handleOpenBookingModal(att)}
+                                className="py-2 px-3 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
+                                title={`Book meeting with ${name}`}
+                              >
+                                <CalendarPlus size={13} />
+                                <span>{t("portal.bookMeetingBtn", "Book")}</span>
+                              </button>
+                              <button
                                 onClick={() => handleStartChatWith(att)}
                                 className="py-2 px-3 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
                                 title={`Message ${name}`}
@@ -2412,6 +2736,13 @@ export default function AttendeePortalView({
 
                       <div className="flex items-center gap-2 shrink-0">
                         <button
+                          onClick={() => handleOpenBookingModal(activeChatContact)}
+                          className="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-xl text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
+                        >
+                          <CalendarPlus size={13} className="text-purple-600" />
+                          <span>{t("portal.bookMeetingBtn", "Book Meeting")}</span>
+                        </button>
+                        <button
                           onClick={() => setSelectedAttendeeForModal(activeChatContact)}
                           className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
                         >
@@ -2585,6 +2916,349 @@ export default function AttendeePortalView({
               </div>
 
             </div>
+
+          </div>
+        )}
+
+        {/* ==================================================================== */}
+        {/* TAB 3.8: 1-ON-1 ATTENDEE MEETINGS                                    */}
+        {/* ==================================================================== */}
+        {activeTab === "meetings" && (
+          <div className="space-y-6 animate-fade-in">
+
+            {/* Meetings Header & Stats */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-7 shadow-xs space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                      <CalendarCheck size={18} />
+                    </div>
+                    <h2 className="text-xl font-black text-slate-900 tracking-tight">
+                      {t("portal.meetingsMainTitle", "1-on-1 Networking Meetings")}
+                    </h2>
+                  </div>
+                  <p className="text-xs text-slate-500 font-medium max-w-2xl">
+                    {t("portal.meetingsMainSubtitle", "Schedule and manage verified face-to-face meetings with your accepted connections during official event operating hours.")}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => setActiveTab("networking")}
+                    className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-600/20 flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <CalendarPlus size={14} />
+                    <span>{t("portal.bookNewMeetingBtn", "Book a Meeting")}</span>
+                  </button>
+                  <button
+                    onClick={loadMeetingsData}
+                    disabled={isLoadingMeetings}
+                    className="p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 border border-slate-200 rounded-xl transition-all cursor-pointer"
+                    title={t("portal.refreshMeetings", "Refresh meetings")}
+                  >
+                    <RefreshCw size={14} className={isLoadingMeetings ? "animate-spin text-blue-600" : ""} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Sub-Tabs Selector */}
+              <div className="flex items-center gap-1.5 border-b border-slate-100 pt-2 overflow-x-auto scrollbar-none">
+                <button
+                  onClick={() => setMeetingsSubTab("upcoming")}
+                  className={`pb-3 px-3.5 text-xs font-bold transition-all cursor-pointer border-b-2 flex items-center gap-1.5 ${
+                    meetingsSubTab === "upcoming"
+                      ? "border-blue-600 text-blue-600"
+                      : "border-transparent text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  <Calendar size={13} />
+                  <span>{t("portal.subTabUpcoming", "Upcoming")}</span>
+                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                    meetingsSubTab === "upcoming" ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-600"
+                  }`}>
+                    {upcomingMeetings.length}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => setMeetingsSubTab("pending")}
+                  className={`pb-3 px-3.5 text-xs font-bold transition-all cursor-pointer border-b-2 flex items-center gap-1.5 ${
+                    meetingsSubTab === "pending"
+                      ? "border-amber-500 text-amber-600"
+                      : "border-transparent text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  <Clock size={13} />
+                  <span>{t("portal.subTabPending", "Pending Requests")}</span>
+                  {pendingMeetings.length > 0 && (
+                    <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
+                      {pendingMeetings.length}
+                    </span>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => setMeetingsSubTab("past")}
+                  className={`pb-3 px-3.5 text-xs font-bold transition-all cursor-pointer border-b-2 flex items-center gap-1.5 ${
+                    meetingsSubTab === "past"
+                      ? "border-slate-800 text-slate-900"
+                      : "border-transparent text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  <CheckCircle2 size={13} />
+                  <span>{t("portal.subTabPast", "Past / Closed")}</span>
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
+                    {pastMeetings.length}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {/* Meetings List Content */}
+            {(() => {
+              const currentList = meetingsSubTab === "upcoming" 
+                ? upcomingMeetings 
+                : (meetingsSubTab === "pending" ? pendingMeetings : pastMeetings);
+
+              if (isLoadingMeetings && currentList.length === 0) {
+                return (
+                  <div className="p-16 text-center bg-white rounded-2xl border border-slate-200 shadow-xs space-y-3">
+                    <Loader2 size={28} className="animate-spin text-blue-600 mx-auto" />
+                    <p className="text-xs text-slate-500 font-semibold">{t("portal.loadingMeetings", "Loading scheduled meetings...")}</p>
+                  </div>
+                );
+              }
+
+              if (currentList.length === 0) {
+                return (
+                  <div className="p-14 text-center bg-white rounded-2xl border border-slate-200 shadow-xs space-y-4">
+                    <div className="w-16 h-16 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                      <CalendarX size={30} />
+                    </div>
+                    <div className="space-y-1 max-w-sm mx-auto">
+                      <h3 className="text-base font-bold text-slate-800">
+                        {meetingsSubTab === "upcoming" 
+                          ? t("portal.noUpcomingMeetings", "No meetings scheduled")
+                          : (meetingsSubTab === "pending" 
+                              ? t("portal.noPendingMeetings", "No pending meeting requests")
+                              : t("portal.noPastMeetings", "No past meetings"))}
+                      </h3>
+                      <p className="text-xs text-slate-400 leading-relaxed">
+                        {meetingsSubTab === "upcoming"
+                          ? t("portal.noUpcomingMeetingsDesc", "Connect with delegates in the attendee directory to book face-to-face meetings during event hours.")
+                          : (meetingsSubTab === "pending"
+                              ? t("portal.noPendingMeetingsDesc", "When an attendee invites you to a meeting or when you send a meeting request, it will appear here.")
+                              : t("portal.noPastMeetingsDesc", "Completed, declined, or cancelled meetings are archived here."))}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setActiveTab("networking")}
+                      className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
+                    >
+                      {t("portal.browseAttendeesToMeet", "Browse Attendees")}
+                    </button>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {currentList.map((m) => {
+                    const isSender = (currentUser?.email && isMatchingEmail(m.sender_email, currentUser.email)) ||
+                      (currentUser?.id && m.sender_id === currentUser.id);
+
+                    // Partner data
+                    const partnerName = isSender 
+                      ? (m.recipient_name || "Delegate") 
+                      : (m.sender_name || "Delegate");
+                    const partnerEmail = isSender ? m.recipient_email : m.sender_email;
+                    const matchedAtt = attendees.find(a => isMatchingEmail(a.email, partnerEmail));
+                    const partnerAvatar = (isSender ? m.recipient_avatar : m.sender_avatar) || matchedAtt?.avatar || matchedAtt?.image;
+                    const partnerJob = matchedAtt?.jobTitle || matchedAtt?.role || (isSender ? m.recipient_title : m.sender_title) || "Delegate";
+                    const partnerComp = matchedAtt?.company || (isSender ? m.recipient_company : m.sender_company) || "";
+
+                    const formattedDate = m.date 
+                      ? new Date(`${m.date}T00:00:00`).toLocaleDateString(lang === "fr" ? "fr-FR" : (lang === "ar" ? "ar-DZ" : "en-US"), {
+                          weekday: "short",
+                          month: "short",
+                          day: "numeric"
+                        })
+                      : t("portal.tbdDate", "TBD");
+
+                    const timeRange = `${m.start_time || m.startTime || "09:00"} – ${m.end_time || m.endTime || "09:30"}`;
+                    const durationMins = m.duration || 30;
+
+                    return (
+                      <div
+                        key={m.id}
+                        className="bg-white border border-slate-200 hover:border-slate-300 rounded-2xl p-5 sm:p-6 shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-4"
+                      >
+                        <div className="space-y-3.5">
+                          {/* Top: Date & Status Badges */}
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200/60 rounded-xl text-xs font-bold">
+                              <Calendar size={12} className="text-blue-600" />
+                              <span>{formattedDate}</span>
+                              <span>•</span>
+                              <Clock size={12} className="text-blue-600" />
+                              <span dir="ltr">{timeRange}</span>
+                            </div>
+
+                            {/* Status Indicator */}
+                            {m.status === "accepted" && (
+                              <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold flex items-center gap-1 shrink-0">
+                                <CheckCircle2 size={12} />
+                                <span>{t("portal.meetingConfirmed", "Confirmed")}</span>
+                              </span>
+                            )}
+                            {m.status === "pending" && (
+                              <span className="px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-xl text-xs font-bold flex items-center gap-1 shrink-0">
+                                <Clock size={12} />
+                                <span>{isSender ? t("portal.meetingAwaitingResponse", "Awaiting Response") : t("portal.meetingInvitationReceived", "Action Required")}</span>
+                              </span>
+                            )}
+                            {m.status === "declined" && (
+                              <span className="px-2.5 py-1 bg-red-50 text-red-700 border border-red-200 rounded-xl text-xs font-bold flex items-center gap-1 shrink-0">
+                                <X size={12} />
+                                <span>{t("portal.meetingDeclined", "Declined")}</span>
+                              </span>
+                            )}
+                            {m.status === "cancelled" && (
+                              <span className="px-2.5 py-1 bg-slate-100 text-slate-600 border border-slate-200 rounded-xl text-xs font-bold flex items-center gap-1 shrink-0">
+                                <span>{t("portal.meetingCancelled", "Cancelled")}</span>
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Meeting Title & Location */}
+                          <div className="space-y-1">
+                            <h3 className="text-sm font-black text-slate-900">
+                              {m.title || t("portal.defaultMeetingTitle", "1-on-1 Networking Meeting")}
+                            </h3>
+                            <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+                              <span className="inline-flex items-center gap-1">
+                                <MapPin size={12} className="text-slate-400" />
+                                <span>{m.location || "Networking Lounge"}</span>
+                              </span>
+                              <span>•</span>
+                              <span>{durationMins} {t("portal.minsDuration", "mins")}</span>
+                            </div>
+                          </div>
+
+                          {/* Partner Mini Profile */}
+                          <div className="p-3 bg-slate-50/80 rounded-xl border border-slate-150 flex items-center gap-3">
+                            {partnerAvatar ? (
+                              <img
+                                src={partnerAvatar}
+                                alt={partnerName}
+                                className="w-10 h-10 rounded-xl object-cover border border-slate-200 shrink-0"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-black text-sm shrink-0">
+                                {partnerName.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                            <div className="min-w-0 flex-1 text-start">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs font-black text-slate-900 truncate">{partnerName}</span>
+                                <span className="text-[10px] font-bold text-slate-400">
+                                  {isSender ? `(${t("portal.recipientLabel", "Invitee")})` : `(${t("portal.requesterLabel", "Organizer")})`}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-500 font-medium truncate">
+                                {partnerJob} {partnerComp ? `• ${partnerComp}` : ""}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Note / Objective if present */}
+                          {(m.note || m.description) && (
+                            <p className="text-xs text-slate-600 bg-amber-50/50 p-2.5 rounded-xl border border-amber-200/40 font-medium leading-relaxed">
+                              <span className="font-bold text-amber-800">{t("portal.meetingNotePrefix", "Note:")} </span>
+                              {m.note || m.description}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Actions Bottom Bar */}
+                        <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                          {m.status === "pending" && !isSender ? (
+                            /* Incoming request: Accept or Decline */
+                            <div className="flex items-center gap-2 w-full">
+                              <button
+                                onClick={() => handleAcceptMeeting(m.id)}
+                                disabled={isProcessingMeetingAction}
+                                className="flex-1 py-2 px-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50"
+                              >
+                                <Check size={13} />
+                                <span>{t("portal.acceptMeetingBtn", "Accept Meeting")}</span>
+                              </button>
+                              <button
+                                onClick={() => handleDeclineMeeting(m.id)}
+                                disabled={isProcessingMeetingAction}
+                                className="py-2 px-3 bg-slate-100 hover:bg-red-50 text-slate-600 hover:text-red-600 border border-slate-200 hover:border-red-200 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
+                              >
+                                <X size={13} />
+                                <span>{t("portal.declineMeetingBtn", "Decline")}</span>
+                              </button>
+                            </div>
+                          ) : m.status === "pending" && isSender ? (
+                            /* Outgoing request: Cancel option */
+                            <div className="flex items-center justify-between gap-2 w-full">
+                              <span className="text-[11px] text-slate-400 font-medium">
+                                {t("portal.awaitingPartnerAcceptance", "Waiting for delegate confirmation...")}
+                              </span>
+                              <button
+                                onClick={() => handleCancelMeeting(m.id)}
+                                disabled={isProcessingMeetingAction}
+                                className="py-1.5 px-3 bg-slate-50 hover:bg-red-50 text-slate-500 hover:text-red-600 border border-slate-200 hover:border-red-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                              >
+                                <X size={12} />
+                                <span>{t("portal.cancelRequestBtn", "Cancel Request")}</span>
+                              </button>
+                            </div>
+                          ) : m.status === "accepted" ? (
+                            /* Confirmed meeting: Message or Cancel */
+                            <div className="flex items-center justify-between gap-2 w-full">
+                              <button
+                                onClick={() => {
+                                  const contact = matchedAtt || {
+                                    id: isSender ? m.recipient_id : m.sender_id,
+                                    email: partnerEmail,
+                                    name: partnerName,
+                                    jobTitle: partnerJob,
+                                    company: partnerComp
+                                  };
+                                  setActiveChatContact(contact);
+                                  setActiveTab("chat");
+                                }}
+                                className="py-2 px-3.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                              >
+                                <MessageCircle size={13} />
+                                <span>{t("portal.messagePartnerBtn", "Send Message")}</span>
+                              </button>
+                              <button
+                                onClick={() => handleCancelMeeting(m.id)}
+                                disabled={isProcessingMeetingAction}
+                                className="py-2 px-3 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+                              >
+                                {t("portal.cancelMeetingAction", "Cancel Meeting")}
+                              </button>
+                            </div>
+                          ) : (
+                            /* Archived/Closed meeting */
+                            <div className="text-[11px] text-slate-400 font-medium italic">
+                              {t("portal.meetingArchived", "This meeting record is closed.")}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
 
           </div>
         )}
@@ -3501,26 +4175,35 @@ export default function AttendeePortalView({
                   <>
                     {isConn ? (
                       <div className="flex flex-col gap-2.5 w-full">
-                        <div className="flex items-center gap-2 w-full">
+                        <div className="grid grid-cols-2 gap-2 w-full">
                           <button
                             onClick={() => handleStartChatWith(att)}
-                            className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-xs font-bold shadow-md shadow-blue-600/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                            className="py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-xs font-bold shadow-md shadow-blue-600/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                           >
                             <MessageCircle size={14} />
                             <span>{t("portal.startOneOnOneChat", "Start 1-on-1 Chat")}</span>
                           </button>
-                          <div className="px-4 py-3 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-2xl text-xs font-bold flex items-center gap-1.5 shrink-0">
-                            <CheckCircle2 size={14} />
-                            <span>{t("portal.connectedStatus", "Connected")}</span>
-                          </div>
+                          <button
+                            onClick={() => handleOpenBookingModal(att)}
+                            className="py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-2xl text-xs font-bold shadow-md shadow-purple-600/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                          >
+                            <CalendarPlus size={14} />
+                            <span>{t("portal.bookMeetingBtn", "Book Meeting")}</span>
+                          </button>
                         </div>
-                        <button
-                          onClick={() => handleOpenDisconnectModal(att)}
-                          className="w-full py-2.5 bg-slate-50 hover:bg-red-50 text-slate-500 hover:text-red-600 border border-slate-200 hover:border-red-200 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                        >
-                          <UserMinus size={13} />
-                          <span>{t("portal.removeConnectionBtn", "Remove Connection")}</span>
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 py-2.5 px-3 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5">
+                            <CheckCircle2 size={14} />
+                            <span>{t("portal.connectedStatus", "Connected Delegate")}</span>
+                          </div>
+                          <button
+                            onClick={() => handleOpenDisconnectModal(att)}
+                            className="py-2.5 px-3 bg-slate-50 hover:bg-red-50 text-slate-500 hover:text-red-600 border border-slate-200 hover:border-red-200 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+                          >
+                            <UserMinus size={13} />
+                            <span>{t("portal.removeConnectionBtn", "Remove")}</span>
+                          </button>
+                        </div>
                       </div>
                     ) : pendingRec ? (
                       <div className="flex items-center gap-2 flex-1 w-full">
@@ -3786,6 +4469,270 @@ export default function AttendeePortalView({
           </div>
         </div>
       )}
+
+      {/* ==================================================================== */}
+      {/* MODAL 2.8: BOOK 1-ON-1 ATTENDEE MEETING                              */}
+      {/* ==================================================================== */}
+      {isBookingModalOpen && bookingTargetAttendee && (() => {
+        const att = bookingTargetAttendee;
+        const name = att.name || `${att.firstName || ""} ${att.lastName || ""}`.trim() || "Delegate";
+        const job = att.jobTitle || att.job_title || att.role || "Delegate";
+        const comp = att.company || att.organization || "";
+
+        const locationOptions = [
+          { value: "Networking Lounge", label: t("portal.locNetworkingLounge", "Networking Lounge") },
+          { value: "Main Hall / Booth Area", label: t("portal.locMainHall", "Main Hall / Booth Area") },
+          { value: "VIP Lounge", label: t("portal.locVipLounge", "VIP Lounge") },
+          { value: "Exhibition Floor", label: t("portal.locExhibitionFloor", "Exhibition Floor") },
+          { value: "Cafeteria / Coffee Area", label: t("portal.locCafeteria", "Cafeteria / Coffee Area") },
+          { value: "Custom Location", label: t("portal.locCustom", "Custom Location...") }
+        ];
+
+        return (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-fade-in font-sans">
+            <div className="bg-white border border-slate-200 w-full max-w-lg rounded-2xl shadow-2xl p-6 sm:p-7 text-start space-y-5 animate-scale-up relative max-h-[92vh] overflow-y-auto">
+              {/* Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-slate-150">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                    <CalendarPlus size={16} />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-slate-900">{t("portal.bookMeetingTitle", "Schedule 1-on-1 Meeting")}</h3>
+                    <p className="text-[11px] text-slate-500 font-medium">{t("portal.bookMeetingSubtitle", "Choose a day and time slot during event operating hours.")}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsBookingModalOpen(false)}
+                  className="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 cursor-pointer font-bold"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Target Attendee Preview Card */}
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center gap-3">
+                {att.avatar || att.image ? (
+                  <img src={att.avatar || att.image} alt={name} className="w-11 h-11 rounded-xl object-cover border border-slate-200 shrink-0" />
+                ) : (
+                  <div className="w-11 h-11 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-black text-base shrink-0">
+                    {name.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className="min-w-0 flex-1 text-start">
+                  <div className="flex items-center gap-1.5">
+                    <h4 className="text-xs font-black text-slate-900 truncate">{name}</h4>
+                    <span className="px-1.5 py-0.2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-[10px] font-bold">
+                      {t("portal.connectedBadge", "Connected")}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 font-medium truncate">
+                    {job} {comp ? `• ${comp}` : ""}
+                  </p>
+                </div>
+              </div>
+
+              {/* Form */}
+              <form onSubmit={handleSubmitBooking} className="space-y-4">
+                {/* 1. Event Day Selection */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-2">
+                    {t("portal.selectMeetingDay", "1. Select Event Day")}
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {eventAvailableDays.map((d, idx) => {
+                      const isSelected = bookingDate === d;
+                      const dateObj = new Date(`${d}T00:00:00`);
+                      const dayName = !isNaN(dateObj.getTime())
+                        ? dateObj.toLocaleDateString(lang === "fr" ? "fr-FR" : (lang === "ar" ? "ar-DZ" : "en-US"), { weekday: "short" })
+                        : "";
+                      const monthDay = !isNaN(dateObj.getTime())
+                        ? dateObj.toLocaleDateString(lang === "fr" ? "fr-FR" : (lang === "ar" ? "ar-DZ" : "en-US"), { month: "short", day: "numeric" })
+                        : d;
+                      return (
+                        <button
+                          key={d}
+                          type="button"
+                          onClick={() => setBookingDate(d)}
+                          className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
+                            isSelected
+                              ? "bg-blue-50 border-blue-600 text-blue-700 font-bold shadow-2xs ring-2 ring-blue-600/20"
+                              : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 font-semibold"
+                          }`}
+                        >
+                          <div className="text-[10px] uppercase tracking-wider text-slate-400">
+                            {t("portal.dayCountPrefix", "Day")} {idx + 1} {dayName ? `• ${dayName}` : ""}
+                          </div>
+                          <div className="text-xs font-black">{monthDay}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 2. Choose Time Slot */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                      {t("portal.selectTimeSlot", "2. Choose Time Slot")}
+                    </label>
+                    {isLoadingBookedSlots && (
+                      <span className="text-[10px] text-blue-600 font-bold flex items-center gap-1">
+                        <Loader2 size={11} className="animate-spin" />
+                        <span>{t("portal.checkingAvailability", "Checking slots...")}</span>
+                      </span>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-44 overflow-y-auto p-1.5 border border-slate-200 rounded-xl bg-slate-50/50">
+                    {eventOperatingHours.map((slot) => {
+                      const isBooked = bookedSlots.includes(slot);
+                      const isSelected = bookingStartTime === slot;
+                      return (
+                        <button
+                          key={slot}
+                          type="button"
+                          disabled={isBooked}
+                          onClick={() => setBookingStartTime(slot)}
+                          className={`py-2 px-2 rounded-xl text-xs font-bold transition-all text-center flex flex-col items-center justify-center cursor-pointer ${
+                            isBooked
+                              ? "bg-slate-100 text-slate-400 border border-dashed border-slate-200 cursor-not-allowed opacity-60"
+                              : isSelected
+                              ? "bg-blue-600 text-white shadow-md shadow-blue-600/20 ring-2 ring-blue-600/20"
+                              : "bg-white hover:bg-blue-50 hover:border-blue-200 text-slate-700 border border-slate-200"
+                          }`}
+                        >
+                          <span dir="ltr">{slot}</span>
+                          {isBooked ? (
+                            <span className="text-[9px] text-slate-400 font-medium">{t("portal.slotBooked", "Booked")}</span>
+                          ) : isSelected ? (
+                            <span className="text-[9px] text-blue-100">{t("portal.slotSelected", "Selected")}</span>
+                          ) : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 3. Duration & Location */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                      {t("portal.meetingDuration", "Duration")}
+                    </label>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {[15, 30, 45].map((d) => (
+                        <button
+                          key={d}
+                          type="button"
+                          onClick={() => setBookingDuration(d)}
+                          className={`py-2 rounded-xl text-xs font-bold transition-all text-center cursor-pointer ${
+                            bookingDuration === d
+                              ? "bg-blue-600 text-white shadow-xs"
+                              : "bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200"
+                          }`}
+                        >
+                          {d} {t("portal.minsShort", "min")}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                      {t("portal.meetingLocation", "Location")}
+                    </label>
+                    <SearchableSelect
+                      value={bookingLocation}
+                      onChange={setBookingLocation}
+                      options={locationOptions}
+                      placeholder={t("portal.selectLocation", "Select location")}
+                      isClearable={false}
+                    />
+                  </div>
+                </div>
+
+                {/* If Custom Location selected */}
+                {bookingLocation === "Custom Location" && (
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                      {t("portal.customLocationDetails", "Custom Location Details")}
+                    </label>
+                    <input
+                      type="text"
+                      value={bookingCustomLocation}
+                      onChange={(e) => setBookingCustomLocation(e.target.value)}
+                      placeholder={t("portal.customLocationPlaceholder", "e.g. Booth #B12, VIP Lounge Table 4...")}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:border-blue-600 transition-all"
+                    />
+                  </div>
+                )}
+
+                {/* 4. Meeting Objective / Title */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    {t("portal.meetingTitleLabel", "Meeting Purpose / Subject")}
+                  </label>
+                  <input
+                    type="text"
+                    value={bookingTitle}
+                    onChange={(e) => setBookingTitle(e.target.value)}
+                    placeholder={t("portal.meetingTitlePlaceholder", "e.g. Discussion on B2B Collaboration")}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:border-blue-600 transition-all"
+                  />
+                </div>
+
+                {/* 5. Optional Note */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    {t("portal.meetingNoteOptional", "Intro Note or Agenda (Optional)")}
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={bookingNote}
+                    onChange={(e) => setBookingNote(e.target.value)}
+                    placeholder={t("portal.meetingNotePlaceholder", "Share a quick agenda or topic of discussion...")}
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 outline-none focus:bg-white focus:border-blue-600 transition-all leading-relaxed"
+                  />
+                </div>
+
+                {/* Error Banner */}
+                {bookingError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs font-semibold text-red-700 flex items-center gap-2 animate-fade-in">
+                    <AlertCircle size={15} className="shrink-0 text-red-500" />
+                    <span>{bookingError}</span>
+                  </div>
+                )}
+
+                {/* Footer Buttons */}
+                <div className="flex gap-2 pt-2 border-t border-slate-150">
+                  <button
+                    type="button"
+                    onClick={() => setIsBookingModalOpen(false)}
+                    className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    {t("portal.cancelBtn", "Cancel")}
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingMeeting || !bookingStartTime}
+                    className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {isSubmittingMeeting ? (
+                      <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <CalendarCheck size={14} />
+                        <span>{t("portal.sendMeetingRequestBtn", "Send Meeting Request")}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+
+            </div>
+          </div>
+        );
+      })()}
 
     </div>
   );
