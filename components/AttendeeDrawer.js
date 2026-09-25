@@ -568,6 +568,8 @@ export default function AttendeeDrawer({
       badgeCode: badgeCode || 'EZ-PASS',
       eventId: activeEventId || '',
       eventTitle: eventTitle || 'Conference Event',
+      eventDate: eventDetails?.startDate || eventDetails?.start_date || '',
+      eventLocation: eventDetails?.location || eventDetails?.venue || '',
       showFoldGuide: badgeSettings.showFoldGuide !== false,
       showPhoto: badgeSettings.showPhoto !== false,
       showQr: badgeSettings.showQr !== false,

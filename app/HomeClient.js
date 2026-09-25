@@ -6161,6 +6161,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
         onUploadFile={uploadFileToBucket}
         activeEventId={activeEventId}
         eventTitle={eventDetails?.title || "Eventzone Summit"}
+        eventDetails={eventDetails}
         onSwitchView={setCurrentView}
         isReadOnly={!canEditModule("tickets", effectivePermissions)}
       />

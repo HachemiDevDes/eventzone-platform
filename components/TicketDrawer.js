@@ -114,6 +114,7 @@ export default function TicketDrawer({
   onUploadFile,
   activeEventId,
   eventTitle = "Eventzone Summit",
+  eventDetails = {},
   onSwitchView,
   isReadOnly = false
 }) {
@@ -1247,6 +1248,8 @@ export default function TicketDrawer({
                         ticketType={name || "VIP Access Pass"}
                         badgeCode="EZ-8942-ELN"
                         eventTitle={eventTitle}
+                        eventDate={eventDetails?.startDate || eventDetails?.start_date || ""}
+                        eventLocation={eventDetails?.location || eventDetails?.venue || ""}
                         showFoldGuide={badgeSettings.showFoldGuide !== false}
                         showPhoto={badgeSettings.showPhoto !== false}
                         showQr={badgeSettings.showQr !== false}

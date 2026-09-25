@@ -17,6 +17,7 @@ export async function GET(request) {
     let attendeeEmail = searchParams.get("email") || "";
     let attendeeCompany = searchParams.get("company") || "";
     let attendeeJobTitle = searchParams.get("job_title") || "";
+    let attendeePhoto = searchParams.get("photo") || searchParams.get("avatar") || "";
     let ticketTier = searchParams.get("ticket_tier") || "Standard Admission";
     let badgeCode = searchParams.get("badge_code") || "EZ-PASS";
     let qrDataUrl = "";
@@ -80,6 +81,7 @@ export async function GET(request) {
         attendeeEmail = part.email || attendeeEmail;
         attendeeCompany = part.company || attendeeCompany;
         attendeeJobTitle = part.job_title || attendeeJobTitle;
+        attendeePhoto = part.photo || part.avatar || part.image || attendeePhoto;
         ticketTier = part.ticket_type || ticketTier;
         badgeCode = part.badge_code || badgeCode;
         qrDataUrl = part.qr_code || qrDataUrl;
@@ -96,6 +98,7 @@ export async function GET(request) {
         attendeeName = `${part.first_name || ""} ${part.last_name || ""}`.trim() || attendeeName;
         attendeeCompany = part.company || attendeeCompany;
         attendeeJobTitle = part.job_title || attendeeJobTitle;
+        attendeePhoto = part.photo || part.avatar || part.image || attendeePhoto;
         ticketTier = part.ticket_type || ticketTier;
         badgeCode = part.badge_code || badgeCode;
         qrDataUrl = part.qr_code || qrDataUrl;
@@ -148,6 +151,7 @@ export async function GET(request) {
       attendeeEmail: attendeeEmail || "",
       attendeeCompany: attendeeCompany || "",
       attendeeJobTitle: attendeeJobTitle || "",
+      attendeePhoto: attendeePhoto || "",
       ticketTier: ticketTier || "Standard Admission",
       badgeCode: badgeCode || "EZ-PASS",
       eventId: eventId || "",

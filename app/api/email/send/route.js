@@ -87,9 +87,11 @@ export async function POST(request) {
       case "ticket_confirmation":
       case "approval_confirmation": {
         let resolvedTemplateUrl = rest.templateUrl || "";
-        let resolvedBadgeSettings = rest.badgeSettings || {};
+        let resolvedEventTitle = rest.eventTitle || "";
+        let resolvedEventDate = rest.eventDate || "";
+        let resolvedEventLocation = rest.eventLocation || "";
 
-        if (!resolvedTemplateUrl && eventId && isValidUuid(eventId)) {
+        if (eventId && isValidUuid(eventId)) {
           try {
             const supabase = getServiceSupabase();
             if (rest.ticketTier) {
@@ -117,19 +119,30 @@ export async function POST(request) {
                 resolvedBadgeSettings = anyTicket.badge_settings || resolvedBadgeSettings;
               }
             }
-            if (!resolvedTemplateUrl) {
-              const { data: evRow } = await supabase
-                .from("events")
-                .select("badge_url, badge_settings")
-                .eq("id", eventId)
-                .maybeSingle();
-              if (evRow?.badge_url) {
+            
+            const { data: evRow } = await supabase
+              .from("events")
+              .select("badge_url, badge_settings, name, location, start_date")
+              .eq("id", eventId)
+              .maybeSingle();
+            if (evRow) {
+              if (!resolvedTemplateUrl && evRow.badge_url) {
                 resolvedTemplateUrl = evRow.badge_url;
                 resolvedBadgeSettings = evRow.badge_settings || resolvedBadgeSettings;
               }
+              if (!resolvedEventTitle && evRow.name) resolvedEventTitle = evRow.name;
+              if (!resolvedEventLocation && evRow.location) resolvedEventLocation = evRow.location;
+              if (!resolvedEventDate && evRow.start_date) {
+                resolvedEventDate = new Date(evRow.start_date).toLocaleDateString(undefined, {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                });
+              }
             }
           } catch (dbErr) {
-            console.warn("Could not query badge_url in email route:", dbErr);
+            console.warn("Could not query event/badge details in email route:", dbErr);
           }
         }
 
@@ -138,6 +151,9 @@ export async function POST(request) {
           subject: finalSubject,
           isApproval: type === "approval_confirmation" || rest.isApproval,
           eventId,
+          eventTitle: resolvedEventTitle || rest.eventTitle || "Eventzone Conference",
+          eventDate: resolvedEventDate || rest.eventDate || "",
+          eventLocation: resolvedEventLocation || rest.eventLocation || "",
           templateUrl: resolvedTemplateUrl,
           badgeSettings: resolvedBadgeSettings,
           ...rest 

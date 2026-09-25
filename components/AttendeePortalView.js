@@ -1089,6 +1089,8 @@ export default function AttendeePortalView({
       ticketType: attendeeTicketType,
       badgeCode: activeBadgeCode,
       eventTitle: eventDetails.title || "Summit",
+      eventDate: eventDetails.startDate || eventDetails.start_date || "",
+      eventLocation: eventDetails.location || eventDetails.venue || "",
       qrCodeUrl: badgeQrUrl,
       showFoldGuide: badgeSettings.showFoldGuide !== false,
       showPhoto: badgeSettings.showPhoto !== false,

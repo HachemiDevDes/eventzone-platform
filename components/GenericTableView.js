@@ -1557,6 +1557,8 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
         badgeCode,
         eventId,
         eventTitle,
+        eventDate: eventDetails.startDate || eventDetails.start_date || "",
+        eventLocation: eventDetails.location || eventDetails.venue || "",
         showFoldGuide: badgeSettings.showFoldGuide !== false,
         showPhoto: badgeSettings.showPhoto !== false,
         showQr: badgeSettings.showQr !== false,
@@ -1705,6 +1707,8 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
       badgeCode,
       eventId,
       eventTitle,
+      eventDate: eventDetails.startDate || eventDetails.start_date || "",
+      eventLocation: eventDetails.location || eventDetails.venue || "",
       showFoldGuide: badgeSettings.showFoldGuide !== false,
       showPhoto: badgeSettings.showPhoto !== false,
       showQr: badgeSettings.showQr !== false,
@@ -2306,6 +2310,8 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
             badgeCode,
             eventId,
             eventTitle,
+            eventDate: eventDetails.startDate || eventDetails.start_date || "",
+            eventLocation: eventDetails.location || eventDetails.venue || "",
             showFoldGuide: badgeSettings.showFoldGuide !== false,
             showPhoto: badgeSettings.showPhoto !== false,
             showQr: badgeSettings.showQr !== false,
@@ -2346,6 +2352,8 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
                   badgeCode={badgeCode}
                   eventId={eventId}
                   eventTitle={eventTitle}
+                  eventDate={eventDetails.startDate || eventDetails.start_date || ""}
+                  eventLocation={eventDetails.location || eventDetails.venue || ""}
                   showFoldGuide={badgeSettings.showFoldGuide !== false}
                   showPhoto={badgeSettings.showPhoto !== false}
                   showQr={badgeSettings.showQr !== false}
@@ -5723,6 +5731,8 @@ function CheckInView({ state, onUpdateState }) {
       badgeCode,
       eventId,
       eventTitle,
+      eventDate: eventDetails.startDate || eventDetails.start_date || "",
+      eventLocation: eventDetails.location || eventDetails.venue || "",
       showFoldGuide: badgeSettings.showFoldGuide !== false,
       showPhoto: badgeSettings.showPhoto !== false,
       showQr: badgeSettings.showQr !== false,
@@ -6526,6 +6536,8 @@ function CheckInView({ state, onUpdateState }) {
             badgeCode,
             eventId,
             eventTitle,
+            eventDate: eventDetails.startDate || eventDetails.start_date || "",
+            eventLocation: eventDetails.location || eventDetails.venue || "",
             showFoldGuide: badgeSettings.showFoldGuide !== false,
             showPhoto: badgeSettings.showPhoto !== false,
             showQr: badgeSettings.showQr !== false,
@@ -6566,6 +6578,8 @@ function CheckInView({ state, onUpdateState }) {
                   badgeCode={badgeCode}
                   eventId={eventId}
                   eventTitle={eventTitle}
+                  eventDate={eventDetails.startDate || eventDetails.start_date || ""}
+                  eventLocation={eventDetails.location || eventDetails.venue || ""}
                   showFoldGuide={badgeSettings.showFoldGuide !== false}
                   showPhoto={badgeSettings.showPhoto !== false}
                   showQr={badgeSettings.showQr !== false}

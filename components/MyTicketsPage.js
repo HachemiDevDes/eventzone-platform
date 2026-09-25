@@ -611,6 +611,8 @@ export default function MyTicketsPage({
         const ticketType = selectedBadgePass.ticketType || matchedTicket?.name || matchedTicket?.tier || "General Admission";
         const badgeCode = selectedBadgePass.badgeCode || "EZ-PASS";
         const eventTitle = selectedBadgePass.eventTitle || matchedEvent.name || matchedEvent.title || "Conference Event";
+        const eventDate = matchedEvent.startDate || matchedEvent.start_date || selectedBadgePass.eventDate || "";
+        const eventLocation = matchedEvent.location || matchedEvent.venue || selectedBadgePass.eventLocation || "";
         const qrUrl = qrCodeUrls[selectedBadgePass.id] || "";
 
         const handlePrint = () => {
@@ -623,6 +625,8 @@ export default function MyTicketsPage({
             ticketType,
             badgeCode,
             eventTitle,
+            eventDate,
+            eventLocation,
             qrCodeUrl: qrUrl,
             showFoldGuide: badgeSettings.showFoldGuide !== false,
             showPhoto: badgeSettings.showPhoto !== false,
@@ -661,6 +665,8 @@ export default function MyTicketsPage({
                   ticketType={ticketType}
                   badgeCode={badgeCode}
                   eventTitle={eventTitle}
+                  eventDate={eventDate}
+                  eventLocation={eventLocation}
                   qrCodeUrl={qrUrl}
                   showFoldGuide={badgeSettings.showFoldGuide !== false}
                   showPhoto={badgeSettings.showPhoto !== false}
