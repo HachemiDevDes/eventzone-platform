@@ -1,9 +1,9 @@
 "use client";
 
 import { useLanguage } from "../lib/i18n";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { Stage, Layer, Rect, Circle, Text, Group, Line, Star, Image as KonvaImage, Transformer, Path, Wedge, Arrow } from "react-konva";
-import { MousePointer, Hand, Maximize } from "lucide-react";
+import { MousePointer, Hand, Maximize, Ruler, X, AlertTriangle, Compass } from "lucide-react";
 
 const getStatusColors = (status) => {
   switch (status) {
@@ -612,6 +612,496 @@ export const generateReservedSeats = (reservedId, seatCount, label, seatSpacing 
   return seats;
 };
 
+// Helper to identify non-physical zone/overlay elements
+const isLayoutElement = (el) => {
+  if (!el || !el.type) return false;
+  return (
+    el.type === "zone-overlay" ||
+    el.type === "corridor" ||
+    el.type.endsWith("-zone") ||
+    el.type === "scheduled-meeting-room" ||
+    el.type === "broadcast-studio" ||
+    el.type === "safety-exit-route" ||
+    el.type === "safety-accessibility-path"
+  );
+};
+
+// Compute direct bounding box distance between two elements A and B
+const computeElementPairDistance = (elA, elB) => {
+  if (!elA || !elB || elA.id === elB.id) return [];
+  const aLeft = elA.x, aRight = elA.x + elA.width, aTop = elA.y, aBottom = elA.y + elA.height;
+  const bLeft = elB.x, bRight = elB.x + elB.width, bTop = elB.y, bBottom = elB.y + elB.height;
+
+  const overlapX = Math.min(aRight, bRight) - Math.max(aLeft, bLeft);
+  const overlapY = Math.min(aBottom, bBottom) - Math.max(aTop, bTop);
+
+  const guides = [];
+
+  if (overlapY > 0) {
+    const yCenter = (Math.max(aTop, bTop) + Math.min(aBottom, bBottom)) / 2;
+    if (aRight <= bLeft) {
+      const gap = bLeft - aRight;
+      guides.push({ x1: aRight, y1: yCenter, x2: bLeft, y2: yCenter, distancePx: gap, distanceMeters: gap / 20, isWall: false });
+    } else if (bRight <= aLeft) {
+      const gap = aLeft - bRight;
+      guides.push({ x1: bRight, y1: yCenter, x2: aLeft, y2: yCenter, distancePx: gap, distanceMeters: gap / 20, isWall: false });
+    }
+  }
+
+  if (overlapX > 0) {
+    const xCenter = (Math.max(aLeft, bLeft) + Math.min(aRight, bRight)) / 2;
+    if (aBottom <= bTop) {
+      const gap = bTop - aBottom;
+      guides.push({ x1: xCenter, y1: aBottom, x2: xCenter, y2: bTop, distancePx: gap, distanceMeters: gap / 20, isWall: false });
+    } else if (bBottom <= aTop) {
+      const gap = aTop - bBottom;
+      guides.push({ x1: xCenter, y1: bBottom, x2: xCenter, y2: aTop, distancePx: gap, distanceMeters: gap / 20, isWall: false });
+    }
+  }
+
+  if (guides.length === 0) {
+    const pAx = aRight < bLeft ? aRight : (aLeft > bRight ? aLeft : aLeft + elA.width / 2);
+    const pAy = aBottom < bTop ? aBottom : (aTop > bBottom ? aTop : aTop + elA.height / 2);
+    const pBx = bRight < aLeft ? bRight : (bLeft > aRight ? bLeft : bLeft + elB.width / 2);
+    const pBy = bBottom < aTop ? bBottom : (bTop > aBottom ? bTop : bTop + elB.height / 2);
+    const distPx = Math.hypot(pBx - pAx, pBy - pAy);
+    guides.push({ x1: pAx, y1: pAy, x2: pBx, y2: pBy, distancePx: distPx, distanceMeters: distPx / 20, isWall: false, isDiagonal: true });
+  }
+
+  return guides;
+};
+
+// Compute 4-way orthogonal distance lines to nearest adjacent elements and walls (CAD/Figma style)
+const computeOrthogonalGuides = (targetEl, allElements, canvasWidth, canvasHeight, safetyClearance) => {
+  if (!targetEl) return [];
+
+  const guides = [];
+  const tLeft = targetEl.x;
+  const tRight = targetEl.x + targetEl.width;
+  const tTop = targetEl.y;
+  const tBottom = targetEl.y + targetEl.height;
+  const tMidX = tLeft + targetEl.width / 2;
+  const tMidY = tTop + targetEl.height / 2;
+
+  const candidates = allElements.filter(el => el.id !== targetEl.id && !isLayoutElement(el));
+
+  // 1. Right Corridor
+  let nearestRight = null;
+  let minGapRight = Infinity;
+  for (const el of candidates) {
+    if (el.x >= tRight - 1) {
+      const overlapY = Math.min(tBottom, el.y + el.height) - Math.max(tTop, el.y);
+      if (overlapY > 0) {
+        const gap = el.x - tRight;
+        if (gap >= 0 && gap < minGapRight) {
+          minGapRight = gap;
+          nearestRight = { el, gap };
+        }
+      }
+    }
+  }
+
+  if (nearestRight) {
+    const el = nearestRight.el;
+    const yCenter = (Math.max(tTop, el.y) + Math.min(tBottom, el.y + el.height)) / 2;
+    guides.push({
+      direction: 'right',
+      x1: tRight,
+      y1: yCenter,
+      x2: el.x,
+      y2: yCenter,
+      distancePx: nearestRight.gap,
+      distanceMeters: nearestRight.gap / 20,
+      targetId: el.id,
+      isWall: false
+    });
+  } else if (canvasWidth && canvasWidth > tRight) {
+    const gap = canvasWidth - tRight;
+    guides.push({
+      direction: 'right',
+      x1: tRight,
+      y1: tMidY,
+      x2: canvasWidth,
+      y2: tMidY,
+      distancePx: gap,
+      distanceMeters: gap / 20,
+      isWall: true,
+      wallLabel: 'Wall'
+    });
+  }
+
+  // 2. Left Corridor
+  let nearestLeft = null;
+  let minGapLeft = Infinity;
+  for (const el of candidates) {
+    const elRight = el.x + el.width;
+    if (elRight <= tLeft + 1) {
+      const overlapY = Math.min(tBottom, el.y + el.height) - Math.max(tTop, el.y);
+      if (overlapY > 0) {
+        const gap = tLeft - elRight;
+        if (gap >= 0 && gap < minGapLeft) {
+          minGapLeft = gap;
+          nearestLeft = { el, gap };
+        }
+      }
+    }
+  }
+
+  if (nearestLeft) {
+    const el = nearestLeft.el;
+    const yCenter = (Math.max(tTop, el.y) + Math.min(tBottom, el.y + el.height)) / 2;
+    guides.push({
+      direction: 'left',
+      x1: el.x + el.width,
+      y1: yCenter,
+      x2: tLeft,
+      y2: yCenter,
+      distancePx: nearestLeft.gap,
+      distanceMeters: nearestLeft.gap / 20,
+      targetId: el.id,
+      isWall: false
+    });
+  } else if (tLeft > 0) {
+    guides.push({
+      direction: 'left',
+      x1: 0,
+      y1: tMidY,
+      x2: tLeft,
+      y2: tMidY,
+      distancePx: tLeft,
+      distanceMeters: tLeft / 20,
+      isWall: true,
+      wallLabel: 'Wall'
+    });
+  }
+
+  // 3. Top Corridor
+  let nearestTop = null;
+  let minGapTop = Infinity;
+  for (const el of candidates) {
+    const elBottom = el.y + el.height;
+    if (elBottom <= tTop + 1) {
+      const overlapX = Math.min(tRight, el.x + el.width) - Math.max(tLeft, el.x);
+      if (overlapX > 0) {
+        const gap = tTop - elBottom;
+        if (gap >= 0 && gap < minGapTop) {
+          minGapTop = gap;
+          nearestTop = { el, gap };
+        }
+      }
+    }
+  }
+
+  if (nearestTop) {
+    const el = nearestTop.el;
+    const xCenter = (Math.max(tLeft, el.x) + Math.min(tRight, el.x + el.width)) / 2;
+    guides.push({
+      direction: 'top',
+      x1: xCenter,
+      y1: el.y + el.height,
+      x2: xCenter,
+      y2: tTop,
+      distancePx: nearestTop.gap,
+      distanceMeters: nearestTop.gap / 20,
+      targetId: el.id,
+      isWall: false
+    });
+  } else if (tTop > 0) {
+    guides.push({
+      direction: 'top',
+      x1: tMidX,
+      y1: 0,
+      x2: tMidX,
+      y2: tTop,
+      distancePx: tTop,
+      distanceMeters: tTop / 20,
+      isWall: true,
+      wallLabel: 'Wall'
+    });
+  }
+
+  // 4. Bottom Corridor
+  let nearestBottom = null;
+  let minGapBottom = Infinity;
+  for (const el of candidates) {
+    if (el.y >= tBottom - 1) {
+      const overlapX = Math.min(tRight, el.x + el.width) - Math.max(tLeft, el.x);
+      if (overlapX > 0) {
+        const gap = el.y - tBottom;
+        if (gap >= 0 && gap < minGapBottom) {
+          minGapBottom = gap;
+          nearestBottom = { el, gap };
+        }
+      }
+    }
+  }
+
+  if (nearestBottom) {
+    const el = nearestBottom.el;
+    const xCenter = (Math.max(tLeft, el.x) + Math.min(tRight, el.x + el.width)) / 2;
+    guides.push({
+      direction: 'bottom',
+      x1: xCenter,
+      y1: tBottom,
+      x2: xCenter,
+      y2: el.y,
+      distancePx: nearestBottom.gap,
+      distanceMeters: nearestBottom.gap / 20,
+      targetId: el.id,
+      isWall: false
+    });
+  } else if (canvasHeight && canvasHeight > tBottom) {
+    const gap = canvasHeight - tBottom;
+    guides.push({
+      direction: 'bottom',
+      x1: tMidX,
+      y1: tBottom,
+      x2: tMidX,
+      y2: canvasHeight,
+      distancePx: gap,
+      distanceMeters: gap / 20,
+      isWall: true,
+      wallLabel: 'Wall'
+    });
+  }
+
+  // Detect equal spacing between opposing corridors (CAD alignment indicator)
+  const leftGuide = guides.find(g => g.direction === 'left' && !g.isWall);
+  const rightGuide = guides.find(g => g.direction === 'right' && !g.isWall);
+  if (leftGuide && rightGuide) {
+    if (Math.abs(leftGuide.distancePx - rightGuide.distancePx) <= 2) {
+      leftGuide.isEqualSpacing = true;
+      rightGuide.isEqualSpacing = true;
+    }
+  }
+
+  const topGuide = guides.find(g => g.direction === 'top' && !g.isWall);
+  const bottomGuide = guides.find(g => g.direction === 'bottom' && !g.isWall);
+  if (topGuide && bottomGuide) {
+    if (Math.abs(topGuide.distancePx - bottomGuide.distancePx) <= 2) {
+      topGuide.isEqualSpacing = true;
+      bottomGuide.isEqualSpacing = true;
+    }
+  }
+
+  return guides;
+};
+
+// CAD Technical Dimension Line with orthogonal tick marks & counter-scaled pill badge
+function DimensionLineOverlay({
+  x1, y1, x2, y2,
+  distanceMeters,
+  stageScale = 1,
+  safetyClearance = 2.5,
+  isSafetyAlert = false,
+  isEqualSpacing = false,
+  isWall = false,
+  isLive = false,
+  customColor = null,
+  showCoordinates = false
+}) {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const dist = Math.hypot(dx, dy);
+  if (dist < 1) return null;
+
+  const ux = dx / dist;
+  const uy = dy / dist;
+  const nx = -uy;
+  const ny = ux;
+
+  // Counter-scaled geometry for zoom independence (keeps text and ticks legible at any zoom)
+  const effectiveScale = Math.max(0.2, Math.min(stageScale, 5));
+  const tickLen = 6 / effectiveScale;
+  const strokeW = Math.max(1, 1.5 / effectiveScale);
+  const midX = (x1 + x2) / 2;
+  const midY = (y1 + y2) / 2;
+  const badgeScale = 1 / effectiveScale;
+
+  let strokeColor = customColor || "#0284c7";
+  let badgeBg = "#0f172a";
+  let badgeBorder = "#38bdf8";
+  let badgeTextColor = "#ffffff";
+  let badgeIcon = "";
+
+  if (isSafetyAlert) {
+    strokeColor = "#ef4444";
+    badgeBg = "#dc2626";
+    badgeBorder = "#fca5a5";
+    badgeIcon = "⚠️ ";
+  } else if (isEqualSpacing) {
+    strokeColor = "#10b981";
+    badgeBg = "#065f46";
+    badgeBorder = "#34d399";
+    badgeIcon = "= ";
+  } else if (isLive) {
+    strokeColor = "#f59e0b";
+    badgeBg = "#1e293b";
+    badgeBorder = "#fbbf24";
+  } else if (isWall) {
+    strokeColor = "#64748b";
+    badgeBg = "#1e293b";
+    badgeBorder = "#94a3b8";
+  }
+
+  const badgeText = `${badgeIcon}${distanceMeters.toFixed(2)}m${isEqualSpacing ? " =" : ""}`;
+  const badgeWidth = Math.max(50, badgeText.length * 6.5 + 14);
+  const badgeHeight = 18;
+
+  const isDiagonal = Math.abs(dx) > 10 && Math.abs(dy) > 10 && showCoordinates;
+  const dxMeters = (Math.abs(dx) / 20).toFixed(2);
+  const dyMeters = (Math.abs(dy) / 20).toFixed(2);
+
+  return (
+    <Group listening={false}>
+      {/* Main Dimension Line */}
+      <Line
+        points={[x1, y1, x2, y2]}
+        stroke={strokeColor}
+        strokeWidth={strokeW}
+        dash={isWall ? [4 / effectiveScale, 2 / effectiveScale] : undefined}
+        listening={false}
+      />
+
+      {/* Orthogonal tick at Point 1 */}
+      <Line
+        points={[
+          x1 - nx * tickLen, y1 - ny * tickLen,
+          x1 + nx * tickLen, y1 + ny * tickLen
+        ]}
+        stroke={strokeColor}
+        strokeWidth={strokeW * 1.2}
+        listening={false}
+      />
+
+      {/* Orthogonal tick at Point 2 */}
+      <Line
+        points={[
+          x2 - nx * tickLen, y2 - ny * tickLen,
+          x2 + nx * tickLen, y2 + ny * tickLen
+        ]}
+        stroke={strokeColor}
+        strokeWidth={strokeW * 1.2}
+        listening={false}
+      />
+
+      {/* Endpoint circles */}
+      <Circle
+        x={x1}
+        y={y1}
+        radius={2.5 / effectiveScale}
+        fill={strokeColor}
+        listening={false}
+      />
+      <Circle
+        x={x2}
+        y={y2}
+        radius={2.5 / effectiveScale}
+        fill={strokeColor}
+        listening={false}
+      />
+
+      {/* Centered CAD Pill Badge */}
+      <Group
+        x={midX}
+        y={midY}
+        scaleX={badgeScale}
+        scaleY={badgeScale}
+        listening={false}
+      >
+        <Rect
+          x={-badgeWidth / 2}
+          y={-badgeHeight / 2}
+          width={badgeWidth}
+          height={badgeHeight}
+          cornerRadius={badgeHeight / 2}
+          fill={badgeBg}
+          stroke={badgeBorder}
+          strokeWidth={1}
+          shadowColor="rgba(0,0,0,0.4)"
+          shadowBlur={6}
+          shadowOffsetY={1}
+          listening={false}
+        />
+        <Text
+          x={-badgeWidth / 2}
+          y={-badgeHeight / 2 + 3}
+          width={badgeWidth}
+          height={badgeHeight}
+          text={badgeText}
+          fontSize={10}
+          fontFamily="monospace, ui-monospace, sans-serif"
+          fontStyle="bold"
+          fill={badgeTextColor}
+          align="center"
+          listening={false}
+        />
+
+        {isDiagonal && (
+          <Group y={badgeHeight + 2}>
+            <Rect
+              x={-55}
+              y={-7}
+              width={110}
+              height={14}
+              cornerRadius={7}
+              fill="rgba(15, 23, 42, 0.85)"
+              stroke="#64748b"
+              strokeWidth={0.5}
+            />
+            <Text
+              x={-55}
+              y={-5}
+              width={110}
+              text={`ΔX: ${dxMeters}m ΔY: ${dyMeters}m`}
+              fontSize={8}
+              fontFamily="monospace, ui-monospace, sans-serif"
+              fill="#94a3b8"
+              align="center"
+            />
+          </Group>
+        )}
+      </Group>
+    </Group>
+  );
+}
+
+// Magnetic Snap Point Target Marker
+function SnapIndicator({ x, y, type, stageScale = 1 }) {
+  const effectiveScale = Math.max(0.2, Math.min(stageScale, 5));
+  const size = 8 / effectiveScale;
+  const strokeW = 1.2 / effectiveScale;
+  const color = type === "grid" ? "#818cf8" : "#38bdf8";
+
+  return (
+    <Group x={x} y={y} listening={false}>
+      <Rect
+        x={-size / 2}
+        y={-size / 2}
+        width={size}
+        height={size}
+        rotation={45}
+        stroke={color}
+        strokeWidth={strokeW}
+        fill="rgba(56, 189, 248, 0.25)"
+        listening={false}
+      />
+      <Line
+        points={[-size * 1.2, 0, size * 1.2, 0]}
+        stroke={color}
+        strokeWidth={strokeW * 0.8}
+        listening={false}
+      />
+      <Line
+        points={[0, -size * 1.2, 0, size * 1.2]}
+        stroke={color}
+        strokeWidth={strokeW * 0.8}
+        listening={false}
+      />
+    </Group>
+  );
+}
+
 const FloorPlanCanvas = React.forwardRef(({
   elements,
   onUpdateLayout = () => {},
@@ -643,6 +1133,8 @@ const FloorPlanCanvas = React.forwardRef(({
   showDimensions = false,
   isPreviewMode = false,
   previewDeviceMode = "desktop",
+  safetyClearance = 2.5,
+  onSafetyClearanceChange,
 }, ref) => {
   const stageRef = useRef(null);
   const { t } = useLanguage();
@@ -887,19 +1379,6 @@ const FloorPlanCanvas = React.forwardRef(({
     );
   };
 
-  const isLayoutElement = (el) => {
-    if (!el || !el.type) return false;
-    return (
-      el.type === "zone-overlay" ||
-      el.type === "corridor" ||
-      el.type.endsWith("-zone") ||
-      el.type === "scheduled-meeting-room" ||
-      el.type === "broadcast-studio" ||
-      el.type === "safety-exit-route" ||
-      el.type === "safety-accessibility-path"
-    );
-  };
-
   // Precalculate overlaps to reduce render loop complexity from O(N^2) to O(1) per element
   const overlapsMap = React.useMemo(() => {
     const map = new Map();
@@ -1029,6 +1508,142 @@ const FloorPlanCanvas = React.forwardRef(({
     }
   }, [bgImage]);
 
+  // Constructor Mode state
+  const [activeMeasurement, setActiveMeasurement] = useState(null);
+  const [isRulerDrawing, setIsRulerDrawing] = useState(false);
+  const [rulerLive, setRulerLive] = useState({ start: null, current: null });
+  const [hoveredSnapPoint, setHoveredSnapPoint] = useState(null);
+  const rulerWaitingSecondClick = useRef(false);
+  const rulerStartPoint = useRef(null);
+  const rulerHasDragged = useRef(false);
+
+  // Clear measurement when switching away from constructor mode
+  useEffect(() => {
+    if (toolMode !== "constructor") {
+      setActiveMeasurement(null);
+      setIsRulerDrawing(false);
+      setRulerLive({ start: null, current: null });
+      setHoveredSnapPoint(null);
+      rulerWaitingSecondClick.current = false;
+      rulerStartPoint.current = null;
+      rulerHasDragged.current = false;
+    }
+  }, [toolMode]);
+
+  // Esc key listener for ruler clearing
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape" && toolMode === "constructor") {
+        if (activeMeasurement || isRulerDrawing || rulerWaitingSecondClick.current) {
+          e.preventDefault();
+          e.stopPropagation();
+          setActiveMeasurement(null);
+          setIsRulerDrawing(false);
+          rulerStartPoint.current = null;
+          rulerWaitingSecondClick.current = false;
+          rulerHasDragged.current = false;
+          setRulerLive({ start: null, current: null });
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [toolMode, activeMeasurement, isRulerDrawing]);
+
+  // Magnetic Snapping helper
+  const getSnapPoint = useCallback((rawX, rawY) => {
+    const effectiveScale = Math.max(0.2, Math.min(stageScale, 5));
+    const SNAP_RADIUS = 14 / effectiveScale;
+    let closestPoint = null;
+    let minDistance = SNAP_RADIUS;
+
+    // Collect candidate snap points from elements
+    for (const el of elements) {
+      if (isLayoutElement(el)) continue;
+      const points = [
+        { x: el.x, y: el.y, type: 'corner' },
+        { x: el.x + el.width, y: el.y, type: 'corner' },
+        { x: el.x, y: el.y + el.height, type: 'corner' },
+        { x: el.x + el.width, y: el.y + el.height, type: 'corner' },
+        { x: el.x + el.width / 2, y: el.y, type: 'midpoint' },
+        { x: el.x + el.width / 2, y: el.y + el.height, type: 'midpoint' },
+        { x: el.x, y: el.y + el.height / 2, type: 'midpoint' },
+        { x: el.x + el.width, y: el.y + el.height / 2, type: 'midpoint' },
+        { x: el.x + el.width / 2, y: el.y + el.height / 2, type: 'center' }
+      ];
+
+      for (const pt of points) {
+        const d = Math.hypot(pt.x - rawX, pt.y - rawY);
+        if (d < minDistance) {
+          minDistance = d;
+          closestPoint = { ...pt, isSnapped: true };
+        }
+      }
+    }
+
+    // Candidate snap points from blueprint background if available
+    if (bgImage && Number.isFinite(blueprintWidth) && Number.isFinite(blueprintHeight)) {
+      const bpX = blueprintX || 0;
+      const bpY = blueprintY || 0;
+      const bpW = blueprintWidth;
+      const bpH = blueprintHeight;
+      const bpPoints = [
+        { x: bpX, y: bpY, type: 'corner' },
+        { x: bpX + bpW, y: bpY, type: 'corner' },
+        { x: bpX, y: bpY + bpH, type: 'corner' },
+        { x: bpX + bpW, y: bpY + bpH, type: 'corner' },
+        { x: bpX + bpW / 2, y: bpY, type: 'midpoint' },
+        { x: bpX + bpW / 2, y: bpY + bpH, type: 'midpoint' },
+        { x: bpX, y: bpY + bpH / 2, type: 'midpoint' },
+        { x: bpX + bpW, y: bpY + bpH / 2, type: 'midpoint' },
+      ];
+      for (const pt of bpPoints) {
+        const d = Math.hypot(pt.x - rawX, pt.y - rawY);
+        if (d < minDistance) {
+          minDistance = d;
+          closestPoint = { ...pt, isSnapped: true };
+        }
+      }
+    }
+
+    if (closestPoint) {
+      return closestPoint;
+    }
+
+    // Grid snap if enabled
+    if (snapToGrid) {
+      const gridX = Math.round(rawX / gridSize) * gridSize;
+      const gridY = Math.round(rawY / gridSize) * gridSize;
+      const gridDist = Math.hypot(gridX - rawX, gridY - rawY);
+      if (gridDist <= SNAP_RADIUS) {
+        return { x: gridX, y: gridY, type: 'grid', isSnapped: true };
+      }
+    }
+
+    return { x: rawX, y: rawY, type: null, isSnapped: false };
+  }, [elements, stageScale, bgImage, blueprintWidth, blueprintHeight, blueprintX, blueprintY, snapToGrid, gridSize]);
+
+  // Dynamic Element-to-Element Distance Guides for Constructor Mode
+  const dynamicConstructorGuides = useMemo(() => {
+    if (toolMode !== "constructor" || exportFilters) return [];
+
+    const selectedEl = elements.find(el => selectedIds.includes(el.id) && !isLayoutElement(el));
+    const hoveredEl = elements.find(el => el.id === hoveredId && !isLayoutElement(el));
+
+    // Case 1: An element is selected and a different element is hovered: measure pair distance directly
+    if (selectedEl && hoveredEl && selectedEl.id !== hoveredEl.id) {
+      return computeElementPairDistance(selectedEl, hoveredEl);
+    }
+
+    // Case 2: Selected or hovered element: compute 4-way orthogonal guides to nearest obstacles & walls
+    const targetEl = selectedEl || hoveredEl;
+    if (targetEl) {
+      return computeOrthogonalGuides(targetEl, elements, canvasWidth, canvasHeight, safetyClearance);
+    }
+
+    return [];
+  }, [toolMode, exportFilters, elements, selectedIds, hoveredId, canvasWidth, canvasHeight, safetyClearance]);
+
   const handleZoomToFit = React.useCallback(() => {
     if (stageWidth <= 0 || stageHeight <= 0 || canvasWidth <= 0 || canvasHeight <= 0) return;
     const scaleX = stageWidth / canvasWidth;
@@ -1098,6 +1713,8 @@ const FloorPlanCanvas = React.forwardRef(({
     const container = stage.container();
     if (toolMode === "pan" || toolMode === "preview") {
       container.style.cursor = "grab";
+    } else if (toolMode === "constructor") {
+      container.style.cursor = "crosshair";
     } else {
       container.style.cursor = "default";
     }
@@ -1937,6 +2554,43 @@ const FloorPlanCanvas = React.forwardRef(({
 
     if (toolMode === "pan" || toolMode === "preview") return;
 
+    if (toolMode === "constructor") {
+      const pointer = stage.getPointerPosition();
+      if (!pointer) return;
+      
+      const scale = stage.scaleX();
+      const relativeX = (pointer.x - stage.x()) / scale;
+      const relativeY = (pointer.y - stage.y()) / scale;
+      const snap = getSnapPoint(relativeX, relativeY);
+
+      // If waiting for second click in two-click mode:
+      if (rulerWaitingSecondClick.current && rulerStartPoint.current) {
+        const dist = Math.hypot(snap.x - rulerStartPoint.current.x, snap.y - rulerStartPoint.current.y);
+        if (dist > 2) {
+          setActiveMeasurement({
+            x1: rulerStartPoint.current.x,
+            y1: rulerStartPoint.current.y,
+            x2: snap.x,
+            y2: snap.y,
+            distancePx: dist,
+            distanceMeters: dist / 20
+          });
+        }
+        rulerWaitingSecondClick.current = false;
+        rulerStartPoint.current = null;
+        setIsRulerDrawing(false);
+        setRulerLive({ start: null, current: null });
+        return;
+      }
+
+      // Start drag / point A
+      rulerStartPoint.current = snap;
+      rulerHasDragged.current = false;
+      setIsRulerDrawing(true);
+      setRulerLive({ start: snap, current: snap });
+      return;
+    }
+
     if (target === stage || target.name() === "grid-bg" || ((target.name() === "blueprint-image" || target.id() === "blueprint-node") && blueprintIsLocked)) {
       const pointer = stage.getPointerPosition();
       if (!pointer) return;
@@ -1957,6 +2611,45 @@ const FloorPlanCanvas = React.forwardRef(({
   };
 
   const handleMouseMove = (e) => {
+    if (toolMode === "constructor") {
+      const stage = stageRef.current;
+      if (!stage) return;
+      const pointer = stage.getPointerPosition();
+      if (!pointer) return;
+      const scale = stage.scaleX();
+      const relativeX = (pointer.x - stage.x()) / scale;
+      const relativeY = (pointer.y - stage.y()) / scale;
+
+      const snap = getSnapPoint(relativeX, relativeY);
+      setHoveredSnapPoint(snap.isSnapped ? snap : null);
+
+      if (isRulerDrawing && rulerStartPoint.current) {
+        let currentPt = snap;
+        if (Math.hypot(snap.x - rulerStartPoint.current.x, snap.y - rulerStartPoint.current.y) > 3) {
+          rulerHasDragged.current = true;
+        }
+
+        // Shift key locks angle to orthogonal or 45 degrees
+        if (e.evt && e.evt.shiftKey) {
+          const dx = snap.x - rulerStartPoint.current.x;
+          const dy = snap.y - rulerStartPoint.current.y;
+          if (Math.abs(dx) > Math.abs(dy) * 2) {
+            currentPt = { ...currentPt, y: rulerStartPoint.current.y };
+          } else if (Math.abs(dy) > Math.abs(dx) * 2) {
+            currentPt = { ...currentPt, x: rulerStartPoint.current.x };
+          } else {
+            const signX = dx >= 0 ? 1 : -1;
+            const signY = dy >= 0 ? 1 : -1;
+            const avg = (Math.abs(dx) + Math.abs(dy)) / 2;
+            currentPt = { ...currentPt, x: rulerStartPoint.current.x + signX * avg, y: rulerStartPoint.current.y + signY * avg };
+          }
+        }
+
+        setRulerLive({ start: rulerStartPoint.current, current: currentPt });
+      }
+      return;
+    }
+
     if (!isMarqueeDragging.current || !marqueeStart) return;
     const stage = stageRef.current;
     if (!stage) return;
@@ -1973,6 +2666,33 @@ const FloorPlanCanvas = React.forwardRef(({
   };
 
   const handleMouseUp = (e) => {
+    if (toolMode === "constructor") {
+      if (isRulerDrawing && rulerStartPoint.current) {
+        if (rulerHasDragged.current) {
+          const currentPt = rulerLive.current || rulerStartPoint.current;
+          const dist = Math.hypot(currentPt.x - rulerStartPoint.current.x, currentPt.y - rulerStartPoint.current.y);
+          if (dist > 3) {
+            setActiveMeasurement({
+              x1: rulerStartPoint.current.x,
+              y1: rulerStartPoint.current.y,
+              x2: currentPt.x,
+              y2: currentPt.y,
+              distancePx: dist,
+              distanceMeters: dist / 20
+            });
+          }
+          setIsRulerDrawing(false);
+          rulerStartPoint.current = null;
+          rulerHasDragged.current = false;
+          setRulerLive({ start: null, current: null });
+        } else {
+          // Clicked Point A without dragging: wait for Point B
+          rulerWaitingSecondClick.current = true;
+        }
+      }
+      return;
+    }
+
     isMarqueeDragging.current = false;
     dragStartScreenPos.current = null;
 
@@ -2183,17 +2903,52 @@ const FloorPlanCanvas = React.forwardRef(({
       y: el.y,
       rotation: el.rotation,
       draggable: toolMode === "select" && !el.isLocked && !isEditingThis,
-      listening: (toolMode === "select" || isPreviewMode) && (!isDraggingElement || selectedIds.includes(el.id)),
+      listening: (toolMode === "select" || isPreviewMode || toolMode === "constructor") && (!isDraggingElement || selectedIds.includes(el.id)),
       opacity: searchOpacity,
       onClick: (e) => {
         e.cancelBubble = true;
         if (justMarqueeDragged.current) return;
+        if (toolMode === "constructor") {
+          if (rulerHasDragged.current) return;
+          if (rulerWaitingSecondClick.current && rulerStartPoint.current) {
+            const pointer = stageRef.current?.getPointerPosition();
+            if (pointer) {
+              const scale = stageRef.current.scaleX();
+              const rx = (pointer.x - stageRef.current.x()) / scale;
+              const ry = (pointer.y - stageRef.current.y()) / scale;
+              const snap = getSnapPoint(rx, ry);
+              const dist = Math.hypot(snap.x - rulerStartPoint.current.x, snap.y - rulerStartPoint.current.y);
+              if (dist > 2) {
+                setActiveMeasurement({
+                  x1: rulerStartPoint.current.x,
+                  y1: rulerStartPoint.current.y,
+                  x2: snap.x,
+                  y2: snap.y,
+                  distancePx: dist,
+                  distanceMeters: dist / 20
+                });
+              }
+              rulerWaitingSecondClick.current = false;
+              rulerStartPoint.current = null;
+              setIsRulerDrawing(false);
+              setRulerLive({ start: null, current: null });
+              return;
+            }
+          }
+          onSelectId(el.id, false);
+          return;
+        }
         const isMultiSelect = (toolMode === "select" || isPreviewMode) ? (e.evt.shiftKey || e.evt.ctrlKey) : false;
         onSelectId(el.id, isMultiSelect);
       },
       onTap: (e) => {
         e.cancelBubble = true;
         if (justMarqueeDragged.current) return;
+        if (toolMode === "constructor") {
+          if (rulerHasDragged.current) return;
+          onSelectId(el.id, false);
+          return;
+        }
         const isMultiSelect = (toolMode === "select" || isPreviewMode) ? (e.evt.shiftKey || e.evt.ctrlKey) : false;
         onSelectId(el.id, isMultiSelect);
       },
@@ -2215,13 +2970,13 @@ const FloorPlanCanvas = React.forwardRef(({
       onMouseEnter: () => {
         setHoveredId(el.id);
         if (stageRef.current) {
-          stageRef.current.container().style.cursor = "pointer";
+          stageRef.current.container().style.cursor = toolMode === "constructor" ? "crosshair" : "pointer";
         }
       },
       onMouseLeave: () => {
         setHoveredId(null);
         if (stageRef.current) {
-          stageRef.current.container().style.cursor = (toolMode === "pan" || toolMode === "preview") ? "grab" : "default";
+          stageRef.current.container().style.cursor = (toolMode === "pan" || toolMode === "preview") ? "grab" : (toolMode === "constructor" ? "crosshair" : "default");
         }
       },
     };
@@ -3944,7 +4699,7 @@ const FloorPlanCanvas = React.forwardRef(({
         style = {
           fill: (hasStatus && statusColors.fill) ? statusColors.fill : (el.fillColor || el.color || "#f8fafc"),
           stroke: (hasStatus && statusColors.stroke) ? statusColors.stroke : (el.strokeColor || "#64748b"),
-          strokeWidth: el.type === "booth-equipped" ? 1.5 : 1.2
+          strokeWidth: (el.type === "booth-equipped" || el.type === "booth-vip" || el.boothType === "Equipped Booth") ? 1.5 : 1.2
         };
       } else if (el.type === "corridor") {
         style = {
@@ -4052,8 +4807,8 @@ const FloorPlanCanvas = React.forwardRef(({
               </Group>
             );
           })()}
-          {el.type === "booth-semi" && (
-            <Group listening={false} opacity={0.3}>
+          {(el.type === "booth-semi" || el.boothType === "Semi-Equipped Booth") && (
+            <Group listening={false} opacity={0.42}>
               {/* Small counter back desk */}
               <Rect 
                 x={el.width * 0.15} 
@@ -4061,7 +4816,7 @@ const FloorPlanCanvas = React.forwardRef(({
                 width={el.width * 0.7} 
                 height={el.height * 0.18} 
                 fill="#cbd5e1" 
-                stroke="#94a3b8" 
+                stroke="#64748b" 
                 strokeWidth={1}
                 cornerRadius={0}
               />
@@ -4071,13 +4826,13 @@ const FloorPlanCanvas = React.forwardRef(({
                 y={el.height * 0.44} 
                 radius={Math.min(el.width, el.height) * 0.09} 
                 fill="#f8fafc" 
-                stroke="#64748b" 
+                stroke="#475569" 
                 strokeWidth={1}
               />
             </Group>
           )}
-          {el.type === "booth-equipped" && (
-            <Group listening={false} opacity={0.3}>
+          {(el.type === "booth-equipped" || el.type === "booth-vip" || el.boothType === "Equipped Booth") && (
+            <Group listening={false} opacity={0.42}>
               {/* Back display wall panel */}
               <Rect 
                 x={el.width * 0.1} 
@@ -4085,7 +4840,7 @@ const FloorPlanCanvas = React.forwardRef(({
                 width={el.width * 0.8} 
                 height={el.height * 0.08} 
                 fill="#94a3b8" 
-                stroke="#64748b" 
+                stroke="#475569" 
                 strokeWidth={1}
                 cornerRadius={0}
               />
@@ -4095,8 +4850,8 @@ const FloorPlanCanvas = React.forwardRef(({
                 y={el.height * 0.46} 
                 radius={Math.min(el.width, el.height) * 0.18} 
                 fill="#f8fafc" 
-                stroke="#475569" 
-                strokeWidth={1}
+                stroke="#334155" 
+                strokeWidth={1.2}
               />
               {/* Two flanking chairs */}
               <Circle 
@@ -4104,16 +4859,16 @@ const FloorPlanCanvas = React.forwardRef(({
                 y={el.height * 0.46} 
                 radius={Math.min(el.width, el.height) * 0.07} 
                 fill="#cbd5e1" 
-                stroke="#94a3b8" 
-                strokeWidth={0.75}
+                stroke="#64748b" 
+                strokeWidth={1}
               />
               <Circle 
                 x={el.width * 0.76} 
                 y={el.height * 0.46} 
                 radius={Math.min(el.width, el.height) * 0.07} 
                 fill="#cbd5e1" 
-                stroke="#94a3b8" 
-                strokeWidth={0.75}
+                stroke="#64748b" 
+                strokeWidth={1}
               />
               {/* Front info desk counter */}
               <Rect 
@@ -4122,7 +4877,7 @@ const FloorPlanCanvas = React.forwardRef(({
                 width={el.width * 0.6} 
                 height={el.height * 0.12} 
                 fill="#e2e8f0" 
-                stroke="#94a3b8" 
+                stroke="#64748b" 
                 strokeWidth={1}
                 cornerRadius={0}
               />
@@ -4318,6 +5073,32 @@ const FloorPlanCanvas = React.forwardRef(({
           )}
           {el.qrDataUrl && (
             <CanvasQRCode qrUrl={el.qrDataUrl} x={5} y={5} size={40} />
+          )}
+          {!el.qrDataUrl && (el.type === "booth-equipped" || el.type === "booth-vip" || el.boothType === "Equipped Booth") && (
+            <Path
+              x={5}
+              y={5}
+              data="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.269a1 1 0 0 1-.956.712H5.81a1 1 0 0 1-.956-.712L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z"
+              fill="#7c3aed"
+              opacity={0.75}
+              scaleX={0.38}
+              scaleY={0.38}
+              listening={false}
+            />
+          )}
+          {!el.qrDataUrl && (el.type === "booth-semi" || el.boothType === "Semi-Equipped Booth") && (
+            <Path
+              x={5}
+              y={5}
+              data="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"
+              stroke="#059669"
+              strokeWidth={1.8}
+              fillEnabled={false}
+              opacity={0.7}
+              scaleX={0.38}
+              scaleY={0.38}
+              listening={false}
+            />
           )}
           {el.type.startsWith("booth") && el.status && (
             <Circle
@@ -5500,6 +6281,18 @@ const FloorPlanCanvas = React.forwardRef(({
               if (target === stage || target.name() === "grid-bg" || target.name() === "blueprint-image" || target.id() === "blueprint-node") {
                 onSelectId([], false);
               }
+            } else if (toolMode === "constructor") {
+              if (!rulerHasDragged.current && !rulerWaitingSecondClick.current) {
+                const target = e.target;
+                const stage = stageRef.current;
+                if (target === stage || target.name() === "grid-bg" || target.name() === "blueprint-image" || target.id() === "blueprint-node") {
+                  if (activeMeasurement) {
+                    setActiveMeasurement(null);
+                  } else {
+                    onSelectId([], false);
+                  }
+                }
+              }
             }
           }}
           onTap={(e) => {
@@ -5508,6 +6301,18 @@ const FloorPlanCanvas = React.forwardRef(({
               const stage = stageRef.current;
               if (target === stage || target.name() === "grid-bg" || target.name() === "blueprint-image" || target.id() === "blueprint-node") {
                 onSelectId([], false);
+              }
+            } else if (toolMode === "constructor") {
+              if (!rulerHasDragged.current && !rulerWaitingSecondClick.current) {
+                const target = e.target;
+                const stage = stageRef.current;
+                if (target === stage || target.name() === "grid-bg" || target.name() === "blueprint-image" || target.id() === "blueprint-node") {
+                  if (activeMeasurement) {
+                    setActiveMeasurement(null);
+                  } else {
+                    onSelectId([], false);
+                  }
+                }
               }
             }
           }}
@@ -5671,10 +6476,128 @@ const FloorPlanCanvas = React.forwardRef(({
               />
             )}
           </Layer>
+
+          {/* Constructor Mode Overlays Layer */}
+          {toolMode === "constructor" && !exportFilters && (
+            <Layer name="constructor-overlay-layer" listening={false}>
+              {/* 1. Dynamic Element-to-Element Distance Guides */}
+              {dynamicConstructorGuides.map((guide, idx) => (
+                <DimensionLineOverlay
+                  key={`guide-${idx}`}
+                  x1={guide.x1}
+                  y1={guide.y1}
+                  x2={guide.x2}
+                  y2={guide.y2}
+                  distanceMeters={guide.distanceMeters}
+                  stageScale={stageScale}
+                  safetyClearance={safetyClearance}
+                  isSafetyAlert={!guide.isWall && guide.distanceMeters > 0 && guide.distanceMeters < safetyClearance}
+                  isEqualSpacing={guide.isEqualSpacing}
+                  isWall={guide.isWall}
+                />
+              ))}
+
+              {/* 2. Live In-Progress Ruler Line */}
+              {isRulerDrawing && rulerLive.start && rulerLive.current && (
+                <DimensionLineOverlay
+                  x1={rulerLive.start.x}
+                  y1={rulerLive.start.y}
+                  x2={rulerLive.current.x}
+                  y2={rulerLive.current.y}
+                  distanceMeters={Math.hypot(rulerLive.current.x - rulerLive.start.x, rulerLive.current.y - rulerLive.start.y) / 20}
+                  stageScale={stageScale}
+                  safetyClearance={safetyClearance}
+                  isSafetyAlert={false}
+                  isEqualSpacing={false}
+                  isLive={true}
+                  showCoordinates={true}
+                />
+              )}
+
+              {/* 3. Pinned Active Ruler Measurement */}
+              {activeMeasurement && (
+                <DimensionLineOverlay
+                  x1={activeMeasurement.x1}
+                  y1={activeMeasurement.y1}
+                  x2={activeMeasurement.x2}
+                  y2={activeMeasurement.y2}
+                  distanceMeters={activeMeasurement.distanceMeters}
+                  stageScale={stageScale}
+                  safetyClearance={safetyClearance}
+                  isSafetyAlert={activeMeasurement.distanceMeters > 0 && activeMeasurement.distanceMeters < safetyClearance}
+                  isEqualSpacing={false}
+                  customColor="#38bdf8"
+                  showCoordinates={true}
+                />
+              )}
+
+              {/* 4. Magnetic Snap Target Marker */}
+              {hoveredSnapPoint && (
+                <SnapIndicator
+                  x={hoveredSnapPoint.x}
+                  y={hoveredSnapPoint.y}
+                  type={hoveredSnapPoint.type}
+                  stageScale={stageScale}
+                />
+              )}
+            </Layer>
+          )}
         </Stage>
       )}
+
+      {/* Top Technical CAD HUD Banner for Constructor Mode */}
+      {toolMode === "constructor" && !exportFilters && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2.5 px-3.5 py-1.5 bg-slate-900/90 text-white rounded-2xl shadow-2xl backdrop-blur-md border border-slate-700/80 text-xs font-mono select-none animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+            <span className="font-bold text-amber-300 flex items-center gap-1.5 text-[11px]">
+              <Ruler size={13} className="text-amber-400" />
+              {t("floor.constructorModeActive", "Constructor Mode Active")}
+            </span>
+          </div>
+
+          <div className="w-px h-3.5 bg-slate-700"></div>
+
+          <div className="text-slate-300 text-[10px]">
+            Scale: 1 grid = {(gridSize / 20).toFixed(1)}m (20px/m)
+          </div>
+
+          <div className="w-px h-3.5 bg-slate-700"></div>
+
+          <div className="flex items-center gap-1 text-[10px]">
+            <span className="text-slate-400">Min Aisle:</span>
+            <span className="font-bold text-emerald-400">{safetyClearance.toFixed(2)}m</span>
+          </div>
+
+          {activeMeasurement && (
+            <>
+              <div className="w-px h-3.5 bg-slate-700"></div>
+              <div className="flex items-center gap-1.5 bg-indigo-950/90 border border-indigo-700/60 px-2 py-0.5 rounded-lg text-indigo-200 text-[10px]">
+                <span>Measure:</span>
+                <span className="font-bold text-white font-mono">{activeMeasurement.distanceMeters.toFixed(2)}m</span>
+                <button
+                  onClick={() => setActiveMeasurement(null)}
+                  className="ml-1 text-slate-400 hover:text-white cursor-pointer"
+                  title="Clear measurement (Esc)"
+                >
+                  <X size={11} />
+                </button>
+              </div>
+            </>
+          )}
+
+          <div className="w-px h-3.5 bg-slate-700"></div>
+
+          <button
+            onClick={() => onToolModeChange("select")}
+            className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-[9px] font-sans font-semibold transition cursor-pointer border border-slate-700"
+          >
+            Done (Esc)
+          </button>
+        </div>
+      )}
       
-      {/* Floating Toolbar to toggle between Select and Move/Pan modes */}
+      {/* Floating Toolbar to toggle between Select, Move/Pan, and Constructor modes */}
       {toolMode !== "preview" && (
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-sm border border-slate-200 shadow-xl rounded-2xl p-1.5 flex gap-1.5 z-30">
           <button
@@ -5700,6 +6623,18 @@ const FloorPlanCanvas = React.forwardRef(({
           >
             <Hand size={15} />
             <span className="text-[10px] font-bold">{t("floor.toolMove", "Move (M)")}</span>
+          </button>
+          <button
+            onClick={() => onToolModeChange(toolMode === "constructor" ? "select" : "constructor")}
+            className={`p-2.5 rounded-xl flex items-center justify-center transition-all duration-200 gap-1.5 cursor-pointer ${
+              toolMode === "constructor"
+                ? "bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-200/50"
+                : "text-slate-650 hover:bg-slate-50 hover:text-slate-900"
+            }`}
+            title="Constructor & Ruler Mode (C / R)"
+          >
+            <Ruler size={15} className={toolMode === "constructor" ? "text-slate-950" : "text-amber-600"} />
+            <span className="text-[10px] font-bold">{t("floor.toolConstructor", "Constructor (C)")}</span>
           </button>
           <div className="w-px h-6 bg-slate-250 my-auto mx-0.5"></div>
           <button
@@ -5805,7 +6740,8 @@ const arePropsEqual = (prevProps, nextProps) => {
     prevProps.previewFilter === nextProps.previewFilter &&
     prevProps.selectedSeatId === nextProps.selectedSeatId &&
     prevProps.showDimensions === nextProps.showDimensions &&
-    prevProps.isPreviewMode === nextProps.isPreviewMode
+    prevProps.isPreviewMode === nextProps.isPreviewMode &&
+    prevProps.safetyClearance === nextProps.safetyClearance
   );
 };
 

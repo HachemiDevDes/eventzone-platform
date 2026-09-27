@@ -10,7 +10,8 @@ import {
   Printer, CircleDot, Monitor, Smartphone, Type, Image, Route,
   Search, Sparkles, Megaphone, HeartPulse, Heart, Tag, Plug, IdCard, Lock, Scan, Briefcase, Pencil, Users, Coffee,
   Plus, Minus, Pipette, Box, SeparatorHorizontal, ArrowLeft, ArrowUpRight, Shield, Fence, MapPin, Presentation, Tablet, Video, Wifi, Compass, GlassWater, LayoutTemplate,
-  Eye, EyeOff, Maximize, ArrowRight, Mail, Send, Globe, Folder, Clock, CheckCircle2, Keyboard, Share2, GripVertical, Clipboard
+  Eye, EyeOff, Maximize, ArrowRight, Mail, Send, Globe, Folder, Clock, CheckCircle2, Keyboard, Share2, GripVertical, Clipboard,
+  Ruler
 } from "lucide-react";
 import { motion, AnimatePresence, Reorder } from "framer-motion";
 
@@ -568,6 +569,7 @@ export default function FloorPlanModifier({
   const [arrayRowGap, setArrayRowGap] = useState(2.0);
   const [showArrayModal, setShowArrayModal] = useState(false);
   const [toolMode, setToolMode] = useState(effectivePreviewMode ? "preview" : "select");
+  const [safetyClearance, setSafetyClearance] = useState(2.5); // Minimum aisle clearance threshold in meters (default 2.50m)
 
   const [isPreviewMode, setIsPreviewMode] = useState(effectivePreviewMode || false);
   const [previewSearchQuery, setPreviewSearchQuery] = useState("");
@@ -1561,9 +1563,11 @@ export default function FloorPlanModifier({
           const first = selectedElements[0];
           const virtual = {
             id: "multi",
-            type: selectedElements.every(el => el.type.startsWith("booth") && first.type.startsWith("booth")) 
-              ? "booth-multiple"
-              : selectedElements.every(el => el.type === first.type) ? first.type : "multiple",
+            type: selectedElements.every(el => el.type === first.type)
+              ? first.type
+              : selectedElements.every(el => el.type.startsWith("booth") && first.type.startsWith("booth")) 
+                ? "booth-multiple"
+                : "multiple",
             isLocked: selectedElements.every(el => el.isLocked === first.isLocked) ? first.isLocked : false,
             label: selectedElements.every(el => el.label === first.label) ? first.label : "",
             fontSize: selectedElements.every(el => el.fontSize === first.fontSize) ? first.fontSize : undefined,
@@ -2552,6 +2556,29 @@ export default function FloorPlanModifier({
       if (!isCtrl && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'm') {
         e.preventDefault();
         setToolMode("pan");
+      }
+
+      // C (Constructor Mode Toggle)
+      if (!isCtrl && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'c') {
+        e.preventDefault();
+        setToolMode(prev => prev === "constructor" ? "select" : "constructor");
+      }
+
+      // R (Ruler Tool / Direct Constructor Mode Activation)
+      if (!isCtrl && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'r') {
+        e.preventDefault();
+        setToolMode("constructor");
+      }
+
+      // Escape (Exit Constructor Mode or deselect)
+      if (e.key === 'Escape') {
+        if (toolMode === "constructor") {
+          e.preventDefault();
+          setToolMode("select");
+        } else if (selectedIds.length > 0) {
+          e.preventDefault();
+          setSelectedIds([]);
+        }
       }
     };
 
@@ -3972,6 +3999,22 @@ export default function FloorPlanModifier({
                 </div>
               )}
 
+              {/* Constructor Mode Button */}
+              {!initialPreviewMode && canEdit && !isPreviewMode && (
+                <button 
+                  onClick={() => setToolMode(prev => prev === "constructor" ? "select" : "constructor")}
+                  className={`flex items-center gap-1.5 px-3 py-2 border rounded-xl font-bold text-xs transition-all duration-200 cursor-pointer ${
+                    toolMode === "constructor" 
+                      ? "bg-amber-500 border-amber-600 text-slate-950 shadow-sm hover:bg-amber-400 font-extrabold" 
+                      : "bg-white border-slate-200 hover:border-amber-300 hover:text-amber-700 text-slate-655"
+                  }`}
+                  title="Constructor Mode (C / R) - Real-time Ruler & Safety Clearance"
+                >
+                  <Ruler size={15} className={toolMode === "constructor" ? "text-slate-950" : "text-amber-600"} />
+                  <span>{t("floor.constructorMode", "Constructor Mode")}</span>
+                </button>
+              )}
+
               {/* Preview Map & Save & Reset */}
               {!initialPreviewMode && canEdit && (
                 <button 
@@ -4258,6 +4301,8 @@ export default function FloorPlanModifier({
                 onSelectSeat={handleSelectSeat}
                 showDimensions={showDimensions}
                 isPreviewMode={isPreviewMode}
+                safetyClearance={safetyClearance}
+                onSafetyClearanceChange={setSafetyClearance}
               />
 
               {/* Floating Zoom Controls for Mobile Preview */}
@@ -4917,9 +4962,17 @@ export default function FloorPlanModifier({
                     {/* Header row with Type title and Lock icon button */}
                     <div className="flex items-center justify-between pb-3 border-b border-slate-150 gap-4">
                       <span className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">
-                        {selectedElement.type === "multiple" || selectedElement.type === "booth-multiple"
+                        {selectedElement.type === "multiple"
                           ? `MULTIPLE (${selectedIds.length} elements)`
-                          : selectedElement.type.replace("-", " ").toUpperCase()}
+                          : selectedElement.type === "booth-multiple"
+                            ? `MULTIPLE BOOTHS (${selectedIds.length} elements)`
+                            : selectedElement.type === "booth-empty"
+                              ? `EMPTY BOOTH${selectedIds.length > 1 ? ` (${selectedIds.length} elements)` : ""}`
+                              : selectedElement.type === "booth-semi"
+                                ? `SEMI-EQUIPPED BOOTH${selectedIds.length > 1 ? ` (${selectedIds.length} elements)` : ""}`
+                                : selectedElement.type === "booth-equipped"
+                                  ? `EQUIPPED BOOTH${selectedIds.length > 1 ? ` (${selectedIds.length} elements)` : ""}`
+                                  : selectedElement.type.replace(/-/g, " ").toUpperCase()}
                       </span>
                       <button
                         type="button"
@@ -5273,22 +5326,41 @@ export default function FloorPlanModifier({
                          <div className="flex flex-col gap-1.5">
                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Booth Type</label>
                            <select
-                             value={selectedElement.type.startsWith("booth-multiple") ? "" : selectedElement.type}
+                             value={
+                               selectedElement.type === "booth-multiple"
+                                 ? ""
+                                 : (selectedElement.type === "booth" || selectedElement.type === "booth-std")
+                                   ? "booth-empty"
+                                   : selectedElement.type === "booth-vip"
+                                     ? "booth-equipped"
+                                     : selectedElement.type
+                             }
                              disabled={selectedElement.isLocked}
                              onChange={(e) => {
                                const newType = e.target.value;
+                               if (!newType) return;
+                               const boothTypeLabelMap = {
+                                 "booth-empty": "Empty Booth",
+                                 "booth-semi": "Semi-Equipped Booth",
+                                 "booth-equipped": "Equipped Booth"
+                               };
                                const updated = elements.map(el => {
                                  if (selectedIds.includes(el.id)) {
                                    if (el.isLocked) return el;
-                                   let newLabel = el.label;
+                                   let newLabel = el.label || "";
                                    if (newType === "booth-empty") {
-                                     newLabel = newLabel.replace(/^(Semi-Equipped |Equipped )?Booth/, "Empty Booth");
+                                     newLabel = newLabel.replace(/^(Semi-Equipped |Equipped )?Booth/i, "Empty Booth");
                                    } else if (newType === "booth-semi") {
-                                     newLabel = newLabel.replace(/^(Empty |Equipped )?Booth/, "Semi-Equipped Booth");
+                                     newLabel = newLabel.replace(/^(Empty |Equipped )?Booth/i, "Semi-Equipped Booth");
                                    } else if (newType === "booth-equipped") {
-                                     newLabel = newLabel.replace(/^(Empty |Semi-Equipped )?Booth/, "Equipped Booth");
+                                     newLabel = newLabel.replace(/^(Empty |Semi-Equipped )?Booth/i, "Equipped Booth");
                                    }
-                                   return { ...el, type: newType, label: newLabel };
+                                   return {
+                                     ...el,
+                                     type: newType,
+                                     label: newLabel,
+                                     boothType: boothTypeLabelMap[newType] || newType
+                                   };
                                  }
                                  return el;
                                });
@@ -5296,7 +5368,9 @@ export default function FloorPlanModifier({
                              }}
                              className="px-3 py-2 border border-slate-200 rounded-xl text-slate-800 focus:outline-none text-xs font-semibold bg-white w-full disabled:opacity-50"
                            >
-                             {!selectedElement.type.startsWith("booth-") && <option value="">Mixed</option>}
+                             {(selectedElement.type === "booth-multiple" || !["booth-empty", "booth-semi", "booth-equipped", "booth", "booth-std", "booth-vip"].includes(selectedElement.type)) && (
+                               <option value="" disabled hidden>Mixed Booth Types</option>
+                             )}
                              <option value="booth-empty">Empty Booth</option>
                              <option value="booth-semi">Semi-Equipped Booth</option>
                              <option value="booth-equipped">Equipped Booth</option>
@@ -7988,6 +8062,19 @@ export default function FloorPlanModifier({
                     <span className="flex items-center gap-2"><Maximize size={14} />{t("floor.showDimensions", "Show Dimensions")}</span>
                     <span className={`w-2 h-2 rounded-full ${showDimensions ? "bg-indigo-500" : "bg-slate-300"}`} />
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setToolMode(toolMode === "constructor" ? "select" : "constructor")}
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 border rounded-xl font-semibold text-xs transition-all duration-200 cursor-pointer ${
+                      toolMode === "constructor" 
+                        ? "bg-amber-50 border-amber-300 text-amber-900 shadow-sm font-bold" 
+                        : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2"><Ruler size={14} className={toolMode === "constructor" ? "text-amber-600" : ""} />{t("floor.constructorMode", "Constructor Mode")}</span>
+                    <span className={`w-2 h-2 rounded-full ${toolMode === "constructor" ? "bg-amber-500 animate-pulse" : "bg-slate-300"}`} />
+                  </button>
                 </div>
 
                 <div className="flex flex-col gap-1.5 border-t border-slate-200/60 pt-3">
@@ -8000,6 +8087,38 @@ export default function FloorPlanModifier({
                     onChange={(val) => setGridSize(Math.max(20, Math.round(val * 20)))}
                     className="px-3 py-2 border border-slate-200 rounded-xl text-slate-800 focus:outline-none text-xs font-semibold bg-white"
                   />
+                </div>
+
+                <div className="flex flex-col gap-1.5 border-t border-slate-200/60 pt-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{t("floor.safetyClearance", "Min Aisle Clearance (Safety)")}</label>
+                    <span className="text-[10px] font-mono font-bold text-emerald-600">{safetyClearance.toFixed(2)}m</span>
+                  </div>
+                  <PropertyInput 
+                    type="number" 
+                    min={0.5}
+                    max={20}
+                    step={0.25}
+                    value={safetyClearance}
+                    onChange={(val) => setSafetyClearance(Math.max(0.5, parseFloat(val) || 2.5))}
+                    className="px-3 py-2 border border-slate-200 rounded-xl text-slate-800 focus:outline-none text-xs font-semibold bg-white"
+                  />
+                  <div className="flex gap-1 mt-1">
+                    {[2.0, 2.5, 3.0, 3.5].map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => setSafetyClearance(preset)}
+                        className={`flex-1 py-1 text-[10px] font-mono rounded-lg border transition cursor-pointer ${
+                          Math.abs(safetyClearance - preset) < 0.05
+                            ? "bg-indigo-100 border-indigo-300 text-indigo-700 font-bold"
+                            : "bg-white border-slate-200 text-slate-600 hover:bg-slate-100"
+                        }`}
+                      >
+                        {preset.toFixed(1)}m
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
