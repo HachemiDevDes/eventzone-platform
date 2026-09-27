@@ -7315,116 +7315,122 @@ const FloorPlanCanvas = React.forwardRef(({
 
       {/* Top Technical CAD HUD Banner for Constructor Mode (Light Mode) */}
       {toolMode === "constructor" && !exportFilters && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-1.5 pointer-events-auto select-none animate-in fade-in slide-in-from-top-2 duration-200">
-          <div className="flex items-center gap-3 px-3.5 py-1.5 bg-white/95 text-slate-800 rounded-2xl shadow-xl shadow-slate-200/70 backdrop-blur-md border border-slate-200/90 text-xs font-sans">
-            <div className="flex items-center gap-2 bg-amber-50/90 border border-amber-250/90 text-amber-900 px-2.5 py-1 rounded-xl shadow-2xs">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-              </span>
-              <span className="font-extrabold text-amber-900 flex items-center gap-1.5 text-[11px] tracking-tight">
-                <Ruler size={13} className="text-amber-600" />
-                {t("floor.constructorModeActive", "Constructor Mode")}
-              </span>
-            </div>
+        <div className="absolute top-4 right-4 z-30 flex flex-col pointer-events-auto select-none animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="bg-white/95 text-slate-800 rounded-2xl shadow-xl shadow-slate-200/70 backdrop-blur-md border border-slate-200/90 text-xs font-sans p-3 flex flex-col gap-2 min-w-[580px] max-w-[820px]">
+            {/* Top row: Badges, Metrics, Status and Controls */}
+            <div className="flex items-center justify-between gap-3">
+              {/* Left group of top row: Constructor mode badge + scale + min aisle */}
+              <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-2 bg-amber-50/90 border border-amber-250/90 text-amber-900 px-2.5 py-1 rounded-xl shadow-2xs whitespace-nowrap">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                  </span>
+                  <span className="font-extrabold text-amber-900 flex items-center gap-1.5 text-[11px] tracking-tight">
+                    <Ruler size={13} className="text-amber-600" />
+                    {t("floor.constructorModeActive", "Constructor Mode")}
+                  </span>
+                </div>
 
-            <div className="w-px h-4 bg-slate-200"></div>
-
-            <div className="flex items-center gap-1.5 text-[11px] text-slate-600">
-              <span className="text-slate-400 font-medium">Scale:</span>
-              <span className="font-mono font-bold text-slate-750">1 grid = {(gridSize / 20).toFixed(1)}m</span>
-              <span className="text-[10px] text-slate-400 font-mono">({gridSize}px)</span>
-            </div>
-
-            <div className="w-px h-4 bg-slate-200"></div>
-
-            <div className="flex items-center gap-1.5 bg-emerald-50/90 border border-emerald-200/80 px-2.5 py-0.5 rounded-lg text-[11px]">
-              <span className="text-emerald-700/80 font-medium text-[10px] uppercase tracking-wider">Min Aisle</span>
-              <span className="font-bold text-emerald-700 font-mono">{safetyClearance.toFixed(2)}m</span>
-            </div>
-
-            {selectedConstructorElement && (
-              <>
                 <div className="w-px h-4 bg-slate-200"></div>
-                <div className="flex items-center gap-1.5 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-xl text-indigo-900 text-[11px] shadow-2xs animate-fade-in">
-                  <span className="text-indigo-600 font-medium">Selected:</span>
-                  <span className="font-extrabold text-indigo-900">
-                    {selectedConstructorElement.label || selectedConstructorElement.name || selectedConstructorElement.boothNumber || selectedConstructorElement.id}
-                  </span>
-                  <span className="text-indigo-500 font-mono text-[10px]">
-                    ({dynamicConstructorGuides.filter(g => !g.isWall).length} distances)
-                  </span>
+
+                <div className="flex items-center gap-1.5 text-[11px] text-slate-600 whitespace-nowrap">
+                  <span className="text-slate-400 font-medium">Scale:</span>
+                  <span className="font-mono font-bold text-slate-750">1 grid = {(gridSize / 20).toFixed(1)}m</span>
+                  <span className="text-[10px] text-slate-400 font-mono">({gridSize}px)</span>
+                </div>
+
+                <div className="w-px h-4 bg-slate-200"></div>
+
+                <div className="flex items-center gap-1.5 bg-emerald-50/90 border border-emerald-200/80 px-2.5 py-0.5 rounded-lg text-[11px] whitespace-nowrap">
+                  <span className="text-emerald-700/80 font-medium text-[10px] uppercase tracking-wider">Min Aisle</span>
+                  <span className="font-bold text-emerald-700 font-mono">{safetyClearance.toFixed(2)}m</span>
+                </div>
+              </div>
+
+              {/* Right group of top row: Action Buttons */}
+              <div className="flex items-center gap-2">
+                {constructorLines.length > 0 && (
                   <button
-                    onClick={() => onSelectId([], false)}
-                    className="ml-1 p-0.5 text-indigo-400 hover:text-indigo-800 hover:bg-indigo-100 rounded-md transition cursor-pointer"
-                    title="Deselect reference element"
+                    onClick={() => {
+                      setConstructorLines([]);
+                      setActiveMeasurement(null);
+                      setHoveredLineId(null);
+                    }}
+                    className="flex items-center gap-1 px-2.5 py-1 bg-rose-50 hover:bg-rose-100/90 active:bg-rose-200 text-rose-700 hover:text-rose-800 border border-rose-200/90 rounded-xl text-[10px] font-bold transition cursor-pointer shadow-2xs whitespace-nowrap"
+                    title="Clear all drawn lines and surfaces"
                   >
-                    <X size={11} />
+                    <Trash2 size={11} className="text-rose-600" />
+                    <span>Clear ({constructorLines.length})</span>
                   </button>
-                </div>
-              </>
-            )}
+                )}
 
-            {constructorLines.length > 0 && (
-              <>
-                <div className="w-px h-4 bg-slate-200"></div>
-                <div className="flex items-center gap-1.5 bg-slate-100 border border-slate-200/80 px-2.5 py-0.5 rounded-xl text-slate-700 text-[11px]">
-                  <span className="text-slate-500 font-medium">Lines:</span>
-                  <span className="font-mono font-extrabold text-slate-800">{constructorLines.length}</span>
-                </div>
-              </>
-            )}
-
-            {detectedPolygons.length > 0 && (
-              <>
-                <div className="w-px h-4 bg-slate-200"></div>
-                <div className="flex items-center gap-1.5 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-xl text-indigo-900 text-[11px] shadow-2xs animate-fade-in">
-                  <Shapes size={12} className="text-indigo-600" />
-                  <span className="text-indigo-600 font-medium">
-                    {detectedPolygons.length === 1 ? "Surface:" : `${detectedPolygons.length} Surfaces:`}
-                  </span>
-                  <span className="font-mono font-extrabold text-indigo-700 text-xs">
-                    {totalClosedSurfaceArea.toFixed(2)} m²
-                  </span>
-                </div>
-              </>
-            )}
-
-            {constructorLines.length > 0 && (
-              <>
-                <div className="w-px h-4 bg-slate-200"></div>
                 <button
-                  onClick={() => {
-                    setConstructorLines([]);
-                    setActiveMeasurement(null);
-                    setHoveredLineId(null);
-                  }}
-                  className="flex items-center gap-1 px-2.5 py-1 bg-rose-50 hover:bg-rose-100/90 active:bg-rose-200 text-rose-700 hover:text-rose-800 border border-rose-200/90 rounded-xl text-[10px] font-bold transition cursor-pointer shadow-2xs"
-                  title="Clear all drawn lines and surfaces"
+                  onClick={() => onToolModeChange("select")}
+                  className="flex items-center gap-1.5 px-3 py-1 bg-slate-100 hover:bg-slate-200/80 active:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200 rounded-xl text-[11px] font-bold transition cursor-pointer shadow-2xs whitespace-nowrap"
+                  title="Exit Constructor Mode (Esc)"
                 >
-                  <Trash2 size={11} className="text-rose-600" />
-                  <span>Clear ({constructorLines.length})</span>
+                  <span>Done</span>
+                  <kbd className="text-[9px] font-mono font-semibold bg-white border border-slate-300 text-slate-500 px-1 py-0.2 rounded shadow-2xs">Esc</kbd>
                 </button>
-              </>
+              </div>
+            </div>
+
+            {/* Middle row: Live Dynamic Details (Reference Element, Lines, Surfaces) if any exist */}
+            {(selectedConstructorElement || constructorLines.length > 0 || detectedPolygons.length > 0) && (
+              <div className="flex items-center gap-2 pt-1.5 border-t border-slate-100 flex-wrap">
+                {selectedConstructorElement && (
+                  <div className="flex items-center gap-1.5 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-xl text-indigo-900 text-[11px] shadow-2xs animate-fade-in">
+                    <span className="text-indigo-600 font-medium">Selected Ref:</span>
+                    <span className="font-extrabold text-indigo-900 truncate max-w-[180px]">
+                      {selectedConstructorElement.label || selectedConstructorElement.name || selectedConstructorElement.boothNumber || selectedConstructorElement.id}
+                    </span>
+                    <span className="text-indigo-500 font-mono text-[10px]">
+                      ({dynamicConstructorGuides.filter(g => !g.isWall).length} distances)
+                    </span>
+                    <button
+                      onClick={() => onSelectId([], false)}
+                      className="ml-1 p-0.5 text-indigo-400 hover:text-indigo-800 hover:bg-indigo-100 rounded-md transition cursor-pointer"
+                      title="Deselect reference element"
+                    >
+                      <X size={11} />
+                    </button>
+                  </div>
+                )}
+
+                {constructorLines.length > 0 && (
+                  <div className="flex items-center gap-1.5 bg-slate-100 border border-slate-200/80 px-2.5 py-0.5 rounded-xl text-slate-700 text-[11px]">
+                    <span className="text-slate-500 font-medium">Lines:</span>
+                    <span className="font-mono font-extrabold text-slate-800">{constructorLines.length}</span>
+                  </div>
+                )}
+
+                {detectedPolygons.length > 0 && (
+                  <div className="flex items-center gap-1.5 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-xl text-indigo-900 text-[11px] shadow-2xs animate-fade-in">
+                    <Shapes size={12} className="text-indigo-600" />
+                    <span className="text-indigo-600 font-medium">
+                      {detectedPolygons.length === 1 ? "Surface:" : `${detectedPolygons.length} Surfaces:`}
+                    </span>
+                    <span className="font-mono font-extrabold text-indigo-700 text-xs">
+                      {totalClosedSurfaceArea.toFixed(2)} m²
+                    </span>
+                  </div>
+                )}
+              </div>
             )}
 
-            <div className="w-px h-4 bg-slate-200"></div>
-
-            <button
-              onClick={() => onToolModeChange("select")}
-              className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 hover:bg-slate-200/80 active:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200 rounded-xl text-[10px] font-bold transition cursor-pointer shadow-2xs"
-              title="Exit Constructor Mode (Esc)"
-            >
-              <span>Done</span>
-              <kbd className="text-[9px] font-mono font-semibold bg-white border border-slate-300 text-slate-500 px-1 py-0.2 rounded shadow-2xs">Esc</kbd>
-            </button>
-          </div>
-
-          {/* Secondary Light Mode Quick Tip */}
-          <div className="px-3 py-0.5 bg-white/90 backdrop-blur-xs border border-slate-200/70 rounded-full text-[10px] text-slate-500 font-medium shadow-xs flex items-center gap-3">
-            <span>• Click any element to view distances to all other elements</span>
-            <span>• Drag or click to draw lines</span>
-            <span>• Hover over any line to delete</span>
+            {/* Bottom helper info row */}
+            <div className="flex items-center justify-between gap-3 pt-1 border-t border-slate-100 text-[10px] text-slate-400 font-medium">
+              <span className="flex items-center gap-1 text-slate-500">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-indigo-500/70"></span>
+                Click any element to inspect clearances to all objects
+              </span>
+              <span className="flex items-center gap-2 text-slate-400">
+                <span>Drag to measure / draw</span>
+                <span>•</span>
+                <span>Hover line to delete</span>
+              </span>
+            </div>
           </div>
         </div>
       )}
