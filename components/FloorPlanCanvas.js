@@ -887,7 +887,7 @@ const computeOrthogonalGuides = (targetEl, allElements, canvasWidth, canvasHeigh
   return guides;
 };
 
-// Compute distance lines from selected reference element to all other elements and walls
+// Compute distance lines from selected reference element to surrounding elements and canvas walls
 const computeAllElementDistances = (targetEl, allElements, canvasWidth, canvasHeight, safetyClearance, hoveredId) => {
   if (!targetEl) return [];
 
@@ -898,10 +898,106 @@ const computeAllElementDistances = (targetEl, allElements, canvasWidth, canvasHe
   const aMidX = aLeft + targetEl.width / 2;
   const aMidY = aTop + targetEl.height / 2;
 
-  const candidates = allElements.filter(el => el.id !== targetEl.id && !isLayoutElement(el));
+  // Maximum radius to consider an element as "around" targetEl (approx 15 meters)
+  const MAX_SURROUND_PX = 300;
+
+  // Helper to compute edge-to-edge distance between targetEl and another element
+  const getElementDistance = (el) => {
+    const dx = Math.max(0, Math.max(aLeft - (el.x + el.width), el.x - aRight));
+    const dy = Math.max(0, Math.max(aTop - (el.y + el.height), el.y - aBottom));
+    return Math.hypot(dx, dy);
+  };
+
+  const candidates = allElements.filter(el => {
+    if (!el || el.id === targetEl.id || isLayoutElement(el)) return false;
+    return getElementDistance(el) <= MAX_SURROUND_PX;
+  });
+
+  const surroundingElementIds = new Set();
+
+  // 1. Right Corridor: elements directly to the right with vertical overlap
+  const rightCandidates = candidates.filter(el => {
+    if (el.x < aRight - 2) return false;
+    const overlapY = Math.min(aBottom, el.y + el.height) - Math.max(aTop, el.y);
+    return overlapY > 2;
+  });
+  if (rightCandidates.length > 0) {
+    const minRightDist = Math.min(...rightCandidates.map(getElementDistance));
+    rightCandidates.filter(el => getElementDistance(el) <= minRightDist + 6).forEach(el => surroundingElementIds.add(el.id));
+  }
+
+  // 2. Left Corridor: elements directly to the left with vertical overlap
+  const leftCandidates = candidates.filter(el => {
+    if (el.x + el.width > aLeft + 2) return false;
+    const overlapY = Math.min(aBottom, el.y + el.height) - Math.max(aTop, el.y);
+    return overlapY > 2;
+  });
+  if (leftCandidates.length > 0) {
+    const minLeftDist = Math.min(...leftCandidates.map(getElementDistance));
+    leftCandidates.filter(el => getElementDistance(el) <= minLeftDist + 6).forEach(el => surroundingElementIds.add(el.id));
+  }
+
+  // 3. Top Corridor: elements directly above with horizontal overlap
+  const topCandidates = candidates.filter(el => {
+    if (el.y + el.height > aTop + 2) return false;
+    const overlapX = Math.min(aRight, el.x + el.width) - Math.max(aLeft, el.x);
+    return overlapX > 2;
+  });
+  if (topCandidates.length > 0) {
+    const minTopDist = Math.min(...topCandidates.map(getElementDistance));
+    topCandidates.filter(el => getElementDistance(el) <= minTopDist + 6).forEach(el => surroundingElementIds.add(el.id));
+  }
+
+  // 4. Bottom Corridor: elements directly below with horizontal overlap
+  const bottomCandidates = candidates.filter(el => {
+    if (el.y < aBottom - 2) return false;
+    const overlapX = Math.min(aRight, el.x + el.width) - Math.max(aLeft, el.x);
+    return overlapX > 2;
+  });
+  if (bottomCandidates.length > 0) {
+    const minBottomDist = Math.min(...bottomCandidates.map(getElementDistance));
+    bottomCandidates.filter(el => getElementDistance(el) <= minBottomDist + 6).forEach(el => surroundingElementIds.add(el.id));
+  }
+
+  // 5. Immediate touching/adjacent elements (gap <= 4px)
+  candidates.forEach(el => {
+    if (getElementDistance(el) <= 4) {
+      surroundingElementIds.add(el.id);
+    }
+  });
+
+  // 6. Closest diagonal / corner neighbors (within immediate safety clearance zone, unoccluded)
+  const diagonalCandidates = candidates.filter(el => !surroundingElementIds.has(el.id));
+  for (const el of diagonalCandidates) {
+    const dist = getElementDistance(el);
+    if (dist > Math.max(safetyClearance * 20, 70)) continue;
+
+    const pAx = aRight < el.x ? aRight : (aLeft > el.x + el.width ? aLeft : aMidX);
+    const pAy = aBottom < el.y ? aBottom : (aTop > el.y + el.height ? aTop : aMidY);
+    const pBx = el.x + el.width < aLeft ? el.x + el.width : (el.x > aRight ? el.x : el.x + el.width / 2);
+    const pBy = el.y + el.height < aTop ? el.y + el.height : (el.y > aBottom ? el.y : el.y + el.height / 2);
+
+    const midX = (pAx + pBx) / 2;
+    const midY = (pAy + pBy) / 2;
+    const radius = dist / 2;
+
+    const isBlocked = candidates.some(other => {
+      if (other.id === el.id) return false;
+      const otherDistToMid = Math.hypot((other.x + other.width / 2) - midX, (other.y + other.height / 2) - midY);
+      return otherDistToMid < radius * 0.9;
+    });
+
+    if (!isBlocked) {
+      surroundingElementIds.add(el.id);
+    }
+  }
+
   const guides = [];
 
-  for (const el of candidates) {
+  for (const elId of surroundingElementIds) {
+    const el = candidates.find(c => c.id === elId);
+    if (!el) continue;
+
     const bLeft = el.x;
     const bRight = el.x + el.width;
     const bTop = el.y;
@@ -933,7 +1029,6 @@ const computeAllElementDistances = (targetEl, allElements, canvasWidth, canvasHe
         distPx = aLeft - bRight;
         isOrthogonal = true;
       } else {
-        // Overlapping / touching
         x1 = aRight;
         y1 = yCenter;
         x2 = bLeft;
@@ -958,7 +1053,6 @@ const computeAllElementDistances = (targetEl, allElements, canvasWidth, canvasHe
         distPx = aTop - bBottom;
         isOrthogonal = true;
       } else {
-        // Overlapping / touching
         x1 = xCenter;
         y1 = aBottom;
         x2 = xCenter;
@@ -977,6 +1071,8 @@ const computeAllElementDistances = (targetEl, allElements, canvasWidth, canvasHe
       y2 = pBy;
       distPx = Math.hypot(pBx - pAx, pBy - pAy);
     }
+
+    if (distPx < 2) continue; // Touching or overlapping; skip zero-length lines to prevent badge stacking
 
     const distMeters = distPx / 20;
     const isHovered = hoveredId === el.id;
@@ -998,7 +1094,7 @@ const computeAllElementDistances = (targetEl, allElements, canvasWidth, canvasHe
     });
   }
 
-  // Also include 4 boundary/wall guides if canvas bounds exist
+  // Also include 4 boundary/wall guides if canvas bounds exist ("and ofc the canva")
   if (aLeft > 0) {
     guides.push({
       direction: 'left',
