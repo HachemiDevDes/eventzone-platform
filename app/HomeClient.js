@@ -448,6 +448,8 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
   const [tickets, setTickets] = useState(() => getInitialEventData("tickets", []));
   const [team, setTeam] = useState(() => getInitialEventData("team", []));
   const [floorPlans, setFloorPlans] = useState(() => getInitialEventData("floorPlans", []));
+  const floorPlansRef = useRef(floorPlans);
+  useEffect(() => { floorPlansRef.current = floorPlans; }, [floorPlans]);
   const [forms, setForms] = useState(() => getInitialEventData("forms", []));
   const [formSubmissions, setFormSubmissions] = useState(() => getInitialEventData("formSubmissions", []));
   const [rsvps, setRsvps] = useState(() => getInitialEventData("rsvps", []));
@@ -2529,21 +2531,64 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
   };
 
   // Floor Plan Save Helpers
-  const saveFloorPlanWithStatus = async (plan) => {
+  const floorPlanSaveTimeoutRef = useRef(null);
+  const pendingPlanToSaveRef = useRef(null);
+
+  const flushFloorPlanSave = useCallback(async () => {
+    if (floorPlanSaveTimeoutRef.current) {
+      clearTimeout(floorPlanSaveTimeoutRef.current);
+      floorPlanSaveTimeoutRef.current = null;
+    }
+    const planToSave = pendingPlanToSaveRef.current;
+    if (!planToSave) return;
+    pendingPlanToSaveRef.current = null;
+
     setSaveStatus("saving");
     try {
-      await upsertFloorPlan(plan, activeEventId);
+      const saved = await upsertFloorPlan(planToSave, activeEventIdRef.current);
+      if (saved) {
+        setFloorPlans(prev => {
+          const updated = prev.map(p => p.id === saved.id ? { ...p, ...saved } : p);
+          safeLocalStorageSet(`eventzone_cache_floorPlans_${activeEventIdRef.current}`, updated);
+          return updated;
+        });
+      }
       setSaveStatus("saved");
     } catch (err) {
-      console.error("Auto-save floor plan failed:", err);
+      console.error("Floor plan save failed:", err);
       setSaveStatus("error");
     }
-  };
+  }, []);
+
+  const saveFloorPlanWithStatus = useCallback((plan, immediate = false) => {
+    pendingPlanToSaveRef.current = plan;
+
+    // Immediately update local React state and cache so UI is instantaneous and survives reload
+    setFloorPlans(prev => {
+      const updated = prev.map(p => p.id === plan.id ? { ...p, ...plan } : p);
+      safeLocalStorageSet(`eventzone_cache_floorPlans_${activeEventIdRef.current}`, updated);
+      return updated;
+    });
+
+    if (floorPlanSaveTimeoutRef.current) {
+      clearTimeout(floorPlanSaveTimeoutRef.current);
+      floorPlanSaveTimeoutRef.current = null;
+    }
+
+    if (immediate) {
+      flushFloorPlanSave();
+    } else {
+      setSaveStatus("saving");
+      floorPlanSaveTimeoutRef.current = setTimeout(() => {
+        flushFloorPlanSave();
+      }, 400);
+    }
+  }, [flushFloorPlanSave]);
 
   const handleCreateFloorPlan = async (name) => {
     const validName = (typeof name === "string" && name.trim().length > 0)
       ? name.trim()
-      : `Floor Plan ${floorPlans.length + 1}`;
+      : `Floor Plan ${(floorPlansRef.current || []).length + 1}`;
     const newId = generateUuid();
     const newPlan = {
       id: newId,
@@ -2568,19 +2613,27 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
       ]
     };
     try {
-      const saved = await upsertFloorPlan(newPlan, activeEventId);
+      const saved = await upsertFloorPlan(newPlan, activeEventIdRef.current);
       const planToSet = saved || newPlan;
-      setFloorPlans(prev => [...prev.filter(p => p.id !== planToSet.id), planToSet]);
+      setFloorPlans(prev => {
+        const next = [...prev.filter(p => p.id !== planToSet.id), planToSet];
+        safeLocalStorageSet(`eventzone_cache_floorPlans_${activeEventIdRef.current}`, next);
+        return next;
+      });
       setActiveFloorPlanId(planToSet.id);
     } catch (err) {
       console.error("Create floor plan error:", err);
-      setFloorPlans(prev => [...prev, newPlan]);
+      setFloorPlans(prev => {
+        const next = [...prev, newPlan];
+        safeLocalStorageSet(`eventzone_cache_floorPlans_${activeEventIdRef.current}`, next);
+        return next;
+      });
       setActiveFloorPlanId(newPlan.id);
     }
   };
 
   const handleDuplicateFloorPlan = async (id) => {
-    const source = floorPlans.find(p => p.id === id);
+    const source = (floorPlansRef.current || []).find(p => p.id === id);
     if (!source) return;
     const duplicated = {
       ...source,
@@ -2589,19 +2642,31 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
       createdAt: new Date().toISOString(),
     };
     try {
-      const saved = await upsertFloorPlan(duplicated, activeEventId);
+      const saved = await upsertFloorPlan(duplicated, activeEventIdRef.current);
       const planToSet = saved || duplicated;
-      setFloorPlans(prev => [...prev.filter(p => p.id !== planToSet.id), planToSet]);
+      setFloorPlans(prev => {
+        const next = [...prev.filter(p => p.id !== planToSet.id), planToSet];
+        safeLocalStorageSet(`eventzone_cache_floorPlans_${activeEventIdRef.current}`, next);
+        return next;
+      });
     } catch (err) {
       console.error("Duplicate floor plan error:", err);
-      setFloorPlans(prev => [...prev, duplicated]);
+      setFloorPlans(prev => {
+        const next = [...prev, duplicated];
+        safeLocalStorageSet(`eventzone_cache_floorPlans_${activeEventIdRef.current}`, next);
+        return next;
+      });
     }
   };
 
   const handleArchiveFloorPlan = async (id) => {
     try {
-      await archiveFloorPlan(id);
-      setFloorPlans(prev => prev.map(p => p.id === id ? { ...p, status: 'archived', isArchived: true } : p));
+      await archiveFloorPlan(id, activeEventIdRef.current);
+      setFloorPlans(prev => {
+        const next = prev.map(p => p.id === id ? { ...p, status: 'archived', isArchived: true } : p);
+        safeLocalStorageSet(`eventzone_cache_floorPlans_${activeEventIdRef.current}`, next);
+        return next;
+      });
       if (activeFloorPlanId === id) setActiveFloorPlanId(null);
     } catch (err) {
       console.error("Archive floor plan error:", err);
@@ -2610,8 +2675,12 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
 
   const handleRestoreFloorPlan = async (id) => {
     try {
-      await restoreFloorPlan(id);
-      setFloorPlans(prev => prev.map(p => p.id === id ? { ...p, status: 'published', isArchived: false } : p));
+      await restoreFloorPlan(id, activeEventIdRef.current);
+      setFloorPlans(prev => {
+        const next = prev.map(p => p.id === id ? { ...p, status: 'published', isArchived: false } : p);
+        safeLocalStorageSet(`eventzone_cache_floorPlans_${activeEventIdRef.current}`, next);
+        return next;
+      });
     } catch (err) {
       console.error("Restore floor plan error:", err);
     }
@@ -2619,12 +2688,20 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
 
   const handlePermanentDeleteFloorPlan = async (id) => {
     try {
-      await permanentDeleteFloorPlan(id);
-      setFloorPlans(prev => prev.filter(p => p.id !== id));
+      await permanentDeleteFloorPlan(id, activeEventIdRef.current);
+      setFloorPlans(prev => {
+        const next = prev.filter(p => p.id !== id);
+        safeLocalStorageSet(`eventzone_cache_floorPlans_${activeEventIdRef.current}`, next);
+        return next;
+      });
       if (activeFloorPlanId === id) setActiveFloorPlanId(null);
     } catch (err) {
       console.error("Permanent delete floor plan error:", err);
-      setFloorPlans(prev => prev.filter(p => p.id !== id));
+      setFloorPlans(prev => {
+        const next = prev.filter(p => p.id !== id);
+        safeLocalStorageSet(`eventzone_cache_floorPlans_${activeEventIdRef.current}`, next);
+        return next;
+      });
     }
   };
 
@@ -2633,49 +2710,54 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
   const handleRenameFloorPlan = async (id, newName) => {
     setFloorPlans(prev => {
       const updated = prev.map(p => p.id === id ? { ...p, name: newName } : p);
+      safeLocalStorageSet(`eventzone_cache_floorPlans_${activeEventIdRef.current}`, updated);
       const target = updated.find(p => p.id === id);
-      if (target) saveFloorPlanWithStatus(target);
+      if (target) saveFloorPlanWithStatus(target, true);
       return updated;
     });
   };
 
   const handleSaveFloorPlanElements = (id, elements) => {
-    const updatedFloorPlans = floorPlans.map(p => p.id === id ? { ...p, elements } : p);
-    setFloorPlans(updatedFloorPlans);
-    const savedPlan = updatedFloorPlans.find(p => p.id === id);
-    if (savedPlan) saveFloorPlanWithStatus(savedPlan);
+    const current = (floorPlansRef.current || []).find(p => p.id === id);
+    const updatedPlan = {
+      ...(current || {}),
+      id,
+      elements
+    };
+    saveFloorPlanWithStatus(updatedPlan, false);
   };
 
   const handleSaveFloorPlanFloors = (id, floors) => {
-    const firstFloor = floors[0] || { elements: [], blueprint: {} };
-    const updatedFloorPlans = floorPlans.map(p => p.id === id ? { 
-      ...p, 
+    const firstFloor = (Array.isArray(floors) && floors[0]) ? floors[0] : { elements: [], blueprint: {} };
+    const current = (floorPlansRef.current || []).find(p => p.id === id);
+    const updatedPlan = {
+      ...(current || {}),
+      id,
       floors,
       elements: firstFloor.elements || [],
       blueprint: firstFloor.blueprint || {}
-    } : p);
-    
-    setFloorPlans(updatedFloorPlans);
-    const savedPlan = updatedFloorPlans.find(p => p.id === id);
-    if (savedPlan) saveFloorPlanWithStatus(savedPlan);
+    };
+    saveFloorPlanWithStatus(updatedPlan, false);
   };
 
   const handleSaveFloorPlanBlueprint = (id, blueprintState) => {
-    setFloorPlans(prev => {
-      const updated = prev.map(p => p.id === id ? { ...p, blueprint: blueprintState } : p);
-      const merged = updated.find(p => p.id === id);
-      if (merged) saveFloorPlanWithStatus(merged);
-      return updated;
-    });
+    const current = (floorPlansRef.current || []).find(p => p.id === id);
+    const updatedPlan = {
+      ...(current || {}),
+      id,
+      blueprint: blueprintState
+    };
+    saveFloorPlanWithStatus(updatedPlan, false);
   };
 
   const handleSaveFloorPlanFontFamily = (id, fontFamily) => {
-    setFloorPlans(prev => {
-      const updated = prev.map(p => p.id === id ? { ...p, fontFamily } : p);
-      const merged = updated.find(p => p.id === id);
-      if (merged) saveFloorPlanWithStatus(merged);
-      return updated;
-    });
+    const current = (floorPlansRef.current || []).find(p => p.id === id);
+    const updatedPlan = {
+      ...(current || {}),
+      id,
+      fontFamily
+    };
+    saveFloorPlanWithStatus(updatedPlan, false);
   };
 
   const activePlan = floorPlans.find(p => p.id === activeFloorPlanId) ?? null;
@@ -5825,7 +5907,9 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               onSaveBlueprintState={(bp) => handleSaveFloorPlanBlueprint(activeFloorPlanId, bp)}
               onSaveFloors={(floors) => handleSaveFloorPlanFloors(activeFloorPlanId, floors)}
               onSaveFontFamily={(font) => handleSaveFloorPlanFontFamily(activeFloorPlanId, font)}
-              onBack={() => {
+              onManualSave={flushFloorPlanSave}
+              onBack={async () => {
+                await flushFloorPlanSave();
                 setActiveFloorPlanId(null);
                 setInitialPreviewMode(false);
               }}

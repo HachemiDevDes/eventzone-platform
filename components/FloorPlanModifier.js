@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { 
-  Undo2, Redo2, Trash2, Copy, Grid, Layers, Download, Save, 
+  Undo2, Redo2, Trash2, Copy, Grid, Layers, Download, Save, Loader2,
   Map, RotateCcw, Upload, FileJson, CheckCircle, ChevronDown, ChevronUp,
   Store, Crown, Star, Mic, ConciergeBell, LogIn, LogOut, Disc, 
   Armchair, Zap, AlertTriangle, Utensils, Square, Circle, Triangle,
@@ -500,6 +500,7 @@ export default function FloorPlanModifier({
   isPreviewLink = false,
   initialFloors = [],
   onSaveFloors,
+  onManualSave,
   isReadOnly = false,
   effectivePermissions = null
 }) {
@@ -2427,6 +2428,27 @@ export default function FloorPlanModifier({
     commitHistoryState(updated);
   };
 
+  const handleManualSave = useCallback(() => {
+    if (!canEdit) return;
+    const currentBp = {
+      url: blueprintUrl,
+      name: blueprintName,
+      opacity: blueprintOpacity,
+      x: blueprintX,
+      y: blueprintY,
+      width: blueprintWidth,
+      height: blueprintHeight,
+      rotation: blueprintRotation,
+      isLocked: blueprintIsLocked,
+      canvasWidth,
+      canvasHeight
+    };
+    syncAndSaveFloors(elements, currentBp);
+    if (onManualSave) {
+      onManualSave();
+    }
+  }, [canEdit, blueprintUrl, blueprintName, blueprintOpacity, blueprintX, blueprintY, blueprintWidth, blueprintHeight, blueprintRotation, blueprintIsLocked, canvasWidth, canvasHeight, elements, syncAndSaveFloors, onManualSave]);
+
   // Keyboard shortcuts listener
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -2444,6 +2466,13 @@ export default function FloorPlanModifier({
 
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
       const isCtrl = isMac ? e.metaKey : e.ctrlKey;
+
+      // Ctrl + S (Save)
+      if (isCtrl && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        handleManualSave();
+        return;
+      }
 
       // Ctrl + Z (Undo)
       if (isCtrl && e.key.toLowerCase() === 'z') {
@@ -4045,6 +4074,37 @@ export default function FloorPlanModifier({
                 >
                   {isPreviewMode ? <EyeOff size={15} /> : <Eye size={15} />}
                   <span>{t("floor.preview", "Preview Map")}</span>
+                </button>
+              )}
+
+              {/* Save Floor Plan Button */}
+              {!initialPreviewMode && canEdit && (
+                <button
+                  onClick={handleManualSave}
+                  disabled={saveStatus === "saving"}
+                  className={`flex items-center gap-1.5 px-3.5 py-2 border rounded-xl font-bold text-xs transition-all duration-200 cursor-pointer shadow-sm ${
+                    saveStatus === "saving"
+                      ? "bg-slate-100 border-slate-200 text-slate-400 cursor-wait"
+                      : saveStatus === "error"
+                      ? "bg-rose-50 border-rose-200 hover:bg-rose-100 text-rose-600"
+                      : "bg-indigo-650 border-indigo-650 hover:bg-indigo-700 text-white"
+                  }`}
+                  title={`${t("floor.saveChanges", "Save Changes")} (Ctrl+S)`}
+                >
+                  {saveStatus === "saving" ? (
+                    <Loader2 size={15} className="animate-spin text-slate-400" />
+                  ) : saveStatus === "error" ? (
+                    <AlertTriangle size={15} className="text-rose-600" />
+                  ) : (
+                    <Save size={15} />
+                  )}
+                  <span>
+                    {saveStatus === "saving"
+                      ? t("floor.saving", "Saving...")
+                      : saveStatus === "error"
+                      ? t("floor.retrySave", "Retry Save")
+                      : t("floor.save", "Save")}
+                  </span>
                 </button>
               )}
             </div>
