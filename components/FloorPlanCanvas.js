@@ -887,6 +887,183 @@ const computeOrthogonalGuides = (targetEl, allElements, canvasWidth, canvasHeigh
   return guides;
 };
 
+// Compute distance lines from selected reference element to all other elements and walls
+const computeAllElementDistances = (targetEl, allElements, canvasWidth, canvasHeight, safetyClearance, hoveredId) => {
+  if (!targetEl) return [];
+
+  const aLeft = targetEl.x;
+  const aRight = targetEl.x + targetEl.width;
+  const aTop = targetEl.y;
+  const aBottom = targetEl.y + targetEl.height;
+  const aMidX = aLeft + targetEl.width / 2;
+  const aMidY = aTop + targetEl.height / 2;
+
+  const candidates = allElements.filter(el => el.id !== targetEl.id && !isLayoutElement(el));
+  const guides = [];
+
+  for (const el of candidates) {
+    const bLeft = el.x;
+    const bRight = el.x + el.width;
+    const bTop = el.y;
+    const bBottom = el.y + el.height;
+    const bMidX = bLeft + el.width / 2;
+    const bMidY = bTop + el.height / 2;
+
+    const overlapX = Math.min(aRight, bRight) - Math.max(aLeft, bLeft);
+    const overlapY = Math.min(aBottom, bBottom) - Math.max(aTop, bTop);
+
+    let x1, y1, x2, y2, distPx;
+    let isOrthogonal = false;
+
+    if (overlapY > 0) {
+      // Horizontal separation with vertical overlap
+      const yCenter = (Math.max(aTop, bTop) + Math.min(aBottom, bBottom)) / 2;
+      if (aRight <= bLeft) {
+        x1 = aRight;
+        y1 = yCenter;
+        x2 = bLeft;
+        y2 = yCenter;
+        distPx = bLeft - aRight;
+        isOrthogonal = true;
+      } else if (bRight <= aLeft) {
+        x1 = aLeft;
+        y1 = yCenter;
+        x2 = bRight;
+        y2 = yCenter;
+        distPx = aLeft - bRight;
+        isOrthogonal = true;
+      } else {
+        // Overlapping / touching
+        x1 = aRight;
+        y1 = yCenter;
+        x2 = bLeft;
+        y2 = yCenter;
+        distPx = 0;
+      }
+    } else if (overlapX > 0) {
+      // Vertical separation with horizontal overlap
+      const xCenter = (Math.max(aLeft, bLeft) + Math.min(aRight, bRight)) / 2;
+      if (aBottom <= bTop) {
+        x1 = xCenter;
+        y1 = aBottom;
+        x2 = xCenter;
+        y2 = bTop;
+        distPx = bTop - aBottom;
+        isOrthogonal = true;
+      } else if (bBottom <= aTop) {
+        x1 = xCenter;
+        y1 = aTop;
+        x2 = xCenter;
+        y2 = bBottom;
+        distPx = aTop - bBottom;
+        isOrthogonal = true;
+      } else {
+        // Overlapping / touching
+        x1 = xCenter;
+        y1 = aBottom;
+        x2 = xCenter;
+        y2 = bTop;
+        distPx = 0;
+      }
+    } else {
+      // Diagonal separation: closest points between bounding boxes
+      const pAx = aRight < bLeft ? aRight : (aLeft > bRight ? aLeft : aMidX);
+      const pAy = aBottom < bTop ? aBottom : (aTop > bBottom ? aTop : aMidY);
+      const pBx = bRight < aLeft ? bRight : (bLeft > aRight ? bLeft : bMidX);
+      const pBy = bBottom < aTop ? bBottom : (bTop > aBottom ? bTop : bMidY);
+      x1 = pAx;
+      y1 = pAy;
+      x2 = pBx;
+      y2 = pBy;
+      distPx = Math.hypot(pBx - pAx, pBy - pAy);
+    }
+
+    const distMeters = distPx / 20;
+    const isHovered = hoveredId === el.id;
+
+    guides.push({
+      targetId: el.id,
+      targetLabel: el.label || el.name || el.boothNumber || el.id,
+      x1,
+      y1,
+      x2,
+      y2,
+      distancePx: distPx,
+      distanceMeters: distMeters,
+      isOrthogonal,
+      isSafetyAlert: distMeters > 0 && distMeters < safetyClearance,
+      isWall: false,
+      isHoveredTarget: isHovered,
+      customColor: isHovered ? "#4f46e5" : (distMeters > 0 && distMeters < safetyClearance ? "#ef4444" : undefined)
+    });
+  }
+
+  // Also include 4 boundary/wall guides if canvas bounds exist
+  if (aLeft > 0) {
+    guides.push({
+      direction: 'left',
+      x1: 0,
+      y1: aMidY,
+      x2: aLeft,
+      y2: aMidY,
+      distancePx: aLeft,
+      distanceMeters: aLeft / 20,
+      isWall: true,
+      wallLabel: 'Wall'
+    });
+  }
+  if (canvasWidth && canvasWidth > aRight) {
+    const gap = canvasWidth - aRight;
+    guides.push({
+      direction: 'right',
+      x1: aRight,
+      y1: aMidY,
+      x2: canvasWidth,
+      y2: aMidY,
+      distancePx: gap,
+      distanceMeters: gap / 20,
+      isWall: true,
+      wallLabel: 'Wall'
+    });
+  }
+  if (aTop > 0) {
+    guides.push({
+      direction: 'top',
+      x1: aMidX,
+      y1: 0,
+      x2: aMidX,
+      y2: aTop,
+      distancePx: aTop,
+      distanceMeters: aTop / 20,
+      isWall: true,
+      wallLabel: 'Wall'
+    });
+  }
+  if (canvasHeight && canvasHeight > aBottom) {
+    const gap = canvasHeight - aBottom;
+    guides.push({
+      direction: 'bottom',
+      x1: aMidX,
+      y1: aBottom,
+      x2: aMidX,
+      y2: canvasHeight,
+      distancePx: gap,
+      distanceMeters: gap / 20,
+      isWall: true,
+      wallLabel: 'Wall'
+    });
+  }
+
+  // Sort: prioritize hovered target, then safety alerts, then closest elements
+  guides.sort((a, b) => {
+    if (a.isHoveredTarget) return -1;
+    if (b.isHoveredTarget) return 1;
+    return a.distancePx - b.distancePx;
+  });
+
+  return guides;
+};
+
 // --- Geometric Helper Functions for Constructor Closed Shape Detection ---
 
 function getSegmentIntersection(p1, p2, p3, p4, tolerance = 1e-5) {
@@ -2147,19 +2324,24 @@ const FloorPlanCanvas = React.forwardRef(({
     const selectedEl = elements.find(el => selectedIds.includes(el.id) && !isLayoutElement(el));
     const hoveredEl = elements.find(el => el.id === hoveredId && !isLayoutElement(el));
 
-    // Case 1: An element is selected and a different element is hovered: measure pair distance directly
-    if (selectedEl && hoveredEl && selectedEl.id !== hoveredEl.id) {
-      return computeElementPairDistance(selectedEl, hoveredEl);
+    // When an element is clicked/selected in Constructor Mode: show distances to ALL other elements and room walls!
+    if (selectedEl) {
+      return computeAllElementDistances(selectedEl, elements, canvasWidth, canvasHeight, safetyClearance, hoveredId);
     }
 
-    // Case 2: Selected or hovered element: compute 4-way orthogonal guides to nearest obstacles & walls
-    const targetEl = selectedEl || hoveredEl;
-    if (targetEl) {
-      return computeOrthogonalGuides(targetEl, elements, canvasWidth, canvasHeight, safetyClearance);
+    // When no element is selected but an element is hovered: show 4-way orthogonal guides to nearest obstacles & walls
+    if (hoveredEl) {
+      return computeOrthogonalGuides(hoveredEl, elements, canvasWidth, canvasHeight, safetyClearance);
     }
 
     return [];
   }, [toolMode, exportFilters, elements, selectedIds, hoveredId, canvasWidth, canvasHeight, safetyClearance]);
+
+  // The active reference element clicked in Constructor Mode
+  const selectedConstructorElement = useMemo(() => {
+    if (toolMode !== "constructor") return null;
+    return elements.find(el => selectedIds.includes(el.id) && !isLayoutElement(el)) || null;
+  }, [toolMode, elements, selectedIds]);
 
   const handleZoomToFit = React.useCallback(() => {
     if (stageWidth <= 0 || stageHeight <= 0 || canvasWidth <= 0 || canvasHeight <= 0) return;
@@ -3456,14 +3638,19 @@ const FloorPlanCanvas = React.forwardRef(({
                 };
                 setConstructorLines(prev => [...prev, newLine]);
                 setActiveMeasurement(newLine);
+                rulerWaitingSecondClick.current = false;
+                rulerStartPoint.current = null;
+                setIsRulerDrawing(false);
+                setRulerLive({ start: null, current: null });
+                return;
               }
-              rulerWaitingSecondClick.current = false;
-              rulerStartPoint.current = null;
-              setIsRulerDrawing(false);
-              setRulerLive({ start: null, current: null });
-              return;
             }
           }
+          // Single click on element in constructor mode selects it to show all distances
+          rulerWaitingSecondClick.current = false;
+          rulerStartPoint.current = null;
+          setIsRulerDrawing(false);
+          setRulerLive({ start: null, current: null });
           onSelectId(el.id, false);
           return;
         }
@@ -3475,6 +3662,10 @@ const FloorPlanCanvas = React.forwardRef(({
         if (justMarqueeDragged.current) return;
         if (toolMode === "constructor") {
           if (rulerHasDragged.current) return;
+          rulerWaitingSecondClick.current = false;
+          rulerStartPoint.current = null;
+          setIsRulerDrawing(false);
+          setRulerLive({ start: null, current: null });
           onSelectId(el.id, false);
           return;
         }
@@ -7032,7 +7223,25 @@ const FloorPlanCanvas = React.forwardRef(({
                 );
               })}
 
-              {/* 2. Dynamic Element-to-Element Distance Guides */}
+              {/* Reference Element Halo in Constructor Mode */}
+              {selectedConstructorElement && (
+                <Group listening={false}>
+                  <Rect
+                    x={selectedConstructorElement.x - 4}
+                    y={selectedConstructorElement.y - 4}
+                    width={selectedConstructorElement.width + 8}
+                    height={selectedConstructorElement.height + 8}
+                    stroke="#4f46e5"
+                    strokeWidth={2.5 / Math.max(0.2, Math.min(stageScale, 5))}
+                    cornerRadius={6}
+                    dash={[6 / Math.max(0.2, Math.min(stageScale, 5)), 3 / Math.max(0.2, Math.min(stageScale, 5))]}
+                    fill="rgba(99, 102, 241, 0.08)"
+                    listening={false}
+                  />
+                </Group>
+              )}
+
+              {/* 2. Dynamic Element-to-Element Distance Guides (shows distances to all other elements when an element is selected) */}
               {dynamicConstructorGuides.map((guide, idx) => (
                 <DimensionLineOverlay
                   key={`guide-${idx}`}
@@ -7043,10 +7252,11 @@ const FloorPlanCanvas = React.forwardRef(({
                   distanceMeters={guide.distanceMeters}
                   stageScale={stageScale}
                   safetyClearance={safetyClearance}
-                  isSafetyAlert={!guide.isWall && guide.distanceMeters > 0 && guide.distanceMeters < safetyClearance}
+                  isSafetyAlert={guide.isSafetyAlert}
                   isEqualSpacing={guide.isEqualSpacing}
                   isWall={guide.isWall}
                   isInteractive={false}
+                  customColor={guide.customColor}
                 />
               ))}
 
@@ -7133,6 +7343,28 @@ const FloorPlanCanvas = React.forwardRef(({
               <span className="font-bold text-emerald-700 font-mono">{safetyClearance.toFixed(2)}m</span>
             </div>
 
+            {selectedConstructorElement && (
+              <>
+                <div className="w-px h-4 bg-slate-200"></div>
+                <div className="flex items-center gap-1.5 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-xl text-indigo-900 text-[11px] shadow-2xs animate-fade-in">
+                  <span className="text-indigo-600 font-medium">Selected:</span>
+                  <span className="font-extrabold text-indigo-900">
+                    {selectedConstructorElement.label || selectedConstructorElement.name || selectedConstructorElement.boothNumber || selectedConstructorElement.id}
+                  </span>
+                  <span className="text-indigo-500 font-mono text-[10px]">
+                    ({dynamicConstructorGuides.filter(g => !g.isWall).length} distances)
+                  </span>
+                  <button
+                    onClick={() => onSelectId([], false)}
+                    className="ml-1 p-0.5 text-indigo-400 hover:text-indigo-800 hover:bg-indigo-100 rounded-md transition cursor-pointer"
+                    title="Deselect reference element"
+                  >
+                    <X size={11} />
+                  </button>
+                </div>
+              </>
+            )}
+
             {constructorLines.length > 0 && (
               <>
                 <div className="w-px h-4 bg-slate-200"></div>
@@ -7190,9 +7422,9 @@ const FloorPlanCanvas = React.forwardRef(({
 
           {/* Secondary Light Mode Quick Tip */}
           <div className="px-3 py-0.5 bg-white/90 backdrop-blur-xs border border-slate-200/70 rounded-full text-[10px] text-slate-500 font-medium shadow-xs flex items-center gap-3">
-            <span>• Draw lines by dragging or clicking</span>
+            <span>• Click any element to view distances to all other elements</span>
+            <span>• Drag or click to draw lines</span>
             <span>• Hover over any line to delete</span>
-            <span>• Connecting or crossing lines auto-calculates surface (m²)</span>
           </div>
         </div>
       )}
