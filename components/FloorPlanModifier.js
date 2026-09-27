@@ -4003,15 +4003,18 @@ export default function FloorPlanModifier({
               {!initialPreviewMode && canEdit && !isPreviewMode && (
                 <button 
                   onClick={() => setToolMode(prev => prev === "constructor" ? "select" : "constructor")}
-                  className={`flex items-center gap-1.5 px-3 py-2 border rounded-xl font-bold text-xs transition-all duration-200 cursor-pointer ${
+                  className={`flex items-center gap-2 px-3 py-2 border rounded-xl font-bold text-xs transition-all duration-200 cursor-pointer ${
                     toolMode === "constructor" 
-                      ? "bg-amber-500 border-amber-600 text-slate-950 shadow-sm hover:bg-amber-400 font-extrabold" 
+                      ? "bg-amber-50 border-amber-300 text-amber-900 shadow-sm hover:bg-amber-100/70 font-extrabold" 
                       : "bg-white border-slate-200 hover:border-amber-300 hover:text-amber-700 text-slate-655"
                   }`}
                   title="Constructor Mode (C / R) - Real-time Ruler & Safety Clearance"
                 >
-                  <Ruler size={15} className={toolMode === "constructor" ? "text-slate-950" : "text-amber-600"} />
+                  <Ruler size={14} className={toolMode === "constructor" ? "text-amber-600" : "text-amber-500"} />
                   <span>{t("floor.constructorMode", "Constructor Mode")}</span>
+                  {toolMode === "constructor" && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse ml-0.5"></span>
+                  )}
                 </button>
               )}
 

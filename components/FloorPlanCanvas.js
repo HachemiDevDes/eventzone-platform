@@ -3,7 +3,7 @@
 import { useLanguage } from "../lib/i18n";
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { Stage, Layer, Rect, Circle, Text, Group, Line, Star, Image as KonvaImage, Transformer, Path, Wedge, Arrow } from "react-konva";
-import { MousePointer, Hand, Maximize, Ruler, X, AlertTriangle, Compass } from "lucide-react";
+import { MousePointer, Hand, Maximize, Ruler, X, AlertTriangle, Compass, Trash2, Shapes } from "lucide-react";
 
 const getStatusColors = (status) => {
   switch (status) {
@@ -887,6 +887,341 @@ const computeOrthogonalGuides = (targetEl, allElements, canvasWidth, canvasHeigh
   return guides;
 };
 
+// --- Geometric Helper Functions for Constructor Closed Shape Detection ---
+
+function getSegmentIntersection(p1, p2, p3, p4, tolerance = 1e-5) {
+  const d = (p2.x - p1.x) * (p4.y - p3.y) - (p2.y - p1.y) * (p4.x - p3.x);
+  if (Math.abs(d) < tolerance) return null; // Parallel or collinear
+
+  const u = ((p3.x - p1.x) * (p4.y - p3.y) - (p3.y - p1.y) * (p4.x - p3.x)) / d;
+  const v = ((p3.x - p1.x) * (p2.y - p1.y) - (p3.y - p1.y) * (p2.x - p1.x)) / d;
+
+  const eps = 1e-4;
+  if (u >= -eps && u <= 1 + eps && v >= -eps && v <= 1 + eps) {
+    const clampedU = Math.max(0, Math.min(1, u));
+    return {
+      x: p1.x + clampedU * (p2.x - p1.x),
+      y: p1.y + clampedU * (p2.y - p1.y),
+      u: clampedU,
+      v: Math.max(0, Math.min(1, v))
+    };
+  }
+  return null;
+}
+
+function distSq(p1, p2) {
+  const dx = p1.x - p2.x;
+  const dy = p1.y - p2.y;
+  return dx * dx + dy * dy;
+}
+
+function detectClosedPolygons(segments, snapTol = 8) {
+  if (!segments || segments.length < 3) return [];
+  const snapTolSq = snapTol * snapTol;
+
+  // 1. Cluster / unify raw endpoints that are within snapping tolerance
+  const allPoints = [];
+  function getOrCreatePoint(pt) {
+    for (const p of allPoints) {
+      if (distSq(p, pt) <= snapTolSq) {
+        return p;
+      }
+    }
+    const newPt = { x: Math.round(pt.x * 10) / 10, y: Math.round(pt.y * 10) / 10 };
+    allPoints.push(newPt);
+    return newPt;
+  }
+
+  // Pre-process segments with unified endpoints and filter zero-length lines
+  const cleanSegs = segments.map(s => ({
+    p1: getOrCreatePoint({ x: s.x1, y: s.y1 }),
+    p2: getOrCreatePoint({ x: s.x2, y: s.y2 })
+  })).filter(s => distSq(s.p1, s.p2) > 4);
+
+  // 2. Find all intersections between segments
+  const segPoints = cleanSegs.map(s => [s.p1, s.p2]);
+  for (let i = 0; i < cleanSegs.length; i++) {
+    for (let j = i + 1; j < cleanSegs.length; j++) {
+      const s1 = cleanSegs[i];
+      const s2 = cleanSegs[j];
+      const inter = getSegmentIntersection(s1.p1, s1.p2, s2.p1, s2.p2);
+      if (inter) {
+        const unified = getOrCreatePoint(inter);
+        segPoints[i].push(unified);
+        segPoints[j].push(unified);
+      }
+    }
+  }
+
+  // 3. Subdivide each segment into atomic sub-edges
+  const vertices = [];
+  const ptToId = (pt) => {
+    for (let i = 0; i < vertices.length; i++) {
+      if (distSq(vertices[i], pt) <= snapTolSq) {
+        return i;
+      }
+    }
+    const id = vertices.length;
+    vertices.push({ id, x: pt.x, y: pt.y });
+    return id;
+  };
+
+  const edgeSet = new Set();
+  const edges = [];
+  function addEdge(u, v) {
+    if (u === v) return;
+    const key = u < v ? `${u}-${v}` : `${v}-${u}`;
+    if (!edgeSet.has(key)) {
+      edgeSet.add(key);
+      edges.push({ u, v });
+    }
+  }
+
+  cleanSegs.forEach((s, idx) => {
+    const pts = segPoints[idx];
+    const uniquePts = [];
+    for (const p of pts) {
+      if (!uniquePts.some(up => distSq(up, p) <= snapTolSq)) {
+        uniquePts.push(p);
+      }
+    }
+    const vx = s.p2.x - s.p1.x;
+    const vy = s.p2.y - s.p1.y;
+    uniquePts.sort((a, b) => {
+      const projA = (a.x - s.p1.x) * vx + (a.y - s.p1.y) * vy;
+      const projB = (b.x - s.p1.x) * vx + (b.y - s.p1.y) * vy;
+      return projA - projB;
+    });
+    for (let k = 0; k < uniquePts.length - 1; k++) {
+      const u = ptToId(uniquePts[k]);
+      const v = ptToId(uniquePts[k + 1]);
+      addEdge(u, v);
+    }
+  });
+
+  if (vertices.length < 3 || edges.length < 3) return [];
+
+  // 4. Build planar adjacency list
+  let adj = Array.from({ length: vertices.length }, () => []);
+  for (const { u, v } of edges) {
+    const ptU = vertices[u];
+    const ptV = vertices[v];
+    const angleUV = Math.atan2(ptV.y - ptU.y, ptV.x - ptU.x);
+    const angleVU = Math.atan2(ptU.y - ptV.y, ptU.x - ptV.x);
+    adj[u].push({ v, angle: angleUV });
+    adj[v].push({ v: u, angle: angleVU });
+  }
+
+  // Iteratively prune antenna leaves (degree < 2)
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (let i = 0; i < vertices.length; i++) {
+      if (adj[i].length === 1) {
+        const neighbor = adj[i][0].v;
+        adj[i] = [];
+        adj[neighbor] = adj[neighbor].filter(edge => edge.v !== i);
+        changed = true;
+      }
+    }
+  }
+
+  // Sort neighbors by counter-clockwise angle
+  for (let i = 0; i < vertices.length; i++) {
+    adj[i].sort((a, b) => a.angle - b.angle);
+  }
+
+  // 5. Extract minimal faces via left-turn traversal
+  const visitedHalfEdges = new Set();
+  const faces = [];
+
+  for (let u = 0; u < vertices.length; u++) {
+    for (const { v } of adj[u]) {
+      const edgeKey = `${u}->${v}`;
+      if (visitedHalfEdges.has(edgeKey)) continue;
+
+      const cycle = [u];
+      let currU = u;
+      let currV = v;
+      let valid = true;
+
+      while (true) {
+        visitedHalfEdges.add(`${currU}->${currV}`);
+        cycle.push(currV);
+
+        const inPtU = vertices[currU];
+        const inPtV = vertices[currV];
+        const incomingAngle = Math.atan2(inPtU.y - inPtV.y, inPtU.x - inPtV.x);
+
+        const neighbors = adj[currV];
+        if (!neighbors || neighbors.length === 0) {
+          valid = false;
+          break;
+        }
+
+        let bestNext = null;
+        let bestDiff = Infinity;
+        for (const cand of neighbors) {
+          if (neighbors.length > 1 && cand.v === currU) continue;
+          let diff = cand.angle - incomingAngle;
+          while (diff <= 0) diff += 2 * Math.PI;
+          while (diff > 2 * Math.PI) diff -= 2 * Math.PI;
+          if (diff < bestDiff) {
+            bestDiff = diff;
+            bestNext = cand.v;
+          }
+        }
+
+        if (bestNext === null) {
+          valid = false;
+          break;
+        }
+
+        if (bestNext === u && currV === v) break;
+        if (cycle.length > 50) {
+          valid = false;
+          break;
+        }
+
+        currU = currV;
+        currV = bestNext;
+        if (currU === u && currV === v) break;
+      }
+
+      if (valid && cycle.length >= 4) {
+        const polyVertices = cycle.slice(0, -1);
+        if (polyVertices[0] === polyVertices[polyVertices.length - 1]) {
+          polyVertices.pop();
+        }
+        if (polyVertices.length >= 3) {
+          const polyCoords = polyVertices.map(idx => vertices[idx]);
+
+          // Compute signed area via Shoelace formula
+          let signedArea2 = 0;
+          const n = polyCoords.length;
+          for (let k = 0; k < n; k++) {
+            const nextK = (k + 1) % n;
+            signedArea2 += polyCoords[k].x * polyCoords[nextK].y - polyCoords[nextK].x * polyCoords[k].y;
+          }
+          const signedArea = signedArea2 / 2;
+          const absArea = Math.abs(signedArea);
+
+          // In screen coords (Y down), left-turn counter-clockwise faces have signedArea < 0 for interior faces
+          if (signedArea < 0 && absArea >= 100) {
+            // Compute perimeter in meters (20px = 1m)
+            let perimeterPx = 0;
+            for (let k = 0; k < n; k++) {
+              const nextK = (k + 1) % n;
+              perimeterPx += Math.hypot(polyCoords[nextK].x - polyCoords[k].x, polyCoords[nextK].y - polyCoords[k].y);
+            }
+            const perimeterMeters = perimeterPx / 20;
+            const areaMeters = absArea / 400; // 1m = 20px, 1m^2 = 400px^2
+
+            // Compute centroid
+            let cx2 = 0;
+            let cy2 = 0;
+            for (let k = 0; k < n; k++) {
+              const nextK = (k + 1) % n;
+              const cross = polyCoords[k].x * polyCoords[nextK].y - polyCoords[nextK].x * polyCoords[k].y;
+              cx2 += (polyCoords[k].x + polyCoords[nextK].x) * cross;
+              cy2 += (polyCoords[k].y + polyCoords[nextK].y) * cross;
+            }
+            const A6 = 6 * signedArea;
+            let centroid;
+            if (Math.abs(A6) > 1e-4) {
+              centroid = { x: cx2 / A6, y: cy2 / A6 };
+            } else {
+              const sumX = polyCoords.reduce((acc, p) => acc + p.x, 0);
+              const sumY = polyCoords.reduce((acc, p) => acc + p.y, 0);
+              centroid = { x: sumX / n, y: sumY / n };
+            }
+
+            faces.push({
+              points: polyCoords,
+              areaMeters,
+              perimeterMeters,
+              centroid
+            });
+          }
+        }
+      }
+    }
+  }
+
+  return faces;
+}
+
+// CAD Technical Centroid Badge for Closed Polygon Surface
+function PolygonAreaBadge({ centroid, areaMeters, perimeterMeters, stageScale = 1 }) {
+  if (!centroid || !Number.isFinite(centroid.x) || !Number.isFinite(centroid.y)) return null;
+
+  const effectiveScale = Math.max(0.2, Math.min(stageScale, 5));
+  const badgeScale = 1 / effectiveScale;
+  const badgeWidth = 114;
+  const badgeHeight = 36;
+
+  return (
+    <Group
+      x={centroid.x}
+      y={centroid.y}
+      scaleX={badgeScale}
+      scaleY={badgeScale}
+      listening={false}
+    >
+      {/* Background card with Light Mode shadow and border */}
+      <Rect
+        x={-badgeWidth / 2}
+        y={-badgeHeight / 2}
+        width={badgeWidth}
+        height={badgeHeight}
+        cornerRadius={8}
+        fill="#ffffff"
+        stroke="#818cf8"
+        strokeWidth={1.5}
+        shadowColor="rgba(99, 102, 241, 0.2)"
+        shadowBlur={8}
+        shadowOffsetY={2}
+      />
+
+      {/* Top accent bar */}
+      <Rect
+        x={-badgeWidth / 2 + 1}
+        y={-badgeHeight / 2 + 1}
+        width={badgeWidth - 2}
+        height={3.5}
+        cornerRadius={[7, 7, 0, 0]}
+        fill="#6366f1"
+      />
+
+      {/* Area Text */}
+      <Text
+        x={-badgeWidth / 2}
+        y={-badgeHeight / 2 + 7}
+        width={badgeWidth}
+        text={`📐 ${areaMeters.toFixed(2)} m²`}
+        fontSize={11}
+        fontFamily="monospace, ui-monospace, sans-serif"
+        fontStyle="bold"
+        fill="#312e81"
+        align="center"
+      />
+
+      {/* Perimeter Subtext */}
+      <Text
+        x={-badgeWidth / 2}
+        y={-badgeHeight / 2 + 21}
+        width={badgeWidth}
+        text={`Perimeter: ${perimeterMeters.toFixed(1)}m`}
+        fontSize={8.5}
+        fontFamily="monospace, ui-monospace, sans-serif"
+        fontStyle="bold"
+        fill="#6366f1"
+        align="center"
+      />
+    </Group>
+  );
+}
+
 // CAD Technical Dimension Line with orthogonal tick marks & counter-scaled pill badge
 function DimensionLineOverlay({
   x1, y1, x2, y2,
@@ -898,7 +1233,11 @@ function DimensionLineOverlay({
   isWall = false,
   isLive = false,
   customColor = null,
-  showCoordinates = false
+  showCoordinates = false,
+  isInteractive = false,
+  isHovered = false,
+  onHover = null,
+  onDelete = null
 }) {
   const dx = x2 - x1;
   const dy = y2 - y1;
@@ -918,30 +1257,39 @@ function DimensionLineOverlay({
   const midY = (y1 + y2) / 2;
   const badgeScale = 1 / effectiveScale;
 
-  let strokeColor = customColor || "#0284c7";
-  let badgeBg = "#0f172a";
-  let badgeBorder = "#38bdf8";
-  let badgeTextColor = "#ffffff";
+  let strokeColor = customColor || "#4f46e5";
+  let badgeBg = "#ffffff";
+  let badgeBorder = "#c7d2fe";
+  let badgeTextColor = "#3730a3";
   let badgeIcon = "";
 
-  if (isSafetyAlert) {
-    strokeColor = "#ef4444";
-    badgeBg = "#dc2626";
+  if (isHovered) {
+    strokeColor = "#f43f5e";
+    badgeBg = "#fff1f2";
     badgeBorder = "#fca5a5";
+    badgeTextColor = "#e11d48";
+  } else if (isSafetyAlert) {
+    strokeColor = "#ef4444";
+    badgeBg = "#fef2f2";
+    badgeBorder = "#fca5a5";
+    badgeTextColor = "#b91c1c";
     badgeIcon = "⚠️ ";
   } else if (isEqualSpacing) {
     strokeColor = "#10b981";
-    badgeBg = "#065f46";
-    badgeBorder = "#34d399";
+    badgeBg = "#f0fdf4";
+    badgeBorder = "#a7f3d0";
+    badgeTextColor = "#065f46";
     badgeIcon = "= ";
   } else if (isLive) {
-    strokeColor = "#f59e0b";
-    badgeBg = "#1e293b";
-    badgeBorder = "#fbbf24";
+    strokeColor = "#d97706";
+    badgeBg = "#fffbeb";
+    badgeBorder = "#fde68a";
+    badgeTextColor = "#92400e";
   } else if (isWall) {
     strokeColor = "#64748b";
-    badgeBg = "#1e293b";
-    badgeBorder = "#94a3b8";
+    badgeBg = "#f8fafc";
+    badgeBorder = "#cbd5e1";
+    badgeTextColor = "#334155";
   }
 
   const badgeText = `${badgeIcon}${distanceMeters.toFixed(2)}m${isEqualSpacing ? " =" : ""}`;
@@ -953,13 +1301,42 @@ function DimensionLineOverlay({
   const dyMeters = (Math.abs(dy) / 20).toFixed(2);
 
   return (
-    <Group listening={false}>
+    <Group listening={isInteractive}>
+      {/* Invisible wide hit target for effortless hover and click detection */}
+      {isInteractive && (
+        <Line
+          name="constructor-line-hit"
+          points={[x1, y1, x2, y2]}
+          stroke="transparent"
+          strokeWidth={Math.max(22, 28 / effectiveScale)}
+          hitStrokeWidth={Math.max(22, 28 / effectiveScale)}
+          onMouseEnter={(e) => {
+            const stage = e.target.getStage();
+            if (stage) stage.container().style.cursor = "pointer";
+            onHover?.(true);
+          }}
+          onMouseLeave={(e) => {
+            const stage = e.target.getStage();
+            if (stage) stage.container().style.cursor = "crosshair";
+            onHover?.(false);
+          }}
+          onClick={(e) => {
+            e.cancelBubble = true;
+            onDelete?.();
+          }}
+          onTap={(e) => {
+            e.cancelBubble = true;
+            onDelete?.();
+          }}
+        />
+      )}
+
       {/* Main Dimension Line */}
       <Line
         points={[x1, y1, x2, y2]}
         stroke={strokeColor}
-        strokeWidth={strokeW}
-        dash={isWall ? [4 / effectiveScale, 2 / effectiveScale] : undefined}
+        strokeWidth={isHovered ? strokeW * 1.6 : strokeW}
+        dash={isWall ? [4 / effectiveScale, 2 / effectiveScale] : (isHovered ? [6 / effectiveScale, 3 / effectiveScale] : undefined)}
         listening={false}
       />
 
@@ -989,14 +1366,14 @@ function DimensionLineOverlay({
       <Circle
         x={x1}
         y={y1}
-        radius={2.5 / effectiveScale}
+        radius={(isHovered ? 3.5 : 2.5) / effectiveScale}
         fill={strokeColor}
         listening={false}
       />
       <Circle
         x={x2}
         y={y2}
-        radius={2.5 / effectiveScale}
+        radius={(isHovered ? 3.5 : 2.5) / effectiveScale}
         fill={strokeColor}
         listening={false}
       />
@@ -1007,7 +1384,33 @@ function DimensionLineOverlay({
         y={midY}
         scaleX={badgeScale}
         scaleY={badgeScale}
-        listening={false}
+        listening={isInteractive}
+        onMouseEnter={(e) => {
+          if (isInteractive) {
+            const stage = e.target.getStage();
+            if (stage) stage.container().style.cursor = "pointer";
+            onHover?.(true);
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (isInteractive) {
+            const stage = e.target.getStage();
+            if (stage) stage.container().style.cursor = "crosshair";
+            onHover?.(false);
+          }
+        }}
+        onClick={(e) => {
+          if (isInteractive) {
+            e.cancelBubble = true;
+            onDelete?.();
+          }
+        }}
+        onTap={(e) => {
+          if (isInteractive) {
+            e.cancelBubble = true;
+            onDelete?.();
+          }
+        }}
       >
         <Rect
           x={-badgeWidth / 2}
@@ -1017,11 +1420,10 @@ function DimensionLineOverlay({
           cornerRadius={badgeHeight / 2}
           fill={badgeBg}
           stroke={badgeBorder}
-          strokeWidth={1}
-          shadowColor="rgba(0,0,0,0.4)"
-          shadowBlur={6}
+          strokeWidth={isHovered ? 1.5 : 1}
+          shadowColor={isHovered ? "rgba(244, 63, 94, 0.25)" : "rgba(15, 23, 42, 0.12)"}
+          shadowBlur={isHovered ? 6 : 4}
           shadowOffsetY={1}
-          listening={false}
         />
         <Text
           x={-badgeWidth / 2}
@@ -1034,10 +1436,50 @@ function DimensionLineOverlay({
           fontStyle="bold"
           fill={badgeTextColor}
           align="center"
-          listening={false}
         />
 
-        {isDiagonal && (
+        {/* Hover Delete Pill Badge floating directly above the measurement */}
+        {isInteractive && isHovered && (
+          <Group
+            y={-(badgeHeight + 5)}
+            onClick={(e) => {
+              e.cancelBubble = true;
+              onDelete?.();
+            }}
+            onTap={(e) => {
+              e.cancelBubble = true;
+              onDelete?.();
+            }}
+          >
+            <Rect
+              x={-34}
+              y={-9}
+              width={68}
+              height={18}
+              cornerRadius={9}
+              fill="#ef4444"
+              stroke="#dc2626"
+              strokeWidth={1}
+              shadowColor="rgba(239, 68, 68, 0.45)"
+              shadowBlur={8}
+              shadowOffsetY={2}
+            />
+            <Text
+              x={-34}
+              y={-6}
+              width={68}
+              height={18}
+              text="✕ Delete"
+              fontSize={10}
+              fontFamily="sans-serif"
+              fontStyle="bold"
+              fill="#ffffff"
+              align="center"
+            />
+          </Group>
+        )}
+
+        {isDiagonal && !isHovered && (
           <Group y={badgeHeight + 2}>
             <Rect
               x={-55}
@@ -1045,9 +1487,12 @@ function DimensionLineOverlay({
               width={110}
               height={14}
               cornerRadius={7}
-              fill="rgba(15, 23, 42, 0.85)"
-              stroke="#64748b"
-              strokeWidth={0.5}
+              fill="#ffffff"
+              stroke="#cbd5e1"
+              strokeWidth={0.8}
+              shadowColor="rgba(15, 23, 42, 0.08)"
+              shadowBlur={3}
+              shadowOffsetY={1}
             />
             <Text
               x={-55}
@@ -1056,7 +1501,8 @@ function DimensionLineOverlay({
               text={`ΔX: ${dxMeters}m ΔY: ${dyMeters}m`}
               fontSize={8}
               fontFamily="monospace, ui-monospace, sans-serif"
-              fill="#94a3b8"
+              fontStyle="bold"
+              fill="#475569"
               align="center"
             />
           </Group>
@@ -1069,9 +1515,10 @@ function DimensionLineOverlay({
 // Magnetic Snap Point Target Marker
 function SnapIndicator({ x, y, type, stageScale = 1 }) {
   const effectiveScale = Math.max(0.2, Math.min(stageScale, 5));
-  const size = 8 / effectiveScale;
-  const strokeW = 1.2 / effectiveScale;
-  const color = type === "grid" ? "#818cf8" : "#38bdf8";
+  const size = (type === "intersection" ? 10 : 8) / effectiveScale;
+  const strokeW = (type === "intersection" ? 1.5 : 1.2) / effectiveScale;
+  const color = type === "grid" ? "#818cf8" : (type === "intersection" ? "#f59e0b" : "#38bdf8");
+  const fill = type === "intersection" ? "rgba(245, 158, 11, 0.3)" : "rgba(56, 189, 248, 0.25)";
 
   return (
     <Group x={x} y={y} listening={false}>
@@ -1083,19 +1530,19 @@ function SnapIndicator({ x, y, type, stageScale = 1 }) {
         rotation={45}
         stroke={color}
         strokeWidth={strokeW}
-        fill="rgba(56, 189, 248, 0.25)"
+        fill={fill}
         listening={false}
       />
       <Line
-        points={[-size * 1.2, 0, size * 1.2, 0]}
+        points={[-size * 1.3, 0, size * 1.3, 0]}
         stroke={color}
-        strokeWidth={strokeW * 0.8}
+        strokeWidth={strokeW * 0.9}
         listening={false}
       />
       <Line
-        points={[0, -size * 1.2, 0, size * 1.2]}
+        points={[0, -size * 1.3, 0, size * 1.3]}
         stroke={color}
-        strokeWidth={strokeW * 0.8}
+        strokeWidth={strokeW * 0.9}
         listening={false}
       />
     </Group>
@@ -1508,7 +1955,14 @@ const FloorPlanCanvas = React.forwardRef(({
     }
   }, [bgImage]);
 
-  // Constructor Mode state
+  // Constructor Mode state (supports multi-line drawing, hover-to-delete, and closed surface calculation)
+  const [constructorLines, setConstructorLines] = useState([]);
+  const [hoveredLineId, setHoveredLineId] = useState(null);
+  const hoveredLineIdRef = useRef(null);
+  useEffect(() => {
+    hoveredLineIdRef.current = hoveredLineId;
+  }, [hoveredLineId]);
+
   const [activeMeasurement, setActiveMeasurement] = useState(null);
   const [isRulerDrawing, setIsRulerDrawing] = useState(false);
   const [rulerLive, setRulerLive] = useState({ start: null, current: null });
@@ -1517,38 +1971,64 @@ const FloorPlanCanvas = React.forwardRef(({
   const rulerStartPoint = useRef(null);
   const rulerHasDragged = useRef(false);
 
-  // Clear measurement when switching away from constructor mode
+  // Automatically detect closed polygons and calculate enclosed surface area
+  const detectedPolygons = useMemo(() => {
+    if (toolMode !== "constructor" || exportFilters || constructorLines.length < 3) return [];
+    return detectClosedPolygons(constructorLines);
+  }, [toolMode, exportFilters, constructorLines]);
+
+  const totalClosedSurfaceArea = useMemo(() => {
+    return detectedPolygons.reduce((acc, p) => acc + (p.areaMeters || 0), 0);
+  }, [detectedPolygons]);
+
+  // Handler to delete a single constructor line
+  const handleDeleteConstructorLine = useCallback((lineId) => {
+    setConstructorLines(prev => prev.filter(l => l.id !== lineId));
+    setHoveredLineId(prev => (prev === lineId ? null : prev));
+    setActiveMeasurement(prev => (prev?.id === lineId ? null : prev));
+  }, []);
+
+  // Cancel live in-progress drawing when switching away from constructor mode
   useEffect(() => {
     if (toolMode !== "constructor") {
-      setActiveMeasurement(null);
       setIsRulerDrawing(false);
       setRulerLive({ start: null, current: null });
       setHoveredSnapPoint(null);
+      setHoveredLineId(null);
       rulerWaitingSecondClick.current = false;
       rulerStartPoint.current = null;
       rulerHasDragged.current = false;
     }
   }, [toolMode]);
 
-  // Esc key listener for ruler clearing
+  // Keyboard shortcut listener: Esc cancels active drawing; Delete/Backspace removes hovered line
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === "Escape" && toolMode === "constructor") {
-        if (activeMeasurement || isRulerDrawing || rulerWaitingSecondClick.current) {
+      if (toolMode !== "constructor") return;
+
+      if (e.key === "Escape") {
+        if (isRulerDrawing || rulerWaitingSecondClick.current || rulerStartPoint.current) {
           e.preventDefault();
           e.stopPropagation();
-          setActiveMeasurement(null);
           setIsRulerDrawing(false);
           rulerStartPoint.current = null;
           rulerWaitingSecondClick.current = false;
           rulerHasDragged.current = false;
           setRulerLive({ start: null, current: null });
+        } else if (activeMeasurement) {
+          setActiveMeasurement(null);
+        }
+      } else if (e.key === "Delete" || e.key === "Backspace") {
+        if (hoveredLineIdRef.current) {
+          e.preventDefault();
+          e.stopPropagation();
+          handleDeleteConstructorLine(hoveredLineIdRef.current);
         }
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [toolMode, activeMeasurement, isRulerDrawing]);
+  }, [toolMode, isRulerDrawing, activeMeasurement, handleDeleteConstructorLine]);
 
   // Magnetic Snapping helper
   const getSnapPoint = useCallback((rawX, rawY) => {
@@ -1556,6 +2036,43 @@ const FloorPlanCanvas = React.forwardRef(({
     const SNAP_RADIUS = 14 / effectiveScale;
     let closestPoint = null;
     let minDistance = SNAP_RADIUS;
+
+    // Collect candidate snap points from existing constructor lines (endpoints, midpoints, intersections)
+    if (constructorLines.length > 0) {
+      for (const line of constructorLines) {
+        const linePoints = [
+          { x: line.x1, y: line.y1, type: 'corner' },
+          { x: line.x2, y: line.y2, type: 'corner' },
+          { x: (line.x1 + line.x2) / 2, y: (line.y1 + line.y2) / 2, type: 'midpoint' }
+        ];
+        for (const pt of linePoints) {
+          const d = Math.hypot(pt.x - rawX, pt.y - rawY);
+          if (d < minDistance) {
+            minDistance = d;
+            closestPoint = { ...pt, isSnapped: true };
+          }
+        }
+      }
+
+      // Check intersections between constructor lines
+      for (let i = 0; i < constructorLines.length; i++) {
+        for (let j = i + 1; j < constructorLines.length; j++) {
+          const inter = getSegmentIntersection(
+            { x: constructorLines[i].x1, y: constructorLines[i].y1 },
+            { x: constructorLines[i].x2, y: constructorLines[i].y2 },
+            { x: constructorLines[j].x1, y: constructorLines[j].y1 },
+            { x: constructorLines[j].x2, y: constructorLines[j].y2 }
+          );
+          if (inter) {
+            const d = Math.hypot(inter.x - rawX, inter.y - rawY);
+            if (d < minDistance) {
+              minDistance = d;
+              closestPoint = { x: inter.x, y: inter.y, type: 'intersection', isSnapped: true };
+            }
+          }
+        }
+      }
+    }
 
     // Collect candidate snap points from elements
     for (const el of elements) {
@@ -1621,7 +2138,7 @@ const FloorPlanCanvas = React.forwardRef(({
     }
 
     return { x: rawX, y: rawY, type: null, isSnapped: false };
-  }, [elements, stageScale, bgImage, blueprintWidth, blueprintHeight, blueprintX, blueprintY, snapToGrid, gridSize]);
+  }, [elements, constructorLines, stageScale, bgImage, blueprintWidth, blueprintHeight, blueprintX, blueprintY, snapToGrid, gridSize]);
 
   // Dynamic Element-to-Element Distance Guides for Constructor Mode
   const dynamicConstructorGuides = useMemo(() => {
@@ -2555,6 +3072,9 @@ const FloorPlanCanvas = React.forwardRef(({
     if (toolMode === "pan" || toolMode === "preview") return;
 
     if (toolMode === "constructor") {
+      // If hovering over an existing line or delete button, do not start drawing a new line
+      if (hoveredLineIdRef.current) return;
+
       const pointer = stage.getPointerPosition();
       if (!pointer) return;
       
@@ -2567,14 +3087,17 @@ const FloorPlanCanvas = React.forwardRef(({
       if (rulerWaitingSecondClick.current && rulerStartPoint.current) {
         const dist = Math.hypot(snap.x - rulerStartPoint.current.x, snap.y - rulerStartPoint.current.y);
         if (dist > 2) {
-          setActiveMeasurement({
+          const newLine = {
+            id: `cline-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
             x1: rulerStartPoint.current.x,
             y1: rulerStartPoint.current.y,
             x2: snap.x,
             y2: snap.y,
             distancePx: dist,
             distanceMeters: dist / 20
-          });
+          };
+          setConstructorLines(prev => [...prev, newLine]);
+          setActiveMeasurement(newLine);
         }
         rulerWaitingSecondClick.current = false;
         rulerStartPoint.current = null;
@@ -2672,14 +3195,17 @@ const FloorPlanCanvas = React.forwardRef(({
           const currentPt = rulerLive.current || rulerStartPoint.current;
           const dist = Math.hypot(currentPt.x - rulerStartPoint.current.x, currentPt.y - rulerStartPoint.current.y);
           if (dist > 3) {
-            setActiveMeasurement({
+            const newLine = {
+              id: `cline-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
               x1: rulerStartPoint.current.x,
               y1: rulerStartPoint.current.y,
               x2: currentPt.x,
               y2: currentPt.y,
               distancePx: dist,
               distanceMeters: dist / 20
-            });
+            };
+            setConstructorLines(prev => [...prev, newLine]);
+            setActiveMeasurement(newLine);
           }
           setIsRulerDrawing(false);
           rulerStartPoint.current = null;
@@ -2919,14 +3445,17 @@ const FloorPlanCanvas = React.forwardRef(({
               const snap = getSnapPoint(rx, ry);
               const dist = Math.hypot(snap.x - rulerStartPoint.current.x, snap.y - rulerStartPoint.current.y);
               if (dist > 2) {
-                setActiveMeasurement({
+                const newLine = {
+                  id: `cline-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
                   x1: rulerStartPoint.current.x,
                   y1: rulerStartPoint.current.y,
                   x2: snap.x,
                   y2: snap.y,
                   distancePx: dist,
                   distanceMeters: dist / 20
-                });
+                };
+                setConstructorLines(prev => [...prev, newLine]);
+                setActiveMeasurement(newLine);
               }
               rulerWaitingSecondClick.current = false;
               rulerStartPoint.current = null;
@@ -6282,15 +6811,13 @@ const FloorPlanCanvas = React.forwardRef(({
                 onSelectId([], false);
               }
             } else if (toolMode === "constructor") {
+              if (hoveredLineIdRef.current) return;
               if (!rulerHasDragged.current && !rulerWaitingSecondClick.current) {
                 const target = e.target;
                 const stage = stageRef.current;
                 if (target === stage || target.name() === "grid-bg" || target.name() === "blueprint-image" || target.id() === "blueprint-node") {
-                  if (activeMeasurement) {
-                    setActiveMeasurement(null);
-                  } else {
-                    onSelectId([], false);
-                  }
+                  setActiveMeasurement(null);
+                  onSelectId([], false);
                 }
               }
             }
@@ -6303,15 +6830,13 @@ const FloorPlanCanvas = React.forwardRef(({
                 onSelectId([], false);
               }
             } else if (toolMode === "constructor") {
+              if (hoveredLineIdRef.current) return;
               if (!rulerHasDragged.current && !rulerWaitingSecondClick.current) {
                 const target = e.target;
                 const stage = stageRef.current;
                 if (target === stage || target.name() === "grid-bg" || target.name() === "blueprint-image" || target.id() === "blueprint-node") {
-                  if (activeMeasurement) {
-                    setActiveMeasurement(null);
-                  } else {
-                    onSelectId([], false);
-                  }
+                  setActiveMeasurement(null);
+                  onSelectId([], false);
                 }
               }
             }
@@ -6479,8 +7004,35 @@ const FloorPlanCanvas = React.forwardRef(({
 
           {/* Constructor Mode Overlays Layer */}
           {toolMode === "constructor" && !exportFilters && (
-            <Layer name="constructor-overlay-layer" listening={false}>
-              {/* 1. Dynamic Element-to-Element Distance Guides */}
+            <Layer name="constructor-overlay-layer">
+              {/* 1. Closed Shape / Polygons with Automatic Surface Area */}
+              {detectedPolygons.map((poly, pIdx) => {
+                const flatPoints = poly.points.flatMap(pt => [pt.x, pt.y]);
+                const effectiveScale = Math.max(0.2, Math.min(stageScale, 5));
+                return (
+                  <Group key={`closed-poly-${pIdx}`} listening={false}>
+                    {/* Translucent Architectural Polygon Fill */}
+                    <Line
+                      points={flatPoints}
+                      closed={true}
+                      fill="rgba(99, 102, 241, 0.12)"
+                      stroke="#6366f1"
+                      strokeWidth={1.8 / effectiveScale}
+                      dash={[6 / effectiveScale, 3 / effectiveScale]}
+                      listening={false}
+                    />
+                    {/* Center Surface Area Badge */}
+                    <PolygonAreaBadge
+                      centroid={poly.centroid}
+                      areaMeters={poly.areaMeters}
+                      perimeterMeters={poly.perimeterMeters}
+                      stageScale={stageScale}
+                    />
+                  </Group>
+                );
+              })}
+
+              {/* 2. Dynamic Element-to-Element Distance Guides */}
               {dynamicConstructorGuides.map((guide, idx) => (
                 <DimensionLineOverlay
                   key={`guide-${idx}`}
@@ -6494,10 +7046,11 @@ const FloorPlanCanvas = React.forwardRef(({
                   isSafetyAlert={!guide.isWall && guide.distanceMeters > 0 && guide.distanceMeters < safetyClearance}
                   isEqualSpacing={guide.isEqualSpacing}
                   isWall={guide.isWall}
+                  isInteractive={false}
                 />
               ))}
 
-              {/* 2. Live In-Progress Ruler Line */}
+              {/* 3. Live In-Progress Ruler Line */}
               {isRulerDrawing && rulerLive.start && rulerLive.current && (
                 <DimensionLineOverlay
                   x1={rulerLive.start.x}
@@ -6511,27 +7064,32 @@ const FloorPlanCanvas = React.forwardRef(({
                   isEqualSpacing={false}
                   isLive={true}
                   showCoordinates={true}
+                  isInteractive={false}
                 />
               )}
 
-              {/* 3. Pinned Active Ruler Measurement */}
-              {activeMeasurement && (
+              {/* 4. Committed Constructor Lines (Interactive: Hover to highlight & delete) */}
+              {constructorLines.map((line) => (
                 <DimensionLineOverlay
-                  x1={activeMeasurement.x1}
-                  y1={activeMeasurement.y1}
-                  x2={activeMeasurement.x2}
-                  y2={activeMeasurement.y2}
-                  distanceMeters={activeMeasurement.distanceMeters}
+                  key={line.id}
+                  x1={line.x1}
+                  y1={line.y1}
+                  x2={line.x2}
+                  y2={line.y2}
+                  distanceMeters={line.distanceMeters}
                   stageScale={stageScale}
                   safetyClearance={safetyClearance}
-                  isSafetyAlert={activeMeasurement.distanceMeters > 0 && activeMeasurement.distanceMeters < safetyClearance}
-                  isEqualSpacing={false}
-                  customColor="#38bdf8"
+                  isSafetyAlert={line.distanceMeters > 0 && line.distanceMeters < safetyClearance}
+                  customColor={hoveredLineId === line.id ? "#f43f5e" : "#4f46e5"}
+                  isInteractive={true}
+                  isHovered={hoveredLineId === line.id}
+                  onHover={(isHov) => setHoveredLineId(isHov ? line.id : null)}
+                  onDelete={() => handleDeleteConstructorLine(line.id)}
                   showCoordinates={true}
                 />
-              )}
+              ))}
 
-              {/* 4. Magnetic Snap Target Marker */}
+              {/* 5. Magnetic Snap Target Marker */}
               {hoveredSnapPoint && (
                 <SnapIndicator
                   x={hoveredSnapPoint.x}
@@ -6545,55 +7103,97 @@ const FloorPlanCanvas = React.forwardRef(({
         </Stage>
       )}
 
-      {/* Top Technical CAD HUD Banner for Constructor Mode */}
+      {/* Top Technical CAD HUD Banner for Constructor Mode (Light Mode) */}
       {toolMode === "constructor" && !exportFilters && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2.5 px-3.5 py-1.5 bg-slate-900/90 text-white rounded-2xl shadow-2xl backdrop-blur-md border border-slate-700/80 text-xs font-mono select-none animate-in fade-in slide-in-from-top-2 duration-200">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-            <span className="font-bold text-amber-300 flex items-center gap-1.5 text-[11px]">
-              <Ruler size={13} className="text-amber-400" />
-              {t("floor.constructorModeActive", "Constructor Mode Active")}
-            </span>
-          </div>
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-1.5 pointer-events-auto select-none animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center gap-3 px-3.5 py-1.5 bg-white/95 text-slate-800 rounded-2xl shadow-xl shadow-slate-200/70 backdrop-blur-md border border-slate-200/90 text-xs font-sans">
+            <div className="flex items-center gap-2 bg-amber-50/90 border border-amber-250/90 text-amber-900 px-2.5 py-1 rounded-xl shadow-2xs">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+              </span>
+              <span className="font-extrabold text-amber-900 flex items-center gap-1.5 text-[11px] tracking-tight">
+                <Ruler size={13} className="text-amber-600" />
+                {t("floor.constructorModeActive", "Constructor Mode")}
+              </span>
+            </div>
 
-          <div className="w-px h-3.5 bg-slate-700"></div>
+            <div className="w-px h-4 bg-slate-200"></div>
 
-          <div className="text-slate-300 text-[10px]">
-            Scale: 1 grid = {(gridSize / 20).toFixed(1)}m (20px/m)
-          </div>
+            <div className="flex items-center gap-1.5 text-[11px] text-slate-600">
+              <span className="text-slate-400 font-medium">Scale:</span>
+              <span className="font-mono font-bold text-slate-750">1 grid = {(gridSize / 20).toFixed(1)}m</span>
+              <span className="text-[10px] text-slate-400 font-mono">({gridSize}px)</span>
+            </div>
 
-          <div className="w-px h-3.5 bg-slate-700"></div>
+            <div className="w-px h-4 bg-slate-200"></div>
 
-          <div className="flex items-center gap-1 text-[10px]">
-            <span className="text-slate-400">Min Aisle:</span>
-            <span className="font-bold text-emerald-400">{safetyClearance.toFixed(2)}m</span>
-          </div>
+            <div className="flex items-center gap-1.5 bg-emerald-50/90 border border-emerald-200/80 px-2.5 py-0.5 rounded-lg text-[11px]">
+              <span className="text-emerald-700/80 font-medium text-[10px] uppercase tracking-wider">Min Aisle</span>
+              <span className="font-bold text-emerald-700 font-mono">{safetyClearance.toFixed(2)}m</span>
+            </div>
 
-          {activeMeasurement && (
-            <>
-              <div className="w-px h-3.5 bg-slate-700"></div>
-              <div className="flex items-center gap-1.5 bg-indigo-950/90 border border-indigo-700/60 px-2 py-0.5 rounded-lg text-indigo-200 text-[10px]">
-                <span>Measure:</span>
-                <span className="font-bold text-white font-mono">{activeMeasurement.distanceMeters.toFixed(2)}m</span>
+            {constructorLines.length > 0 && (
+              <>
+                <div className="w-px h-4 bg-slate-200"></div>
+                <div className="flex items-center gap-1.5 bg-slate-100 border border-slate-200/80 px-2.5 py-0.5 rounded-xl text-slate-700 text-[11px]">
+                  <span className="text-slate-500 font-medium">Lines:</span>
+                  <span className="font-mono font-extrabold text-slate-800">{constructorLines.length}</span>
+                </div>
+              </>
+            )}
+
+            {detectedPolygons.length > 0 && (
+              <>
+                <div className="w-px h-4 bg-slate-200"></div>
+                <div className="flex items-center gap-1.5 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-xl text-indigo-900 text-[11px] shadow-2xs animate-fade-in">
+                  <Shapes size={12} className="text-indigo-600" />
+                  <span className="text-indigo-600 font-medium">
+                    {detectedPolygons.length === 1 ? "Surface:" : `${detectedPolygons.length} Surfaces:`}
+                  </span>
+                  <span className="font-mono font-extrabold text-indigo-700 text-xs">
+                    {totalClosedSurfaceArea.toFixed(2)} m²
+                  </span>
+                </div>
+              </>
+            )}
+
+            {constructorLines.length > 0 && (
+              <>
+                <div className="w-px h-4 bg-slate-200"></div>
                 <button
-                  onClick={() => setActiveMeasurement(null)}
-                  className="ml-1 text-slate-400 hover:text-white cursor-pointer"
-                  title="Clear measurement (Esc)"
+                  onClick={() => {
+                    setConstructorLines([]);
+                    setActiveMeasurement(null);
+                    setHoveredLineId(null);
+                  }}
+                  className="flex items-center gap-1 px-2.5 py-1 bg-rose-50 hover:bg-rose-100/90 active:bg-rose-200 text-rose-700 hover:text-rose-800 border border-rose-200/90 rounded-xl text-[10px] font-bold transition cursor-pointer shadow-2xs"
+                  title="Clear all drawn lines and surfaces"
                 >
-                  <X size={11} />
+                  <Trash2 size={11} className="text-rose-600" />
+                  <span>Clear ({constructorLines.length})</span>
                 </button>
-              </div>
-            </>
-          )}
+              </>
+            )}
 
-          <div className="w-px h-3.5 bg-slate-700"></div>
+            <div className="w-px h-4 bg-slate-200"></div>
 
-          <button
-            onClick={() => onToolModeChange("select")}
-            className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-[9px] font-sans font-semibold transition cursor-pointer border border-slate-700"
-          >
-            Done (Esc)
-          </button>
+            <button
+              onClick={() => onToolModeChange("select")}
+              className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 hover:bg-slate-200/80 active:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200 rounded-xl text-[10px] font-bold transition cursor-pointer shadow-2xs"
+              title="Exit Constructor Mode (Esc)"
+            >
+              <span>Done</span>
+              <kbd className="text-[9px] font-mono font-semibold bg-white border border-slate-300 text-slate-500 px-1 py-0.2 rounded shadow-2xs">Esc</kbd>
+            </button>
+          </div>
+
+          {/* Secondary Light Mode Quick Tip */}
+          <div className="px-3 py-0.5 bg-white/90 backdrop-blur-xs border border-slate-200/70 rounded-full text-[10px] text-slate-500 font-medium shadow-xs flex items-center gap-3">
+            <span>• Draw lines by dragging or clicking</span>
+            <span>• Hover over any line to delete</span>
+            <span>• Connecting or crossing lines auto-calculates surface (m²)</span>
+          </div>
         </div>
       )}
       
@@ -6628,12 +7228,12 @@ const FloorPlanCanvas = React.forwardRef(({
             onClick={() => onToolModeChange(toolMode === "constructor" ? "select" : "constructor")}
             className={`p-2.5 rounded-xl flex items-center justify-center transition-all duration-200 gap-1.5 cursor-pointer ${
               toolMode === "constructor"
-                ? "bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-200/50"
+                ? "bg-amber-500 text-white font-bold shadow-md shadow-amber-200"
                 : "text-slate-650 hover:bg-slate-50 hover:text-slate-900"
             }`}
             title="Constructor & Ruler Mode (C / R)"
           >
-            <Ruler size={15} className={toolMode === "constructor" ? "text-slate-950" : "text-amber-600"} />
+            <Ruler size={15} className={toolMode === "constructor" ? "text-white" : "text-amber-600"} />
             <span className="text-[10px] font-bold">{t("floor.toolConstructor", "Constructor (C)")}</span>
           </button>
           <div className="w-px h-6 bg-slate-250 my-auto mx-0.5"></div>
