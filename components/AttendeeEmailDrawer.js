@@ -30,6 +30,7 @@ import QRCode from 'qrcode';
 import SearchableSelect from './SearchableSelect';
 import { logCommunication } from '../lib/db';
 import { useLanguage } from '../lib/i18n';
+import { supabase } from '../lib/supabase';
 
 const EMAIL_TEMPLATES = [
   {
@@ -433,6 +434,17 @@ export default function AttendeeEmailDrawer({
 
       // Run the delivery loop in the background without blocking the organizer
       (async () => {
+        let authToken = null;
+        try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          authToken = sessionData?.session?.access_token || null;
+        } catch (e) {}
+
+        const headers = { "Content-Type": "application/json" };
+        if (authToken) {
+          headers["Authorization"] = `Bearer ${authToken}`;
+        }
+
         const tmpl = EMAIL_TEMPLATES.find(t => t.id === selectedTemplateId);
         let successCount = 0;
         let failCount = 0;
@@ -453,7 +465,7 @@ export default function AttendeeEmailDrawer({
                   name: curData.name || "",
                   email: curData.email || "",
                   tier: curData.ticketTier || "",
-                  eventId: activeEventId || eventDetails.id || "",
+                  eventId: activeEventId || eventDetails?.id || "",
                   event: curData.eventTitle || ""
                 });
                 curQrDataUrl = await QRCode.toDataURL(checkinPayload, {
@@ -504,9 +516,9 @@ export default function AttendeeEmailDrawer({
                 badgeCode: curData.badgeCode,
                 qrDataUrl: includeQr ? curQrDataUrl : undefined,
                 passId: curAtt.id,
-                eventId: activeEventId || eventDetails.id || "",
-                templateUrl: matchedTicket.badgeUrl || eventDetails.badgeUrl || "",
-                badgeSettings: matchedTicket.badgeSettings || eventDetails.badgeSettings || {},
+                eventId: activeEventId || eventDetails?.id || "",
+                templateUrl: matchedTicket.badgeUrl || eventDetails?.badgeUrl || "",
+                badgeSettings: matchedTicket.badgeSettings || eventDetails?.badgeSettings || {},
                 attendeePhoto: curData.avatar || curAtt.photo || curAtt.avatar || "",
                 formUrl: includeFormLink && resolvedFormUrl ? resolvedFormUrl : undefined,
                 formButtonText: includeFormLink && resolvedFormUrl ? (formButtonText.trim() || "Open Form") : undefined,
@@ -519,21 +531,25 @@ export default function AttendeeEmailDrawer({
                 to: curData.email,
                 subject: personalizedSubject.trim(),
                 text: personalizedBody.trim(),
-                html: generateCustomEmailHtml(curData, personalizedBody, curQrDataUrl)
+                html: generateCustomEmailHtml(curData, personalizedBody, curQrDataUrl),
+                eventId: activeEventId || eventDetails?.id || "",
+                eventTitle: curData.eventTitle,
+                organizerName: curData.organizerName
               };
             }
 
             const res = await fetch("/api/email/send", {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers,
               body: JSON.stringify(payload)
             });
 
-            if (res.ok) {
+            const data = await res.json().catch(() => ({}));
+            if (res.ok && data.success) {
               successCount++;
               try {
                 await logCommunication({
-                  eventId: activeEventId || eventDetails.id || "default",
+                  eventId: activeEventId || eventDetails?.id || "default",
                   recipientEmail: curData.email,
                   recipientName: curData.name,
                   subject: personalizedSubject.trim(),
@@ -546,6 +562,7 @@ export default function AttendeeEmailDrawer({
               } catch (e) {}
             } else {
               failCount++;
+              console.warn(`Bulk send error for ${curData.email}:`, data?.error || res.statusText);
             }
           } catch (err) {
             console.error(`Failed to send email to ${curData.email}:`, err);
@@ -564,9 +581,21 @@ export default function AttendeeEmailDrawer({
     setSendingProgress(0);
 
     try {
+      let authToken = null;
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        authToken = sessionData?.session?.access_token || null;
+      } catch (e) {}
+
+      const headers = { "Content-Type": "application/json" };
+      if (authToken) {
+        headers["Authorization"] = `Bearer ${authToken}`;
+      }
+
       const tmpl = EMAIL_TEMPLATES.find(t => t.id === selectedTemplateId);
       let successCount = 0;
       let failCount = 0;
+      let lastSendError = null;
 
       for (let i = 0; i < validRecipients.length; i++) {
         const curAtt = validRecipients[i];
@@ -585,7 +614,7 @@ export default function AttendeeEmailDrawer({
                 name: curData.name || "",
                 email: curData.email || "",
                 tier: curData.ticketTier || "",
-                eventId: activeEventId || eventDetails.id || "",
+                eventId: activeEventId || eventDetails?.id || "",
                 event: curData.eventTitle || ""
               });
               curQrDataUrl = await QRCode.toDataURL(checkinPayload, {
@@ -620,6 +649,7 @@ export default function AttendeeEmailDrawer({
             .replace(/\{\{company\}\}/g, curData.company || "")
             .replace(/\{\{formLink\}\}/g, resolvedFormUrl || "");
 
+          let payload;
           if (tmpl && tmpl.id === "badge_pass") {
             const matchedTicket = (tickets || []).find(t => (t.name || t.tier || "").trim().toLowerCase() === (curData.ticketTier || "").trim().toLowerCase()) || {};
             payload = {
@@ -635,9 +665,9 @@ export default function AttendeeEmailDrawer({
               badgeCode: curData.badgeCode,
               qrDataUrl: includeQr ? curQrDataUrl : undefined,
               passId: curAtt.id,
-              eventId: activeEventId || eventDetails.id || "",
-              templateUrl: matchedTicket.badgeUrl || eventDetails.badgeUrl || "",
-              badgeSettings: matchedTicket.badgeSettings || eventDetails.badgeSettings || {},
+              eventId: activeEventId || eventDetails?.id || "",
+              templateUrl: matchedTicket.badgeUrl || eventDetails?.badgeUrl || "",
+              badgeSettings: matchedTicket.badgeSettings || eventDetails?.badgeSettings || {},
               attendeePhoto: curData.avatar || curAtt.photo || curAtt.avatar || "",
               formUrl: includeFormLink && resolvedFormUrl ? resolvedFormUrl : undefined,
               formButtonText: includeFormLink && resolvedFormUrl ? (formButtonText.trim() || "Open Form") : undefined,
@@ -650,22 +680,25 @@ export default function AttendeeEmailDrawer({
               to: curData.email,
               subject: personalizedSubject.trim(),
               text: personalizedBody.trim(),
-              html: generateCustomEmailHtml(curData, personalizedBody, curQrDataUrl)
+              html: generateCustomEmailHtml(curData, personalizedBody, curQrDataUrl),
+              eventId: activeEventId || eventDetails?.id || "",
+              eventTitle: curData.eventTitle,
+              organizerName: curData.organizerName
             };
           }
 
           const res = await fetch("/api/email/send", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers,
             body: JSON.stringify(payload)
           });
 
-          const data = await res.json();
+          const data = await res.json().catch(() => ({}));
           if (res.ok && data.success) {
             successCount++;
             try {
               await logCommunication({
-                eventId: activeEventId || eventDetails.id || "default",
+                eventId: activeEventId || eventDetails?.id || "default",
                 recipientEmail: curData.email,
                 recipientName: curData.name,
                 subject: personalizedSubject.trim(),
@@ -678,10 +711,12 @@ export default function AttendeeEmailDrawer({
             } catch (e) {}
           } else {
             failCount++;
+            lastSendError = data.error || (data.errors && data.errors[0]?.error) || res.statusText || "Failed to dispatch email.";
           }
         } catch (err) {
           console.error(`Failed to send email to ${curData.email}:`, err);
           failCount++;
+          lastSendError = err?.message || "Failed to deliver email.";
         }
       }
 
@@ -693,7 +728,7 @@ export default function AttendeeEmailDrawer({
         );
         if (onEmailSent) onEmailSent(successCount);
       } else {
-        throw new Error("Failed to deliver emails through the SMTP server. Please verify your connection.");
+        throw new Error(lastSendError || "Failed to deliver emails through the SMTP server. Please verify your connection.");
       }
     } catch (err) {
       console.error("Failed to send email to attendee:", err);

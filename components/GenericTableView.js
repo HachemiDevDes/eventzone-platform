@@ -1109,6 +1109,7 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
   const [previewImageModal, setPreviewImageModal] = useState(null);
   const [selectedBadgeAttendee, setSelectedBadgeAttendee] = useState(null);
   const [emailAttendees, setEmailAttendees] = useState(null);
+  const [emailBgToast, setEmailBgToast] = useState(null);
   const [activeActionsMenu, setActiveActionsMenu] = useState(null);
   const [isEasyUploadOpen, setIsEasyUploadOpen] = useState(false);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
@@ -2513,7 +2514,33 @@ function AttendeesView({ state, onUpdateState, onOpenModal }) {
           tickets={tickets}
           forms={forms}
           activeEventId={state.activeEventId}
+          onEmailSent={(count) => {
+            setEmailBgToast(
+              t("table.emailSentBg", "Emails are being sent in the background to {count} attendee(s). You can continue working!")
+                .replace("{count}", count)
+            );
+            setTimeout(() => setEmailBgToast(null), 5000);
+          }}
         />
+      )}
+
+      {/* Floating Background Email Dispatch Banner */}
+      {emailBgToast && (
+        <div className="fixed bottom-6 right-6 z-[99999] bg-slate-900/95 backdrop-blur-md text-white border border-slate-700/60 shadow-2xl rounded-2xl px-5 py-3.5 flex items-center gap-3.5 animate-in slide-in-from-bottom duration-250 max-w-md">
+          <div className="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
+            <Mail size={16} />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-xs font-black text-white">{t("table.sendingBgTitle", "Sending in Background")}</span>
+            <p className="text-[11px] text-slate-300">{emailBgToast}</p>
+          </div>
+          <button 
+            onClick={() => setEmailBgToast(null)} 
+            className="ml-auto text-slate-400 hover:text-white p-1 rounded-lg text-xs cursor-pointer"
+          >
+            <X size={14} />
+          </button>
+        </div>
       )}
 
       {/* Floating Action Menu Popover (Portaled to document.body so it NEVER gets clipped by table overflow or container boundaries) */}

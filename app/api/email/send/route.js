@@ -5,7 +5,8 @@ import {
   sendBroadcastEmail, 
   sendExhibitorPacketEmail,
   sendCertificateEmail,
-  sendTeamInviteEmail
+  sendTeamInviteEmail,
+  sendEmail
 } from "@/lib/mailer";
 import { getServiceSupabase, verifyOrganizerSession } from "@/lib/apiAuth";
 
@@ -54,12 +55,12 @@ export async function POST(request) {
           { status: authResult.status || 401 }
         );
       }
-    } else if (type === "exhibitor_packet" || type === "sponsor_packet" || type === "floor_plan") {
+    } else if (type === "exhibitor_packet" || type === "sponsor_packet" || type === "floor_plan" || type === "custom") {
       const authHeader = request.headers.get("authorization") || "";
       if (authHeader && eventId && isValidUuid(eventId)) {
         const authResult = await verifyOrganizerSession(request, eventId);
         if (!authResult.authorized) {
-          console.warn("Organizer auth check notice for floor plan:", authResult.error);
+          console.warn(`Organizer auth check notice for ${type}:`, authResult.error);
         }
       }
     }
@@ -266,6 +267,19 @@ export async function POST(request) {
           message: rest.message || rest.notes || "",
           inviteUrl: rest.inviteUrl || "",
           eventId,
+          ...rest
+        });
+        break;
+      }
+
+      case "custom": {
+        result = await sendEmail({
+          to,
+          subject: finalSubject || subject || "Event Notification",
+          html: html || undefined,
+          text: text || undefined,
+          eventId,
+          eventTitle: rest.eventTitle || undefined,
           ...rest
         });
         break;
