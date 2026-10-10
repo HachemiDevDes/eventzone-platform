@@ -88,6 +88,7 @@ export async function POST(request) {
       case "ticket_confirmation":
       case "approval_confirmation": {
         let resolvedTemplateUrl = rest.templateUrl || "";
+        let resolvedBadgeSettings = rest.badgeSettings || {};
         let resolvedEventTitle = rest.eventTitle || "";
         let resolvedEventDate = rest.eventDate || "";
         let resolvedEventLocation = rest.eventLocation || "";
