@@ -27,3 +27,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   - `eventzone` (All Lowercase, preferred for logos, URLs, emails, or lowercase aesthetic contexts)
 - **Application**: This applies to all generated UI copy, code comments, git commit messages, file contents, and conversational responses.
 
+# Cloudflare Guidelines
+
+When interacting with Cloudflare, use the `cf` CLI unless the project has a Wrangler configuration file.
+
+

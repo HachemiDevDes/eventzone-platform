@@ -591,26 +591,8 @@ export default function AuthView({
               role: dbRole,
               avatar_url: retrievedAvatar,
               onboarding_completed: true,
-              created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
             }, { onConflict: "id" });
-
-            if (dbRole === "organizer") {
-              fetch("/api/email/admin-notify", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  type: "organizer_joined",
-                  organizer: {
-                    id: userId,
-                    fullName: retrievedName,
-                    email: email.trim(),
-                    role: "organizer",
-                    createdAt: new Date().toISOString(),
-                  }
-                })
-              }).catch(() => {});
-            }
           } catch (e) {
             console.warn("Auto profile creation on login warning:", e);
           }

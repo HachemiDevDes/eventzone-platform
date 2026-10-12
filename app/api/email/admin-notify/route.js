@@ -51,6 +51,13 @@ export async function POST(request) {
       const orgId = organizer.id;
       const orgEmail = (organizer.email || "").trim().toLowerCase();
 
+      if (!orgId && !orgEmail) {
+        return NextResponse.json(
+          { error: "Organizer id or email is required." },
+          { status: 400 }
+        );
+      }
+
       const dedupeKey = `organizer_joined:${orgId || orgEmail}`;
       if (isDuplicateNotification(dedupeKey)) {
         return NextResponse.json({
@@ -60,7 +67,8 @@ export async function POST(request) {
         });
       }
 
-      // If missing details and we have an ID or email, enrich from profiles table
+      let profileRow = null;
+      // If we have an ID or email, fetch and check from profiles table
       if (supabase && (orgId || orgEmail)) {
         try {
           let query = supabase.from("profiles").select("*");
@@ -69,28 +77,87 @@ export async function POST(request) {
           } else {
             query = query.eq("email", orgEmail);
           }
-          const { data: profileRow } = await query.maybeSingle();
-          if (profileRow) {
-            enrichedOrganizer = {
-              id: profileRow.id || enrichedOrganizer.id,
-              fullName: profileRow.full_name || enrichedOrganizer.fullName || "Organizer",
-              email: profileRow.email || enrichedOrganizer.email,
-              companyName: profileRow.company_name || enrichedOrganizer.companyName || "",
-              jobTitle: profileRow.job_title || enrichedOrganizer.jobTitle || "",
-              phone: profileRow.phone || enrichedOrganizer.phone || "",
-              location: profileRow.location || enrichedOrganizer.location || "",
-              createdAt: profileRow.created_at || enrichedOrganizer.createdAt || new Date().toISOString(),
-              role: profileRow.role || enrichedOrganizer.role || "organizer",
-            };
-          }
+          const { data } = await query.maybeSingle();
+          profileRow = data;
         } catch (dbErr) {
           console.warn("Could not enrich organizer profile from DB:", dbErr);
         }
       }
 
+      if (profileRow) {
+        // Guard 1: Verify role is actually organizer
+        if (profileRow.role && profileRow.role !== "organizer") {
+          return NextResponse.json({
+            success: true,
+            ignored: true,
+            message: "Profile is not an organizer. Skipping notification.",
+          });
+        }
+
+        const profileMeta = (profileRow.metadata && typeof profileRow.metadata === "object") ? profileRow.metadata : {};
+
+        // Guard 2: Persistent deduplication - check if admin notification was already sent
+        if (profileMeta.admin_organizer_notified) {
+          return NextResponse.json({
+            success: true,
+            deduplicated: true,
+            message: "Admin notification was already sent previously for this organizer.",
+          });
+        }
+
+        // Guard 3: Account age check - only genuine new accounts (< 15 minutes old) qualify
+        if (profileRow.created_at) {
+          const createdAtTime = new Date(profileRow.created_at).getTime();
+          const ageMs = Date.now() - createdAtTime;
+          const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
+          if (!isNaN(createdAtTime) && ageMs > FIFTEEN_MINUTES_MS) {
+            return NextResponse.json({
+              success: true,
+              ignored: true,
+              message: "Organizer account is not newly registered. Skipping notification.",
+            });
+          }
+        }
+
+        enrichedOrganizer = {
+          id: profileRow.id || enrichedOrganizer.id,
+          fullName: profileRow.full_name || enrichedOrganizer.fullName || "Organizer",
+          email: profileRow.email || enrichedOrganizer.email,
+          companyName: profileRow.company_name || enrichedOrganizer.companyName || "",
+          jobTitle: profileRow.job_title || enrichedOrganizer.jobTitle || "",
+          phone: profileRow.phone || enrichedOrganizer.phone || "",
+          location: profileRow.location || enrichedOrganizer.location || "",
+          createdAt: profileRow.created_at || enrichedOrganizer.createdAt || new Date().toISOString(),
+          role: profileRow.role || enrichedOrganizer.role || "organizer",
+        };
+      }
+
       const sendResult = await sendAdminOrganizerJoinedNotification({
         organizer: enrichedOrganizer,
       });
+
+      // Mark persistent deduplication in profile metadata so this alert can NEVER fire again
+      if (supabase && (profileRow?.id || enrichedOrganizer.id || orgEmail)) {
+        try {
+          const targetId = profileRow?.id || enrichedOrganizer.id;
+          const currentMeta = (profileRow?.metadata && typeof profileRow.metadata === "object")
+            ? profileRow.metadata
+            : {};
+          const updatedMeta = {
+            ...currentMeta,
+            admin_organizer_notified: true,
+            admin_organizer_notified_at: new Date().toISOString(),
+          };
+
+          if (targetId) {
+            await supabase.from("profiles").update({ metadata: updatedMeta }).eq("id", targetId);
+          } else if (orgEmail) {
+            await supabase.from("profiles").update({ metadata: updatedMeta }).eq("email", orgEmail);
+          }
+        } catch (metaErr) {
+          console.warn("Could not record admin_organizer_notified in metadata:", metaErr);
+        }
+      }
 
       return NextResponse.json({
         success: true,
