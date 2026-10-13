@@ -1,1221 +1,1244 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
-  ArrowLeft, Save, Share2, Download, Plus, Trash2,
-  Check, Upload, Copy, FileText, Calendar, CheckCircle2,
-  AlertCircle, Printer, Eye, Building2, X, Package, Zap,
-  Tv, Coffee, Search, Palette, Type, ShieldCheck, Sparkles,
-  Layers, ArrowUp, ArrowDown, LayoutTemplate, AlignLeft,
-  BarChart2, Scale, CheckSquare, Quote, Move, ZoomIn, ZoomOut,
-  Maximize2, RotateCcw, Image as ImageIcon, ExternalLink, MapPin
+  ArrowLeft, Plus, Trash2, Printer, Check, Copy,
+  ArrowUp, ArrowDown, ChevronDown, ChevronUp, ZoomIn,
+  ZoomOut, Maximize2, FileText, Search, Sparkles
 } from "lucide-react";
-import { toPng } from "html-to-image";
 import SearchableSelect from "./SearchableSelect";
 import A4VisualDocumentSheet, { printVisualDocument } from "./A4VisualDocumentSheet";
 import {
-  DOCUMENT_CATEGORIES,
-  COLOR_THEMES,
-  FONT_PAIRINGS,
-  CALLIGRAPHY_SIGNATURES,
-  BLOCK_TYPES_CATALOG,
-  DOCUMENT_TEMPLATES,
-  createDefaultDocument,
+  ELEMENT_TYPES,
+  FONT_OPTIONS,
+  COLOR_OPTIONS,
+  STARTER_PRESETS,
+  createEmptyDocument,
+  createDocumentElement,
 } from "../lib/documentDesignerPresets";
-import { ALGERIAN_WILAYAS } from "../lib/invoicingConstants";
-import { uploadMedia } from "../lib/storage";
-import { useLanguage } from "../lib/i18n";
 
 export default function DocumentDesigner({
   initialDocument = null,
   activeEventId = null,
   eventDetails = {},
   currentUser = {},
-  speakers = [],
-  sponsors = [],
-  exhibitors = [],
-  organizations = [],
-  opportunities = [],
+  documents = [],
   onBack,
   onSaveDocument,
   onSaveToDocuments,
+  onDeleteDocument,
   effectivePermissions,
 }) {
-  const { t } = useLanguage();
+  // View mode: 'list' (consult documents) or 'editor' (edit single A4 document)
+  const [viewMode, setViewMode] = useState(() => (initialDocument ? "editor" : "list"));
 
-  // Document state
-  const [doc, setDoc] = useState(() => {
+  // Active document being edited
+  const [activeDoc, setActiveDoc] = useState(() => {
     if (initialDocument) return initialDocument;
-    return createDefaultDocument("sponsorship-one-pager", eventDetails, currentUser);
+    return createEmptyDocument(eventDetails, currentUser, "blank");
   });
 
-  // Studio inspector tabs: 'templates' | 'blocks' | 'design' | 'brand'
-  const [activeStudioTab, setActiveStudioTab] = useState("templates");
-  const [selectedBlockId, setSelectedBlockId] = useState(() => doc.blocks?.[0]?.id || null);
+  // Selected element ID in the editor
+  const [selectedElementId, setSelectedElementId] = useState(null);
 
-  // Template browser state
-  const [templateCategoryFilter, setTemplateCategoryFilter] = useState("all");
-  const [templateSearchTerm, setTemplateSearchTerm] = useState("");
+  // Search filter in list mode
+  const [listSearch, setListSearch] = useState("");
 
-  // Canvas zoom
+  // Editor zoom level
   const [zoom, setZoom] = useState(0.85);
-  const [isGeneratingPng, setIsGeneratingPng] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccessNotice, setSaveSuccessNotice] = useState(false);
-  const [shareNotice, setShareNotice] = useState(false);
 
-  // Responsive mobile view toggle: 'editor' | 'preview'
-  const [mobileViewMode, setMobileViewMode] = useState("editor");
+  // Starter template modal
+  const [showNewDocModal, setShowNewDocModal] = useState(false);
 
-  const logoInputRef = useRef(null);
+  // Local storage cache for designed documents
+  const [localDocs, setLocalDocs] = useState([]);
 
-  // Filter templates
-  const filteredTemplates = useMemo(() => {
-    return DOCUMENT_TEMPLATES.filter((tpl) => {
-      const matchCat = templateCategoryFilter === "all" || tpl.category === templateCategoryFilter;
-      const matchSearch =
-        !templateSearchTerm ||
-        tpl.title.toLowerCase().includes(templateSearchTerm.toLowerCase()) ||
-        tpl.description.toLowerCase().includes(templateSearchTerm.toLowerCase());
-      return matchCat && matchSearch;
+  // Load local storage documents on mount
+  useEffect(() => {
+    if (typeof window === "undefined" || !activeEventId) return;
+    try {
+      const stored = localStorage.getItem(`eventzone_designed_docs_${activeEventId}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) setLocalDocs(parsed);
+      }
+    } catch (e) {
+      console.error("Failed to load local designed docs:", e);
+    }
+  }, [activeEventId]);
+
+  // Combined documents list: from props (supabase) + local storage
+  const combinedDocuments = useMemo(() => {
+    const map = new Map();
+
+    // From Supabase props
+    (documents || []).forEach((d) => {
+      if (d.isDesignedDocument && d.designedDocumentData) {
+        map.set(d.id, {
+          ...d.designedDocumentData,
+          id: d.id,
+          name: d.name || d.designedDocumentData.name,
+          updatedAt: d.updatedAt || d.createdAt,
+        });
+      }
     });
-  }, [templateCategoryFilter, templateSearchTerm]);
 
-  // Handle template selection
-  const handleApplyTemplate = (templateId) => {
-    const freshDoc = createDefaultDocument(templateId, eventDetails, currentUser);
-    setDoc({
-      ...freshDoc,
-      id: doc.id, // keep document ID
+    // From local storage
+    (localDocs || []).forEach((d) => {
+      if (d && d.id) {
+        map.set(d.id, d);
+      }
     });
-    setSelectedBlockId(freshDoc.blocks?.[0]?.id || null);
-    setActiveStudioTab("blocks");
-  };
 
-  // Update root document property
-  const updateDocProp = (key, value) => {
-    setDoc((prev) => ({
-      ...prev,
-      [key]: value,
-      updatedAt: new Date().toISOString(),
-    }));
-  };
+    const list = Array.from(map.values());
+    // Sort newest first
+    return list.sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+  }, [documents, localDocs]);
 
-  // Block management
-  const updateBlock = (blockId, updater) => {
-    setDoc((prev) => {
-      const updatedBlocks = prev.blocks.map((b) => {
-        if (b.id === blockId) {
-          return typeof updater === "function" ? updater(b) : { ...b, ...updater };
-        }
-        return b;
+  // Filtered list
+  const filteredDocs = useMemo(() => {
+    if (!listSearch) return combinedDocuments;
+    const q = listSearch.toLowerCase();
+    return combinedDocuments.filter((d) =>
+      (d.name || "").toLowerCase().includes(q)
+    );
+  }, [combinedDocuments, listSearch]);
+
+  // Persist locally helper
+  const saveToLocalStorage = (docToSave) => {
+    if (typeof window === "undefined" || !activeEventId) return;
+    try {
+      setLocalDocs((prev) => {
+        const exists = prev.some((d) => d.id === docToSave.id);
+        const next = exists
+          ? prev.map((d) => (d.id === docToSave.id ? docToSave : d))
+          : [docToSave, ...prev];
+        localStorage.setItem(`eventzone_designed_docs_${activeEventId}`, JSON.stringify(next));
+        return next;
       });
-      return { ...prev, blocks: updatedBlocks };
-    });
-  };
-
-  const removeBlock = (blockId) => {
-    setDoc((prev) => ({
-      ...prev,
-      blocks: prev.blocks.filter((b) => b.id !== blockId),
-    }));
-    if (selectedBlockId === blockId) {
-      setSelectedBlockId(doc.blocks.find((b) => b.id !== blockId)?.id || null);
+    } catch (e) {
+      console.error("Local storage error:", e);
     }
   };
 
-  const moveBlock = (blockId, direction) => {
-    setDoc((prev) => {
-      const index = prev.blocks.findIndex((b) => b.id === blockId);
-      if (index === -1) return prev;
-      const newIndex = direction === "up" ? index - 1 : index + 1;
-      if (newIndex < 0 || newIndex >= prev.blocks.length) return prev;
-
-      const newBlocks = [...prev.blocks];
-      const [moved] = newBlocks.splice(index, 1);
-      newBlocks.splice(newIndex, 0, moved);
-      return { ...prev, blocks: newBlocks };
-    });
+  // Open editor for a specific document
+  const handleEditDocument = (docItem) => {
+    setActiveDoc(docItem);
+    setSelectedElementId(docItem.elements?.[0]?.id || null);
+    setViewMode("editor");
   };
 
-  const addBlock = (blockType) => {
-    const newId = `block-${Date.now()}`;
-    let newBlock = { id: newId, type: blockType };
+  // Create new document from preset
+  const handleCreateNewDocument = (presetId = "blank") => {
+    const newDoc = createEmptyDocument(eventDetails, currentUser, presetId);
+    setActiveDoc(newDoc);
+    setSelectedElementId(newDoc.elements?.[0]?.id || null);
+    saveToLocalStorage(newDoc);
+    setShowNewDocModal(false);
+    setViewMode("editor");
+  };
 
-    switch (blockType) {
-      case "hero_banner":
-        newBlock = {
-          ...newBlock,
-          badge: "NEW SECTION",
-          title: "{{event_name}}",
-          subtitle: "Executive Highlight & Subtitle",
-          date: "{{event_date}}",
-          location: "{{venue}}, {{wilaya}}",
-        };
-        break;
-      case "executive_summary":
-        newBlock = {
-          ...newBlock,
-          heading: "Executive Summary",
-          content: "Enter your summary or introductory announcement here.",
-        };
-        break;
-      case "stats_grid":
-        newBlock = {
-          ...newBlock,
-          items: [
-            { number: "1,000+", label: "Participants", icon: "Users" },
-            { number: "25+", label: "Speakers", icon: "Mic2" },
-            { number: "50+", label: "Exhibitors", icon: "Building2" },
-          ],
-        };
-        break;
-      case "content_section":
-        newBlock = {
-          ...newBlock,
-          badge: "INFO",
-          heading: "Article / Section Title",
-          content: "Detailed description and informative text for the document.",
-        };
-        break;
-      case "tiers_grid":
-        newBlock = {
-          ...newBlock,
-          heading: "Partnership Packages",
-          tiers: [
-            { name: "Gold", price: "450 000 DZD", badge: "Primary", featured: true, perks: ["Perk 1", "Perk 2"] },
-            { name: "Silver", price: "250 000 DZD", badge: "Standard", featured: false, perks: ["Perk 1", "Perk 2"] },
-          ],
-        };
-        break;
-      case "schedule_table":
-        newBlock = {
-          ...newBlock,
-          heading: "Program Schedule",
-          sessions: [
-            { time: "09:00 - 10:00", title: "Opening Session", stage: "Main Hall", speaker: "Host" },
-            { time: "10:00 - 11:30", title: "Keynote Talk", stage: "Plenary", speaker: "Keynote" },
-          ],
-        };
-        break;
-      case "quote_callout":
-        newBlock = {
-          ...newBlock,
-          quote: "A powerful visionary quote that emphasizes the event mission.",
-          author: "{{organizer_name}}",
-          authorTitle: "President",
-        };
-        break;
-      case "terms_clauses":
-        newBlock = {
-          ...newBlock,
-          heading: "General Terms & Clauses",
-          clauses: [
-            { title: "Article 1 : Scope of Agreement", text: "Terms and conditions governing the event participation." },
-            { title: "Article 2 : Mutual Obligations", text: "Deliverables and timelines committed by each party." },
-          ],
-        };
-        break;
-      case "signature_block":
-        newBlock = {
-          ...newBlock,
-          signatory1Name: "{{organizer_name}}",
-          signatory1Title: "Authorized Organizer",
-          signatory1Org: "Eventzone Platform",
-          date: "{{current_date}}",
-        };
-        break;
-      default:
-        break;
+  // Duplicate a document
+  const handleDuplicateDocument = (docItem) => {
+    const duplicate = {
+      ...docItem,
+      id: `doc-${Date.now()}`,
+      name: `${docItem.name} (Copie)`,
+      updatedAt: new Date().toISOString(),
+    };
+    saveToLocalStorage(duplicate);
+  };
+
+  // Delete a document
+  const handleDelete = async (docId) => {
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer ce document ?")) return;
+
+    // Remove from local storage
+    if (typeof window !== "undefined" && activeEventId) {
+      setLocalDocs((prev) => {
+        const next = prev.filter((d) => d.id !== docId);
+        localStorage.setItem(`eventzone_designed_docs_${activeEventId}`, JSON.stringify(next));
+        return next;
+      });
     }
 
-    setDoc((prev) => ({
-      ...prev,
-      blocks: [...prev.blocks, newBlock],
-    }));
-    setSelectedBlockId(newId);
-    setActiveStudioTab("blocks");
-  };
-
-  // Upload organizer logo
-  const handleLogoUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      const eventId = activeEventId || "general";
-      const uploadedUrl = await uploadMedia(file, "documents", eventId, "logo");
-      if (uploadedUrl) {
-        updateDocProp("organizerLogo", uploadedUrl);
+    // Call prop if provided
+    if (onDeleteDocument) {
+      try {
+        await onDeleteDocument(docId);
+      } catch (e) {
+        console.error("Error deleting document:", e);
       }
-    } catch (err) {
-      console.error("Logo upload error:", err);
     }
   };
 
-  // Save document draft
-  const handleSaveDraft = async () => {
+  // Save active document
+  const handleSaveActiveDocument = async () => {
     setIsSaving(true);
+    const updated = {
+      ...activeDoc,
+      updatedAt: new Date().toISOString(),
+    };
+    setActiveDoc(updated);
+    saveToLocalStorage(updated);
+
+    // Also persist via props
     try {
-      if (typeof window !== "undefined") {
-        const key = `eventzone_designed_doc_${doc.id}`;
-        localStorage.setItem(key, JSON.stringify(doc));
-      }
       if (onSaveDocument) {
-        await onSaveDocument(doc);
+        await onSaveDocument(updated);
       }
-      setSaveSuccessNotice(true);
-      setTimeout(() => setSaveSuccessNotice(false), 3000);
-    } catch (err) {
-      console.error("Save document error:", err);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  // Save as managed document in DocumentsView
-  const handlePublishToEventDocuments = async () => {
-    setIsSaving(true);
-    try {
-      // Create a managed document object compatible with DocumentsView
-      const categoryMap = {
-        sponsorship: "Sponsorship & Media",
-        agendas: "Guidelines & Policies",
-        press: "Press & Marketing",
-        contracts: "Contracts & Legal",
-        permits: "Permits & Licenses",
-        promotional: "Press & Marketing",
-        vip: "General",
-      };
-
-      const publishedDoc = {
-        id: doc.id,
-        name: doc.title,
-        fileName: `${doc.title.replace(/[^a-zA-Z0-9_-]/g, "_")}.pdf`,
-        fileType: "pdf",
-        category: categoryMap[doc.category] || "General",
-        accessLevel: "team",
-        description: `Visual document generated via Eventzone Document Studio (${doc.category}).`,
-        fileSize: 185000, // Estimated representation
-        fileUrl: "#", // In-app generated
-        isDesignedDocument: true,
-        designedDocumentData: doc,
-        createdAt: new Date().toISOString(),
-      };
 
       if (onSaveToDocuments) {
+        const publishedDoc = {
+          id: updated.id,
+          name: updated.name,
+          fileName: `${updated.name.replace(/[^a-zA-Z0-9_-]/g, "_")}.pdf`,
+          fileType: "pdf",
+          category: "Official",
+          accessLevel: "team",
+          description: `Document A4 créé avec Eventzone Document Studio.`,
+          isDesignedDocument: true,
+          designedDocumentData: updated,
+          updatedAt: updated.updatedAt,
+        };
         await onSaveToDocuments(publishedDoc);
       }
 
       setSaveSuccessNotice(true);
-      setTimeout(() => setSaveSuccessNotice(false), 3500);
+      setTimeout(() => setSaveSuccessNotice(false), 2500);
     } catch (err) {
-      console.error("Publish to documents error:", err);
+      console.error("Failed to save document:", err);
     } finally {
       setIsSaving(false);
     }
   };
 
-  // Download high-resolution PNG
-  const handleDownloadPng = async () => {
-    const element = document.getElementById("a4-visual-document-sheet");
-    if (!element) return;
+  // Add an element to active document
+  const handleAddElement = (type) => {
+    const newElement = createDocumentElement(type, eventDetails, currentUser);
+    setActiveDoc((prev) => ({
+      ...prev,
+      elements: [...(prev.elements || []), newElement],
+      updatedAt: new Date().toISOString(),
+    }));
+    setSelectedElementId(newElement.id);
+  };
 
-    setIsGeneratingPng(true);
-    try {
-      const dataUrl = await toPng(element, {
-        quality: 0.95,
-        pixelRatio: 2,
-        cacheBust: true,
-      });
+  // Update specific element
+  const handleUpdateElement = (elementId, updater) => {
+    setActiveDoc((prev) => ({
+      ...prev,
+      elements: (prev.elements || []).map((el) => {
+        if (el.id === elementId) {
+          return typeof updater === "function" ? updater(el) : { ...el, ...updater };
+        }
+        return el;
+      }),
+      updatedAt: new Date().toISOString(),
+    }));
+  };
 
-      const link = document.createElement("a");
-      link.download = `${doc.title.replace(/[^a-zA-Z0-9_-]/g, "_") || "document"}.png`;
-      link.href = dataUrl;
-      link.click();
-    } catch (err) {
-      console.error("PNG export error:", err);
-    } finally {
-      setIsGeneratingPng(false);
+  // Remove element
+  const handleRemoveElement = (elementId) => {
+    setActiveDoc((prev) => ({
+      ...prev,
+      elements: (prev.elements || []).filter((el) => el.id !== elementId),
+      updatedAt: new Date().toISOString(),
+    }));
+    if (selectedElementId === elementId) {
+      setSelectedElementId(null);
     }
   };
 
-  // Share link
-  const handleCopyShareLink = () => {
-    if (typeof window !== "undefined") {
-      const url = `${window.location.origin}/documents?docId=${doc.id}`;
-      navigator.clipboard?.writeText(url);
-      setShareNotice(true);
-      setTimeout(() => setShareNotice(false), 3000);
-    }
+  // Move element up/down
+  const handleMoveElement = (index, direction) => {
+    setActiveDoc((prev) => {
+      const items = [...(prev.elements || [])];
+      const targetIndex = direction === "up" ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= items.length) return prev;
+      const temp = items[index];
+      items[index] = items[targetIndex];
+      items[targetIndex] = temp;
+      return { ...prev, elements: items };
+    });
   };
 
-  // Currently selected block
-  const selectedBlock = useMemo(() => {
-    return doc.blocks?.find((b) => b.id === selectedBlockId) || doc.blocks?.[0] || null;
-  }, [doc.blocks, selectedBlockId]);
+  // =========================================================================
+  // VIEW MODE: LIST (Document Hub)
+  // =========================================================================
+  if (viewMode === "list") {
+    return (
+      <div className="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 py-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-slate-200">
+          <div>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+              <FileText className="w-6 h-6 text-indigo-600" />
+              Document Studio
+            </h1>
+            <p className="text-sm font-medium text-slate-500 mt-1">
+              Consultez vos documents, imprimez-les en format A4 ou composez de nouveaux documents officiels personnalisés.
+            </p>
+          </div>
 
-  return (
-    <div className="flex flex-col h-[calc(100vh-64px)] w-full bg-slate-50 overflow-hidden select-none">
-      {/* ─────────────────────────────────────────────
-          1. TOP NAVIGATION & ACTION BAR
-          ───────────────────────────────────────────── */}
-      <header className="h-16 px-4 sm:px-6 bg-white border-b border-slate-200 flex items-center justify-between shrink-0 z-30 shadow-2xs">
-        <div className="flex items-center gap-3 min-w-0">
-          <button
-            onClick={onBack}
-            className="p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors flex items-center gap-1.5 text-xs font-bold cursor-pointer"
-            title="Back to Documents"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">Back</span>
-          </button>
-
-          <div className="h-6 w-px bg-slate-200 mx-1 hidden sm:block" />
-
-          {/* Editable Document Title */}
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
-              <Sparkles className="w-4 h-4" />
-            </div>
-            <div className="min-w-0">
-              <input
-                type="text"
-                value={doc.title}
-                onChange={(e) => updateDocProp("title", e.target.value)}
-                placeholder="Document Title"
-                className="font-black text-sm text-slate-900 bg-transparent hover:bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 rounded-lg px-2 py-1 outline-hidden truncate max-w-[200px] sm:max-w-xs md:max-w-sm transition-all"
-              />
-              <span className="text-[10px] font-bold text-slate-400 block px-2 -mt-0.5">
-                Eventzone Document Studio
-              </span>
-            </div>
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <button
+              onClick={() => setShowNewDocModal(true)}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl shadow-xs transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Nouveau Document A4
+            </button>
           </div>
         </div>
 
-        {/* Center / Action Buttons */}
-        <div className="flex items-center gap-2">
-          {/* Orientation switch */}
-          <div className="hidden md:flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 text-xs font-bold">
-            <button
-              onClick={() => updateDocProp("orientation", "portrait")}
-              className={`px-2.5 py-1 rounded-lg transition-all ${
-                doc.orientation === "portrait"
-                  ? "bg-white text-slate-900 shadow-2xs"
-                  : "text-slate-500 hover:text-slate-800"
-              }`}
-            >
-              Portrait
-            </button>
-            <button
-              onClick={() => updateDocProp("orientation", "landscape")}
-              className={`px-2.5 py-1 rounded-lg transition-all ${
-                doc.orientation === "landscape"
-                  ? "bg-white text-slate-900 shadow-2xs"
-                  : "text-slate-500 hover:text-slate-800"
-              }`}
-            >
-              Landscape
-            </button>
+        {/* Search & Counter */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="relative w-full sm:w-80">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={listSearch}
+              onChange={(e) => setListSearch(e.target.value)}
+              placeholder="Rechercher un document..."
+              className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all font-medium"
+            />
           </div>
 
-          {/* Mobile view switch */}
-          <div className="flex lg:hidden items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 text-xs font-bold">
+          <div className="text-xs font-semibold text-slate-500 self-end sm:self-center">
+            {filteredDocs.length} {filteredDocs.length > 1 ? "documents disponibles" : "document disponible"}
+          </div>
+        </div>
+
+        {/* Documents Grid */}
+        {filteredDocs.length === 0 ? (
+          <div className="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-12 text-center max-w-xl mx-auto my-8">
+            <div className="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-4">
+              <FileText className="w-7 h-7" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 mb-1">
+              Aucun document pour le moment
+            </h3>
+            <p className="text-sm text-slate-500 mb-6 leading-relaxed">
+              Commencez avec une feuille A4 vierge ou utilisez un modèle pour créer des lettres, conventions, programmes ou invitations.
+            </p>
             <button
-              onClick={() => setMobileViewMode("editor")}
-              className={`px-2.5 py-1 rounded-lg transition-all ${
-                mobileViewMode === "editor"
-                  ? "bg-white text-slate-900 shadow-2xs"
-                  : "text-slate-500 hover:text-slate-800"
-              }`}
+              onClick={() => setShowNewDocModal(true)}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl shadow-xs transition-colors"
             >
-              Editor
-            </button>
-            <button
-              onClick={() => setMobileViewMode("preview")}
-              className={`px-2.5 py-1 rounded-lg transition-all ${
-                mobileViewMode === "preview"
-                  ? "bg-white text-slate-900 shadow-2xs"
-                  : "text-slate-500 hover:text-slate-800"
-              }`}
-            >
-              Live A4
+              <Plus className="w-4 h-4" />
+              Créer mon premier document
             </button>
           </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {filteredDocs.map((item) => {
+              const elementCount = item.elements?.length || 0;
+              const formattedDate = item.updatedAt
+                ? new Date(item.updatedAt).toLocaleDateString("fr-FR", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })
+                : "Récemment";
 
-          {/* Save to Event Documents Button */}
+              return (
+                <div
+                  key={item.id}
+                  className="bg-white border border-slate-200 hover:border-indigo-300 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between group"
+                >
+                  <div>
+                    {/* Card Top */}
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                        <FileText className="w-5 h-5" />
+                      </div>
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-md">
+                        A4 {item.orientation === "landscape" ? "Paysage" : "Portrait"}
+                      </span>
+                    </div>
+
+                    {/* Card Title */}
+                    <h3 className="font-bold text-slate-900 text-base line-clamp-1 group-hover:text-indigo-600 transition-colors">
+                      {item.name || "Document sans titre"}
+                    </h3>
+
+                    {/* Meta info */}
+                    <div className="flex items-center gap-3 text-xs text-slate-400 mt-2 font-medium">
+                      <span>{elementCount} {elementCount > 1 ? "éléments" : "élément"}</span>
+                      <span>•</span>
+                      <span>Modifié le {formattedDate}</span>
+                    </div>
+                  </div>
+
+                  {/* Actions Bar */}
+                  <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between gap-2">
+                    <button
+                      onClick={() => handleEditDocument(item)}
+                      className="flex-1 py-2 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs rounded-lg transition-colors text-center"
+                    >
+                      Modifier
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setActiveDoc(item);
+                        setTimeout(() => printVisualDocument(), 100);
+                      }}
+                      title="Imprimer / Exporter PDF"
+                      className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-lg transition-colors"
+                    >
+                      <Printer className="w-4 h-4" />
+                    </button>
+
+                    <button
+                      onClick={() => handleDuplicateDocument(item)}
+                      title="Dupliquer"
+                      className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-lg transition-colors"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
+
+                    <button
+                      onClick={() => handleDelete(item.id)}
+                      title="Supprimer"
+                      className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Modal: New Document Starter Selector */}
+        {showNewDocModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
+            <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h3 className="font-bold text-slate-900 text-lg">
+                  Nouveau Document A4
+                </h3>
+                <button
+                  onClick={() => setShowNewDocModal(false)}
+                  className="text-slate-400 hover:text-slate-600 text-sm font-bold p-1"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <p className="text-xs text-slate-500">
+                Choisissez comment vous souhaitez commencer votre document. Vous pourrez toujours ajouter ou modifier n&apos;importe quel élément par la suite.
+              </p>
+
+              <div className="space-y-2.5 pt-1">
+                {STARTER_PRESETS.map((preset) => (
+                  <button
+                    key={preset.id}
+                    onClick={() => handleCreateNewDocument(preset.id)}
+                    className="w-full text-left p-3.5 rounded-xl border border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/30 transition-all flex items-start gap-3.5 group"
+                  >
+                    <div className="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                      {preset.id === "blank" ? <Plus className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-900 text-sm group-hover:text-indigo-600 transition-colors">
+                        {preset.name}
+                      </h4>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {preset.description}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              <div className="pt-2 text-right">
+                <button
+                  onClick={() => setShowNewDocModal(false)}
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 rounded-lg"
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // VIEW MODE: EDITOR (A4 Visual Document Composer)
+  // =========================================================================
+  return (
+    <div className="min-h-screen bg-slate-100 flex flex-col">
+      {/* Top Application Bar */}
+      <header className="sticky top-0 z-30 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between gap-4 shadow-xs">
+        {/* Left: Back & Title input */}
+        <div className="flex items-center gap-3 flex-1 min-w-0">
           <button
-            onClick={handlePublishToEventDocuments}
-            disabled={isSaving}
-            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-colors cursor-pointer"
-            title="Save into Event Documents asset directory"
+            onClick={() => setViewMode("list")}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors shrink-0"
           >
-            <Layers className="w-3.5 h-3.5 text-indigo-600" />
-            <span>Add to Documents</span>
+            <ArrowLeft className="w-4 h-4" />
+            <span className="hidden sm:inline">Tous les documents</span>
+          </button>
+
+          <div className="h-4 w-px bg-slate-200 shrink-0" />
+
+          {/* Editable Document Title */}
+          <input
+            type="text"
+            value={activeDoc.name || ""}
+            onChange={(e) =>
+              setActiveDoc((prev) => ({
+                ...prev,
+                name: e.target.value,
+                updatedAt: new Date().toISOString(),
+              }))
+            }
+            placeholder="Nom du document..."
+            className="font-bold text-base text-slate-900 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-indigo-600 focus:outline-hidden px-1 py-0.5 max-w-sm w-full transition-colors truncate"
+          />
+        </div>
+
+        {/* Center / Right: Page settings & Actions */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {/* Orientation Toggle */}
+          <button
+            onClick={() =>
+              setActiveDoc((prev) => ({
+                ...prev,
+                orientation: prev.orientation === "landscape" ? "portrait" : "landscape",
+              }))
+            }
+            className="px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5"
+            title="Basculer Portrait / Paysage"
+          >
+            <span>{activeDoc.orientation === "landscape" ? "Paysage" : "Portrait"}</span>
           </button>
 
           {/* Print / PDF Button */}
           <button
-            onClick={() => printVisualDocument(doc)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 shadow-2xs transition-colors cursor-pointer"
+            onClick={() => printVisualDocument()}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold text-xs rounded-lg transition-colors shadow-2xs"
           >
-            <Printer className="w-3.5 h-3.5 text-slate-600" />
-            <span className="hidden sm:inline">Print / PDF</span>
+            <Printer className="w-4 h-4 text-slate-500" />
+            <span className="hidden md:inline">Imprimer / PDF</span>
           </button>
 
-          {/* Download PNG Button */}
+          {/* Save Button */}
           <button
-            onClick={handleDownloadPng}
-            disabled={isGeneratingPng}
-            className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 shadow-2xs transition-colors cursor-pointer"
-          >
-            <Download className="w-3.5 h-3.5 text-slate-600" />
-            <span>{isGeneratingPng ? "Exporting..." : "PNG"}</span>
-          </button>
-
-          {/* Save Draft Button */}
-          <button
-            onClick={handleSaveDraft}
+            onClick={handleSaveActiveDocument}
             disabled={isSaving}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-all cursor-pointer"
+            className={`inline-flex items-center gap-1.5 px-4 py-1.5 font-bold text-xs rounded-lg shadow-xs transition-colors ${
+              saveSuccessNotice
+                ? "bg-emerald-600 text-white"
+                : "bg-indigo-600 hover:bg-indigo-700 text-white"
+            }`}
           >
-            <Save className="w-3.5 h-3.5" />
-            <span>{isSaving ? "Saving..." : "Save Draft"}</span>
-          </button>
-
-          {/* Share button */}
-          <button
-            onClick={handleCopyShareLink}
-            className="p-1.5 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
-            title="Copy Share Link"
-          >
-            <Share2 className="w-4 h-4" />
+            {saveSuccessNotice ? (
+              <>
+                <Check className="w-4 h-4" />
+                <span>Enregistré !</span>
+              </>
+            ) : (
+              <>
+                <span>{isSaving ? "Enregistrement..." : "Enregistrer"}</span>
+              </>
+            )}
           </button>
         </div>
       </header>
 
-      {/* Floating Alerts */}
-      {saveSuccessNotice && (
-        <div className="absolute top-20 right-6 z-50 bg-emerald-600 text-white px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2 text-xs font-bold animate-in fade-in slide-in-from-top-2">
-          <CheckCircle2 className="w-4 h-4" />
-          <span>Document saved successfully!</span>
-        </div>
-      )}
-      {shareNotice && (
-        <div className="absolute top-20 right-6 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2 text-xs font-bold animate-in fade-in slide-in-from-top-2">
-          <Copy className="w-4 h-4" />
-          <span>Shareable link copied to clipboard!</span>
-        </div>
-      )}
-
-      {/* ─────────────────────────────────────────────
-          2. MAIN SPLIT-SCREEN WORKSPACE
-          ───────────────────────────────────────────── */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* ────────── LEFT STUDIO INSPECTOR ────────── */}
-        <aside
-          className={`w-full lg:w-[480px] xl:w-[520px] bg-white border-r border-slate-200 flex flex-col shrink-0 overflow-hidden ${
-            mobileViewMode === "preview" ? "hidden lg:flex" : "flex"
-          }`}
-        >
-          {/* Tab Navigation */}
-          <div className="flex items-center border-b border-slate-200 px-3 bg-slate-50/50 shrink-0">
-            <button
-              onClick={() => setActiveStudioTab("templates")}
-              className={`flex-1 py-3 text-xs font-bold border-b-2 text-center transition-all cursor-pointer ${
-                activeStudioTab === "templates"
-                  ? "border-blue-600 text-blue-600 bg-white"
-                  : "border-transparent text-slate-500 hover:text-slate-800"
-              }`}
-            >
-              <div className="flex items-center justify-center gap-1.5">
-                <LayoutTemplate className="w-3.5 h-3.5" />
-                <span>Templates</span>
+      {/* Main Studio Workspace: Split Screen */}
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        {/* Left Side: Clean Elements Panel */}
+        <div className="w-full lg:w-[460px] bg-white border-r border-slate-200 flex flex-col h-[calc(100vh-57px)] overflow-y-auto">
+          {/* 1. Quick Style bar (Font & Theme color) */}
+          <div className="p-4 border-b border-slate-100 bg-slate-50/50 space-y-3">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-bold text-slate-700">Style du document</span>
+              {/* Color swatches */}
+              <div className="flex items-center gap-1.5">
+                {COLOR_OPTIONS.map((col) => (
+                  <button
+                    key={col.id}
+                    onClick={() => setActiveDoc((p) => ({ ...p, colorId: col.id }))}
+                    title={col.name}
+                    className={`w-5 h-5 rounded-full transition-all ${
+                      activeDoc.colorId === col.id
+                        ? "ring-2 ring-offset-2 ring-slate-400 scale-110"
+                        : "opacity-80 hover:opacity-100"
+                    }`}
+                    style={{ backgroundColor: col.primary }}
+                  />
+                ))}
               </div>
-            </button>
+            </div>
 
-            <button
-              onClick={() => setActiveStudioTab("blocks")}
-              className={`flex-1 py-3 text-xs font-bold border-b-2 text-center transition-all cursor-pointer ${
-                activeStudioTab === "blocks"
-                  ? "border-blue-600 text-blue-600 bg-white"
-                  : "border-transparent text-slate-500 hover:text-slate-800"
-              }`}
-            >
-              <div className="flex items-center justify-center gap-1.5">
-                <Layers className="w-3.5 h-3.5" />
-                <span>Content & Blocks</span>
-              </div>
-            </button>
-
-            <button
-              onClick={() => setActiveStudioTab("design")}
-              className={`flex-1 py-3 text-xs font-bold border-b-2 text-center transition-all cursor-pointer ${
-                activeStudioTab === "design"
-                  ? "border-blue-600 text-blue-600 bg-white"
-                  : "border-transparent text-slate-500 hover:text-slate-800"
-              }`}
-            >
-              <div className="flex items-center justify-center gap-1.5">
-                <Palette className="w-3.5 h-3.5" />
-                <span>Theme & Style</span>
-              </div>
-            </button>
-
-            <button
-              onClick={() => setActiveStudioTab("brand")}
-              className={`flex-1 py-3 text-xs font-bold border-b-2 text-center transition-all cursor-pointer ${
-                activeStudioTab === "brand"
-                  ? "border-blue-600 text-blue-600 bg-white"
-                  : "border-transparent text-slate-500 hover:text-slate-800"
-              }`}
-            >
-              <div className="flex items-center justify-center gap-1.5">
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Brand & Stamp</span>
-              </div>
-            </button>
+            {/* Font Selector via SearchableSelect */}
+            <div>
+              <SearchableSelect
+                value={activeDoc.fontId || "sans"}
+                onChange={(val) => setActiveDoc((p) => ({ ...p, fontId: val }))}
+                options={FONT_OPTIONS.map((f) => ({
+                  value: f.id,
+                  label: f.name,
+                }))}
+                placeholder="Choisir une typographie..."
+                buttonClassName="py-1.5 text-xs bg-white"
+              />
+            </div>
           </div>
 
-          {/* Tab 1: Templates Gallery */}
-          {activeStudioTab === "templates" && (
-            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
-              {/* Category selector using SearchableSelect */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Document Category
-                </label>
-                <SearchableSelect
-                  value={templateCategoryFilter}
-                  onChange={setTemplateCategoryFilter}
-                  options={DOCUMENT_CATEGORIES.map((c) => ({ value: c.id, label: c.label }))}
-                  placeholder="Select Category"
-                />
-              </div>
+          {/* 2. Add Element Palette */}
+          <div className="p-4 border-b border-slate-100">
+            <div className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2.5">
+              + Ajouter un élément à la page
+            </div>
 
-              {/* Template search */}
-              <div className="relative">
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
-                <input
-                  type="text"
-                  value={templateSearchTerm}
-                  onChange={(e) => setTemplateSearchTerm(e.target.value)}
-                  placeholder="Search preset templates..."
-                  className="w-full pl-9 pr-3 py-2 text-xs font-medium rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-hidden"
-                />
-              </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => handleAddElement("header")}
+                className="text-left px-3 py-2 bg-slate-50 hover:bg-indigo-50 hover:text-indigo-700 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition-colors"
+              >
+                + En-tête officiel
+              </button>
+              <button
+                onClick={() => handleAddElement("heading")}
+                className="text-left px-3 py-2 bg-slate-50 hover:bg-indigo-50 hover:text-indigo-700 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition-colors"
+              >
+                + Titre / Section
+              </button>
+              <button
+                onClick={() => handleAddElement("paragraph")}
+                className="text-left px-3 py-2 bg-slate-50 hover:bg-indigo-50 hover:text-indigo-700 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition-colors"
+              >
+                + Texte / Paragraphe
+              </button>
+              <button
+                onClick={() => handleAddElement("callout")}
+                className="text-left px-3 py-2 bg-slate-50 hover:bg-indigo-50 hover:text-indigo-700 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition-colors"
+              >
+                + Encadré / Note
+              </button>
+              <button
+                onClick={() => handleAddElement("info_grid")}
+                className="text-left px-3 py-2 bg-slate-50 hover:bg-indigo-50 hover:text-indigo-700 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition-colors"
+              >
+                + Infos Clés (Grille)
+              </button>
+              <button
+                onClick={() => handleAddElement("table")}
+                className="text-left px-3 py-2 bg-slate-50 hover:bg-indigo-50 hover:text-indigo-700 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition-colors"
+              >
+                + Tableau / Programme
+              </button>
+              <button
+                onClick={() => handleAddElement("signature")}
+                className="text-left px-3 py-2 bg-slate-50 hover:bg-indigo-50 hover:text-indigo-700 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition-colors"
+              >
+                + Signatures & Cachet
+              </button>
+              <button
+                onClick={() => handleAddElement("divider")}
+                className="text-left px-3 py-2 bg-slate-50 hover:bg-indigo-50 hover:text-indigo-700 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition-colors"
+              >
+                + Ligne de séparation
+              </button>
+            </div>
+          </div>
 
-              {/* Template Cards Grid */}
-              <div className="space-y-3 pt-1">
-                {filteredTemplates.map((tpl) => {
-                  const isActive = doc.templateId === tpl.id;
-                  return (
+          {/* 3. Elements On Page List */}
+          <div className="flex-1 p-4 space-y-3">
+            <div className="flex items-center justify-between text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
+              <span>Éléments de la page ({activeDoc.elements?.length || 0})</span>
+            </div>
+
+            {(!activeDoc.elements || activeDoc.elements.length === 0) ? (
+              <div className="text-center py-10 px-4 border border-dashed border-slate-200 rounded-xl text-slate-400 text-xs">
+                Aucun élément pour le moment. Cliquez sur un élément ci-dessus pour l&apos;ajouter à votre feuille A4.
+              </div>
+            ) : (
+              activeDoc.elements.map((el, index) => {
+                const isSelected = selectedElementId === el.id;
+
+                return (
+                  <div
+                    key={el.id}
+                    id={`editor-element-${el.id}`}
+                    className={`border rounded-xl transition-all ${
+                      isSelected
+                        ? "border-indigo-500 bg-indigo-50/20 shadow-xs"
+                        : "border-slate-200 bg-white"
+                    }`}
+                  >
+                    {/* Element header row */}
                     <div
-                      key={tpl.id}
-                      onClick={() => handleApplyTemplate(tpl.id)}
-                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer text-left ${
-                        isActive
-                          ? "border-blue-600 bg-blue-50/20 shadow-xs"
-                          : "border-slate-200 hover:border-slate-300 hover:bg-slate-50/50"
-                      }`}
+                      onClick={() => setSelectedElementId(isSelected ? null : el.id)}
+                      className="p-3 flex items-center justify-between gap-2 cursor-pointer select-none"
                     >
-                      <div className="flex items-start justify-between gap-2 mb-1.5">
-                        <span className="font-extrabold text-xs text-slate-900 leading-snug">
-                          {tpl.title}
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 shrink-0">
+                          {ELEMENT_TYPES.find((t) => t.type === el.type)?.label?.split(" ")[0] || el.type}
                         </span>
-                        <span className="px-2 py-0.5 rounded text-[9.5px] font-extrabold uppercase tracking-wide bg-slate-100 text-slate-600 shrink-0">
-                          {tpl.category}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-slate-500 leading-relaxed mb-3">
-                        {tpl.description}
-                      </p>
-                      <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                        <span className="text-[10px] text-slate-400 font-semibold">
-                          {tpl.blocks?.length || 0} visual blocks
-                        </span>
-                        <span
-                          className={`text-xs font-bold inline-flex items-center gap-1 ${
-                            isActive ? "text-blue-600" : "text-slate-600"
-                          }`}
-                        >
-                          {isActive ? "Currently Active" : "Apply Template →"}
+                        <span className="text-xs font-bold text-slate-800 truncate">
+                          {getElementSummary(el)}
                         </span>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
 
-          {/* Tab 2: Content & Blocks */}
-          {activeStudioTab === "blocks" && (
-            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-5">
-              {/* Add New Block Selector */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-bold text-slate-700">Add Content Block</label>
-                  <span className="text-[10px] text-slate-400 font-medium">Click to append</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {BLOCK_TYPES_CATALOG.map((cat) => (
-                    <button
-                      key={cat.type}
-                      onClick={() => addBlock(cat.type)}
-                      className="p-2 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/40 text-left transition-all cursor-pointer flex items-center gap-2 group"
-                    >
-                      <div className="w-6 h-6 rounded-md bg-slate-100 group-hover:bg-blue-100 text-slate-600 group-hover:text-blue-600 flex items-center justify-center shrink-0">
-                        <Plus className="w-3.5 h-3.5" />
-                      </div>
-                      <span className="text-[11px] font-bold text-slate-700 group-hover:text-blue-700 truncate">
-                        {cat.label}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Block List Reordering */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-2">
-                  Active Document Blocks ({doc.blocks?.length || 0})
-                </label>
-                <div className="space-y-1.5">
-                  {doc.blocks?.map((block, idx) => {
-                    const isSelected = block.id === selectedBlockId;
-                    const catInfo = BLOCK_TYPES_CATALOG.find((c) => c.type === block.type);
-
-                    return (
-                      <div
-                        key={block.id}
-                        onClick={() => setSelectedBlockId(block.id)}
-                        className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 transition-all cursor-pointer ${
-                          isSelected
-                            ? "border-blue-600 bg-blue-50/30 shadow-2xs"
-                            : "border-slate-200 hover:border-slate-300 bg-white"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-[10px] font-mono text-slate-400 font-bold w-4">
-                            {idx + 1}.
-                          </span>
-                          <span className="text-xs font-bold text-slate-800 truncate">
-                            {block.title || block.heading || catInfo?.label || block.type}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            onClick={() => moveBlock(block.id, "up")}
-                            disabled={idx === 0}
-                            className="p-1 rounded text-slate-400 hover:text-slate-700 disabled:opacity-30 cursor-pointer"
-                            title="Move Up"
-                          >
-                            <ArrowUp className="w-3 h-3" />
-                          </button>
-                          <button
-                            onClick={() => moveBlock(block.id, "down")}
-                            disabled={idx === doc.blocks.length - 1}
-                            className="p-1 rounded text-slate-400 hover:text-slate-700 disabled:opacity-30 cursor-pointer"
-                            title="Move Down"
-                          >
-                            <ArrowDown className="w-3 h-3" />
-                          </button>
-                          <button
-                            onClick={() => removeBlock(block.id)}
-                            className="p-1 rounded text-rose-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
-                            title="Remove Block"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Block Field Inspector */}
-              {selectedBlock && (
-                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-3">
-                  <div className="flex items-center justify-between pb-2 border-b border-slate-200">
-                    <span className="text-xs font-black uppercase tracking-wider text-slate-800">
-                      Edit Block: {selectedBlock.type}
-                    </span>
-                    <span className="text-[10px] font-mono text-slate-400">{selectedBlock.id}</span>
-                  </div>
-
-                  {/* Variables quick insertion pills */}
-                  <div>
-                    <span className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
-                      Insert Event Tags:
-                    </span>
-                    <div className="flex flex-wrap gap-1">
-                      {["{{event_name}}", "{{event_date}}", "{{venue}}", "{{wilaya}}", "{{organizer_name}}", "{{current_date}}"].map((tag) => (
+                      <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                        {/* Move Up */}
                         <button
-                          key={tag}
-                          type="button"
-                          onClick={() => {
-                            if (selectedBlock.content !== undefined) {
-                              updateBlock(selectedBlock.id, {
-                                content: (selectedBlock.content || "") + ` ${tag} `,
-                              });
-                            } else if (selectedBlock.title !== undefined) {
-                              updateBlock(selectedBlock.id, {
-                                title: (selectedBlock.title || "") + ` ${tag} `,
-                              });
-                            }
-                          }}
-                          className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-white hover:bg-blue-50 border border-slate-200 text-slate-700 cursor-pointer transition-colors"
+                          disabled={index === 0}
+                          onClick={() => handleMoveElement(index, "up")}
+                          className="p-1 text-slate-400 hover:text-slate-700 disabled:opacity-20"
+                          title="Monter"
                         >
-                          {tag}
+                          <ArrowUp className="w-3.5 h-3.5" />
                         </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Fields based on block type */}
-                  {selectedBlock.badge !== undefined && (
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-700 mb-1">Badge Text</label>
-                      <input
-                        type="text"
-                        value={selectedBlock.badge || ""}
-                        onChange={(e) => updateBlock(selectedBlock.id, { badge: e.target.value })}
-                        className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-white"
-                      />
-                    </div>
-                  )}
-
-                  {selectedBlock.title !== undefined && (
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-700 mb-1">Title</label>
-                      <input
-                        type="text"
-                        value={selectedBlock.title || ""}
-                        onChange={(e) => updateBlock(selectedBlock.id, { title: e.target.value })}
-                        className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-white font-bold"
-                      />
-                    </div>
-                  )}
-
-                  {selectedBlock.subtitle !== undefined && (
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-700 mb-1">Subtitle</label>
-                      <input
-                        type="text"
-                        value={selectedBlock.subtitle || ""}
-                        onChange={(e) => updateBlock(selectedBlock.id, { subtitle: e.target.value })}
-                        className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-white"
-                      />
-                    </div>
-                  )}
-
-                  {selectedBlock.heading !== undefined && (
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-700 mb-1">Heading</label>
-                      <input
-                        type="text"
-                        value={selectedBlock.heading || ""}
-                        onChange={(e) => updateBlock(selectedBlock.id, { heading: e.target.value })}
-                        className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-white font-bold"
-                      />
-                    </div>
-                  )}
-
-                  {selectedBlock.content !== undefined && (
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-700 mb-1">Content / Paragraph</label>
-                      <textarea
-                        rows={5}
-                        value={selectedBlock.content || ""}
-                        onChange={(e) => updateBlock(selectedBlock.id, { content: e.target.value })}
-                        className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white leading-relaxed resize-y"
-                      />
-                    </div>
-                  )}
-
-                  {selectedBlock.quote !== undefined && (
-                    <div className="space-y-2">
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-700 mb-1">Quote</label>
-                        <textarea
-                          rows={3}
-                          value={selectedBlock.quote || ""}
-                          onChange={(e) => updateBlock(selectedBlock.id, { quote: e.target.value })}
-                          className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white italic"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-700 mb-1">Author Name</label>
-                        <input
-                          type="text"
-                          value={selectedBlock.author || ""}
-                          onChange={(e) => updateBlock(selectedBlock.id, { author: e.target.value })}
-                          className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-white"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedBlock.signatory1Name !== undefined && (
-                    <div className="space-y-2">
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-700 mb-1">Signatory Name</label>
-                        <input
-                          type="text"
-                          value={selectedBlock.signatory1Name || ""}
-                          onChange={(e) => updateBlock(selectedBlock.id, { signatory1Name: e.target.value })}
-                          className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-white font-bold"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-700 mb-1">Signatory Title</label>
-                        <input
-                          type="text"
-                          value={selectedBlock.signatory1Title || ""}
-                          onChange={(e) => updateBlock(selectedBlock.id, { signatory1Title: e.target.value })}
-                          className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-white"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Tab 3: Design & Styling */}
-          {activeStudioTab === "design" && (
-            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-5">
-              {/* Color Themes */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-2">
-                  Color DNA Palette
-                </label>
-                <div className="grid grid-cols-2 gap-2.5">
-                  {COLOR_THEMES.map((theme) => {
-                    const isSelected = doc.themeId === theme.id;
-                    return (
-                      <div
-                        key={theme.id}
-                        onClick={() => updateDocProp("themeId", theme.id)}
-                        className={`p-3 rounded-2xl border transition-all cursor-pointer text-left ${
-                          isSelected
-                            ? "border-blue-600 bg-blue-50/20 shadow-xs"
-                            : "border-slate-200 hover:border-slate-300"
-                        }`}
-                      >
-                        <div className="flex items-center gap-1.5 mb-2">
-                          <div
-                            className="w-4 h-4 rounded-full shadow-2xs"
-                            style={{ backgroundColor: theme.primary }}
-                          />
-                          <div
-                            className="w-4 h-4 rounded-full shadow-2xs"
-                            style={{ backgroundColor: theme.accent }}
-                          />
-                        </div>
-                        <span className="text-xs font-bold text-slate-900 block truncate">
-                          {theme.name.split(" ")[0]}
-                        </span>
-                        <span className="text-[10px] text-slate-400 block truncate">
-                          {theme.name.split("(")[1]?.replace(")", "") || ""}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Font Pairings */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-2">
-                  Typography Pairing
-                </label>
-                <div className="space-y-2">
-                  {FONT_PAIRINGS.map((font) => {
-                    const isSelected = doc.fontPairingId === font.id;
-                    return (
-                      <div
-                        key={font.id}
-                        onClick={() => updateDocProp("fontPairingId", font.id)}
-                        className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
-                          isSelected
-                            ? "border-blue-600 bg-blue-50/20 shadow-xs"
-                            : "border-slate-200 hover:border-slate-300"
-                        }`}
-                      >
-                        <div>
-                          <span
-                            className="text-sm font-bold text-slate-900 block"
-                            style={{ fontFamily: font.titleFont }}
-                          >
-                            {font.name}
-                          </span>
-                          <span className="text-[10px] text-slate-400">
-                            Headings in {font.name.split("(")[1]?.split("&")[0] || "Font"}
-                          </span>
-                        </div>
-                        {isSelected && <Check className="w-4 h-4 text-blue-600" />}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Calligraphy Signature Script */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-2">
-                  Calligraphic Signature Script
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {CALLIGRAPHY_SIGNATURES.map((sig) => {
-                    const isSelected = doc.calligraphySignatureId === sig.id;
-                    return (
-                      <button
-                        key={sig.id}
-                        type="button"
-                        onClick={() => updateDocProp("calligraphySignatureId", sig.id)}
-                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                          isSelected
-                            ? "border-blue-600 bg-blue-50/20"
-                            : "border-slate-200 hover:border-slate-300"
-                        }`}
-                      >
-                        <span
-                          className="text-lg text-slate-800 block truncate mb-1"
-                          style={{ fontFamily: sig.fontFamily }}
+                        {/* Move Down */}
+                        <button
+                          disabled={index === activeDoc.elements.length - 1}
+                          onClick={() => handleMoveElement(index, "down")}
+                          className="p-1 text-slate-400 hover:text-slate-700 disabled:opacity-20"
+                          title="Descendre"
                         >
-                          Signature
-                        </span>
-                        <span className="text-[10px] font-bold text-slate-500 block truncate">
-                          {sig.name}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Toggles */}
-              <div className="pt-2 border-t border-slate-100 space-y-3">
-                <label className="flex items-center justify-between text-xs font-bold text-slate-700 cursor-pointer">
-                  <span>Show Formal Letterhead</span>
-                  <input
-                    type="checkbox"
-                    checked={doc.showLetterhead}
-                    onChange={(e) => updateDocProp("showLetterhead", e.target.checked)}
-                    className="rounded text-blue-600 w-4 h-4 cursor-pointer"
-                  />
-                </label>
-
-                <label className="flex items-center justify-between text-xs font-bold text-slate-700 cursor-pointer">
-                  <span>Show Official Stamp & Seal</span>
-                  <input
-                    type="checkbox"
-                    checked={doc.showStamp}
-                    onChange={(e) => updateDocProp("showStamp", e.target.checked)}
-                    className="rounded text-blue-600 w-4 h-4 cursor-pointer"
-                  />
-                </label>
-
-                <label className="flex items-center justify-between text-xs font-bold text-slate-700 cursor-pointer">
-                  <span>Background Watermark</span>
-                  <input
-                    type="checkbox"
-                    checked={doc.showWatermark}
-                    onChange={(e) => updateDocProp("showWatermark", e.target.checked)}
-                    className="rounded text-blue-600 w-4 h-4 cursor-pointer"
-                  />
-                </label>
-              </div>
-            </div>
-          )}
-
-          {/* Tab 4: Brand & Authority */}
-          {activeStudioTab === "brand" && (
-            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
-              {/* Organizer Logo */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Organizer Logo
-                </label>
-                <div className="flex items-center gap-3">
-                  {doc.organizerLogo ? (
-                    <img
-                      src={doc.organizerLogo}
-                      alt="Logo"
-                      className="h-12 w-28 object-contain border border-slate-200 rounded-xl p-1 bg-white"
-                    />
-                  ) : (
-                    <div className="h-12 w-28 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 text-xs font-bold">
-                      No Logo
+                          <ArrowDown className="w-3.5 h-3.5" />
+                        </button>
+                        {/* Delete */}
+                        <button
+                          onClick={() => handleRemoveElement(el.id)}
+                          className="p-1 text-red-400 hover:text-red-600"
+                          title="Supprimer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
-                  )}
-                  <div>
-                    <input
-                      ref={logoInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleLogoUpload}
-                      className="hidden"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => logoInputRef.current?.click()}
-                      className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <Upload className="w-3.5 h-3.5" />
-                      <span>Upload Logo</span>
-                    </button>
+
+                    {/* Inline Element Editor (when expanded/selected) */}
+                    {isSelected && (
+                      <div className="px-3 pb-3 pt-1 border-t border-slate-100/80 space-y-2.5 text-xs">
+                        {renderElementEditForm(el, (updater) => handleUpdateElement(el.id, updater))}
+                      </div>
+                    )}
                   </div>
-                </div>
-              </div>
+                );
+              })
+            )}
+          </div>
+        </div>
 
-              {/* Organization Name */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Organization / Company Name
-                </label>
-                <input
-                  type="text"
-                  value={doc.organizerName || ""}
-                  onChange={(e) => updateDocProp("organizerName", e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white font-bold"
-                />
-              </div>
-
-              {/* Wilaya Selector using SearchableSelect */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Wilaya / Jurisdiction
-                </label>
-                <SearchableSelect
-                  value={doc.variables?.wilaya || "16 - Alger"}
-                  onChange={(newWilaya) => {
-                    const cleanWilaya = newWilaya.replace(/^[0-9]+\s*-\s*/, "");
-                    setDoc((prev) => ({
-                      ...prev,
-                      variables: { ...prev.variables, wilaya: cleanWilaya },
-                    }));
-                  }}
-                  options={ALGERIAN_WILAYAS}
-                  placeholder="Select Wilaya"
-                />
-              </div>
-
-              {/* Legal Tax / RC Registration */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Legal Registration (RC, NIF, NIS)
-                </label>
-                <input
-                  type="text"
-                  value={doc.organizerTaxId || ""}
-                  onChange={(e) => updateDocProp("organizerTaxId", e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white font-mono"
-                  placeholder="e.g., NIF: 001616012345678 • RC: 16/00-987654"
-                />
-              </div>
-
-              {/* Official Stamp Text */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Official Seal Text
-                </label>
-                <input
-                  type="text"
-                  value={doc.stampText || ""}
-                  onChange={(e) => updateDocProp("stampText", e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white"
-                  placeholder="Eventzone Certified Document"
-                />
-              </div>
-
-              {/* Contact Information */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Contact Coordinates
-                </label>
-                <input
-                  type="text"
-                  value={doc.organizerContact || ""}
-                  onChange={(e) => updateDocProp("organizerContact", e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white text-slate-600"
-                  placeholder="contact@eventzone.pro • +213 550 00 00 00"
-                />
-              </div>
-            </div>
-          )}
-        </aside>
-
-        {/* ────────── RIGHT LIVE A4 CANVAS ────────── */}
-        <main
-          className={`flex-1 bg-slate-100 overflow-auto flex flex-col items-center p-4 sm:p-8 relative ${
-            mobileViewMode === "editor" ? "hidden lg:flex" : "flex"
-          }`}
-        >
-          {/* Sticky Floating Zoom & Controller Bar */}
-          <div className="sticky top-0 z-20 mb-6 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-2">
+        {/* Right Side: A4 Live Preview Canvas */}
+        <div className="flex-1 bg-slate-200/70 p-6 overflow-auto flex flex-col items-center justify-start relative">
+          {/* Zoom toolbar */}
+          <div className="sticky top-2 z-20 mb-4 bg-white/95 backdrop-blur-xs border border-slate-200 rounded-xl px-3 py-1.5 shadow-sm flex items-center gap-2 text-xs font-bold text-slate-700">
             <button
               onClick={() => setZoom((z) => Math.max(0.4, Number((z - 0.1).toFixed(2))))}
-              className="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 cursor-pointer"
-              title="Zoom Out"
+              className="p-1 hover:bg-slate-100 rounded-md"
+              title="Zoom arrière"
             >
               <ZoomOut className="w-3.5 h-3.5" />
             </button>
-
-            <span className="text-xs font-bold text-slate-700 min-w-12 text-center">
+            <span className="w-12 text-center text-[11px] font-mono">
               {Math.round(zoom * 100)}%
             </span>
-
             <button
-              onClick={() => setZoom((z) => Math.min(1.5, Number((z + 0.1).toFixed(2))))}
-              className="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 cursor-pointer"
-              title="Zoom In"
+              onClick={() => setZoom((z) => Math.min(1.4, Number((z + 0.1).toFixed(2))))}
+              className="p-1 hover:bg-slate-100 rounded-md"
+              title="Zoom avant"
             >
               <ZoomIn className="w-3.5 h-3.5" />
             </button>
-
-            <div className="h-4 w-px bg-slate-200 mx-1" />
-
-            <button
-              onClick={() => setZoom(0.7)}
-              className="px-2 py-1 rounded-md text-[10px] font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
-            >
-              70%
-            </button>
+            <div className="h-3 w-px bg-slate-200 mx-1" />
             <button
               onClick={() => setZoom(0.85)}
-              className="px-2 py-1 rounded-md text-[10px] font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
+              className="px-1.5 py-0.5 hover:bg-slate-100 rounded-md text-[11px]"
             >
-              85%
+              Ajuster
             </button>
             <button
-              onClick={() => setZoom(1.0)}
-              className="px-2 py-1 rounded-md text-[10px] font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
+              onClick={() => setZoom(1)}
+              className="px-1.5 py-0.5 hover:bg-slate-100 rounded-md text-[11px]"
             >
               100%
             </button>
           </div>
 
-          {/* Render the Live Sheet */}
-          <div className="flex justify-center w-full pb-16">
-            <A4VisualDocumentSheet
-              doc={doc}
-              zoom={zoom}
-              selectedBlockId={selectedBlockId}
-              onSelectBlock={(blockId) => {
-                setSelectedBlockId(blockId);
-                setActiveStudioTab("blocks");
-              }}
-            />
-          </div>
-        </main>
+          {/* Real A4 Paper View */}
+          <A4VisualDocumentSheet
+            doc={activeDoc}
+            zoom={zoom}
+            selectedElementId={selectedElementId}
+            onSelectElement={(id) => {
+              setSelectedElementId(id);
+              // scroll into view in left panel
+              const node = document.getElementById(`editor-element-${id}`);
+              if (node) node.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            }}
+          />
+        </div>
       </div>
     </div>
   );
+}
+
+/**
+ * Summarize element in card header
+ */
+function getElementSummary(el) {
+  switch (el.type) {
+    case "header":
+      return el.orgName || "Papier à en-tête";
+    case "heading":
+      return el.text || "Titre";
+    case "paragraph":
+      return el.text?.slice(0, 35) + "..." || "Texte";
+    case "callout":
+      return el.title || "Encadré";
+    case "info_grid":
+      return "Grille d'informations clés";
+    case "table":
+      return el.title || "Tableau";
+    case "signature":
+      return `Signatures (${el.sign1Name || "Responsable"})`;
+    case "divider":
+      return "Séparateur";
+    default:
+      return "Élément";
+  }
+}
+
+/**
+ * Clean inline edit form for each element type
+ */
+function renderElementEditForm(el, update) {
+  switch (el.type) {
+    case "header":
+      return (
+        <div className="space-y-2">
+          <div>
+            <label className="text-[10px] font-bold text-slate-500 uppercase">Organisation</label>
+            <input
+              type="text"
+              value={el.orgName || ""}
+              onChange={(e) => update({ orgName: e.target.value })}
+              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase">Sous-titre / Lieu</label>
+              <input
+                type="text"
+                value={el.subtitle || ""}
+                onChange={(e) => update({ subtitle: e.target.value })}
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase">Référence</label>
+              <input
+                type="text"
+                value={el.ref || ""}
+                onChange={(e) => update({ ref: e.target.value })}
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="text-[10px] font-bold text-slate-500 uppercase">Date</label>
+            <input
+              type="text"
+              value={el.date || ""}
+              onChange={(e) => update({ date: e.target.value })}
+              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+            />
+          </div>
+        </div>
+      );
+
+    case "heading":
+      return (
+        <div className="space-y-2">
+          <div>
+            <label className="text-[10px] font-bold text-slate-500 uppercase">Texte du titre</label>
+            <input
+              type="text"
+              value={el.text || ""}
+              onChange={(e) => update({ text: e.target.value })}
+              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] font-bold text-slate-500 uppercase">Sous-titre (optionnel)</label>
+            <input
+              type="text"
+              value={el.subtitle || ""}
+              onChange={(e) => update({ subtitle: e.target.value })}
+              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase">Taille</label>
+              <div className="flex gap-1 mt-1">
+                {["sm", "md", "lg", "xl"].map((sz) => (
+                  <button
+                    key={sz}
+                    type="button"
+                    onClick={() => update({ size: sz })}
+                    className={`flex-1 py-1 text-[10px] font-bold rounded-md border ${
+                      (el.size || "lg") === sz
+                        ? "bg-indigo-600 text-white border-indigo-600"
+                        : "bg-slate-50 border-slate-200 text-slate-600"
+                    }`}
+                  >
+                    {sz.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase">Alignement</label>
+              <div className="flex gap-1 mt-1">
+                {[
+                  { id: "left", label: "Gauche" },
+                  { id: "center", label: "Centre" },
+                  { id: "right", label: "Droite" },
+                ].map((a) => (
+                  <button
+                    key={a.id}
+                    type="button"
+                    onClick={() => update({ align: a.id })}
+                    className={`flex-1 py-1 text-[10px] font-bold rounded-md border ${
+                      (el.align || "left") === a.id
+                        ? "bg-indigo-600 text-white border-indigo-600"
+                        : "bg-slate-50 border-slate-200 text-slate-600"
+                    }`}
+                  >
+                    {a.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+
+    case "paragraph":
+      return (
+        <div className="space-y-2">
+          <div>
+            <label className="text-[10px] font-bold text-slate-500 uppercase">Texte du paragraphe</label>
+            <textarea
+              rows={5}
+              value={el.text || ""}
+              onChange={(e) => update({ text: e.target.value })}
+              placeholder="Rédigez ici..."
+              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs leading-relaxed"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase">Taille</label>
+              <div className="flex gap-1 mt-1">
+                {[
+                  { id: "sm", label: "Petit" },
+                  { id: "md", label: "Normal" },
+                  { id: "lg", label: "Grand" },
+                ].map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => update({ size: s.id })}
+                    className={`flex-1 py-1 text-[10px] font-bold rounded-md border ${
+                      (el.size || "md") === s.id
+                        ? "bg-indigo-600 text-white border-indigo-600"
+                        : "bg-slate-50 border-slate-200 text-slate-600"
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase">Alignement</label>
+              <div className="flex gap-1 mt-1">
+                {[
+                  { id: "left", label: "Gauche" },
+                  { id: "justify", label: "Justifié" },
+                  { id: "center", label: "Centre" },
+                ].map((a) => (
+                  <button
+                    key={a.id}
+                    type="button"
+                    onClick={() => update({ align: a.id })}
+                    className={`flex-1 py-1 text-[10px] font-bold rounded-md border ${
+                      (el.align || "left") === a.id
+                        ? "bg-indigo-600 text-white border-indigo-600"
+                        : "bg-slate-50 border-slate-200 text-slate-600"
+                    }`}
+                  >
+                    {a.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+
+    case "callout":
+      return (
+        <div className="space-y-2">
+          <div>
+            <label className="text-[10px] font-bold text-slate-500 uppercase">Titre de l&apos;encadré</label>
+            <input
+              type="text"
+              value={el.title || ""}
+              onChange={(e) => update({ title: e.target.value })}
+              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] font-bold text-slate-500 uppercase">Texte</label>
+            <textarea
+              rows={3}
+              value={el.text || ""}
+              onChange={(e) => update({ text: e.target.value })}
+              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] font-bold text-slate-500 uppercase">Couleur</label>
+            <div className="flex gap-1 mt-1">
+              {[
+                { id: "slate", label: "Gris" },
+                { id: "blue", label: "Bleu" },
+                { id: "emerald", label: "Vert" },
+                { id: "amber", label: "Jaune" },
+              ].map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => update({ color: c.id })}
+                  className={`flex-1 py-1 text-[10px] font-bold rounded-md border ${
+                    (el.color || "slate") === c.id
+                      ? "bg-indigo-600 text-white border-indigo-600"
+                      : "bg-slate-50 border-slate-200 text-slate-600"
+                  }`}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+
+    case "info_grid":
+      return (
+        <div className="space-y-2">
+          <label className="text-[10px] font-bold text-slate-500 uppercase">Données clés (2 à 4 éléments)</label>
+          {(el.items || []).map((item, idx) => (
+            <div key={idx} className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Libellé"
+                value={item.label || ""}
+                onChange={(e) => {
+                  const newItems = [...(el.items || [])];
+                  newItems[idx] = { ...newItems[idx], label: e.target.value };
+                  update({ items: newItems });
+                }}
+                className="w-1/3 p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+              />
+              <input
+                type="text"
+                placeholder="Valeur"
+                value={item.value || ""}
+                onChange={(e) => {
+                  const newItems = [...(el.items || [])];
+                  newItems[idx] = { ...newItems[idx], value: e.target.value };
+                  update({ items: newItems });
+                }}
+                className="flex-1 p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold"
+              />
+            </div>
+          ))}
+        </div>
+      );
+
+    case "table":
+      return (
+        <div className="space-y-2">
+          <div>
+            <label className="text-[10px] font-bold text-slate-500 uppercase">Titre du tableau (optionnel)</label>
+            <input
+              type="text"
+              value={el.title || ""}
+              onChange={(e) => update({ title: e.target.value })}
+              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] font-bold text-slate-500 uppercase">Colonnes (séparées par une virgule)</label>
+            <input
+              type="text"
+              value={(el.headers || []).join(", ")}
+              onChange={(e) => {
+                const arr = e.target.value.split(",").map((s) => s.trim());
+                update({ headers: arr });
+              }}
+              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+            />
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-[10px] font-bold text-slate-500 uppercase">Lignes ({el.rows?.length || 0})</label>
+              <button
+                type="button"
+                onClick={() => {
+                  const colCount = (el.headers || []).length || 3;
+                  const newRow = new Array(colCount).fill("Nouvelle entrée");
+                  update({ rows: [...(el.rows || []), newRow] });
+                }}
+                className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800"
+              >
+                + Ajouter une ligne
+              </button>
+            </div>
+            <div className="space-y-1.5 max-h-40 overflow-y-auto">
+              {(el.rows || []).map((row, rIdx) => (
+                <div key={rIdx} className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-bold text-slate-400 w-4">{rIdx + 1}.</span>
+                  {row.map((cell, cIdx) => (
+                    <input
+                      key={cIdx}
+                      type="text"
+                      value={cell || ""}
+                      onChange={(e) => {
+                        const newRows = [...(el.rows || [])];
+                        newRows[rIdx] = [...newRows[rIdx]];
+                        newRows[rIdx][cIdx] = e.target.value;
+                        update({ rows: newRows });
+                      }}
+                      className="flex-1 p-1 bg-slate-50 border border-slate-200 rounded-md text-[11px]"
+                    />
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newRows = (el.rows || []).filter((_, idx) => idx !== rIdx);
+                      update({ rows: newRows });
+                    }}
+                    className="p-1 text-red-400 hover:text-red-600"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+
+    case "signature":
+      return (
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase">Signataire 1 (Nom)</label>
+              <input
+                type="text"
+                value={el.sign1Name || ""}
+                onChange={(e) => update({ sign1Name: e.target.value })}
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase">Fonction / Titre</label>
+              <input
+                type="text"
+                value={el.sign1Title || ""}
+                onChange={(e) => update({ sign1Title: e.target.value })}
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase">Signataire 2 (Optionnel)</label>
+              <input
+                type="text"
+                value={el.sign2Name || ""}
+                onChange={(e) => update({ sign2Name: e.target.value })}
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase">Fonction 2</label>
+              <input
+                type="text"
+                value={el.sign2Title || ""}
+                onChange={(e) => update({ sign2Title: e.target.value })}
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-2 pt-1">
+            <input
+              type="checkbox"
+              id="stampCheckbox"
+              checked={!!el.showStamp}
+              onChange={(e) => update({ showStamp: e.target.checked })}
+              className="rounded text-indigo-600 focus:ring-indigo-500"
+            />
+            <label htmlFor="stampCheckbox" className="text-xs font-semibold text-slate-700">
+              Afficher le cachet officiel &apos;Eventzone Approuvé&apos;
+            </label>
+          </div>
+        </div>
+      );
+
+    case "divider":
+      return (
+        <div>
+          <label className="text-[10px] font-bold text-slate-500 uppercase">Style de ligne</label>
+          <div className="flex gap-1 mt-1">
+            {[
+              { id: "solid", label: "Pleine" },
+              { id: "dashed", label: "Pointillés" },
+              { id: "double", label: "Double" },
+            ].map((d) => (
+              <button
+                key={d.id}
+                type="button"
+                onClick={() => update({ style: d.id })}
+                className={`flex-1 py-1 text-[10px] font-bold rounded-md border ${
+                  (el.style || "solid") === d.id
+                    ? "bg-indigo-600 text-white border-indigo-600"
+                    : "bg-slate-50 border-slate-200 text-slate-600"
+                }`}
+              >
+                {d.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+
+    default:
+      return null;
+  }
 }

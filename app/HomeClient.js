@@ -4974,8 +4974,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
   const showTabAnalytics = canViewModule("analytics", effectivePermissions.permissions) && matchesTabQuery(t("dash.analytics", "Analytics"), ["Analytics", "stats", "reports", "metrics", "insights", "charts"]);
   const showTabCommunications = canViewModule("communications", effectivePermissions.permissions) && matchesTabQuery(t("dash.communications", "Communications"), ["Communications", "emails", "broadcast", "messages", "notifications", "newsletter"]);
   const showTabCertificates = canViewModule("certificates", effectivePermissions.permissions) && matchesTabQuery(t("dash.certificates", "Certificates"), ["Certificates", "badges", "diploma", "awards", "accreditation"]);
-  const showTabDocumentDesigner = canViewModule("documents", effectivePermissions.permissions) && matchesTabQuery(t("dash.documentDesigner", "Document Studio"), ["Document Studio", "document studio", "designer", "creator", "templates", "documents", "contracts", "proposals", "flyers", "decks"]);
-  const showTabDocuments = canViewModule("documents", effectivePermissions.permissions) && matchesTabQuery(t("dash.documents", "Documents & Assets"), ["Documents & Assets", "documents", "files", "assets", "uploads", "storage", "pdf"]);
+  const showTabDocumentDesigner = canViewModule("documents", effectivePermissions.permissions) && matchesTabQuery(t("dash.documentDesigner", "Document Studio"), ["Document Studio", "document studio", "designer", "creator", "templates", "documents", "contracts", "proposals", "flyers", "decks", "files", "assets"]);
   const showTabDevelopers = canViewModule("developers", effectivePermissions.permissions) && matchesTabQuery(t("dash.developers", "Developers & API"), ["Developers & API", "developers", "api", "webhooks", "keys", "tokens", "code"]);
 
   const hasAdminAccess = !!(
@@ -4992,7 +4991,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
     showTabOverview || showTabEventDetails || showTabCalendar || showTabOpportunities ||
     showGroupParticipants || showGroupCompanies || showTabFloorPlan || showTabTickets ||
     showTabPortal || showTabForms || showTabRsvp || showGroupLogistics || showTabInfluencers ||
-    showTabInvoicing || showTabDocumentDesigner || showTabDocuments || showTabCheckIn || showTabTeam || showTabAnalytics ||
+    showTabInvoicing || showTabDocumentDesigner || showTabCheckIn || showTabTeam || showTabAnalytics ||
     showTabCommunications || showTabCertificates || showTabDevelopers || showTabAdmin
   );
 
@@ -5585,29 +5584,14 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
             {showTabDocumentDesigner && (
               <button 
                 onClick={() => { setSelectedDesignedDoc(null); setCurrentView("document-designer"); }}
-                className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "document-designer" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+                className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${["document-designer", "documents"].includes(currentView) ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
               >
                 <div className="flex items-center gap-2">
-                  <FileEdit size={14} className={`shrink-0 ${currentView === "document-designer" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
+                  <FileText size={14} className={`shrink-0 ${["document-designer", "documents"].includes(currentView) ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
                   <span>{t("dash.documentDesigner", "Document Studio")}</span>
                 </div>
-                <span className={`text-[9px] font-extrabold py-0.5 px-2 rounded-full uppercase tracking-wider ${currentView === "document-designer" ? "bg-white/25 text-white" : "bg-slate-100 text-slate-500"}`}>
+                <span className={`text-[9px] font-extrabold py-0.5 px-2 rounded-full uppercase tracking-wider ${["document-designer", "documents"].includes(currentView) ? "bg-white/25 text-white" : "bg-slate-100 text-slate-500"}`}>
                   A4
-                </span>
-              </button>
-            )}
-
-            {showTabDocuments && (
-              <button 
-                onClick={() => setCurrentView("documents")}
-                className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "documents" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
-              >
-                <div className="flex items-center gap-2">
-                  <Files size={14} className={`shrink-0 ${currentView === "documents" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
-                  <span>{t("dash.documents", "Documents & Assets")}</span>
-                </div>
-                <span className={`text-[9px] font-extrabold py-0.5 px-2 rounded-full ${currentView === "documents" ? "bg-white/25 text-white" : "bg-slate-100 text-slate-500"}`}>
-                  {documents.length}
                 </span>
               </button>
             )}
@@ -6071,50 +6055,22 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
             />
           )}
 
-          {currentView === "document-designer" && (
+          {["document-designer", "documents"].includes(currentView) && (
             <DocumentDesigner
               initialDocument={selectedDesignedDoc}
               activeEventId={activeEventId}
               eventDetails={eventDetails}
               currentUser={currentUser}
-              speakers={sessions.flatMap(s => s.speakers || []).filter(Boolean)}
-              sponsors={sponsors}
-              exhibitors={exhibitors}
-              organizations={organizations}
-              opportunities={opportunities}
-              onBack={() => setCurrentView("documents")}
+              documents={documents}
+              onBack={() => setCurrentView("home")}
               onSaveDocument={async (designedDoc) => {
                 if (typeof window !== "undefined") {
                   localStorage.setItem(`eventzone_designed_doc_${designedDoc.id}`, JSON.stringify(designedDoc));
                 }
               }}
               onSaveToDocuments={handleSaveDocument}
-              effectivePermissions={effectivePermissions}
-            />
-          )}
-
-          {currentView === "documents" && (
-            <DocumentsView
-              documents={documents}
-              onSaveDocument={handleSaveDocument}
               onDeleteDocument={handleDeleteDocument}
-              onTogglePin={handleTogglePinDocument}
-              onUploadFile={uploadFileToBucket}
-              activeEventId={activeEventId}
-              eventDetails={eventDetails}
               effectivePermissions={effectivePermissions}
-              onOpenDesigner={() => {
-                setSelectedDesignedDoc(null);
-                setCurrentView("document-designer");
-              }}
-              onEditDesignedDocument={(doc) => {
-                setSelectedDesignedDoc(doc.designedDocumentData || null);
-                setCurrentView("document-designer");
-              }}
-              onRefreshData={async () => {
-                const fresh = await fetchDocuments(activeEventId);
-                if (fresh) setDocuments(fresh);
-              }}
             />
           )}
 

@@ -3,62 +3,56 @@
 
 import React, { useMemo } from "react";
 import {
-  Calendar, MapPin, Users, Mic2, Building2, Share2, Sparkles,
-  CheckCircle2, Clock, ShieldCheck, Check, Globe, Tv,
-  TrendingUp, Award, Quote, FileText, CheckSquare, Mail, Phone,
-  Layers, Package, Coffee, Car, Store
-} from "lucide-react";
-import {
-  COLOR_THEMES,
-  FONT_PAIRINGS,
-  CALLIGRAPHY_SIGNATURES,
+  FONT_OPTIONS,
+  COLOR_OPTIONS,
   interpolateDocumentVariables,
 } from "../lib/documentDesignerPresets";
 
-// Icon lookup dictionary
-const ICON_MAP = {
-  Users, Mic2, Building2, Share2, Sparkles, CheckCircle2,
-  Clock, ShieldCheck, Check, Globe, Tv, TrendingUp, Award,
-  Calendar, MapPin, Mail, Phone, Layers, Package, Coffee, Car, Store
-};
-
-function renderBlockIcon(iconName, className = "w-4 h-4") {
-  const IconComponent = ICON_MAP[iconName] || Sparkles;
-  return <IconComponent className={className} />;
+/**
+ * Print helper
+ */
+export function printVisualDocument() {
+  if (typeof window !== "undefined") {
+    window.print();
+  }
 }
 
 /**
  * A4VisualDocumentSheet
- * Pixel-perfect A4 Visual Document Renderer
- *
+ * Clean, pixel-accurate A4 renderer for Eventzone Document Studio.
  * Dimensions:
- * - Portrait: 210mm x 297mm (Approx 794px x 1123px at 96 DPI)
- * - Landscape: 297mm x 210mm (Approx 1123px x 794px at 96 DPI)
+ * - Portrait: 210mm x 297mm (794px x 1123px at 96 DPI)
+ * - Landscape: 297mm x 210mm (1123px x 794px at 96 DPI)
  */
 export default function A4VisualDocumentSheet({
   doc = {},
   zoom = 1,
-  selectedBlockId = null,
-  onSelectBlock = null,
+  selectedElementId = null,
+  onSelectElement = null,
   isPrintView = false,
   className = "",
 }) {
-  const theme = useMemo(() => {
-    return COLOR_THEMES.find((t) => t.id === doc.themeId) || COLOR_THEMES[0];
-  }, [doc.themeId]);
+  const isLandscape = doc?.orientation === "landscape";
+  const elements = doc?.elements || [];
+  const variables = doc?.variables || {};
 
-  const fontPairing = useMemo(() => {
-    return FONT_PAIRINGS.find((f) => f.id === doc.fontPairingId) || FONT_PAIRINGS[0];
-  }, [doc.fontPairingId]);
+  // Resolve active theme color
+  const activeColor = useMemo(() => {
+    return (
+      COLOR_OPTIONS.find((c) => c.id === doc?.colorId) ||
+      COLOR_OPTIONS[0]
+    );
+  }, [doc?.colorId]);
 
-  const calligraphy = useMemo(() => {
-    return CALLIGRAPHY_SIGNATURES.find((c) => c.id === doc.calligraphySignatureId) || CALLIGRAPHY_SIGNATURES[0];
-  }, [doc.calligraphySignatureId]);
+  // Resolve active font family
+  const activeFont = useMemo(() => {
+    return (
+      FONT_OPTIONS.find((f) => f.id === doc?.fontId) ||
+      FONT_OPTIONS[0]
+    );
+  }, [doc?.fontId]);
 
-  const isLandscape = doc.orientation === "landscape";
-
-  const blocks = doc.blocks || [];
-  const variables = doc.variables || {};
+  const primaryColor = activeColor.primary;
 
   return (
     <div
@@ -67,13 +61,13 @@ export default function A4VisualDocumentSheet({
         transform: !isPrintView && zoom !== 1 ? `scale(${zoom})` : undefined,
       }}
     >
-      {/* Dynamic Google Fonts injection */}
+      {/* Global CSS for print and Google fonts */}
       <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&family=Montserrat:wght@600;700;800;900&family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600;1,700&family=Great+Vibes&family=Alex+Brush&family=Allura&family=Parisienne&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Playfair+Display:ital,wght@0,500;0,600;0,700;0,800;1,400&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,400;1,600&family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
 
-        .a4-document-page {
-          width: ${isLandscape ? "297mm" : "210mm"};
-          min-height: ${isLandscape ? "210mm" : "297mm"};
+        .a4-paper-sheet {
+          width: ${isLandscape ? "1123px" : "794px"};
+          min-height: ${isLandscape ? "794px" : "1123px"};
           box-sizing: border-box;
           background-color: #ffffff;
         }
@@ -81,7 +75,7 @@ export default function A4VisualDocumentSheet({
         @media print {
           @page {
             size: ${isLandscape ? "A4 landscape" : "A4 portrait"};
-            margin: 0;
+            margin: 12mm;
           }
           body {
             margin: 0 !important;
@@ -90,11 +84,12 @@ export default function A4VisualDocumentSheet({
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
-          .a4-document-page {
+          .a4-paper-sheet {
             box-shadow: none !important;
             margin: 0 !important;
             width: 100% !important;
             min-height: 100vh !important;
+            padding: 0 !important;
             page-break-after: avoid !important;
             page-break-inside: avoid !important;
           }
@@ -104,485 +99,82 @@ export default function A4VisualDocumentSheet({
         }
       `}</style>
 
-      {/* A4 Paper Canvas */}
+      {/* The Physical A4 Paper */}
       <div
-        id="a4-visual-document-sheet"
-        className="a4-document-page relative mx-auto bg-white text-slate-800 shadow-2xl flex flex-col justify-between overflow-hidden"
+        id="a4-document-root"
+        className="a4-paper-sheet relative mx-auto bg-white text-slate-800 shadow-xl rounded-sm p-12 md:p-14 flex flex-col justify-between"
         style={{
-          fontFamily: fontPairing.bodyFont,
-          borderColor: theme.borderColor,
+          fontFamily: activeFont.font,
+          color: "#1e293b",
         }}
       >
-        {/* Subtle Watermark Overlay */}
-        {doc.showWatermark && (
-          <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden opacity-[0.035] z-0">
-            <span
-              className="text-[120px] font-black uppercase tracking-widest -rotate-45 select-none"
-              style={{ color: theme.primary }}
-            >
-              Eventzone
-            </span>
-          </div>
-        )}
-
-        {/* Decorative Top Accent Bar */}
+        {/* Top colored accent bar */}
         <div
-          className="w-full h-2.5 shrink-0"
-          style={{
-            background: `linear-gradient(90deg, ${theme.gradientFrom}, ${theme.gradientTo})`,
-          }}
+          className="absolute top-0 left-0 right-0 h-1.5"
+          style={{ backgroundColor: primaryColor }}
         />
 
-        {/* Inner Content Area */}
-        <div className="p-8 sm:p-10 md:p-12 flex-1 flex flex-col justify-between relative z-10">
-          <div>
-            {/* 1. Header / Letterhead */}
-            {doc.showLetterhead && (
-              <div className="flex items-center justify-between pb-6 mb-6 border-b border-slate-100">
-                <div className="flex items-center gap-4">
-                  {doc.organizerLogo ? (
-                    <img
-                      src={doc.organizerLogo}
-                      alt="Organizer Logo"
-                      className="h-12 max-w-[160px] object-contain"
-                    />
-                  ) : (
-                    <div
-                      className="h-10 px-3 rounded-lg flex items-center justify-center font-black text-white text-sm"
-                      style={{ background: theme.primary }}
-                    >
-                      {doc.organizerName ? doc.organizerName.substring(0, 3).toUpperCase() : "EZ"}
-                    </div>
-                  )}
-                  <div>
-                    <h2
-                      className="text-base font-extrabold tracking-tight text-slate-900 leading-tight"
-                      style={{ fontFamily: fontPairing.titleFont }}
-                    >
-                      {doc.organizerName || "Eventzone Organizing Body"}
-                    </h2>
-                    <p className="text-[11px] font-medium text-slate-500 mt-0.5">
-                      {doc.organizerAddress || "Alger, Algérie"}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="text-right">
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wider uppercase mb-1"
-                    style={{ backgroundColor: theme.primaryLight, color: theme.primary }}
-                  >
-                    <span>{doc.category || "Official Document"}</span>
-                  </div>
-                  <p className="text-[10px] text-slate-500 font-medium">
-                    {doc.organizerTaxId || doc.organizerContact}
-                  </p>
-                </div>
+        {/* Content Body */}
+        <div className="flex-1 space-y-7">
+          {elements.length === 0 ? (
+            // Empty Canvas State
+            <div className="h-[750px] flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-2xl p-10 text-center">
+              <div
+                className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 transition-transform hover:scale-105"
+                style={{ backgroundColor: activeColor.light, color: primaryColor }}
+              >
+                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
               </div>
-            )}
-
-            {/* 2. Dynamic Content Blocks */}
-            <div className="space-y-6">
-              {blocks.map((block) => {
-                const isSelected = selectedBlockId === block.id;
-
-                return (
-                  <div
-                    key={block.id}
-                    onClick={() => onSelectBlock && onSelectBlock(block.id)}
-                    className={`relative transition-all duration-150 ${
-                      onSelectBlock ? "cursor-pointer hover:ring-2 hover:ring-blue-400/50 rounded-xl" : ""
-                    } ${isSelected ? "ring-2 ring-blue-600 rounded-xl bg-blue-50/10 p-2" : ""}`}
-                  >
-                    {/* Render Specific Block Type */}
-                    {block.type === "hero_banner" && (
-                      <div
-                        className="rounded-2xl p-6 md:p-8 text-white relative overflow-hidden shadow-sm"
-                        style={{
-                          background: `linear-gradient(135deg, ${theme.gradientFrom}, ${theme.gradientTo})`,
-                        }}
-                      >
-                        {/* Background subtle geometric shapes */}
-                        <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-white/10 blur-xl pointer-events-none" />
-                        <div className="absolute -bottom-10 -left-10 w-36 h-36 rounded-full bg-black/10 blur-lg pointer-events-none" />
-
-                        <div className="relative z-10">
-                          {block.badge && (
-                            <span className="inline-block px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-widest bg-white/20 text-white backdrop-blur-xs mb-3 border border-white/20">
-                              {interpolateDocumentVariables(block.badge, variables)}
-                            </span>
-                          )}
-                          <h1
-                            className="text-2xl sm:text-3xl font-black tracking-tight leading-tight mb-2 text-white"
-                            style={{ fontFamily: fontPairing.titleFont }}
-                          >
-                            {interpolateDocumentVariables(block.title, variables)}
-                          </h1>
-                          {block.subtitle && (
-                            <p className="text-sm sm:text-base text-white/90 font-medium max-w-2xl leading-relaxed mb-4">
-                              {interpolateDocumentVariables(block.subtitle, variables)}
-                            </p>
-                          )}
-
-                          <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-white/80 pt-2 border-t border-white/15">
-                            {block.date && (
-                              <div className="flex items-center gap-1.5">
-                                <Calendar className="w-3.5 h-3.5 text-white" />
-                                <span>{interpolateDocumentVariables(block.date, variables)}</span>
-                              </div>
-                            )}
-                            {block.location && (
-                              <div className="flex items-center gap-1.5">
-                                <MapPin className="w-3.5 h-3.5 text-white" />
-                                <span>{interpolateDocumentVariables(block.location, variables)}</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {block.type === "executive_summary" && (
-                      <div
-                        className="p-5 rounded-xl border-l-4 bg-slate-50/80 border-slate-200"
-                        style={{ borderLeftColor: theme.primary }}
-                      >
-                        {block.heading && (
-                          <h3
-                            className="text-xs font-bold uppercase tracking-wider mb-2 text-slate-700"
-                            style={{ fontFamily: fontPairing.accentFont, color: theme.primary }}
-                          >
-                            {interpolateDocumentVariables(block.heading, variables)}
-                          </h3>
-                        )}
-                        <p className="text-sm text-slate-700 leading-relaxed font-normal whitespace-pre-line">
-                          {interpolateDocumentVariables(block.content, variables)}
-                        </p>
-                      </div>
-                    )}
-
-                    {block.type === "stats_grid" && (
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        {(block.items || []).map((item, idx) => (
-                          <div
-                            key={idx}
-                            className="p-4 rounded-xl border border-slate-100 bg-white shadow-2xs text-center flex flex-col items-center justify-center transition-all"
-                          >
-                            <div
-                              className="w-8 h-8 rounded-lg flex items-center justify-center mb-2"
-                              style={{ backgroundColor: theme.primaryLight, color: theme.primary }}
-                            >
-                              {renderBlockIcon(item.icon, "w-4 h-4")}
-                            </div>
-                            <span
-                              className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight"
-                              style={{ fontFamily: fontPairing.titleFont }}
-                            >
-                              {item.number}
-                            </span>
-                            <span className="text-[11px] font-medium text-slate-500 mt-0.5 leading-snug">
-                              {item.label}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {block.type === "content_section" && (
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          {block.badge && (
-                            <span
-                              className="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wide"
-                              style={{ backgroundColor: theme.badgeBg, color: theme.badgeText }}
-                            >
-                              {block.badge}
-                            </span>
-                          )}
-                          {block.heading && (
-                            <h2
-                              className="text-base font-extrabold text-slate-900 tracking-tight"
-                              style={{ fontFamily: fontPairing.titleFont }}
-                            >
-                              {interpolateDocumentVariables(block.heading, variables)}
-                            </h2>
-                          )}
-                        </div>
-                        <div className="text-sm text-slate-600 leading-relaxed whitespace-pre-line font-normal">
-                          {interpolateDocumentVariables(block.content, variables)}
-                        </div>
-                      </div>
-                    )}
-
-                    {block.type === "tiers_grid" && (
-                      <div className="space-y-3">
-                        {block.heading && (
-                          <h3
-                            className="text-sm font-extrabold text-slate-900 tracking-tight"
-                            style={{ fontFamily: fontPairing.titleFont }}
-                          >
-                            {block.heading}
-                          </h3>
-                        )}
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                          {(block.tiers || []).map((tier, tidx) => (
-                            <div
-                              key={tidx}
-                              className={`p-4 rounded-xl border flex flex-col justify-between transition-all ${
-                                tier.featured
-                                  ? "border-2 shadow-xs bg-white"
-                                  : "border-slate-200 bg-slate-50/50"
-                              }`}
-                              style={{
-                                borderColor: tier.featured ? theme.primary : undefined,
-                              }}
-                            >
-                              <div>
-                                <div className="flex items-center justify-between mb-1">
-                                  <span
-                                    className="text-xs font-black tracking-tight"
-                                    style={{ color: tier.featured ? theme.primary : "#1e293b" }}
-                                  >
-                                    {tier.name}
-                                  </span>
-                                  {tier.badge && (
-                                    <span
-                                      className="text-[9px] font-extrabold px-1.5 py-0.5 rounded-full"
-                                      style={{
-                                        backgroundColor: tier.featured ? theme.badgeBg : "#e2e8f0",
-                                        color: tier.featured ? theme.badgeText : "#475569",
-                                      }}
-                                    >
-                                      {tier.badge}
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="text-base font-black text-slate-900 mb-3">
-                                  {tier.price}
-                                </div>
-                                <ul className="space-y-1.5 text-[11px] text-slate-600">
-                                  {(tier.perks || []).map((perk, pidx) => (
-                                    <li key={pidx} className="flex items-start gap-1.5">
-                                      <CheckCircle2
-                                        className="w-3.5 h-3.5 shrink-0 mt-0.5"
-                                        style={{ color: theme.primary }}
-                                      />
-                                      <span className="leading-tight">{perk}</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {block.type === "schedule_table" && (
-                      <div className="space-y-2">
-                        {block.heading && (
-                          <h3
-                            className="text-sm font-extrabold text-slate-900 tracking-tight"
-                            style={{ fontFamily: fontPairing.titleFont }}
-                          >
-                            {block.heading}
-                          </h3>
-                        )}
-                        <div className="border border-slate-200 rounded-xl overflow-hidden text-xs">
-                          <table className="w-full border-collapse">
-                            <thead>
-                              <tr className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200 text-left">
-                                <th className="p-2.5 w-32">Time</th>
-                                <th className="p-2.5">Session / Activity</th>
-                                <th className="p-2.5 w-36">Hall / Room</th>
-                                <th className="p-2.5 w-40">Speaker / Host</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                              {(block.sessions || []).map((sess, sidx) => (
-                                <tr key={sidx} className="hover:bg-slate-50/50">
-                                  <td className="p-2.5 font-bold text-slate-900 whitespace-nowrap">
-                                    {sess.time}
-                                  </td>
-                                  <td className="p-2.5 font-semibold text-slate-800">
-                                    {sess.title}
-                                  </td>
-                                  <td className="p-2.5 text-slate-500">
-                                    {sess.stage}
-                                  </td>
-                                  <td className="p-2.5 font-medium text-slate-600">
-                                    {interpolateDocumentVariables(sess.speaker, variables)}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    )}
-
-                    {block.type === "quote_callout" && (
-                      <div
-                        className="p-6 rounded-2xl bg-linear-to-r from-slate-50 to-white border border-slate-100 relative my-2"
-                        style={{ borderLeft: `4px solid ${theme.primary}` }}
-                      >
-                        <Quote
-                          className="w-8 h-8 opacity-15 absolute top-4 right-4"
-                          style={{ color: theme.primary }}
-                        />
-                        <blockquote
-                          className="text-sm italic font-medium text-slate-700 leading-relaxed mb-3"
-                          style={{ fontFamily: fontPairing.accentFont }}
-                        >
-                          “{interpolateDocumentVariables(block.quote, variables)}”
-                        </blockquote>
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="w-2 h-2 rounded-full"
-                            style={{ backgroundColor: theme.primary }}
-                          />
-                          <div>
-                            <span className="text-xs font-bold text-slate-900">
-                              {interpolateDocumentVariables(block.author, variables)}
-                            </span>
-                            {block.authorTitle && (
-                              <span className="text-[11px] text-slate-500 ml-1.5 font-normal">
-                                • {interpolateDocumentVariables(block.authorTitle, variables)}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {block.type === "terms_clauses" && (
-                      <div className="space-y-3">
-                        {block.heading && (
-                          <h3
-                            className="text-sm font-extrabold text-slate-900 tracking-tight"
-                            style={{ fontFamily: fontPairing.titleFont }}
-                          >
-                            {block.heading}
-                          </h3>
-                        )}
-                        <div className="space-y-2.5">
-                          {(block.clauses || []).map((clause, cidx) => (
-                            <div key={cidx} className="text-xs leading-relaxed">
-                              <h4 className="font-bold text-slate-800 mb-0.5">
-                                {clause.title}
-                              </h4>
-                              <p className="text-slate-600 whitespace-pre-line font-normal text-[11px]">
-                                {interpolateDocumentVariables(clause.text, variables)}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {block.type === "signature_block" && (
-                      <div className="pt-4 border-t border-slate-200 mt-6">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-end">
-                          {/* Signatory 1 (Organizer) */}
-                          <div className="space-y-2">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                              Authorized Signatory
-                            </span>
-                            <div className="h-16 flex items-end">
-                              <span
-                                className="text-2xl text-slate-800 select-none"
-                                style={{ fontFamily: calligraphy.fontFamily }}
-                              >
-                                {interpolateDocumentVariables(block.signatory1Name, variables)}
-                              </span>
-                            </div>
-                            <div className="w-full h-px bg-slate-300" />
-                            <div className="text-[11px]">
-                              <p className="font-bold text-slate-900">
-                                {interpolateDocumentVariables(block.signatory1Name, variables)}
-                              </p>
-                              <p className="text-slate-500 font-medium">
-                                {block.signatory1Title}
-                              </p>
-                              <p className="text-slate-400 text-[10px]">
-                                {block.signatory1Org}
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Signatory 2 or Stamp */}
-                          <div className="flex flex-col items-start sm:items-end space-y-2">
-                            {doc.showStamp ? (
-                              <div className="flex flex-col items-center">
-                                {/* Official Stamp & Seal Graphic */}
-                                <div
-                                  className="w-24 h-24 rounded-full border-2 border-dashed flex flex-col items-center justify-center p-2 text-center rotate-[-8deg] shadow-2xs select-none transition-transform"
-                                  style={{
-                                    borderColor: theme.primary,
-                                    color: theme.primary,
-                                    backgroundColor: theme.primaryLight,
-                                  }}
-                                >
-                                  <ShieldCheck className="w-5 h-5 mb-0.5" />
-                                  <span className="text-[7.5px] font-black uppercase tracking-tight leading-tight">
-                                    {doc.stampText || "Eventzone Certified"}
-                                  </span>
-                                  <span className="text-[7px] font-bold mt-0.5 opacity-80">
-                                    {variables.current_date || "2026"}
-                                  </span>
-                                </div>
-                                <span className="text-[9px] text-slate-400 font-medium mt-1">
-                                  Cachet & Sceau Officiel
-                                </span>
-                              </div>
-                            ) : block.signatory2Name ? (
-                              <div className="w-full space-y-2">
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block text-right">
-                                  Partner Signatory
-                                </span>
-                                <div className="h-16 flex items-end justify-end">
-                                  <span
-                                    className="text-2xl text-slate-800 select-none"
-                                    style={{ fontFamily: calligraphy.fontFamily }}
-                                  >
-                                    {interpolateDocumentVariables(block.signatory2Name, variables)}
-                                  </span>
-                                </div>
-                                <div className="w-full h-px bg-slate-300" />
-                                <div className="text-[11px] text-right">
-                                  <p className="font-bold text-slate-900">
-                                    {interpolateDocumentVariables(block.signatory2Name, variables)}
-                                  </p>
-                                  <p className="text-slate-500 font-medium">
-                                    {block.signatory2Title}
-                                  </p>
-                                  <p className="text-slate-400 text-[10px]">
-                                    {block.signatory2Org}
-                                  </p>
-                                </div>
-                              </div>
-                            ) : null}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+              <h3 className="text-xl font-bold text-slate-800 mb-2">
+                Feuille A4 Vierge
+              </h3>
+              <p className="text-sm text-slate-500 max-w-md leading-relaxed">
+                Votre document est actuellement vide. Utilisez les boutons du panneau de gauche pour ajouter vos éléments : en-tête, titre, texte, encadré, tableau ou signatures.
+              </p>
             </div>
+          ) : (
+            // Render Elements sequentially
+            elements.map((element, idx) => {
+              const isSelected = selectedElementId === element.id;
+
+              return (
+                <div
+                  key={element.id || `el-${idx}`}
+                  onClick={() => onSelectElement && onSelectElement(element.id)}
+                  className={`relative group transition-all rounded-lg p-2 -mx-2 cursor-pointer ${
+                    isSelected
+                      ? "ring-2 ring-blue-500/80 bg-blue-50/20"
+                      : "hover:bg-slate-50/70"
+                  }`}
+                >
+                  {renderElementContent(element, {
+                    primaryColor,
+                    lightColor: activeColor.light,
+                    borderColor: activeColor.border,
+                    variables,
+                  })}
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Minimalist Professional Footer */}
+        <div className="mt-10 pt-4 border-t border-slate-200/80 flex items-center justify-between text-[11px] text-slate-400">
+          <div className="flex items-center gap-2 font-medium">
+            <span
+              className="w-2 h-2 rounded-full inline-block"
+              style={{ backgroundColor: primaryColor }}
+            />
+            <span>{doc?.name || "Document Officiel"}</span>
           </div>
-
-          {/* 3. Document Footer */}
-          <div className="pt-6 mt-8 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-slate-600">Eventzone</span>
-              <span>•</span>
-              <span>Document ID: #{doc.id?.slice(-8) || "EZ-DOC-26"}</span>
-              <span>•</span>
-              <span>Confidentiel & Usage Réservé</span>
-            </div>
-            <div>
-              <span>Page 1 / 1</span>
-            </div>
+          <div>
+            <span>Généré avec Eventzone Document Studio</span>
+          </div>
+          <div>
+            <span>Page 1 / 1</span>
           </div>
         </div>
       </div>
@@ -591,83 +183,308 @@ export default function A4VisualDocumentSheet({
 }
 
 /**
- * Print Document Helper function
- * Opens a dedicated popup with exact CSS print styles and calls window.print()
+ * Render single element switch
  */
-export function printVisualDocument(doc = {}) {
-  if (typeof window === "undefined") return;
+function renderElementContent(element, theme) {
+  const { primaryColor, lightColor, borderColor, variables } = theme;
 
-  const targetElement = document.getElementById("a4-visual-document-sheet");
-  if (!targetElement) {
-    window.print();
-    return;
+  switch (element.type) {
+    case "header": {
+      const orgName = interpolateDocumentVariables(element.orgName || "Organisation", variables);
+      const subtitle = interpolateDocumentVariables(element.subtitle || "", variables);
+      const date = interpolateDocumentVariables(element.date || "", variables);
+      const ref = interpolateDocumentVariables(element.ref || "", variables);
+
+      return (
+        <div className="border-b-2 pb-5 pt-1" style={{ borderColor: primaryColor }}>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-4">
+              {element.logo ? (
+                <img
+                  src={element.logo}
+                  alt={orgName}
+                  className="w-16 h-16 object-contain rounded-lg p-1 bg-white border border-slate-100"
+                />
+              ) : (
+                <div
+                  className="w-14 h-14 rounded-xl flex items-center justify-center font-black text-xl text-white shadow-xs"
+                  style={{ backgroundColor: primaryColor }}
+                >
+                  {orgName.charAt(0) || "E"}
+                </div>
+              )}
+              <div>
+                <h2 className="text-xl font-black tracking-tight text-slate-900 uppercase">
+                  {orgName}
+                </h2>
+                {subtitle && (
+                  <p className="text-xs font-semibold text-slate-500 mt-0.5">
+                    {subtitle}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="text-right shrink-0">
+              {date && (
+                <p className="text-xs font-semibold text-slate-600">
+                  {date}
+                </p>
+              )}
+              {ref && (
+                <span
+                  className="inline-block mt-1 text-[11px] font-mono font-bold px-2 py-0.5 rounded-sm"
+                  style={{ backgroundColor: lightColor, color: primaryColor }}
+                >
+                  {ref}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    case "heading": {
+      const text = interpolateDocumentVariables(element.text || "Titre du document", variables);
+      const subtitle = interpolateDocumentVariables(element.subtitle || "", variables);
+
+      const sizeClasses = {
+        sm: "text-lg font-bold",
+        md: "text-xl font-bold",
+        lg: "text-2xl font-black",
+        xl: "text-3xl font-black tracking-tight",
+      }[element.size || "lg"];
+
+      const alignClass = {
+        left: "text-left",
+        center: "text-center",
+        right: "text-right",
+      }[element.align || "left"];
+
+      return (
+        <div className={`py-1 ${alignClass}`}>
+          <h1 className={`${sizeClasses} text-slate-900 leading-tight`}>
+            {text}
+          </h1>
+          {subtitle && (
+            <p className="text-sm font-medium text-slate-500 mt-1">
+              {subtitle}
+            </p>
+          )}
+        </div>
+      );
+    }
+
+    case "paragraph": {
+      const text = interpolateDocumentVariables(element.text || "Rédigez votre texte ici...", variables);
+
+      const sizeClasses = {
+        sm: "text-xs leading-relaxed",
+        md: "text-sm leading-relaxed",
+        lg: "text-base leading-relaxed",
+      }[element.size || "md"];
+
+      const alignClass = {
+        left: "text-left",
+        center: "text-center",
+        justify: "text-justify",
+        right: "text-right",
+      }[element.align || "left"];
+
+      return (
+        <div className={`py-1 ${alignClass}`}>
+          <div className={`${sizeClasses} text-slate-700 whitespace-pre-line font-normal`}>
+            {text}
+          </div>
+        </div>
+      );
+    }
+
+    case "callout": {
+      const title = interpolateDocumentVariables(element.title || "", variables);
+      const text = interpolateDocumentVariables(element.text || "", variables);
+
+      // Color scheme for callout
+      const calloutStyles = {
+        slate: { bg: "#f8fafc", border: "#cbd5e1", text: "#1e293b", title: "#0f172a" },
+        blue: { bg: "#eff6ff", border: "#bfdbfe", text: "#1e40af", title: "#1e3a8a" },
+        emerald: { bg: "#ecfdf5", border: "#a7f3d0", text: "#065f46", title: "#064e3b" },
+        amber: { bg: "#fffbeb", border: "#fde68a", text: "#92400e", title: "#78350f" },
+        indigo: { bg: lightColor, border: borderColor, text: "#3730a3", title: primaryColor },
+      }[element.color || "slate"] || { bg: "#f8fafc", border: "#cbd5e1", text: "#1e293b", title: "#0f172a" };
+
+      return (
+        <div
+          className="rounded-xl p-5 border-l-4 my-2"
+          style={{
+            backgroundColor: calloutStyles.bg,
+            borderColor: calloutStyles.border,
+            borderLeftColor: primaryColor,
+          }}
+        >
+          {title && (
+            <h4
+              className="text-xs font-black uppercase tracking-wider mb-1.5"
+              style={{ color: calloutStyles.title }}
+            >
+              {title}
+            </h4>
+          )}
+          <p
+            className="text-sm font-medium leading-relaxed whitespace-pre-line"
+            style={{ color: calloutStyles.text }}
+          >
+            {text}
+          </p>
+        </div>
+      );
+    }
+
+    case "info_grid": {
+      const items = element.items || [];
+      return (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 my-2">
+          {items.map((item, i) => (
+            <div
+              key={i}
+              className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-3.5 text-center"
+            >
+              <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                {interpolateDocumentVariables(item.label || "", variables)}
+              </div>
+              <div
+                className="text-sm font-bold truncate"
+                style={{ color: primaryColor }}
+              >
+                {interpolateDocumentVariables(item.value || "", variables)}
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    case "table": {
+      const title = interpolateDocumentVariables(element.title || "", variables);
+      const headers = element.headers || [];
+      const rows = element.rows || [];
+
+      return (
+        <div className="my-2 space-y-2">
+          {title && (
+            <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
+              {title}
+            </h4>
+          )}
+          <div className="overflow-hidden border border-slate-200 rounded-xl">
+            <table className="w-full text-left text-xs">
+              <thead style={{ backgroundColor: lightColor }}>
+                <tr>
+                  {headers.map((h, i) => (
+                    <th
+                      key={i}
+                      className="px-3.5 py-2.5 font-bold uppercase tracking-wider text-[11px]"
+                      style={{ color: primaryColor }}
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 bg-white">
+                {rows.map((row, rIdx) => (
+                  <tr key={rIdx} className={rIdx % 2 === 1 ? "bg-slate-50/50" : ""}>
+                    {row.map((cell, cIdx) => (
+                      <td key={cIdx} className="px-3.5 py-2.5 font-medium text-slate-700">
+                        {interpolateDocumentVariables(cell || "", variables)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
+
+    case "signature": {
+      const sign1Name = interpolateDocumentVariables(element.sign1Name || "", variables);
+      const sign1Title = interpolateDocumentVariables(element.sign1Title || "", variables);
+      const sign2Name = interpolateDocumentVariables(element.sign2Name || "", variables);
+      const sign2Title = interpolateDocumentVariables(element.sign2Title || "", variables);
+      const date = interpolateDocumentVariables(element.date || "", variables);
+      const stampText = interpolateDocumentVariables(element.stampText || "Eventzone Approuvé", variables);
+
+      return (
+        <div className="pt-6 mt-4 border-t border-slate-200">
+          <div className="flex items-end justify-between gap-8">
+            {/* Signatory 1 */}
+            <div className="flex-1 text-center">
+              <p className="text-xs font-semibold text-slate-500 mb-10">
+                {sign1Title || "Pour l'Organisateur"}
+              </p>
+              <div className="border-b border-slate-400 w-40 mx-auto mb-1.5" />
+              <p className="text-sm font-bold text-slate-900">{sign1Name || "Nom et Prénom"}</p>
+              {date && <p className="text-[11px] text-slate-400 mt-0.5">{date}</p>}
+            </div>
+
+            {/* Official Cachet Stamp */}
+            {element.showStamp && (
+              <div className="shrink-0 flex flex-col items-center justify-center p-2">
+                <div
+                  className="w-24 h-24 rounded-full border-2 border-dashed flex flex-col items-center justify-center p-2 text-center transform -rotate-6 shadow-xs"
+                  style={{
+                    borderColor: primaryColor,
+                    color: primaryColor,
+                    backgroundColor: lightColor,
+                  }}
+                >
+                  <span className="text-[9px] font-black uppercase tracking-widest">
+                    OFFICIEL
+                  </span>
+                  <span className="text-[11px] font-extrabold leading-tight my-0.5">
+                    {stampText}
+                  </span>
+                  <span className="text-[8px] font-mono font-semibold">
+                    VALIDÉ
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Signatory 2 (Optional) */}
+            {sign2Name || sign2Title ? (
+              <div className="flex-1 text-center">
+                <p className="text-xs font-semibold text-slate-500 mb-10">
+                  {sign2Title || "Pour le Partenaire"}
+                </p>
+                <div className="border-b border-slate-400 w-40 mx-auto mb-1.5" />
+                <p className="text-sm font-bold text-slate-900">{sign2Name || "Nom et Prénom"}</p>
+                {date && <p className="text-[11px] text-slate-400 mt-0.5">{date}</p>}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      );
+    }
+
+    case "divider": {
+      const borderStyles = {
+        solid: "border-solid",
+        dashed: "border-dashed",
+        double: "border-double border-b-4",
+      }[element.style || "solid"];
+
+      return (
+        <div className="py-2">
+          <hr className={`border-slate-200 ${borderStyles}`} />
+        </div>
+      );
+    }
+
+    default:
+      return null;
   }
-
-  const printWindow = window.open("", "_blank", "width=900,height=1200");
-  if (!printWindow) {
-    window.print();
-    return;
-  }
-
-  const isLandscape = doc.orientation === "landscape";
-  const sheetHtml = targetElement.outerHTML;
-
-  const fullHtml = `
-    <!DOCTYPE html>
-    <html lang="fr">
-      <head>
-        <meta charset="utf-8" />
-        <title>${doc.title || "Document"} — Eventzone</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Montserrat:wght@600;700;800;900&family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600;1,700&family=Great+Vibes&family=Alex+Brush&family=Allura&family=Parisienne&display=swap" rel="stylesheet">
-        <script src="https://cdn.tailwindcss.com"></script>
-        <style>
-          @page {
-            size: ${isLandscape ? "A4 landscape" : "A4 portrait"};
-            margin: 0;
-          }
-          body {
-            margin: 0 !important;
-            padding: 0 !important;
-            background: #ffffff !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          .a4-document-page {
-            box-shadow: none !important;
-            margin: 0 auto !important;
-            width: ${isLandscape ? "297mm" : "210mm"} !important;
-            min-height: ${isLandscape ? "210mm" : "297mm"} !important;
-            page-break-after: avoid !important;
-            page-break-inside: avoid !important;
-          }
-        </style>
-      </head>
-      <body>
-        ${sheetHtml}
-        <script>
-          async function executePrint() {
-            try {
-              if (document.fonts && document.fonts.ready) {
-                await document.fonts.ready;
-              }
-            } catch (e) {}
-            setTimeout(() => {
-              window.print();
-            }, 350);
-          }
-          if (document.readyState === 'complete') {
-            executePrint();
-          } else {
-            window.addEventListener('load', executePrint);
-          }
-        </script>
-      </body>
-    </html>
-  `;
-
-  printWindow.document.open();
-  printWindow.document.write(fullHtml);
-  printWindow.document.close();
 }
