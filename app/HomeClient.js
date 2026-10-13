@@ -57,6 +57,7 @@ import FormsView from "../components/FormsView";
 import RSVPView from "../components/RSVPView";
 import LogisticsView from "../components/LogisticsView";
 import DocumentsView from "../components/DocumentsView";
+import DocumentDesigner from "../components/DocumentDesigner";
 import InvoicingView from "../components/InvoicingView";
 import DevelopersView from "../components/DevelopersView";
 import PlatformAdminView from "../components/PlatformAdminView";
@@ -174,6 +175,7 @@ export function resolveActiveEventId() {
 function getModuleKeyFromView(view) {
   if (view === "page-builder") return "event-details";
   if (view === "invoices") return "invoicing";
+  if (view === "document-designer") return "documents";
   return view;
 }
 
@@ -311,7 +313,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
         "home", "auth", "profile", "my-tickets", "events-hub", "create-event", "event-landing", "register", "visitor-portal", "attendee-portal", "overview", "page-builder", "calendar", "event-details", 
         "attendees", "pending", "organizations", "sponsors", 
         "exhibitors", "speakers", "opportunities", "influencers", "tickets", "forms", "rsvp", "logistics", "documents", "check-in", 
-        "my-team", "developers", "analytics", "communications", "certificates", "floor-plan", "portal-settings", "admin", "invoicing", "invoices"
+        "my-team", "developers", "analytics", "communications", "certificates", "floor-plan", "portal-settings", "admin", "invoicing", "invoices", "document-designer"
       ];
       if (viewParam && validViews.includes(viewParam)) {
         return viewParam;
@@ -468,6 +470,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
     }
     return [];
   });
+  const [selectedDesignedDoc, setSelectedDesignedDoc] = useState(null);
   const [showGlobalPublicRsvp, setShowGlobalPublicRsvp] = useState(false);
   const [simulatedMemberId, setSimulatedMemberId] = useState(null);
 
@@ -537,7 +540,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
       "overview", "event-details", "page-builder", "calendar", "speakers", "opportunities", 
       "organizations", "sponsors", "exhibitors", "influencers", "tickets", "attendees", 
       "pending", "rsvp", "floor-plan", "logistics", "documents", "check-in", "forms", 
-      "communications", "certificates", "analytics", "my-team", "developers", "portal-settings", "invoicing", "invoices"
+      "communications", "certificates", "analytics", "my-team", "developers", "portal-settings", "invoicing", "invoices", "document-designer"
     ];
     if (!eventDashboardViews.includes(currentView)) return;
 
@@ -2029,7 +2032,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
             "home", "auth", "profile", "my-tickets", "events-hub", "create-event", "event-landing", "register", "visitor-portal", "attendee-portal", "overview", "page-builder", "calendar", "event-details", 
             "attendees", "pending", "organizations", "sponsors", 
             "exhibitors", "speakers", "opportunities", "influencers", "tickets", "forms", "rsvp", "logistics", "documents", "check-in", 
-            "my-team", "developers", "analytics", "communications", "certificates", "floor-plan", "portal-settings", "admin", "invoicing", "invoices"
+            "my-team", "developers", "analytics", "communications", "certificates", "floor-plan", "portal-settings", "admin", "invoicing", "invoices", "document-designer"
           ];
           if (validViews.includes(viewParam)) {
             setCurrentView(viewParam);
@@ -4971,6 +4974,8 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
   const showTabAnalytics = canViewModule("analytics", effectivePermissions.permissions) && matchesTabQuery(t("dash.analytics", "Analytics"), ["Analytics", "stats", "reports", "metrics", "insights", "charts"]);
   const showTabCommunications = canViewModule("communications", effectivePermissions.permissions) && matchesTabQuery(t("dash.communications", "Communications"), ["Communications", "emails", "broadcast", "messages", "notifications", "newsletter"]);
   const showTabCertificates = canViewModule("certificates", effectivePermissions.permissions) && matchesTabQuery(t("dash.certificates", "Certificates"), ["Certificates", "badges", "diploma", "awards", "accreditation"]);
+  const showTabDocumentDesigner = canViewModule("documents", effectivePermissions.permissions) && matchesTabQuery(t("dash.documentDesigner", "Document Studio"), ["Document Studio", "document studio", "designer", "creator", "templates", "documents", "contracts", "proposals", "flyers", "decks"]);
+  const showTabDocuments = canViewModule("documents", effectivePermissions.permissions) && matchesTabQuery(t("dash.documents", "Documents & Assets"), ["Documents & Assets", "documents", "files", "assets", "uploads", "storage", "pdf"]);
   const showTabDevelopers = canViewModule("developers", effectivePermissions.permissions) && matchesTabQuery(t("dash.developers", "Developers & API"), ["Developers & API", "developers", "api", "webhooks", "keys", "tokens", "code"]);
 
   const hasAdminAccess = !!(
@@ -4987,7 +4992,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
     showTabOverview || showTabEventDetails || showTabCalendar || showTabOpportunities ||
     showGroupParticipants || showGroupCompanies || showTabFloorPlan || showTabTickets ||
     showTabPortal || showTabForms || showTabRsvp || showGroupLogistics || showTabInfluencers ||
-    showTabInvoicing || showTabCheckIn || showTabTeam || showTabAnalytics ||
+    showTabInvoicing || showTabDocumentDesigner || showTabDocuments || showTabCheckIn || showTabTeam || showTabAnalytics ||
     showTabCommunications || showTabCertificates || showTabDevelopers || showTabAdmin
   );
 
@@ -5577,6 +5582,36 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               </button>
             )}
 
+            {showTabDocumentDesigner && (
+              <button 
+                onClick={() => { setSelectedDesignedDoc(null); setCurrentView("document-designer"); }}
+                className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "document-designer" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+              >
+                <div className="flex items-center gap-2">
+                  <Sparkles size={14} className={`shrink-0 ${currentView === "document-designer" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
+                  <span>{t("dash.documentDesigner", "Document Studio")}</span>
+                </div>
+                <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-md ${currentView === "document-designer" ? "bg-white/25 text-white" : "bg-indigo-50 text-indigo-700 border border-indigo-150"}`}>
+                  Visual
+                </span>
+              </button>
+            )}
+
+            {showTabDocuments && (
+              <button 
+                onClick={() => setCurrentView("documents")}
+                className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "documents" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
+              >
+                <div className="flex items-center gap-2">
+                  <Files size={14} className={`shrink-0 ${currentView === "documents" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
+                  <span>{t("dash.documents", "Documents & Assets")}</span>
+                </div>
+                <span className={`text-[9px] font-extrabold py-0.5 px-2 rounded-full ${currentView === "documents" ? "bg-white/25 text-white" : "bg-slate-100 text-slate-500"}`}>
+                  {documents.length}
+                </span>
+              </button>
+            )}
+
             {showTabDevelopers && (
               <button 
                 onClick={() => setCurrentView("developers")}
@@ -5727,6 +5762,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
                 case "logistics":
                   return <LogisticsSkeleton />;
                 case "documents":
+                case "document-designer":
                   return <DocumentsSkeleton />;
                 case "forms":
                   return <FormsSkeleton />;
@@ -6035,6 +6071,28 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
             />
           )}
 
+          {currentView === "document-designer" && (
+            <DocumentDesigner
+              initialDocument={selectedDesignedDoc}
+              activeEventId={activeEventId}
+              eventDetails={eventDetails}
+              currentUser={currentUser}
+              speakers={speakers}
+              sponsors={sponsors}
+              exhibitors={exhibitors}
+              organizations={organizations}
+              opportunities={opportunities}
+              onBack={() => setCurrentView("documents")}
+              onSaveDocument={async (designedDoc) => {
+                if (typeof window !== "undefined") {
+                  localStorage.setItem(`eventzone_designed_doc_${designedDoc.id}`, JSON.stringify(designedDoc));
+                }
+              }}
+              onSaveToDocuments={handleSaveDocument}
+              effectivePermissions={effectivePermissions}
+            />
+          )}
+
           {currentView === "documents" && (
             <DocumentsView
               documents={documents}
@@ -6045,6 +6103,14 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               activeEventId={activeEventId}
               eventDetails={eventDetails}
               effectivePermissions={effectivePermissions}
+              onOpenDesigner={() => {
+                setSelectedDesignedDoc(null);
+                setCurrentView("document-designer");
+              }}
+              onEditDesignedDocument={(doc) => {
+                setSelectedDesignedDoc(doc.designedDocumentData || null);
+                setCurrentView("document-designer");
+              }}
               onRefreshData={async () => {
                 const fresh = await fetchDocuments(activeEventId);
                 if (fresh) setDocuments(fresh);
@@ -6160,7 +6226,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
             />
           )}
 
-          {!["overview", "calendar", "page-builder", "event-details", "forms", "rsvp", "logistics", "documents", "developers", "portal-settings", "attendee-portal", "invoicing", "invoices"].includes(currentView) && currentView !== "floor-plan" && (
+          {!["overview", "calendar", "page-builder", "event-details", "forms", "rsvp", "logistics", "documents", "document-designer", "developers", "portal-settings", "attendee-portal", "invoicing", "invoices"].includes(currentView) && currentView !== "floor-plan" && (
             <GenericTableView 
               viewName={currentView}
               state={{

@@ -94,6 +94,8 @@ export default function DocumentsView({
   eventDetails = {},
   onRefreshData,
   effectivePermissions,
+  onOpenDesigner,
+  onEditDesignedDocument,
 }) {
   const { t, isRTL } = useLanguage();
   const canEdit = canEditModule("documents", effectivePermissions);
@@ -514,6 +516,17 @@ export default function DocumentsView({
             </button>
           )}
 
+          {canEdit && onOpenDesigner && (
+            <button
+              onClick={onOpenDesigner}
+              className="bg-linear-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs sm:text-sm shadow-sm transition-all flex items-center gap-2 cursor-pointer"
+              title="Open Visual Document Studio"
+            >
+              <Sparkles size={15} />
+              <span>Document Studio</span>
+            </button>
+          )}
+
           {canEdit && (
             <button
               onClick={() => {
@@ -814,7 +827,16 @@ export default function DocumentsView({
               : "Upload contracts, presentation templates, floor plans, and guidelines to share with your team and attendees."}
           </p>
           {canEdit && (
-            <button
+            <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+              {onOpenDesigner && (
+                <button
+                  onClick={onOpenDesigner}
+                  className="px-4 py-2 rounded-xl bg-linear-to-r from-indigo-600 to-blue-600 text-white font-bold text-xs hover:from-indigo-700 hover:to-blue-700 transition-all inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <Sparkles size={14} /> Design with Studio
+                </button>
+              )}
+              <button
                 onClick={() => {
                   setEditingDoc(null);
                   setUploadFileObj(null);
@@ -828,11 +850,12 @@ export default function DocumentsView({
                   });
                   setShowUploadModal(true);
                 }}
-                className="px-4 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-700 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition-colors inline-flex items-center gap-1.5 cursor-pointer"
               >
-                <Plus size={14} /> Add First Document
+                <Plus size={14} /> Upload File
               </button>
-            )}
+            </div>
+          )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -851,9 +874,16 @@ export default function DocumentsView({
                   <div className="space-y-2.5">
                     {/* Top row: Category pill on left, Access Badge on right */}
                     <div className="flex items-start justify-between gap-2">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
-                        {doc.category || "General"}
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+                          {doc.category || "General"}
+                        </span>
+                        {doc.isDesignedDocument && (
+                          <span className="text-[9.5px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 inline-flex items-center gap-1">
+                            <Sparkles size={10} /> Studio
+                          </span>
+                        )}
+                      </div>
                       <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${accessCfg.color}`}>
                         {accessCfg.label}
                       </span>
@@ -955,11 +985,17 @@ export default function DocumentsView({
                             </button>
                             {!doc.isArchived && (
                               <button
-                                onClick={() => handleOpenEdit(doc)}
+                                onClick={() => {
+                                  if (doc.isDesignedDocument && onEditDesignedDocument) {
+                                    onEditDesignedDocument(doc);
+                                  } else {
+                                    handleOpenEdit(doc);
+                                  }
+                                }}
                                 className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
-                                title="Edit metadata"
+                                title={doc.isDesignedDocument ? "Open in Document Studio" : "Edit metadata"}
                               >
-                                <Pencil size={14} />
+                                {doc.isDesignedDocument ? <Sparkles size={14} className="text-indigo-600" /> : <Pencil size={14} />}
                               </button>
                             )}
 

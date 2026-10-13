@@ -59,6 +59,7 @@ import LogisticsView from "./LogisticsView";
 import TeamView from "./TeamView";
 import SpeakersView from "./SpeakersView";
 import DocumentsView from "./DocumentsView";
+import DocumentDesigner from "./DocumentDesigner";
 import AnalyticsView from "./AnalyticsView";
 import DevelopersView from "./DevelopersView";
 import CommunicationsView from "./CommunicationsView";
@@ -85,7 +86,7 @@ export default function GenericTableView({
   if (state?.isLoading) {
     if (viewName === "analytics") return <AnalyticsSkeleton />;
     if (viewName === "logistics") return <LogisticsSkeleton />;
-    if (viewName === "documents") return <DocumentsSkeleton />;
+    if (viewName === "documents" || viewName === "document-designer") return <DocumentsSkeleton />;
     if (viewName === "certificates") return <CertificatesSkeleton />;
     return <TableViewSkeleton />;
   }
@@ -117,6 +118,29 @@ export default function GenericTableView({
           activeEventId={state.activeEventId || state.eventDetails?.id}
           eventDetails={state.eventDetails || {}}
           onRefreshData={state.onRefreshDocuments}
+          effectivePermissions={state.effectivePermissions}
+          onOpenDesigner={() => onSwitchView("document-designer")}
+          onEditDesignedDocument={(doc) => {
+            if (state.setSelectedDesignedDoc) state.setSelectedDesignedDoc(doc.designedDocumentData || null);
+            onSwitchView("document-designer");
+          }}
+        />
+      );
+    case "document-designer":
+      return (
+        <DocumentDesigner
+          initialDocument={state.selectedDesignedDoc || null}
+          activeEventId={state.activeEventId || state.eventDetails?.id}
+          eventDetails={state.eventDetails || {}}
+          currentUser={state.currentUser || {}}
+          speakers={state.speakers || []}
+          sponsors={state.sponsors || []}
+          exhibitors={state.exhibitors || []}
+          organizations={state.organizations || []}
+          opportunities={state.opportunities || []}
+          onBack={() => onSwitchView("documents")}
+          onSaveDocument={state.onSaveDesignedDocument}
+          onSaveToDocuments={state.onSaveDocument}
           effectivePermissions={state.effectivePermissions}
         />
       );
