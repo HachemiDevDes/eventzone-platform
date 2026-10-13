@@ -9,7 +9,7 @@ import {
   ChevronDown, LayoutDashboard, Calendar, Clock,
   Users2, UserCheck, BarChart3, X, Globe, Map as MapIcon, Sparkles, Upload, Mail,
   Building2, Plus, ArrowLeft, ArrowRight, Layers, LogOut, Compass, ExternalLink, ChevronRight, Home as HomeIcon, User,
-  FileText, ClipboardList, QrCode, Store, Mic2, Check, TrendingUp, Share2, Boxes, Truck, Package, Files, Code2, Award, Eye,
+  FileText, FileEdit, ClipboardList, QrCode, Store, Mic2, Check, TrendingUp, Share2, Boxes, Truck, Package, Files, Code2, Award, Eye,
   Plane, ClipboardCheck, Receipt, Search
 } from "lucide-react";
 
@@ -5588,11 +5588,11 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
                 className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "document-designer" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
               >
                 <div className="flex items-center gap-2">
-                  <Sparkles size={14} className={`shrink-0 ${currentView === "document-designer" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
+                  <FileEdit size={14} className={`shrink-0 ${currentView === "document-designer" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
                   <span>{t("dash.documentDesigner", "Document Studio")}</span>
                 </div>
-                <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-md ${currentView === "document-designer" ? "bg-white/25 text-white" : "bg-indigo-50 text-indigo-700 border border-indigo-150"}`}>
-                  Visual
+                <span className={`text-[9px] font-extrabold py-0.5 px-2 rounded-full uppercase tracking-wider ${currentView === "document-designer" ? "bg-white/25 text-white" : "bg-slate-100 text-slate-500"}`}>
+                  A4
                 </span>
               </button>
             )}
@@ -6077,7 +6077,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               activeEventId={activeEventId}
               eventDetails={eventDetails}
               currentUser={currentUser}
-              speakers={speakers}
+              speakers={sessions.flatMap(s => s.speakers || []).filter(Boolean)}
               sponsors={sponsors}
               exhibitors={exhibitors}
               organizations={organizations}
