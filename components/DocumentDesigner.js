@@ -1015,7 +1015,7 @@ export default function DocumentDesigner({
                     {/* Inline Element Editor (when expanded/selected) */}
                     {isSelected && (
                       <div className="px-3 pb-3 pt-1 border-t border-slate-100/80 space-y-2.5 text-xs">
-                        {renderElementEditForm(el, (updater) => handleUpdateElement(el.id, updater))}
+                        {renderElementEditForm(el, (updater) => handleUpdateElement(el.id, updater), activeDoc)}
                       </div>
                     )}
                   </div>
@@ -1111,7 +1111,7 @@ function getElementSummary(el) {
 /**
  * Clean inline edit form for each element type
  */
-function renderElementEditForm(el, update) {
+function renderElementEditForm(el, update, activeDoc = {}) {
   switch (el.type) {
     case "header":
       return (
@@ -1443,8 +1443,8 @@ function renderElementEditForm(el, update) {
                   className="w-3.5 h-3.5 rounded-full shrink-0 shadow-2xs"
                   style={{
                     backgroundColor:
-                      activeDoc.customColor ||
-                      COLOR_OPTIONS.find((c) => c.id === activeDoc.colorId)?.primary ||
+                      activeDoc?.customColor ||
+                      COLOR_OPTIONS.find((c) => c.id === activeDoc?.colorId)?.primary ||
                       "#2563eb",
                   }}
                 />
