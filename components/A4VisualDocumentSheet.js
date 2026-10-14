@@ -530,9 +530,9 @@ function renderElementContent(element, theme) {
               <tbody className="divide-y divide-slate-100 bg-white">
                 {rows.map((row, rIdx) => (
                   <tr key={rIdx} className={rIdx % 2 === 1 ? "bg-slate-50/50" : ""}>
-                    {row.map((cell, cIdx) => (
+                    {headers.map((_, cIdx) => (
                       <td key={cIdx} className="px-3.5 py-2.5 font-medium text-slate-700" style={{ fontFamily: docFont }}>
-                        {interpolateDocumentVariables(cell || "", variables)}
+                        {interpolateDocumentVariables(row[cIdx] || "", variables)}
                       </td>
                     ))}
                   </tr>

@@ -1783,9 +1783,35 @@ function renderElementEditForm(el, update) {
         </div>
       );
 
-    case "table":
+    case "table": {
+      const currentHeaders = (el.headers && el.headers.length > 0)
+        ? el.headers
+        : ["Colonne 1", "Colonne 2", "Colonne 3"];
+
+      const handleHeadersChange = (newHeaderString) => {
+        const arr = newHeaderString.split(",").map((s) => s.trim());
+        // Pad all existing rows so every row has cells for all columns
+        const currentRows = el.rows || [];
+        const updatedRows = currentRows.map((row) => {
+          const padded = [...(row || [])];
+          while (padded.length < arr.length) {
+            padded.push("");
+          }
+          return padded;
+        });
+        update({ headers: arr, rows: updatedRows });
+      };
+
+      const handleAddColumn = () => {
+        const newColName = `Colonne ${currentHeaders.length + 1}`;
+        const newHeaders = [...currentHeaders, newColName];
+        const currentRows = el.rows || [];
+        const updatedRows = currentRows.map((row) => [...(row || []), ""]);
+        update({ headers: newHeaders, rows: updatedRows });
+      };
+
       return (
-        <div className="space-y-2">
+        <div className="space-y-3">
           <div>
             <label className="text-[10px] font-bold text-slate-500 uppercase">Titre du tableau (optionnel)</label>
             <input
@@ -1795,26 +1821,41 @@ function renderElementEditForm(el, update) {
               className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:border-blue-500 focus:outline-hidden"
             />
           </div>
+
           <div>
-            <label className="text-[10px] font-bold text-slate-500 uppercase">Colonnes (séparées par une virgule)</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-[10px] font-bold text-slate-500 uppercase">
+                Colonnes ({currentHeaders.length})
+              </label>
+              <button
+                type="button"
+                onClick={handleAddColumn}
+                className="text-[10px] font-bold text-blue-600 hover:text-blue-800 cursor-pointer flex items-center gap-1"
+              >
+                + Ajouter une colonne
+              </button>
+            </div>
             <input
               type="text"
               value={(el.headers || []).join(", ")}
-              onChange={(e) => {
-                const arr = e.target.value.split(",").map((s) => s.trim());
-                update({ headers: arr });
-              }}
+              onChange={(e) => handleHeadersChange(e.target.value)}
+              placeholder="Ex: Heure, Activité, Intervenant..."
               className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-blue-500 focus:outline-hidden"
             />
+            <p className="text-[10px] text-slate-400 mt-1">
+              Séparez par une virgule pour ajouter ou renommer des colonnes.
+            </p>
           </div>
+
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-[10px] font-bold text-slate-500 uppercase">Lignes ({el.rows?.length || 0})</label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-[10px] font-bold text-slate-500 uppercase">
+                Lignes ({el.rows?.length || 0})
+              </label>
               <button
                 type="button"
                 onClick={() => {
-                  const colCount = (el.headers || []).length || 3;
-                  const newRow = new Array(colCount).fill("Nouvelle entrée");
+                  const newRow = new Array(currentHeaders.length).fill("");
                   update({ rows: [...(el.rows || []), newRow] });
                 }}
                 className="text-[10px] font-bold text-blue-600 hover:text-blue-800 cursor-pointer"
@@ -1822,31 +1863,40 @@ function renderElementEditForm(el, update) {
                 + Ajouter une ligne
               </button>
             </div>
-            <div className="space-y-1.5 max-h-40 overflow-y-auto">
+
+            <div className="space-y-1.5 max-h-56 overflow-y-auto overflow-x-auto pb-2">
               {(el.rows || []).map((row, rIdx) => (
-                <div key={rIdx} className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-bold text-slate-400 w-4">{rIdx + 1}.</span>
-                  {row.map((cell, cIdx) => (
+                <div key={rIdx} className="flex items-center gap-1.5 min-w-max">
+                  <span className="text-[10px] font-bold text-slate-400 w-4 shrink-0 text-center">
+                    {rIdx + 1}.
+                  </span>
+                  {currentHeaders.map((headerName, cIdx) => (
                     <input
                       key={cIdx}
                       type="text"
-                      value={cell || ""}
+                      placeholder={headerName || `Col ${cIdx + 1}`}
+                      value={row[cIdx] !== undefined ? row[cIdx] : ""}
                       onChange={(e) => {
                         const newRows = [...(el.rows || [])];
-                        newRows[rIdx] = [...newRows[rIdx]];
-                        newRows[rIdx][cIdx] = e.target.value;
+                        const currentRow = [...(newRows[rIdx] || [])];
+                        while (currentRow.length <= cIdx) {
+                          currentRow.push("");
+                        }
+                        currentRow[cIdx] = e.target.value;
+                        newRows[rIdx] = currentRow;
                         update({ rows: newRows });
                       }}
-                      className="flex-1 p-1 bg-slate-50 border border-slate-200 rounded-md text-[11px] focus:border-blue-500 focus:outline-hidden"
+                      className="min-w-[125px] flex-1 p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[11px] focus:border-blue-500 focus:bg-white focus:outline-hidden"
                     />
                   ))}
                   <button
                     type="button"
+                    title="Supprimer la ligne"
                     onClick={() => {
                       const newRows = (el.rows || []).filter((_, idx) => idx !== rIdx);
                       update({ rows: newRows });
                     }}
-                    className="p-1 text-rose-400 hover:text-rose-600 cursor-pointer"
+                    className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-md cursor-pointer shrink-0 transition-colors"
                   >
                     ✕
                   </button>
@@ -1856,6 +1906,7 @@ function renderElementEditForm(el, update) {
           </div>
         </div>
       );
+    }
 
     case "signature":
       return (
