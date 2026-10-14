@@ -292,15 +292,23 @@ function renderElementContent(element, theme) {
         ? FONT_OPTIONS.find((f) => f.id === element.fontId)?.font
         : docFont;
 
+      const customTextColor = element.color === "primary"
+        ? primaryColor
+        : element.color === "muted"
+        ? "#64748b"
+        : element.color && element.color.startsWith("#")
+        ? element.color
+        : undefined;
+
       const styleObj = {
         fontFamily: elementFont,
-        color: element.color === "primary" ? primaryColor : undefined,
+        color: customTextColor,
       };
 
       return (
         <div className={`py-1 ${alignClass}`} style={{ fontFamily: elementFont }}>
           <h1
-            className={`${sizeClasses} ${weightClass} ${element.italic ? "italic" : ""} ${element.underline ? "underline underline-offset-4" : ""} leading-tight ${element.color === "muted" ? "text-slate-500" : element.color === "primary" ? "" : "text-slate-900"}`}
+            className={`${sizeClasses} ${weightClass} ${element.italic ? "italic" : ""} ${element.underline ? "underline underline-offset-4" : ""} leading-tight ${customTextColor ? "" : (element.color === "muted" ? "text-slate-500" : "text-slate-900")}`}
             style={styleObj}
           >
             {text}
@@ -347,15 +355,23 @@ function renderElementContent(element, theme) {
         ? FONT_OPTIONS.find((f) => f.id === element.fontId)?.font
         : docFont;
 
+      const customTextColor = element.color === "primary"
+        ? primaryColor
+        : element.color === "muted"
+        ? "#64748b"
+        : element.color && element.color.startsWith("#")
+        ? element.color
+        : undefined;
+
       const styleObj = {
         fontFamily: elementFont,
-        color: element.color === "primary" ? primaryColor : undefined,
+        color: customTextColor,
       };
 
       return (
         <div className={`py-1 ${alignClass}`} style={{ fontFamily: elementFont }}>
           <div
-            className={`${sizeClasses} ${weightClass} ${element.italic ? "italic" : ""} ${element.underline ? "underline underline-offset-4" : ""} ${element.color === "muted" ? "text-slate-500" : element.color === "primary" ? "" : "text-slate-700"} whitespace-pre-line`}
+            className={`${sizeClasses} ${weightClass} ${element.italic ? "italic" : ""} ${element.underline ? "underline underline-offset-4" : ""} ${customTextColor ? "" : (element.color === "muted" ? "text-slate-500" : "text-slate-700")} whitespace-pre-line`}
             style={styleObj}
           >
             {text}

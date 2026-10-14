@@ -7,7 +7,9 @@ import {
   ArrowUp, ArrowDown, ZoomIn, ZoomOut, FileText,
   Search, Sparkles, Download, Mail, Award, Clock,
   ShieldCheck, CheckCircle2, X, FileEdit, Calendar,
-  Upload, Image as ImageIcon, Type
+  Upload, Image as ImageIcon, Type,
+  AlignLeft, AlignCenter, AlignRight, AlignJustify,
+  Italic, Underline, Bold, Palette, Square, Circle
 } from "lucide-react";
 import SearchableSelect from "./SearchableSelect";
 import A4VisualDocumentSheet, { printVisualDocument } from "./A4VisualDocumentSheet";
@@ -1211,132 +1213,284 @@ function renderElementEditForm(el, update) {
             />
           </div>
 
-          {/* Size / Taille */}
+          {/* 1. Size / Taille via Slider */}
           <div>
-            <label className="text-[10px] font-bold text-slate-500 uppercase">Taille du texte</label>
-            <div className="flex gap-1 mt-1">
-              {["xs", "sm", "md", "lg", "xl", "2xl"].map((sz) => (
-                <button
-                  key={sz}
-                  type="button"
-                  onClick={() => update({ size: sz })}
-                  className={`flex-1 py-1 text-[10px] font-bold rounded-md border cursor-pointer ${
-                    (el.size || (el.type === "heading" ? "lg" : "md")) === sz
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
-                  }`}
-                >
-                  {sz.toUpperCase()}
-                </button>
-              ))}
+            <div className="flex items-center justify-between text-[10px] font-bold text-slate-500 uppercase">
+              <span className="flex items-center gap-1.5">
+                <Type size={12} className="text-slate-400" />
+                Taille du texte
+              </span>
+              <span className="font-mono text-blue-600 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md text-[11px] font-bold">
+                {{
+                  xs: "XS (12px)",
+                  sm: "SM (14px)",
+                  md: "MD (16px)",
+                  lg: "LG (20px)",
+                  xl: "XL (24px)",
+                  "2xl": "2XL (32px)",
+                }[el.size || (el.type === "heading" ? "lg" : "md")] || "MD"}
+              </span>
+            </div>
+            <div className="flex items-center gap-2.5 mt-2 px-1">
+              <span className="text-[10px] font-bold text-slate-400 select-none">A</span>
+              <input
+                type="range"
+                min={0}
+                max={5}
+                step={1}
+                value={Math.max(0, ["xs", "sm", "md", "lg", "xl", "2xl"].indexOf(el.size || (el.type === "heading" ? "lg" : "md")))}
+                onChange={(e) => {
+                  const sizes = ["xs", "sm", "md", "lg", "xl", "2xl"];
+                  update({ size: sizes[Number(e.target.value)] });
+                }}
+                className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600 focus:outline-hidden"
+              />
+              <span className="text-base font-black text-slate-800 select-none">A</span>
+            </div>
+            <div className="flex justify-between text-[9px] text-slate-400 font-semibold px-1 mt-1 select-none">
+              <span>XS</span>
+              <span>SM</span>
+              <span>MD</span>
+              <span>LG</span>
+              <span>XL</span>
+              <span>2XL</span>
             </div>
           </div>
 
-          {/* Boldness / Weight */}
+          {/* 2. Boldness / Weight via Slider */}
           <div>
-            <label className="text-[10px] font-bold text-slate-500 uppercase">Graisse / Boldness</label>
-            <div className="flex gap-1 mt-1">
-              {[
-                { id: "normal", label: "Normal" },
-                { id: "medium", label: "Moyen" },
-                { id: "semibold", label: "Semi" },
-                { id: "bold", label: "Gras" },
-                { id: "extrabold", label: "Black" },
-              ].map((w) => (
-                <button
-                  key={w.id}
-                  type="button"
-                  onClick={() => update({ weight: w.id })}
-                  className={`flex-1 py-1 text-[10px] font-bold rounded-md border cursor-pointer ${
-                    (el.weight || (el.type === "heading" ? "bold" : "normal")) === w.id
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
-                  }`}
-                >
-                  {w.label}
-                </button>
-              ))}
+            <div className="flex items-center justify-between text-[10px] font-bold text-slate-500 uppercase">
+              <span className="flex items-center gap-1.5">
+                <Bold size={12} className="text-slate-400" />
+                Graisse / Boldness
+              </span>
+              <span className="font-mono text-blue-600 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md text-[11px] font-bold">
+                {{
+                  normal: "Normal (400)",
+                  medium: "Moyen (500)",
+                  semibold: "Semi (600)",
+                  bold: "Gras (700)",
+                  extrabold: "Black (900)",
+                }[el.weight || (el.type === "heading" ? "bold" : "normal")] || "Normal"}
+              </span>
+            </div>
+            <div className="flex items-center gap-2.5 mt-2 px-1">
+              <span className="text-[11px] font-normal text-slate-400 select-none">B</span>
+              <input
+                type="range"
+                min={0}
+                max={4}
+                step={1}
+                value={Math.max(0, ["normal", "medium", "semibold", "bold", "extrabold"].indexOf(el.weight || (el.type === "heading" ? "bold" : "normal")))}
+                onChange={(e) => {
+                  const weights = ["normal", "medium", "semibold", "bold", "extrabold"];
+                  update({ weight: weights[Number(e.target.value)] });
+                }}
+                className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600 focus:outline-hidden"
+              />
+              <span className="text-sm font-black text-slate-900 select-none">B</span>
+            </div>
+            <div className="flex justify-between text-[9px] text-slate-400 font-semibold px-1 mt-1 select-none">
+              <span>Normal</span>
+              <span>Moyen</span>
+              <span>Semi</span>
+              <span>Gras</span>
+              <span>Black</span>
             </div>
           </div>
 
-          {/* Position / Alignement & Formatting */}
-          <div className="grid grid-cols-2 gap-2">
+          {/* 3. Position & Style via Icon Toolbars */}
+          <div className="grid grid-cols-2 gap-3 pt-1">
+            {/* Position / Alignement */}
             <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase">Position / Alignement</label>
-              <div className="flex gap-1 mt-1">
-                {[
-                  { id: "left", label: "Gauche" },
-                  { id: "center", label: "Centre" },
-                  { id: "right", label: "Droite" },
-                  ...(el.type !== "heading" ? [{ id: "justify", label: "Justifié" }] : []),
-                ].map((a) => (
+              <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1.5">
+                Alignement
+              </label>
+              <div className="inline-flex p-1 bg-slate-100/90 border border-slate-200 rounded-xl gap-1 w-full justify-around">
+                <button
+                  type="button"
+                  title="Aligner à gauche"
+                  onClick={() => update({ align: "left" })}
+                  className={`flex-1 py-1.5 flex items-center justify-center rounded-lg transition-all cursor-pointer ${
+                    (el.align || "left") === "left"
+                      ? "bg-white text-blue-600 shadow-xs font-bold"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
+                  }`}
+                >
+                  <AlignLeft size={16} />
+                </button>
+                <button
+                  type="button"
+                  title="Centrer"
+                  onClick={() => update({ align: "center" })}
+                  className={`flex-1 py-1.5 flex items-center justify-center rounded-lg transition-all cursor-pointer ${
+                    el.align === "center"
+                      ? "bg-white text-blue-600 shadow-xs font-bold"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
+                  }`}
+                >
+                  <AlignCenter size={16} />
+                </button>
+                <button
+                  type="button"
+                  title="Aligner à droite"
+                  onClick={() => update({ align: "right" })}
+                  className={`flex-1 py-1.5 flex items-center justify-center rounded-lg transition-all cursor-pointer ${
+                    el.align === "right"
+                      ? "bg-white text-blue-600 shadow-xs font-bold"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
+                  }`}
+                >
+                  <AlignRight size={16} />
+                </button>
+                {el.type !== "heading" && (
                   <button
-                    key={a.id}
                     type="button"
-                    onClick={() => update({ align: a.id })}
-                    className={`flex-1 py-1 text-[10px] font-bold rounded-md border cursor-pointer ${
-                      (el.align || "left") === a.id
-                        ? "bg-blue-600 text-white border-blue-600"
-                        : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                    title="Justifier"
+                    onClick={() => update({ align: "justify" })}
+                    className={`flex-1 py-1.5 flex items-center justify-center rounded-lg transition-all cursor-pointer ${
+                      el.align === "justify"
+                        ? "bg-white text-blue-600 shadow-xs font-bold"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
                     }`}
                   >
-                    {a.label}
+                    <AlignJustify size={16} />
                   </button>
-                ))}
+                )}
               </div>
             </div>
 
+            {/* Style & Décoration */}
             <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase">Style & Décoration</label>
-              <div className="flex gap-1 mt-1">
+              <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1.5">
+                Style & Décoration
+              </label>
+              <div className="inline-flex p-1 bg-slate-100/90 border border-slate-200 rounded-xl gap-1 w-full justify-around">
                 <button
                   type="button"
+                  title="Italique"
                   onClick={() => update({ italic: !el.italic })}
-                  className={`flex-1 py-1 text-[10px] font-bold rounded-md border cursor-pointer ${
+                  className={`flex-1 py-1.5 flex items-center justify-center rounded-lg transition-all cursor-pointer ${
                     el.italic
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 italic"
+                      ? "bg-white text-blue-600 shadow-xs font-bold"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
                   }`}
                 >
-                  Italique
+                  <Italic size={16} />
                 </button>
                 <button
                   type="button"
+                  title="Souligné"
                   onClick={() => update({ underline: !el.underline })}
-                  className={`flex-1 py-1 text-[10px] font-bold rounded-md border cursor-pointer ${
+                  className={`flex-1 py-1.5 flex items-center justify-center rounded-lg transition-all cursor-pointer ${
                     el.underline
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 underline"
+                      ? "bg-white text-blue-600 shadow-xs font-bold"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
                   }`}
                 >
-                  Souligné
+                  <Underline size={16} />
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Color Selection */}
+          {/* 4. Text Color with Swatches, Icons & Color Picker */}
           <div>
-            <label className="text-[10px] font-bold text-slate-500 uppercase">Couleur du texte</label>
-            <div className="flex gap-1 mt-1">
-              {[
-                { id: "default", label: "Défaut (Sombre)" },
-                { id: "primary", label: "Couleur thème" },
-                { id: "muted", label: "Gris atténué" },
-              ].map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => update({ color: c.id })}
-                  className={`flex-1 py-1 text-[10px] font-bold rounded-md border cursor-pointer ${
-                    (el.color || "default") === c.id
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
-                  }`}
-                >
-                  {c.label}
-                </button>
-              ))}
+            <div className="flex items-center justify-between text-[10px] font-bold text-slate-500 uppercase mb-1.5">
+              <span className="flex items-center gap-1.5">
+                <Palette size={12} className="text-slate-400" />
+                Couleur du texte
+              </span>
+              <span className="font-mono text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md text-[10px] font-semibold">
+                {el.color === "primary"
+                  ? "Thème"
+                  : el.color === "muted"
+                  ? "Atténué"
+                  : el.color && el.color.startsWith("#")
+                  ? el.color.toUpperCase()
+                  : "Sombre"}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1.5 p-1.5 bg-slate-50 border border-slate-200 rounded-xl">
+              {/* Sombre / Default */}
+              <button
+                type="button"
+                onClick={() => update({ color: "default" })}
+                title="Sombre (Défaut)"
+                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                  !el.color || el.color === "default"
+                    ? "bg-white text-slate-900 border-slate-300 shadow-xs"
+                    : "border-transparent text-slate-600 hover:bg-white/60"
+                }`}
+              >
+                <span className="w-3.5 h-3.5 rounded-full bg-slate-900 shrink-0 shadow-2xs" />
+                <span className="text-[11px]">Sombre</span>
+              </button>
+
+              {/* Theme Color */}
+              <button
+                type="button"
+                onClick={() => update({ color: "primary" })}
+                title="Couleur Thème du Document"
+                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                  el.color === "primary"
+                    ? "bg-white text-blue-700 border-blue-300 shadow-xs"
+                    : "border-transparent text-slate-600 hover:bg-white/60"
+                }`}
+              >
+                <span
+                  className="w-3.5 h-3.5 rounded-full shrink-0 shadow-2xs"
+                  style={{
+                    backgroundColor:
+                      activeDoc.customColor ||
+                      COLOR_OPTIONS.find((c) => c.id === activeDoc.colorId)?.primary ||
+                      "#2563eb",
+                  }}
+                />
+                <span className="text-[11px]">Thème</span>
+              </button>
+
+              {/* Muted */}
+              <button
+                type="button"
+                onClick={() => update({ color: "muted" })}
+                title="Gris atténué"
+                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                  el.color === "muted"
+                    ? "bg-white text-slate-700 border-slate-300 shadow-xs"
+                    : "border-transparent text-slate-500 hover:bg-white/60"
+                }`}
+              >
+                <span className="w-3.5 h-3.5 rounded-full bg-slate-400 shrink-0 shadow-2xs" />
+                <span className="text-[11px]">Gris</span>
+              </button>
+
+              {/* Custom Color Picker for Text */}
+              <label
+                title="Couleur personnalisée"
+                className={`relative p-1.5 rounded-lg border flex items-center justify-center cursor-pointer transition-all ${
+                  el.color && el.color.startsWith("#")
+                    ? "bg-white border-blue-400 shadow-xs"
+                    : "border-transparent hover:bg-white/60"
+                }`}
+              >
+                <span
+                  className="w-4 h-4 rounded-full shrink-0 shadow-2xs"
+                  style={{
+                    backgroundColor: el.color && el.color.startsWith("#") ? el.color : "#ef4444",
+                    backgroundImage: !(el.color && el.color.startsWith("#"))
+                      ? "conic-gradient(from 180deg at 50% 50%, #ef4444 0deg, #f59e0b 60deg, #10b981 120deg, #06b6d4 180deg, #6366f1 240deg, #ec4899 300deg, #ef4444 360deg)"
+                      : undefined,
+                  }}
+                />
+                <input
+                  type="color"
+                  value={el.color && el.color.startsWith("#") ? el.color : "#2563eb"}
+                  onChange={(e) => update({ color: e.target.value })}
+                  className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                />
+              </label>
             </div>
           </div>
         </div>
@@ -1384,77 +1538,131 @@ function renderElementEditForm(el, update) {
 
           {/* Position / Alignement */}
           <div>
-            <label className="text-[10px] font-bold text-slate-500 uppercase">Position / Alignement</label>
-            <div className="flex gap-1 mt-1">
-              {[
-                { id: "left", label: "Gauche" },
-                { id: "center", label: "Centré" },
-                { id: "right", label: "Droite" },
-              ].map((a) => (
-                <button
-                  key={a.id}
-                  type="button"
-                  onClick={() => update({ align: a.id })}
-                  className={`flex-1 py-1 text-[10px] font-bold rounded-md border cursor-pointer ${
-                    (el.align || "center") === a.id
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
-                  }`}
-                >
-                  {a.label}
-                </button>
-              ))}
+            <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1.5">
+              Position / Alignement
+            </label>
+            <div className="inline-flex p-1 bg-slate-100/90 border border-slate-200 rounded-xl gap-1 w-full justify-around">
+              <button
+                type="button"
+                title="Aligner à gauche"
+                onClick={() => update({ align: "left" })}
+                className={`flex-1 py-1.5 flex items-center justify-center rounded-lg transition-all cursor-pointer ${
+                  (el.align || "center") === "left"
+                    ? "bg-white text-blue-600 shadow-xs font-bold"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
+                }`}
+              >
+                <AlignLeft size={16} />
+              </button>
+              <button
+                type="button"
+                title="Centrer"
+                onClick={() => update({ align: "center" })}
+                className={`flex-1 py-1.5 flex items-center justify-center rounded-lg transition-all cursor-pointer ${
+                  (el.align || "center") === "center"
+                    ? "bg-white text-blue-600 shadow-xs font-bold"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
+                }`}
+              >
+                <AlignCenter size={16} />
+              </button>
+              <button
+                type="button"
+                title="Aligner à droite"
+                onClick={() => update({ align: "right" })}
+                className={`flex-1 py-1.5 flex items-center justify-center rounded-lg transition-all cursor-pointer ${
+                  el.align === "right"
+                    ? "bg-white text-blue-600 shadow-xs font-bold"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
+                }`}
+              >
+                <AlignRight size={16} />
+              </button>
             </div>
           </div>
 
-          {/* Size / Taille */}
+          {/* Size / Taille via Slider */}
           <div>
-            <label className="text-[10px] font-bold text-slate-500 uppercase">Taille de l&apos;image</label>
-            <div className="flex gap-1 mt-1">
-              {[
-                { id: "sm", label: "Petite (140px)" },
-                { id: "md", label: "Moyenne (280px)" },
-                { id: "lg", label: "Grande (460px)" },
-                { id: "full", label: "Pleine largeur" },
-              ].map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => update({ size: s.id })}
-                  className={`flex-1 py-1 text-[10px] font-bold rounded-md border cursor-pointer ${
-                    (el.size || "md") === s.id
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
-                  }`}
-                >
-                  {s.label}
-                </button>
-              ))}
+            <div className="flex items-center justify-between text-[10px] font-bold text-slate-500 uppercase">
+              <span>Taille de l&apos;image</span>
+              <span className="font-mono text-blue-600 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md text-[11px] font-bold">
+                {{
+                  sm: "Petite (140px)",
+                  md: "Moyenne (280px)",
+                  lg: "Grande (460px)",
+                  full: "Pleine largeur (100%)",
+                }[el.size || "md"] || "Moyenne"}
+              </span>
+            </div>
+            <div className="flex items-center gap-2.5 mt-2 px-1">
+              <span className="text-[10px] font-bold text-slate-400 select-none">140px</span>
+              <input
+                type="range"
+                min={0}
+                max={3}
+                step={1}
+                value={Math.max(0, ["sm", "md", "lg", "full"].indexOf(el.size || "md"))}
+                onChange={(e) => {
+                  const sizes = ["sm", "md", "lg", "full"];
+                  update({ size: sizes[Number(e.target.value)] });
+                }}
+                className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600 focus:outline-hidden"
+              />
+              <span className="text-[10px] font-bold text-slate-800 select-none">100%</span>
+            </div>
+            <div className="flex justify-between text-[9px] text-slate-400 font-semibold px-1 mt-1 select-none">
+              <span>140px</span>
+              <span>280px</span>
+              <span>460px</span>
+              <span>Plein</span>
             </div>
           </div>
 
-          {/* Shape / Forme */}
+          {/* Shape / Forme via Icons */}
           <div>
-            <label className="text-[10px] font-bold text-slate-500 uppercase">Cadrage / Forme</label>
-            <div className="flex gap-1 mt-1">
-              {[
-                { id: "rounded", label: "Bords arrondis" },
-                { id: "square", label: "Rectangle / Carré" },
-                { id: "circle", label: "Cercle" },
-              ].map((sh) => (
-                <button
-                  key={sh.id}
-                  type="button"
-                  onClick={() => update({ shape: sh.id })}
-                  className={`flex-1 py-1 text-[10px] font-bold rounded-md border cursor-pointer ${
-                    (el.shape || "rounded") === sh.id
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
-                  }`}
-                >
-                  {sh.label}
-                </button>
-              ))}
+            <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1.5">
+              Cadrage / Forme
+            </label>
+            <div className="inline-flex p-1 bg-slate-100/90 border border-slate-200 rounded-xl gap-1 w-full justify-around">
+              <button
+                type="button"
+                title="Bords arrondis"
+                onClick={() => update({ shape: "rounded" })}
+                className={`flex-1 py-1.5 flex items-center justify-center gap-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  (el.shape || "rounded") === "rounded"
+                    ? "bg-white text-blue-600 shadow-xs font-bold"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
+                }`}
+              >
+                <Square size={15} className="rounded-xs" />
+                <span className="text-[11px]">Arrondi</span>
+              </button>
+              <button
+                type="button"
+                title="Rectangle / Carré"
+                onClick={() => update({ shape: "square" })}
+                className={`flex-1 py-1.5 flex items-center justify-center gap-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  el.shape === "square"
+                    ? "bg-white text-blue-600 shadow-xs font-bold"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
+                }`}
+              >
+                <Square size={15} />
+                <span className="text-[11px]">Carré</span>
+              </button>
+              <button
+                type="button"
+                title="Cercle"
+                onClick={() => update({ shape: "circle" })}
+                className={`flex-1 py-1.5 flex items-center justify-center gap-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  el.shape === "circle"
+                    ? "bg-white text-blue-600 shadow-xs font-bold"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
+                }`}
+              >
+                <Circle size={15} />
+                <span className="text-[11px]">Cercle</span>
+              </button>
             </div>
           </div>
 
