@@ -1,11 +1,12 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   ArrowLeft, Plus, Trash2, Printer, Check, Copy,
-  ArrowUp, ArrowDown, ChevronDown, ChevronUp, ZoomIn,
-  ZoomOut, Maximize2, FileText, Search, Sparkles
+  ArrowUp, ArrowDown, ZoomIn, ZoomOut, FileText,
+  Search, Sparkles, Download, Mail, Award, Clock,
+  ShieldCheck, CheckCircle2, X, FileEdit, Calendar
 } from "lucide-react";
 import SearchableSelect from "./SearchableSelect";
 import A4VisualDocumentSheet, { printVisualDocument } from "./A4VisualDocumentSheet";
@@ -42,8 +43,12 @@ export default function DocumentDesigner({
   // Selected element ID in the editor
   const [selectedElementId, setSelectedElementId] = useState(null);
 
-  // Search filter in list mode
+  // Sub-tabs navigation in list mode: 'all' | 'letters' | 'agreements' | 'agendas' | 'blank'
+  const [activeSubTab, setActiveSubTab] = useState("all");
+
+  // Search filter and orientation filter in list mode
   const [listSearch, setListSearch] = useState("");
+  const [orientationFilter, setOrientationFilter] = useState("all");
 
   // Editor zoom level
   const [zoom, setZoom] = useState(0.85);
@@ -98,14 +103,72 @@ export default function DocumentDesigner({
     return list.sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
   }, [documents, localDocs]);
 
-  // Filtered list
+  // Categorization helper
+  const getDocCategory = (doc) => {
+    const name = (doc.name || "").toLowerCase();
+    if (name.includes("lettre") || name.includes("invitation") || name.includes("courrier") || name.includes("letter")) return "letters";
+    if (name.includes("convention") || name.includes("partenariat") || name.includes("contrat") || name.includes("accord") || name.includes("agreement")) return "agreements";
+    if (name.includes("programme") || name.includes("horaire") || name.includes("agenda") || name.includes("planning")) return "agendas";
+    return "blank";
+  };
+
+  // KPI Statistics
+  const stats = useMemo(() => {
+    let letters = 0;
+    let agreements = 0;
+    let agendas = 0;
+    let blank = 0;
+
+    combinedDocuments.forEach((d) => {
+      const cat = getDocCategory(d);
+      if (cat === "letters") letters++;
+      else if (cat === "agreements") agreements++;
+      else if (cat === "agendas") agendas++;
+      else blank++;
+    });
+
+    return {
+      total: combinedDocuments.length,
+      letters,
+      agreements,
+      agendas,
+      blank,
+    };
+  }, [combinedDocuments]);
+
+  // Filtered documents by tab, search, and orientation
   const filteredDocs = useMemo(() => {
-    if (!listSearch) return combinedDocuments;
-    const q = listSearch.toLowerCase();
-    return combinedDocuments.filter((d) =>
-      (d.name || "").toLowerCase().includes(q)
-    );
-  }, [combinedDocuments, listSearch]);
+    return combinedDocuments.filter((d) => {
+      // Sub-tab filter
+      if (activeSubTab !== "all") {
+        const cat = getDocCategory(d);
+        if (cat !== activeSubTab) return false;
+      }
+
+      // Orientation filter
+      if (orientationFilter !== "all") {
+        const docOrient = d.orientation || "portrait";
+        if (docOrient !== orientationFilter) return false;
+      }
+
+      // Search query
+      if (listSearch) {
+        const q = listSearch.toLowerCase();
+        const matchName = (d.name || "").toLowerCase().includes(q);
+        const matchContent = (d.elements || []).some((el) => {
+          return (
+            (el.text || "").toLowerCase().includes(q) ||
+            (el.title || "").toLowerCase().includes(q) ||
+            (el.orgName || "").toLowerCase().includes(q) ||
+            (el.sign1Name || "").toLowerCase().includes(q)
+          );
+        });
+        if (!matchName && !matchContent) return false;
+      }
+
+      return true;
+    });
+  }, [combinedDocuments, activeSubTab, orientationFilter, listSearch]);
 
   // Persist locally helper
   const saveToLocalStorage = (docToSave) => {
@@ -156,7 +219,6 @@ export default function DocumentDesigner({
   const handleDelete = async (docId) => {
     if (!window.confirm("Êtes-vous sûr de vouloir supprimer ce document ?")) return;
 
-    // Remove from local storage
     if (typeof window !== "undefined" && activeEventId) {
       setLocalDocs((prev) => {
         const next = prev.filter((d) => d.id !== docId);
@@ -165,7 +227,6 @@ export default function DocumentDesigner({
       });
     }
 
-    // Call prop if provided
     if (onDeleteDocument) {
       try {
         await onDeleteDocument(docId);
@@ -185,7 +246,6 @@ export default function DocumentDesigner({
     setActiveDoc(updated);
     saveToLocalStorage(updated);
 
-    // Also persist via props
     try {
       if (onSaveDocument) {
         await onSaveDocument(updated);
@@ -214,6 +274,29 @@ export default function DocumentDesigner({
     } finally {
       setIsSaving(false);
     }
+  };
+
+  // Export Documents Manifest CSV
+  const handleExportCSV = () => {
+    let rows = [["Titre du Document", "Orientation", "Nombre d'elements", "Derniere Modification", "Type"]];
+    combinedDocuments.forEach((d) => {
+      rows.push([
+        `"${(d.name || "").replace(/"/g, '""')}"`,
+        d.orientation === "landscape" ? "A4 Paysage" : "A4 Portrait",
+        d.elements?.length || 0,
+        d.updatedAt ? new Date(d.updatedAt).toLocaleDateString("fr-FR") : "",
+        getDocCategory(d)
+      ]);
+    });
+
+    const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + rows.map((e) => e.join(",")).join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `Eventzone_Documents_${activeEventId || "Export"}_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   // Add an element to active document
@@ -266,75 +349,224 @@ export default function DocumentDesigner({
     });
   };
 
+  // Navigation Sub-tabs definition (matching Logistics pattern)
+  const SUB_TABS = [
+    { id: "all", label: "Tous les documents", icon: FileText, count: stats.total },
+    { id: "letters", label: "Lettres & Invitations", icon: Mail, count: stats.letters },
+    { id: "agreements", label: "Conventions & Accords", icon: Award, count: stats.agreements },
+    { id: "agendas", label: "Programmes & Horaires", icon: Clock, count: stats.agendas },
+    { id: "blank", label: "Feuilles Vierges & Autres", icon: FileEdit, count: stats.blank },
+  ];
+
   // =========================================================================
-  // VIEW MODE: LIST (Document Hub)
+  // VIEW MODE: LIST (Document Hub with Logistics styling)
   // =========================================================================
   if (viewMode === "list") {
     return (
-      <div className="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 py-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-slate-200">
+      <div className="space-y-6 animate-fade-in text-slate-800 pb-16">
+        {/* ─────────────────────────────────────────────
+            1. HEADER & GLOBAL ACTIONS
+        ───────────────────────────────────────────── */}
+        <header className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 select-none">
           <div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-              <FileText className="w-6 h-6 text-indigo-600" />
+            <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
               Document Studio
-            </h1>
-            <p className="text-sm font-medium text-slate-500 mt-1">
-              Consultez vos documents, imprimez-les en format A4 ou composez de nouveaux documents officiels personnalisés.
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-500">
+              Centre de conception de documents administratifs officiels, lettres, conventions et programmes au format A4.
             </p>
           </div>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="flex items-center flex-wrap gap-2.5">
+            <button
+              onClick={handleExportCSV}
+              className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl text-xs sm:text-sm transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+              title="Exporter la liste des documents (CSV)"
+            >
+              <Download size={14} />
+              <span>Exporter la liste (CSV)</span>
+            </button>
+
             <button
               onClick={() => setShowNewDocModal(true)}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl shadow-xs transition-colors"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs sm:text-sm shadow-sm transition-all flex items-center gap-2 cursor-pointer"
             >
-              <Plus className="w-4 h-4" />
-              Nouveau Document A4
+              <Plus size={16} />
+              <span>+ Nouveau Document A4</span>
             </button>
+          </div>
+        </header>
+
+        {/* ─────────────────────────────────────────────
+            2. EXECUTIVE KPI CARDS (Matching LogisticsView)
+        ───────────────────────────────────────────── */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {/* Card 1: Total Documents */}
+          <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-500">Total Documents</span>
+              <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                <FileText size={16} />
+              </div>
+            </div>
+            <div className="mt-3">
+              <div className="text-2xl font-black text-slate-900"><bdi dir="ltr">{stats.total}</bdi></div>
+              <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-slate-500">
+                <span className="text-blue-600 font-bold"><bdi dir="ltr">{stats.total}</bdi></span> prêts pour impression / export
+              </div>
+            </div>
+          </div>
+
+          {/* Card 2: Letters & Invitations */}
+          <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-500">Lettres & Invitations</span>
+              <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <Mail size={16} />
+              </div>
+            </div>
+            <div className="mt-3">
+              <div className="text-2xl font-black text-slate-900"><bdi dir="ltr">{stats.letters}</bdi></div>
+              <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-emerald-600">
+                <CheckCircle2 size={12} /> <bdi dir="ltr">{stats.letters}</bdi> courriers officiels
+              </div>
+            </div>
+          </div>
+
+          {/* Card 3: Agreements & Contracts */}
+          <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-500">Conventions & Accords</span>
+              <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                <Award size={16} />
+              </div>
+            </div>
+            <div className="mt-3">
+              <div className="text-2xl font-black text-slate-900"><bdi dir="ltr">{stats.agreements}</bdi></div>
+              <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-purple-600">
+                <bdi dir="ltr">{stats.agreements}</bdi> protocoles & contrats
+              </div>
+            </div>
+          </div>
+
+          {/* Card 4: Format Readiness */}
+          <div className="bg-white p-5 rounded-3xl border border-slate-150 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-500">Format & Précision</span>
+              <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
+                <ShieldCheck size={16} />
+              </div>
+            </div>
+            <div className="mt-3">
+              <div className="flex items-center justify-between">
+                <span className="text-2xl font-black text-slate-900">100%</span>
+                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-teal-100 text-teal-700">
+                  Norme A4 Prête
+                </span>
+              </div>
+              <div className="w-full bg-slate-150 h-1.5 rounded-full mt-2 overflow-hidden">
+                <div className="h-full bg-teal-500 rounded-full w-full" />
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Search & Counter */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="relative w-full sm:w-80">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+        {/* ─────────────────────────────────────────────
+            3. SUB-MODULE TABS NAVIGATION
+        ───────────────────────────────────────────── */}
+        <div className="flex items-center border-b border-slate-200 gap-1 overflow-x-auto">
+          {SUB_TABS.map((tab) => {
+            const isActive = activeSubTab === tab.id;
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => { setActiveSubTab(tab.id); }}
+                className={`relative flex items-center gap-2 px-4 py-3 font-bold text-xs transition-all cursor-pointer !rounded-none ${
+                  isActive
+                    ? "text-blue-600 font-black bg-blue-50/50"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                }`}
+              >
+                <Icon size={15} />
+                <span>{tab.label}</span>
+                <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
+                  isActive ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"
+                }`}>
+                  <bdi dir="ltr">{tab.count}</bdi>
+                </span>
+                {isActive && (
+                  <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-blue-600" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ─────────────────────────────────────────────
+            4. SEARCH & FILTER TOOLBAR
+        ───────────────────────────────────────────── */}
+        <div className="flex flex-col sm:flex-row items-center gap-3 bg-white p-3 rounded-2xl border border-slate-150 shadow-xs">
+          {/* Search Input */}
+          <div className="relative flex-1 w-full">
+            <Search size={15} className="absolute start-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               value={listSearch}
               onChange={(e) => setListSearch(e.target.value)}
-              placeholder="Rechercher un document..."
-              className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all font-medium"
+              placeholder="Rechercher un document par titre, référence, signataire..."
+              className="w-full ps-9 pe-8 py-2 text-xs font-medium bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 focus:outline-hidden transition-colors"
             />
+            {listSearch && (
+              <button
+                onClick={() => setListSearch("")}
+                className="absolute end-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X size={13} />
+              </button>
+            )}
           </div>
 
-          <div className="text-xs font-semibold text-slate-500 self-end sm:self-center">
-            {filteredDocs.length} {filteredDocs.length > 1 ? "documents disponibles" : "document disponible"}
+          {/* Quick Format Filter via SearchableSelect */}
+          <div className="w-full sm:w-56">
+            <SearchableSelect
+              value={orientationFilter}
+              onChange={(val) => setOrientationFilter(val || "all")}
+              options={[
+                { value: "all", label: "Toutes les orientations" },
+                { value: "portrait", label: "Format Portrait (Vertical)" },
+                { value: "landscape", label: "Format Paysage (Horizontal)" },
+              ]}
+              placeholder="Toutes les orientations"
+              buttonClassName="py-1.5 text-xs bg-slate-50 border-slate-200"
+            />
           </div>
         </div>
 
-        {/* Documents Grid */}
+        {/* ─────────────────────────────────────────────
+            5. DOCUMENTS GRID OR EMPTY STATE
+        ───────────────────────────────────────────── */}
         {filteredDocs.length === 0 ? (
-          <div className="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-12 text-center max-w-xl mx-auto my-8">
-            <div className="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-4">
-              <FileText className="w-7 h-7" />
+          <div className="bg-white border border-slate-150 rounded-2xl p-12 text-center my-4 shadow-xs">
+            <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-3">
+              <FileText size={24} />
             </div>
-            <h3 className="text-lg font-bold text-slate-900 mb-1">
-              Aucun document pour le moment
+            <h3 className="font-bold text-slate-900 text-base mb-1">
+              Aucun document trouvé
             </h3>
-            <p className="text-sm text-slate-500 mb-6 leading-relaxed">
-              Commencez avec une feuille A4 vierge ou utilisez un modèle pour créer des lettres, conventions, programmes ou invitations.
+            <p className="text-xs text-slate-500 max-w-sm mx-auto mb-4 leading-relaxed">
+              Créez votre première lettre officielle, convention ou programme sur format A4 en un clic.
             </p>
             <button
               onClick={() => setShowNewDocModal(true)}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl shadow-xs transition-colors"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-5 rounded-xl text-xs transition-colors shadow-xs inline-flex items-center gap-2 cursor-pointer"
             >
-              <Plus className="w-4 h-4" />
-              Créer mon premier document
+              <Plus size={14} />
+              <span>+ Nouveau Document A4</span>
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredDocs.map((item) => {
               const elementCount = item.elements?.length || 0;
               const formattedDate = item.updatedAt
@@ -348,21 +580,21 @@ export default function DocumentDesigner({
               return (
                 <div
                   key={item.id}
-                  className="bg-white border border-slate-200 hover:border-indigo-300 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between group"
+                  className="bg-white border border-slate-200 hover:border-blue-400 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between group"
                 >
                   <div>
                     {/* Card Top */}
                     <div className="flex items-start justify-between gap-3 mb-3">
-                      <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-                        <FileText className="w-5 h-5" />
+                      <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                        <FileText size={18} />
                       </div>
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-md">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 bg-slate-50 border border-slate-150 px-2.5 py-1 rounded-md">
                         A4 {item.orientation === "landscape" ? "Paysage" : "Portrait"}
                       </span>
                     </div>
 
                     {/* Card Title */}
-                    <h3 className="font-bold text-slate-900 text-base line-clamp-1 group-hover:text-indigo-600 transition-colors">
+                    <h3 className="font-bold text-slate-900 text-base line-clamp-1 group-hover:text-blue-600 transition-colors">
                       {item.name || "Document sans titre"}
                     </h3>
 
@@ -374,11 +606,11 @@ export default function DocumentDesigner({
                     </div>
                   </div>
 
-                  {/* Actions Bar */}
+                  {/* Actions Bar (Clean Eventzone blue) */}
                   <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between gap-2">
                     <button
                       onClick={() => handleEditDocument(item)}
-                      className="flex-1 py-2 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs rounded-lg transition-colors text-center"
+                      className="flex-1 py-2 px-3 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs rounded-lg transition-colors text-center cursor-pointer"
                     >
                       Modifier
                     </button>
@@ -389,25 +621,25 @@ export default function DocumentDesigner({
                         setTimeout(() => printVisualDocument(), 100);
                       }}
                       title="Imprimer / Exporter PDF"
-                      className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-lg transition-colors"
+                      className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
                     >
-                      <Printer className="w-4 h-4" />
+                      <Printer size={16} />
                     </button>
 
                     <button
                       onClick={() => handleDuplicateDocument(item)}
                       title="Dupliquer"
-                      className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-lg transition-colors"
+                      className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
                     >
-                      <Copy className="w-4 h-4" />
+                      <Copy size={16} />
                     </button>
 
                     <button
                       onClick={() => handleDelete(item.id)}
                       title="Supprimer"
-                      className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                      className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 size={16} />
                     </button>
                   </div>
                 </div>
@@ -419,21 +651,21 @@ export default function DocumentDesigner({
         {/* Modal: New Document Starter Selector */}
         {showNewDocModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
-            <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-4">
+            <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-150 space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <h3 className="font-bold text-slate-900 text-lg">
                   Nouveau Document A4
                 </h3>
                 <button
                   onClick={() => setShowNewDocModal(false)}
-                  className="text-slate-400 hover:text-slate-600 text-sm font-bold p-1"
+                  className="text-slate-400 hover:text-slate-600 text-sm font-bold p-1 cursor-pointer"
                 >
                   ✕
                 </button>
               </div>
 
               <p className="text-xs text-slate-500">
-                Choisissez comment vous souhaitez commencer votre document. Vous pourrez toujours ajouter ou modifier n&apos;importe quel élément par la suite.
+                Choisissez comment vous souhaitez commencer votre document. Vous pourrez toujours ajouter, modifier ou réorganiser n&apos;importe quel élément par la suite.
               </p>
 
               <div className="space-y-2.5 pt-1">
@@ -441,13 +673,13 @@ export default function DocumentDesigner({
                   <button
                     key={preset.id}
                     onClick={() => handleCreateNewDocument(preset.id)}
-                    className="w-full text-left p-3.5 rounded-xl border border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/30 transition-all flex items-start gap-3.5 group"
+                    className="w-full text-left p-3.5 rounded-xl border border-slate-200 hover:border-blue-500 hover:bg-blue-50/30 transition-all flex items-start gap-3.5 group cursor-pointer"
                   >
-                    <div className="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                      {preset.id === "blank" ? <Plus className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
+                    <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                      {preset.id === "blank" ? <Plus size={16} /> : <Sparkles size={16} />}
                     </div>
                     <div>
-                      <h4 className="font-bold text-slate-900 text-sm group-hover:text-indigo-600 transition-colors">
+                      <h4 className="font-bold text-slate-900 text-sm group-hover:text-blue-600 transition-colors">
                         {preset.name}
                       </h4>
                       <p className="text-xs text-slate-500 mt-0.5">
@@ -461,7 +693,7 @@ export default function DocumentDesigner({
               <div className="pt-2 text-right">
                 <button
                   onClick={() => setShowNewDocModal(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 rounded-lg"
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 rounded-lg cursor-pointer"
                 >
                   Annuler
                 </button>
@@ -484,9 +716,9 @@ export default function DocumentDesigner({
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <button
             onClick={() => setViewMode("list")}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors shrink-0"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors shrink-0 cursor-pointer"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft size={16} />
             <span className="hidden sm:inline">Tous les documents</span>
           </button>
 
@@ -504,7 +736,7 @@ export default function DocumentDesigner({
               }))
             }
             placeholder="Nom du document..."
-            className="font-bold text-base text-slate-900 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-indigo-600 focus:outline-hidden px-1 py-0.5 max-w-sm w-full transition-colors truncate"
+            className="font-bold text-base text-slate-900 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-600 focus:outline-hidden px-1 py-0.5 max-w-sm w-full transition-colors truncate"
           />
         </div>
 
@@ -518,7 +750,7 @@ export default function DocumentDesigner({
                 orientation: prev.orientation === "landscape" ? "portrait" : "landscape",
               }))
             }
-            className="px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5"
+            className="px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
             title="Basculer Portrait / Paysage"
           >
             <span>{activeDoc.orientation === "landscape" ? "Paysage" : "Portrait"}</span>
@@ -527,9 +759,9 @@ export default function DocumentDesigner({
           {/* Print / PDF Button */}
           <button
             onClick={() => printVisualDocument()}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold text-xs rounded-lg transition-colors shadow-2xs"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold text-xs rounded-lg transition-colors shadow-2xs cursor-pointer"
           >
-            <Printer className="w-4 h-4 text-slate-500" />
+            <Printer size={16} className="text-slate-500" />
             <span className="hidden md:inline">Imprimer / PDF</span>
           </button>
 
@@ -537,15 +769,15 @@ export default function DocumentDesigner({
           <button
             onClick={handleSaveActiveDocument}
             disabled={isSaving}
-            className={`inline-flex items-center gap-1.5 px-4 py-1.5 font-bold text-xs rounded-lg shadow-xs transition-colors ${
+            className={`inline-flex items-center gap-1.5 px-4 py-1.5 font-bold text-xs rounded-lg shadow-xs transition-colors cursor-pointer ${
               saveSuccessNotice
                 ? "bg-emerald-600 text-white"
-                : "bg-indigo-600 hover:bg-indigo-700 text-white"
+                : "bg-blue-600 hover:bg-blue-700 text-white"
             }`}
           >
             {saveSuccessNotice ? (
               <>
-                <Check className="w-4 h-4" />
+                <Check size={16} />
                 <span>Enregistré !</span>
               </>
             ) : (
@@ -572,7 +804,7 @@ export default function DocumentDesigner({
                     key={col.id}
                     onClick={() => setActiveDoc((p) => ({ ...p, colorId: col.id }))}
                     title={col.name}
-                    className={`w-5 h-5 rounded-full transition-all ${
+                    className={`w-5 h-5 rounded-full transition-all cursor-pointer ${
                       activeDoc.colorId === col.id
                         ? "ring-2 ring-offset-2 ring-slate-400 scale-110"
                         : "opacity-80 hover:opacity-100"
@@ -593,7 +825,7 @@ export default function DocumentDesigner({
                   label: f.name,
                 }))}
                 placeholder="Choisir une typographie..."
-                buttonClassName="py-1.5 text-xs bg-white"
+                buttonClassName="py-1.5 text-xs bg-white border-slate-200"
               />
             </div>
           </div>
@@ -607,49 +839,49 @@ export default function DocumentDesigner({
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => handleAddElement("header")}
-                className="text-left px-3 py-2 bg-slate-50 hover:bg-indigo-50 hover:text-indigo-700 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition-colors"
+                className="text-left px-3 py-2 bg-slate-50 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition-colors cursor-pointer"
               >
                 + En-tête officiel
               </button>
               <button
                 onClick={() => handleAddElement("heading")}
-                className="text-left px-3 py-2 bg-slate-50 hover:bg-indigo-50 hover:text-indigo-700 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition-colors"
+                className="text-left px-3 py-2 bg-slate-50 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition-colors cursor-pointer"
               >
                 + Titre / Section
               </button>
               <button
                 onClick={() => handleAddElement("paragraph")}
-                className="text-left px-3 py-2 bg-slate-50 hover:bg-indigo-50 hover:text-indigo-700 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition-colors"
+                className="text-left px-3 py-2 bg-slate-50 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition-colors cursor-pointer"
               >
                 + Texte / Paragraphe
               </button>
               <button
                 onClick={() => handleAddElement("callout")}
-                className="text-left px-3 py-2 bg-slate-50 hover:bg-indigo-50 hover:text-indigo-700 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition-colors"
+                className="text-left px-3 py-2 bg-slate-50 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition-colors cursor-pointer"
               >
                 + Encadré / Note
               </button>
               <button
                 onClick={() => handleAddElement("info_grid")}
-                className="text-left px-3 py-2 bg-slate-50 hover:bg-indigo-50 hover:text-indigo-700 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition-colors"
+                className="text-left px-3 py-2 bg-slate-50 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition-colors cursor-pointer"
               >
                 + Infos Clés (Grille)
               </button>
               <button
                 onClick={() => handleAddElement("table")}
-                className="text-left px-3 py-2 bg-slate-50 hover:bg-indigo-50 hover:text-indigo-700 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition-colors"
+                className="text-left px-3 py-2 bg-slate-50 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition-colors cursor-pointer"
               >
                 + Tableau / Programme
               </button>
               <button
                 onClick={() => handleAddElement("signature")}
-                className="text-left px-3 py-2 bg-slate-50 hover:bg-indigo-50 hover:text-indigo-700 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition-colors"
+                className="text-left px-3 py-2 bg-slate-50 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition-colors cursor-pointer"
               >
                 + Signatures & Cachet
               </button>
               <button
                 onClick={() => handleAddElement("divider")}
-                className="text-left px-3 py-2 bg-slate-50 hover:bg-indigo-50 hover:text-indigo-700 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition-colors"
+                className="text-left px-3 py-2 bg-slate-50 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition-colors cursor-pointer"
               >
                 + Ligne de séparation
               </button>
@@ -676,7 +908,7 @@ export default function DocumentDesigner({
                     id={`editor-element-${el.id}`}
                     className={`border rounded-xl transition-all ${
                       isSelected
-                        ? "border-indigo-500 bg-indigo-50/20 shadow-xs"
+                        ? "border-blue-500 bg-blue-50/20 shadow-xs"
                         : "border-slate-200 bg-white"
                     }`}
                   >
@@ -699,27 +931,27 @@ export default function DocumentDesigner({
                         <button
                           disabled={index === 0}
                           onClick={() => handleMoveElement(index, "up")}
-                          className="p-1 text-slate-400 hover:text-slate-700 disabled:opacity-20"
+                          className="p-1 text-slate-400 hover:text-slate-700 disabled:opacity-20 cursor-pointer"
                           title="Monter"
                         >
-                          <ArrowUp className="w-3.5 h-3.5" />
+                          <ArrowUp size={14} />
                         </button>
                         {/* Move Down */}
                         <button
                           disabled={index === activeDoc.elements.length - 1}
                           onClick={() => handleMoveElement(index, "down")}
-                          className="p-1 text-slate-400 hover:text-slate-700 disabled:opacity-20"
+                          className="p-1 text-slate-400 hover:text-slate-700 disabled:opacity-20 cursor-pointer"
                           title="Descendre"
                         >
-                          <ArrowDown className="w-3.5 h-3.5" />
+                          <ArrowDown size={14} />
                         </button>
                         {/* Delete */}
                         <button
                           onClick={() => handleRemoveElement(el.id)}
-                          className="p-1 text-red-400 hover:text-red-600"
+                          className="p-1 text-rose-400 hover:text-rose-600 cursor-pointer"
                           title="Supprimer"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     </div>
@@ -743,31 +975,31 @@ export default function DocumentDesigner({
           <div className="sticky top-2 z-20 mb-4 bg-white/95 backdrop-blur-xs border border-slate-200 rounded-xl px-3 py-1.5 shadow-sm flex items-center gap-2 text-xs font-bold text-slate-700">
             <button
               onClick={() => setZoom((z) => Math.max(0.4, Number((z - 0.1).toFixed(2))))}
-              className="p-1 hover:bg-slate-100 rounded-md"
+              className="p-1 hover:bg-slate-100 rounded-md cursor-pointer"
               title="Zoom arrière"
             >
-              <ZoomOut className="w-3.5 h-3.5" />
+              <ZoomOut size={14} />
             </button>
             <span className="w-12 text-center text-[11px] font-mono">
               {Math.round(zoom * 100)}%
             </span>
             <button
               onClick={() => setZoom((z) => Math.min(1.4, Number((z + 0.1).toFixed(2))))}
-              className="p-1 hover:bg-slate-100 rounded-md"
+              className="p-1 hover:bg-slate-100 rounded-md cursor-pointer"
               title="Zoom avant"
             >
-              <ZoomIn className="w-3.5 h-3.5" />
+              <ZoomIn size={14} />
             </button>
             <div className="h-3 w-px bg-slate-200 mx-1" />
             <button
               onClick={() => setZoom(0.85)}
-              className="px-1.5 py-0.5 hover:bg-slate-100 rounded-md text-[11px]"
+              className="px-1.5 py-0.5 hover:bg-slate-100 rounded-md text-[11px] cursor-pointer"
             >
               Ajuster
             </button>
             <button
               onClick={() => setZoom(1)}
-              className="px-1.5 py-0.5 hover:bg-slate-100 rounded-md text-[11px]"
+              className="px-1.5 py-0.5 hover:bg-slate-100 rounded-md text-[11px] cursor-pointer"
             >
               100%
             </button>
@@ -780,7 +1012,6 @@ export default function DocumentDesigner({
             selectedElementId={selectedElementId}
             onSelectElement={(id) => {
               setSelectedElementId(id);
-              // scroll into view in left panel
               const node = document.getElementById(`editor-element-${id}`);
               if (node) node.scrollIntoView({ behavior: "smooth", block: "nearest" });
             }}
@@ -831,7 +1062,7 @@ function renderElementEditForm(el, update) {
               type="text"
               value={el.orgName || ""}
               onChange={(e) => update({ orgName: e.target.value })}
-              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold"
+              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:border-blue-500 focus:outline-hidden"
             />
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -841,7 +1072,7 @@ function renderElementEditForm(el, update) {
                 type="text"
                 value={el.subtitle || ""}
                 onChange={(e) => update({ subtitle: e.target.value })}
-                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-blue-500 focus:outline-hidden"
               />
             </div>
             <div>
@@ -850,7 +1081,7 @@ function renderElementEditForm(el, update) {
                 type="text"
                 value={el.ref || ""}
                 onChange={(e) => update({ ref: e.target.value })}
-                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-blue-500 focus:outline-hidden"
               />
             </div>
           </div>
@@ -860,7 +1091,7 @@ function renderElementEditForm(el, update) {
               type="text"
               value={el.date || ""}
               onChange={(e) => update({ date: e.target.value })}
-              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-blue-500 focus:outline-hidden"
             />
           </div>
         </div>
@@ -875,7 +1106,7 @@ function renderElementEditForm(el, update) {
               type="text"
               value={el.text || ""}
               onChange={(e) => update({ text: e.target.value })}
-              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold"
+              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:border-blue-500 focus:outline-hidden"
             />
           </div>
           <div>
@@ -884,7 +1115,7 @@ function renderElementEditForm(el, update) {
               type="text"
               value={el.subtitle || ""}
               onChange={(e) => update({ subtitle: e.target.value })}
-              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-blue-500 focus:outline-hidden"
             />
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -896,10 +1127,10 @@ function renderElementEditForm(el, update) {
                     key={sz}
                     type="button"
                     onClick={() => update({ size: sz })}
-                    className={`flex-1 py-1 text-[10px] font-bold rounded-md border ${
+                    className={`flex-1 py-1 text-[10px] font-bold rounded-md border cursor-pointer ${
                       (el.size || "lg") === sz
-                        ? "bg-indigo-600 text-white border-indigo-600"
-                        : "bg-slate-50 border-slate-200 text-slate-600"
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
                     }`}
                   >
                     {sz.toUpperCase()}
@@ -919,10 +1150,10 @@ function renderElementEditForm(el, update) {
                     key={a.id}
                     type="button"
                     onClick={() => update({ align: a.id })}
-                    className={`flex-1 py-1 text-[10px] font-bold rounded-md border ${
+                    className={`flex-1 py-1 text-[10px] font-bold rounded-md border cursor-pointer ${
                       (el.align || "left") === a.id
-                        ? "bg-indigo-600 text-white border-indigo-600"
-                        : "bg-slate-50 border-slate-200 text-slate-600"
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
                     }`}
                   >
                     {a.label}
@@ -944,7 +1175,7 @@ function renderElementEditForm(el, update) {
               value={el.text || ""}
               onChange={(e) => update({ text: e.target.value })}
               placeholder="Rédigez ici..."
-              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs leading-relaxed"
+              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs leading-relaxed focus:border-blue-500 focus:outline-hidden"
             />
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -960,10 +1191,10 @@ function renderElementEditForm(el, update) {
                     key={s.id}
                     type="button"
                     onClick={() => update({ size: s.id })}
-                    className={`flex-1 py-1 text-[10px] font-bold rounded-md border ${
+                    className={`flex-1 py-1 text-[10px] font-bold rounded-md border cursor-pointer ${
                       (el.size || "md") === s.id
-                        ? "bg-indigo-600 text-white border-indigo-600"
-                        : "bg-slate-50 border-slate-200 text-slate-600"
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
                     }`}
                   >
                     {s.label}
@@ -983,10 +1214,10 @@ function renderElementEditForm(el, update) {
                     key={a.id}
                     type="button"
                     onClick={() => update({ align: a.id })}
-                    className={`flex-1 py-1 text-[10px] font-bold rounded-md border ${
+                    className={`flex-1 py-1 text-[10px] font-bold rounded-md border cursor-pointer ${
                       (el.align || "left") === a.id
-                        ? "bg-indigo-600 text-white border-indigo-600"
-                        : "bg-slate-50 border-slate-200 text-slate-600"
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
                     }`}
                   >
                     {a.label}
@@ -1007,7 +1238,7 @@ function renderElementEditForm(el, update) {
               type="text"
               value={el.title || ""}
               onChange={(e) => update({ title: e.target.value })}
-              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold"
+              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:border-blue-500 focus:outline-hidden"
             />
           </div>
           <div>
@@ -1016,7 +1247,7 @@ function renderElementEditForm(el, update) {
               rows={3}
               value={el.text || ""}
               onChange={(e) => update({ text: e.target.value })}
-              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-blue-500 focus:outline-hidden"
             />
           </div>
           <div>
@@ -1032,10 +1263,10 @@ function renderElementEditForm(el, update) {
                   key={c.id}
                   type="button"
                   onClick={() => update({ color: c.id })}
-                  className={`flex-1 py-1 text-[10px] font-bold rounded-md border ${
+                  className={`flex-1 py-1 text-[10px] font-bold rounded-md border cursor-pointer ${
                     (el.color || "slate") === c.id
-                      ? "bg-indigo-600 text-white border-indigo-600"
-                      : "bg-slate-50 border-slate-200 text-slate-600"
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
                   }`}
                 >
                   {c.label}
@@ -1061,7 +1292,7 @@ function renderElementEditForm(el, update) {
                   newItems[idx] = { ...newItems[idx], label: e.target.value };
                   update({ items: newItems });
                 }}
-                className="w-1/3 p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+                className="w-1/3 p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-blue-500 focus:outline-hidden"
               />
               <input
                 type="text"
@@ -1072,7 +1303,7 @@ function renderElementEditForm(el, update) {
                   newItems[idx] = { ...newItems[idx], value: e.target.value };
                   update({ items: newItems });
                 }}
-                className="flex-1 p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold"
+                className="flex-1 p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:border-blue-500 focus:outline-hidden"
               />
             </div>
           ))}
@@ -1088,7 +1319,7 @@ function renderElementEditForm(el, update) {
               type="text"
               value={el.title || ""}
               onChange={(e) => update({ title: e.target.value })}
-              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold"
+              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:border-blue-500 focus:outline-hidden"
             />
           </div>
           <div>
@@ -1100,7 +1331,7 @@ function renderElementEditForm(el, update) {
                 const arr = e.target.value.split(",").map((s) => s.trim());
                 update({ headers: arr });
               }}
-              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-blue-500 focus:outline-hidden"
             />
           </div>
           <div>
@@ -1113,7 +1344,7 @@ function renderElementEditForm(el, update) {
                   const newRow = new Array(colCount).fill("Nouvelle entrée");
                   update({ rows: [...(el.rows || []), newRow] });
                 }}
-                className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800"
+                className="text-[10px] font-bold text-blue-600 hover:text-blue-800 cursor-pointer"
               >
                 + Ajouter une ligne
               </button>
@@ -1133,7 +1364,7 @@ function renderElementEditForm(el, update) {
                         newRows[rIdx][cIdx] = e.target.value;
                         update({ rows: newRows });
                       }}
-                      className="flex-1 p-1 bg-slate-50 border border-slate-200 rounded-md text-[11px]"
+                      className="flex-1 p-1 bg-slate-50 border border-slate-200 rounded-md text-[11px] focus:border-blue-500 focus:outline-hidden"
                     />
                   ))}
                   <button
@@ -1142,7 +1373,7 @@ function renderElementEditForm(el, update) {
                       const newRows = (el.rows || []).filter((_, idx) => idx !== rIdx);
                       update({ rows: newRows });
                     }}
-                    className="p-1 text-red-400 hover:text-red-600"
+                    className="p-1 text-rose-400 hover:text-rose-600 cursor-pointer"
                   >
                     ✕
                   </button>
@@ -1163,7 +1394,7 @@ function renderElementEditForm(el, update) {
                 type="text"
                 value={el.sign1Name || ""}
                 onChange={(e) => update({ sign1Name: e.target.value })}
-                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold"
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:border-blue-500 focus:outline-hidden"
               />
             </div>
             <div>
@@ -1172,7 +1403,7 @@ function renderElementEditForm(el, update) {
                 type="text"
                 value={el.sign1Title || ""}
                 onChange={(e) => update({ sign1Title: e.target.value })}
-                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-blue-500 focus:outline-hidden"
               />
             </div>
           </div>
@@ -1183,7 +1414,7 @@ function renderElementEditForm(el, update) {
                 type="text"
                 value={el.sign2Name || ""}
                 onChange={(e) => update({ sign2Name: e.target.value })}
-                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold"
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:border-blue-500 focus:outline-hidden"
               />
             </div>
             <div>
@@ -1192,7 +1423,7 @@ function renderElementEditForm(el, update) {
                 type="text"
                 value={el.sign2Title || ""}
                 onChange={(e) => update({ sign2Title: e.target.value })}
-                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-blue-500 focus:outline-hidden"
               />
             </div>
           </div>
@@ -1202,9 +1433,9 @@ function renderElementEditForm(el, update) {
               id="stampCheckbox"
               checked={!!el.showStamp}
               onChange={(e) => update({ showStamp: e.target.checked })}
-              className="rounded text-indigo-600 focus:ring-indigo-500"
+              className="rounded text-blue-600 focus:ring-blue-500"
             />
-            <label htmlFor="stampCheckbox" className="text-xs font-semibold text-slate-700">
+            <label htmlFor="stampCheckbox" className="text-xs font-semibold text-slate-700 cursor-pointer">
               Afficher le cachet officiel &apos;Eventzone Approuvé&apos;
             </label>
           </div>
@@ -1225,10 +1456,10 @@ function renderElementEditForm(el, update) {
                 key={d.id}
                 type="button"
                 onClick={() => update({ style: d.id })}
-                className={`flex-1 py-1 text-[10px] font-bold rounded-md border ${
+                className={`flex-1 py-1 text-[10px] font-bold rounded-md border cursor-pointer ${
                   (el.style || "solid") === d.id
-                    ? "bg-indigo-600 text-white border-indigo-600"
-                    : "bg-slate-50 border-slate-200 text-slate-600"
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
                 }`}
               >
                 {d.label}
