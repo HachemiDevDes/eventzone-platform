@@ -803,16 +803,57 @@ export default function DocumentDesigner({
                 {COLOR_OPTIONS.map((col) => (
                   <button
                     key={col.id}
-                    onClick={() => setActiveDoc((p) => ({ ...p, colorId: col.id }))}
+                    onClick={() => setActiveDoc((p) => ({ ...p, colorId: col.id, customColor: undefined }))}
                     title={col.name}
                     className={`w-5 h-5 rounded-full transition-all cursor-pointer ${
-                      activeDoc.colorId === col.id
-                        ? "ring-2 ring-offset-2 ring-slate-400 scale-110"
-                        : "opacity-80 hover:opacity-100"
+                      activeDoc.colorId === col.id && !activeDoc.customColor
+                        ? "ring-2 ring-offset-2 ring-blue-500 scale-110 shadow-xs"
+                        : "opacity-80 hover:opacity-100 hover:scale-105"
                     }`}
                     style={{ backgroundColor: col.primary }}
                   />
                 ))}
+
+                <span className="w-px h-3.5 bg-slate-300 mx-0.5" />
+
+                {/* Custom Color Picker Swatch & Native Input */}
+                <label
+                  title={
+                    activeDoc.customColor || activeDoc.colorId === "custom"
+                      ? `Couleur personnalisée: ${activeDoc.customColor || "#2563eb"}`
+                      : "Choisir une couleur personnalisée"
+                  }
+                  className={`relative w-5 h-5 rounded-full cursor-pointer flex items-center justify-center transition-all overflow-hidden ${
+                    activeDoc.colorId === "custom" || activeDoc.customColor
+                      ? "ring-2 ring-offset-2 ring-blue-500 scale-110 shadow-xs"
+                      : "opacity-85 hover:opacity-100 hover:scale-105"
+                  }`}
+                  style={{
+                    backgroundColor: activeDoc.customColor || "#2563eb",
+                    backgroundImage: !(activeDoc.colorId === "custom" || activeDoc.customColor)
+                      ? "conic-gradient(from 180deg at 50% 50%, #ef4444 0deg, #f59e0b 60deg, #10b981 120deg, #06b6d4 180deg, #6366f1 240deg, #ec4899 300deg, #ef4444 360deg)"
+                      : undefined,
+                  }}
+                >
+                  <input
+                    type="color"
+                    value={activeDoc.customColor || (activeDoc.colorId?.startsWith("#") ? activeDoc.colorId : "#2563eb")}
+                    onChange={(e) => {
+                      const newColor = e.target.value;
+                      setActiveDoc((p) => ({
+                        ...p,
+                        colorId: "custom",
+                        customColor: newColor,
+                      }));
+                    }}
+                    className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                  />
+                  {!(activeDoc.colorId === "custom" || activeDoc.customColor) && (
+                    <span className="text-[10px] font-black text-white drop-shadow-xs pointer-events-none select-none leading-none">
+                      +
+                    </span>
+                  )}
+                </label>
               </div>
             </div>
 
@@ -1280,7 +1321,7 @@ function renderElementEditForm(el, update) {
             <div className="flex gap-1 mt-1">
               {[
                 { id: "default", label: "Défaut (Sombre)" },
-                { id: "primary", label: "Bleu Eventzone" },
+                { id: "primary", label: "Couleur thème" },
                 { id: "muted", label: "Gris atténué" },
               ].map((c) => (
                 <button

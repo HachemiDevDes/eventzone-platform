@@ -36,13 +36,24 @@ export default function A4VisualDocumentSheet({
   const elements = doc?.elements || [];
   const variables = doc?.variables || {};
 
-  // Resolve active theme color
+  // Resolve active theme color (supports presets and custom hex color)
   const activeColor = useMemo(() => {
+    const customHex = doc?.customColor || (doc?.colorId?.startsWith("#") ? doc.colorId : null);
+    if (customHex || doc?.colorId === "custom") {
+      const hex = customHex || "#2563eb";
+      return {
+        id: "custom",
+        name: "Personnalisé",
+        primary: hex,
+        light: hex.length === 7 ? `${hex}18` : hex,
+        border: hex.length === 7 ? `${hex}38` : hex,
+      };
+    }
     return (
       COLOR_OPTIONS.find((c) => c.id === doc?.colorId) ||
       COLOR_OPTIONS[0]
     );
-  }, [doc?.colorId]);
+  }, [doc?.colorId, doc?.customColor]);
 
   // Resolve active font family
   const activeFont = useMemo(() => {
@@ -63,13 +74,17 @@ export default function A4VisualDocumentSheet({
     >
       {/* Global CSS for print and Google fonts */}
       <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Playfair+Display:ital,wght@0,500;0,600;0,700;0,800;1,400&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,400;1,600&family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Alex+Brush&family=Cinzel:wght@400;600;700;800&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Great+Vibes&family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=Merriweather:ital,wght@0,400;0,700;1,400&family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Outfit:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;0,800;1,400&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
 
         .a4-paper-sheet {
           width: ${isLandscape ? "1123px" : "794px"};
           min-height: ${isLandscape ? "794px" : "1123px"};
           box-sizing: border-box;
           background-color: #ffffff;
+        }
+        .a4-paper-sheet,
+        .a4-paper-sheet *:not([data-custom-font]) {
+          font-family: inherit;
         }
 
         @media print {
@@ -154,6 +169,7 @@ export default function A4VisualDocumentSheet({
                     lightColor: activeColor.light,
                     borderColor: activeColor.border,
                     variables,
+                    activeFont,
                   })}
                 </div>
               );
@@ -186,7 +202,8 @@ export default function A4VisualDocumentSheet({
  * Render single element switch
  */
 function renderElementContent(element, theme) {
-  const { primaryColor, lightColor, borderColor, variables } = theme;
+  const { primaryColor, lightColor, borderColor, variables, activeFont } = theme;
+  const docFont = activeFont?.font || "'Plus Jakarta Sans', sans-serif";
 
   switch (element.type) {
     case "header": {
@@ -196,7 +213,7 @@ function renderElementContent(element, theme) {
       const ref = interpolateDocumentVariables(element.ref || "", variables);
 
       return (
-        <div className="border-b-2 pb-5 pt-1" style={{ borderColor: primaryColor }}>
+        <div className="border-b-2 pb-5 pt-1" style={{ borderColor: primaryColor, fontFamily: docFont }}>
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-4">
               {element.logo ? (
@@ -208,17 +225,17 @@ function renderElementContent(element, theme) {
               ) : (
                 <div
                   className="w-14 h-14 rounded-xl flex items-center justify-center font-black text-xl text-white shadow-xs"
-                  style={{ backgroundColor: primaryColor }}
+                  style={{ backgroundColor: primaryColor, fontFamily: docFont }}
                 >
                   {orgName.charAt(0) || "E"}
                 </div>
               )}
               <div>
-                <h2 className="text-xl font-black tracking-tight text-slate-900 uppercase">
+                <h2 className="text-xl font-black tracking-tight text-slate-900 uppercase" style={{ fontFamily: docFont }}>
                   {orgName}
                 </h2>
                 {subtitle && (
-                  <p className="text-xs font-semibold text-slate-500 mt-0.5">
+                  <p className="text-xs font-semibold text-slate-500 mt-0.5" style={{ fontFamily: docFont }}>
                     {subtitle}
                   </p>
                 )}
@@ -227,7 +244,7 @@ function renderElementContent(element, theme) {
 
             <div className="text-right shrink-0">
               {date && (
-                <p className="text-xs font-semibold text-slate-600">
+                <p className="text-xs font-semibold text-slate-600" style={{ fontFamily: docFont }}>
                   {date}
                 </p>
               )}
@@ -271,17 +288,17 @@ function renderElementContent(element, theme) {
         right: "text-right",
       }[element.align || "left"];
 
-      const customFont = element.fontId && element.fontId !== "inherit"
+      const elementFont = (element.fontId && element.fontId !== "inherit")
         ? FONT_OPTIONS.find((f) => f.id === element.fontId)?.font
-        : undefined;
+        : docFont;
 
       const styleObj = {
-        fontFamily: customFont,
+        fontFamily: elementFont,
         color: element.color === "primary" ? primaryColor : undefined,
       };
 
       return (
-        <div className={`py-1 ${alignClass}`}>
+        <div className={`py-1 ${alignClass}`} style={{ fontFamily: elementFont }}>
           <h1
             className={`${sizeClasses} ${weightClass} ${element.italic ? "italic" : ""} ${element.underline ? "underline underline-offset-4" : ""} leading-tight ${element.color === "muted" ? "text-slate-500" : element.color === "primary" ? "" : "text-slate-900"}`}
             style={styleObj}
@@ -289,7 +306,7 @@ function renderElementContent(element, theme) {
             {text}
           </h1>
           {subtitle && (
-            <p className="text-sm font-medium text-slate-500 mt-1">
+            <p className="text-sm font-medium text-slate-500 mt-1" style={{ fontFamily: elementFont }}>
               {subtitle}
             </p>
           )}
@@ -326,17 +343,17 @@ function renderElementContent(element, theme) {
         right: "text-right",
       }[element.align || "left"];
 
-      const customFont = element.fontId && element.fontId !== "inherit"
+      const elementFont = (element.fontId && element.fontId !== "inherit")
         ? FONT_OPTIONS.find((f) => f.id === element.fontId)?.font
-        : undefined;
+        : docFont;
 
       const styleObj = {
-        fontFamily: customFont,
+        fontFamily: elementFont,
         color: element.color === "primary" ? primaryColor : undefined,
       };
 
       return (
-        <div className={`py-1 ${alignClass}`}>
+        <div className={`py-1 ${alignClass}`} style={{ fontFamily: elementFont }}>
           <div
             className={`${sizeClasses} ${weightClass} ${element.italic ? "italic" : ""} ${element.underline ? "underline underline-offset-4" : ""} ${element.color === "muted" ? "text-slate-500" : element.color === "primary" ? "" : "text-slate-700"} whitespace-pre-line`}
             style={styleObj}
@@ -411,6 +428,10 @@ function renderElementContent(element, theme) {
         indigo: { bg: lightColor, border: borderColor, text: "#3730a3", title: primaryColor },
       }[element.color || "slate"] || { bg: "#f8fafc", border: "#cbd5e1", text: "#1e293b", title: "#0f172a" };
 
+      const elementFont = (element.fontId && element.fontId !== "inherit")
+        ? FONT_OPTIONS.find((f) => f.id === element.fontId)?.font
+        : docFont;
+
       return (
         <div
           className="rounded-xl p-5 border-l-4 my-2"
@@ -418,19 +439,20 @@ function renderElementContent(element, theme) {
             backgroundColor: calloutStyles.bg,
             borderColor: calloutStyles.border,
             borderLeftColor: primaryColor,
+            fontFamily: elementFont,
           }}
         >
           {title && (
             <h4
               className="text-xs font-black uppercase tracking-wider mb-1.5"
-              style={{ color: calloutStyles.title }}
+              style={{ color: calloutStyles.title, fontFamily: elementFont }}
             >
               {title}
             </h4>
           )}
           <p
             className="text-sm font-medium leading-relaxed whitespace-pre-line"
-            style={{ color: calloutStyles.text }}
+            style={{ color: calloutStyles.text, fontFamily: elementFont }}
           >
             {text}
           </p>
@@ -441,18 +463,18 @@ function renderElementContent(element, theme) {
     case "info_grid": {
       const items = element.items || [];
       return (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 my-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 my-2" style={{ fontFamily: docFont }}>
           {items.map((item, i) => (
             <div
               key={i}
               className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-3.5 text-center"
             >
-              <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
+              <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1" style={{ fontFamily: docFont }}>
                 {interpolateDocumentVariables(item.label || "", variables)}
               </div>
               <div
                 className="text-sm font-bold truncate"
-                style={{ color: primaryColor }}
+                style={{ color: primaryColor, fontFamily: docFont }}
               >
                 {interpolateDocumentVariables(item.value || "", variables)}
               </div>
@@ -468,21 +490,21 @@ function renderElementContent(element, theme) {
       const rows = element.rows || [];
 
       return (
-        <div className="my-2 space-y-2">
+        <div className="my-2 space-y-2" style={{ fontFamily: docFont }}>
           {title && (
-            <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
+            <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider" style={{ fontFamily: docFont }}>
               {title}
             </h4>
           )}
           <div className="overflow-hidden border border-slate-200 rounded-xl">
-            <table className="w-full text-left text-xs">
+            <table className="w-full text-left text-xs" style={{ fontFamily: docFont }}>
               <thead style={{ backgroundColor: lightColor }}>
                 <tr>
                   {headers.map((h, i) => (
                     <th
                       key={i}
                       className="px-3.5 py-2.5 font-bold uppercase tracking-wider text-[11px]"
-                      style={{ color: primaryColor }}
+                      style={{ color: primaryColor, fontFamily: docFont }}
                     >
                       {h}
                     </th>
@@ -493,7 +515,7 @@ function renderElementContent(element, theme) {
                 {rows.map((row, rIdx) => (
                   <tr key={rIdx} className={rIdx % 2 === 1 ? "bg-slate-50/50" : ""}>
                     {row.map((cell, cIdx) => (
-                      <td key={cIdx} className="px-3.5 py-2.5 font-medium text-slate-700">
+                      <td key={cIdx} className="px-3.5 py-2.5 font-medium text-slate-700" style={{ fontFamily: docFont }}>
                         {interpolateDocumentVariables(cell || "", variables)}
                       </td>
                     ))}
@@ -515,16 +537,16 @@ function renderElementContent(element, theme) {
       const stampText = interpolateDocumentVariables(element.stampText || "Eventzone Approuvé", variables);
 
       return (
-        <div className="pt-6 mt-4 border-t border-slate-200">
+        <div className="pt-6 mt-4 border-t border-slate-200" style={{ fontFamily: docFont }}>
           <div className="flex items-end justify-between gap-8">
             {/* Signatory 1 */}
             <div className="flex-1 text-center">
-              <p className="text-xs font-semibold text-slate-500 mb-10">
+              <p className="text-xs font-semibold text-slate-500 mb-10" style={{ fontFamily: docFont }}>
                 {sign1Title || "Pour l'Organisateur"}
               </p>
               <div className="border-b border-slate-400 w-40 mx-auto mb-1.5" />
-              <p className="text-sm font-bold text-slate-900">{sign1Name || "Nom et Prénom"}</p>
-              {date && <p className="text-[11px] text-slate-400 mt-0.5">{date}</p>}
+              <p className="text-sm font-bold text-slate-900" style={{ fontFamily: docFont }}>{sign1Name || "Nom et Prénom"}</p>
+              {date && <p className="text-[11px] text-slate-400 mt-0.5" style={{ fontFamily: docFont }}>{date}</p>}
             </div>
 
             {/* Official Cachet Stamp */}
@@ -536,6 +558,7 @@ function renderElementContent(element, theme) {
                     borderColor: primaryColor,
                     color: primaryColor,
                     backgroundColor: lightColor,
+                    fontFamily: docFont,
                   }}
                 >
                   <span className="text-[9px] font-black uppercase tracking-widest">
@@ -554,12 +577,12 @@ function renderElementContent(element, theme) {
             {/* Signatory 2 (Optional) */}
             {sign2Name || sign2Title ? (
               <div className="flex-1 text-center">
-                <p className="text-xs font-semibold text-slate-500 mb-10">
+                <p className="text-xs font-semibold text-slate-500 mb-10" style={{ fontFamily: docFont }}>
                   {sign2Title || "Pour le Partenaire"}
                 </p>
                 <div className="border-b border-slate-400 w-40 mx-auto mb-1.5" />
-                <p className="text-sm font-bold text-slate-900">{sign2Name || "Nom et Prénom"}</p>
-                {date && <p className="text-[11px] text-slate-400 mt-0.5">{date}</p>}
+                <p className="text-sm font-bold text-slate-900" style={{ fontFamily: docFont }}>{sign2Name || "Nom et Prénom"}</p>
+                {date && <p className="text-[11px] text-slate-400 mt-0.5" style={{ fontFamily: docFont }}>{date}</p>}
               </div>
             ) : null}
           </div>
