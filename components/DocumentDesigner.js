@@ -6,7 +6,8 @@ import {
   ArrowLeft, Plus, Trash2, Printer, Check, Copy,
   ArrowUp, ArrowDown, ZoomIn, ZoomOut, FileText,
   Search, Sparkles, Download, Mail, Award, Clock,
-  ShieldCheck, CheckCircle2, X, FileEdit, Calendar
+  ShieldCheck, CheckCircle2, X, FileEdit, Calendar,
+  Upload, Image as ImageIcon, Type
 } from "lucide-react";
 import SearchableSelect from "./SearchableSelect";
 import A4VisualDocumentSheet, { printVisualDocument } from "./A4VisualDocumentSheet";
@@ -856,6 +857,18 @@ export default function DocumentDesigner({
                 + Texte / Paragraphe
               </button>
               <button
+                onClick={() => handleAddElement("custom_text")}
+                className="text-left px-3 py-2 bg-slate-50 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition-colors cursor-pointer"
+              >
+                + Bloc de Texte Libre
+              </button>
+              <button
+                onClick={() => handleAddElement("image")}
+                className="text-left px-3 py-2 bg-slate-50 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition-colors cursor-pointer"
+              >
+                + Image / Photo
+              </button>
+              <button
                 onClick={() => handleAddElement("callout")}
                 className="text-left px-3 py-2 bg-slate-50 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition-colors cursor-pointer"
               >
@@ -1033,6 +1046,10 @@ function getElementSummary(el) {
       return el.text || "Titre";
     case "paragraph":
       return el.text?.slice(0, 35) + "..." || "Texte";
+    case "custom_text":
+      return el.text?.slice(0, 35) + "..." || "Texte Libre";
+    case "image":
+      return el.caption ? `Image : ${el.caption}` : "Image / Photo";
     case "callout":
       return el.title || "Encadré";
     case "info_grid":
@@ -1098,53 +1115,119 @@ function renderElementEditForm(el, update) {
       );
 
     case "heading":
+    case "paragraph":
+    case "custom_text":
       return (
-        <div className="space-y-2">
+        <div className="space-y-2.5">
+          {/* Text Content */}
           <div>
-            <label className="text-[10px] font-bold text-slate-500 uppercase">Texte du titre</label>
-            <input
-              type="text"
-              value={el.text || ""}
-              onChange={(e) => update({ text: e.target.value })}
-              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:border-blue-500 focus:outline-hidden"
+            <label className="text-[10px] font-bold text-slate-500 uppercase">
+              {el.type === "heading" ? "Texte du titre" : "Contenu du texte"}
+            </label>
+            {el.type === "heading" ? (
+              <input
+                type="text"
+                value={el.text || ""}
+                onChange={(e) => update({ text: e.target.value })}
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:border-blue-500 focus:outline-hidden"
+              />
+            ) : (
+              <textarea
+                rows={4}
+                value={el.text || ""}
+                onChange={(e) => update({ text: e.target.value })}
+                placeholder="Rédigez ici..."
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs leading-relaxed focus:border-blue-500 focus:outline-hidden"
+              />
+            )}
+          </div>
+
+          {/* Subtitle for heading */}
+          {el.type === "heading" && (
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase">Sous-titre (optionnel)</label>
+              <input
+                type="text"
+                value={el.subtitle || ""}
+                onChange={(e) => update({ subtitle: e.target.value })}
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-blue-500 focus:outline-hidden"
+              />
+            </div>
+          )}
+
+          {/* Font / Typography */}
+          <div>
+            <label className="text-[10px] font-bold text-slate-500 uppercase">Police / Typographie</label>
+            <SearchableSelect
+              value={el.fontId || "inherit"}
+              onChange={(val) => update({ fontId: val })}
+              options={[
+                { value: "inherit", label: "Police par défaut du document" },
+                ...FONT_OPTIONS.map((f) => ({ value: f.id, label: f.name })),
+              ]}
+              placeholder="Police de caractères..."
+              buttonClassName="py-1 text-xs bg-slate-50 border-slate-200"
             />
           </div>
+
+          {/* Size / Taille */}
           <div>
-            <label className="text-[10px] font-bold text-slate-500 uppercase">Sous-titre (optionnel)</label>
-            <input
-              type="text"
-              value={el.subtitle || ""}
-              onChange={(e) => update({ subtitle: e.target.value })}
-              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-blue-500 focus:outline-hidden"
-            />
+            <label className="text-[10px] font-bold text-slate-500 uppercase">Taille du texte</label>
+            <div className="flex gap-1 mt-1">
+              {["xs", "sm", "md", "lg", "xl", "2xl"].map((sz) => (
+                <button
+                  key={sz}
+                  type="button"
+                  onClick={() => update({ size: sz })}
+                  className={`flex-1 py-1 text-[10px] font-bold rounded-md border cursor-pointer ${
+                    (el.size || (el.type === "heading" ? "lg" : "md")) === sz
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  {sz.toUpperCase()}
+                </button>
+              ))}
+            </div>
           </div>
+
+          {/* Boldness / Weight */}
+          <div>
+            <label className="text-[10px] font-bold text-slate-500 uppercase">Graisse / Boldness</label>
+            <div className="flex gap-1 mt-1">
+              {[
+                { id: "normal", label: "Normal" },
+                { id: "medium", label: "Moyen" },
+                { id: "semibold", label: "Semi" },
+                { id: "bold", label: "Gras" },
+                { id: "extrabold", label: "Black" },
+              ].map((w) => (
+                <button
+                  key={w.id}
+                  type="button"
+                  onClick={() => update({ weight: w.id })}
+                  className={`flex-1 py-1 text-[10px] font-bold rounded-md border cursor-pointer ${
+                    (el.weight || (el.type === "heading" ? "bold" : "normal")) === w.id
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  {w.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Position / Alignement & Formatting */}
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase">Taille</label>
-              <div className="flex gap-1 mt-1">
-                {["sm", "md", "lg", "xl"].map((sz) => (
-                  <button
-                    key={sz}
-                    type="button"
-                    onClick={() => update({ size: sz })}
-                    className={`flex-1 py-1 text-[10px] font-bold rounded-md border cursor-pointer ${
-                      (el.size || "lg") === sz
-                        ? "bg-blue-600 text-white border-blue-600"
-                        : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
-                    }`}
-                  >
-                    {sz.toUpperCase()}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase">Alignement</label>
+              <label className="text-[10px] font-bold text-slate-500 uppercase">Position / Alignement</label>
               <div className="flex gap-1 mt-1">
                 {[
                   { id: "left", label: "Gauche" },
                   { id: "center", label: "Centre" },
                   { id: "right", label: "Droite" },
+                  ...(el.type !== "heading" ? [{ id: "justify", label: "Justifié" }] : []),
                 ].map((a) => (
                   <button
                     key={a.id}
@@ -1160,71 +1243,212 @@ function renderElementEditForm(el, update) {
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase">Style & Décoration</label>
+              <div className="flex gap-1 mt-1">
+                <button
+                  type="button"
+                  onClick={() => update({ italic: !el.italic })}
+                  className={`flex-1 py-1 text-[10px] font-bold rounded-md border cursor-pointer ${
+                    el.italic
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 italic"
+                  }`}
+                >
+                  Italique
+                </button>
+                <button
+                  type="button"
+                  onClick={() => update({ underline: !el.underline })}
+                  className={`flex-1 py-1 text-[10px] font-bold rounded-md border cursor-pointer ${
+                    el.underline
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 underline"
+                  }`}
+                >
+                  Souligné
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Color Selection */}
+          <div>
+            <label className="text-[10px] font-bold text-slate-500 uppercase">Couleur du texte</label>
+            <div className="flex gap-1 mt-1">
+              {[
+                { id: "default", label: "Défaut (Sombre)" },
+                { id: "primary", label: "Bleu Eventzone" },
+                { id: "muted", label: "Gris atténué" },
+              ].map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => update({ color: c.id })}
+                  className={`flex-1 py-1 text-[10px] font-bold rounded-md border cursor-pointer ${
+                    (el.color || "default") === c.id
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  {c.label}
+                </button>
+              ))}
             </div>
           </div>
         </div>
       );
 
-    case "paragraph":
+    case "image":
       return (
-        <div className="space-y-2">
+        <div className="space-y-2.5">
+          {/* File Upload Button */}
           <div>
-            <label className="text-[10px] font-bold text-slate-500 uppercase">Texte du paragraphe</label>
-            <textarea
-              rows={5}
-              value={el.text || ""}
-              onChange={(e) => update({ text: e.target.value })}
-              placeholder="Rédigez ici..."
-              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs leading-relaxed focus:border-blue-500 focus:outline-hidden"
+            <label className="text-[10px] font-bold text-slate-500 uppercase">Fichier Image / Photo</label>
+            <div className="mt-1">
+              <label className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold cursor-pointer transition-colors shadow-2xs">
+                <Upload size={14} />
+                <span>Importer une photo depuis l&apos;ordinateur</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (uploadEvent) => {
+                      update({ url: uploadEvent.target.result });
+                    };
+                    reader.readAsDataURL(file);
+                  }}
+                />
+              </label>
+            </div>
+          </div>
+
+          {/* Direct Image URL */}
+          <div>
+            <label className="text-[10px] font-bold text-slate-500 uppercase">Ou lien direct (URL)</label>
+            <input
+              type="text"
+              value={el.url || ""}
+              onChange={(e) => update({ url: e.target.value })}
+              placeholder="https://exemple.com/image.jpg ou /mon-image.png"
+              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-blue-500 focus:outline-hidden"
             />
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase">Taille</label>
-              <div className="flex gap-1 mt-1">
-                {[
-                  { id: "sm", label: "Petit" },
-                  { id: "md", label: "Normal" },
-                  { id: "lg", label: "Grand" },
-                ].map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => update({ size: s.id })}
-                    className={`flex-1 py-1 text-[10px] font-bold rounded-md border cursor-pointer ${
-                      (el.size || "md") === s.id
-                        ? "bg-blue-600 text-white border-blue-600"
-                        : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
-                    }`}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
+
+          {/* Position / Alignement */}
+          <div>
+            <label className="text-[10px] font-bold text-slate-500 uppercase">Position / Alignement</label>
+            <div className="flex gap-1 mt-1">
+              {[
+                { id: "left", label: "Gauche" },
+                { id: "center", label: "Centré" },
+                { id: "right", label: "Droite" },
+              ].map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => update({ align: a.id })}
+                  className={`flex-1 py-1 text-[10px] font-bold rounded-md border cursor-pointer ${
+                    (el.align || "center") === a.id
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  {a.label}
+                </button>
+              ))}
             </div>
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase">Alignement</label>
-              <div className="flex gap-1 mt-1">
-                {[
-                  { id: "left", label: "Gauche" },
-                  { id: "justify", label: "Justifié" },
-                  { id: "center", label: "Centre" },
-                ].map((a) => (
-                  <button
-                    key={a.id}
-                    type="button"
-                    onClick={() => update({ align: a.id })}
-                    className={`flex-1 py-1 text-[10px] font-bold rounded-md border cursor-pointer ${
-                      (el.align || "left") === a.id
-                        ? "bg-blue-600 text-white border-blue-600"
-                        : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
-                    }`}
-                  >
-                    {a.label}
-                  </button>
-                ))}
-              </div>
+          </div>
+
+          {/* Size / Taille */}
+          <div>
+            <label className="text-[10px] font-bold text-slate-500 uppercase">Taille de l&apos;image</label>
+            <div className="flex gap-1 mt-1">
+              {[
+                { id: "sm", label: "Petite (140px)" },
+                { id: "md", label: "Moyenne (280px)" },
+                { id: "lg", label: "Grande (460px)" },
+                { id: "full", label: "Pleine largeur" },
+              ].map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => update({ size: s.id })}
+                  className={`flex-1 py-1 text-[10px] font-bold rounded-md border cursor-pointer ${
+                    (el.size || "md") === s.id
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  {s.label}
+                </button>
+              ))}
             </div>
+          </div>
+
+          {/* Shape / Forme */}
+          <div>
+            <label className="text-[10px] font-bold text-slate-500 uppercase">Cadrage / Forme</label>
+            <div className="flex gap-1 mt-1">
+              {[
+                { id: "rounded", label: "Bords arrondis" },
+                { id: "square", label: "Rectangle / Carré" },
+                { id: "circle", label: "Cercle" },
+              ].map((sh) => (
+                <button
+                  key={sh.id}
+                  type="button"
+                  onClick={() => update({ shape: sh.id })}
+                  className={`flex-1 py-1 text-[10px] font-bold rounded-md border cursor-pointer ${
+                    (el.shape || "rounded") === sh.id
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  {sh.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Border & Shadow */}
+          <div className="grid grid-cols-2 gap-2 pt-1">
+            <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={!!el.border}
+                onChange={(e) => update({ border: e.target.checked })}
+                className="rounded text-blue-600 focus:ring-blue-500"
+              />
+              <span>Bordure fine</span>
+            </label>
+            <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={!!el.shadow}
+                onChange={(e) => update({ shadow: e.target.checked })}
+                className="rounded text-blue-600 focus:ring-blue-500"
+              />
+              <span>Ombre portée</span>
+            </label>
+          </div>
+
+          {/* Caption */}
+          <div>
+            <label className="text-[10px] font-bold text-slate-500 uppercase">Légende sous l&apos;image (optionnelle)</label>
+            <input
+              type="text"
+              value={el.caption || ""}
+              onChange={(e) => update({ caption: e.target.value })}
+              placeholder="Légende ou description..."
+              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-blue-500 focus:outline-hidden"
+            />
           </div>
         </div>
       );

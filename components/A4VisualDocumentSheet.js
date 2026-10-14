@@ -250,11 +250,20 @@ function renderElementContent(element, theme) {
       const subtitle = interpolateDocumentVariables(element.subtitle || "", variables);
 
       const sizeClasses = {
-        sm: "text-lg font-bold",
-        md: "text-xl font-bold",
-        lg: "text-2xl font-black",
-        xl: "text-3xl font-black tracking-tight",
+        sm: "text-lg",
+        md: "text-xl",
+        lg: "text-2xl",
+        xl: "text-3xl",
+        "2xl": "text-4xl",
       }[element.size || "lg"];
+
+      const weightClass = {
+        normal: "font-normal",
+        medium: "font-medium",
+        semibold: "font-semibold",
+        bold: "font-bold",
+        extrabold: "font-black",
+      }[element.weight || "bold"];
 
       const alignClass = {
         left: "text-left",
@@ -262,9 +271,21 @@ function renderElementContent(element, theme) {
         right: "text-right",
       }[element.align || "left"];
 
+      const customFont = element.fontId && element.fontId !== "inherit"
+        ? FONT_OPTIONS.find((f) => f.id === element.fontId)?.font
+        : undefined;
+
+      const styleObj = {
+        fontFamily: customFont,
+        color: element.color === "primary" ? primaryColor : undefined,
+      };
+
       return (
         <div className={`py-1 ${alignClass}`}>
-          <h1 className={`${sizeClasses} text-slate-900 leading-tight`}>
+          <h1
+            className={`${sizeClasses} ${weightClass} ${element.italic ? "italic" : ""} ${element.underline ? "underline underline-offset-4" : ""} leading-tight ${element.color === "muted" ? "text-slate-500" : element.color === "primary" ? "" : "text-slate-900"}`}
+            style={styleObj}
+          >
             {text}
           </h1>
           {subtitle && (
@@ -276,14 +297,27 @@ function renderElementContent(element, theme) {
       );
     }
 
-    case "paragraph": {
+    case "paragraph":
+    case "custom_text":
+    case "text": {
       const text = interpolateDocumentVariables(element.text || "Rédigez votre texte ici...", variables);
 
       const sizeClasses = {
-        sm: "text-xs leading-relaxed",
-        md: "text-sm leading-relaxed",
-        lg: "text-base leading-relaxed",
-      }[element.size || "md"];
+        xs: "text-xs leading-relaxed",
+        sm: "text-sm leading-relaxed",
+        md: "text-base leading-relaxed",
+        lg: "text-lg leading-relaxed",
+        xl: "text-xl leading-relaxed",
+        "2xl": "text-2xl leading-relaxed",
+      }[element.size || (element.type === "paragraph" ? "sm" : "md")];
+
+      const weightClass = {
+        normal: "font-normal",
+        medium: "font-medium",
+        semibold: "font-semibold",
+        bold: "font-bold",
+        extrabold: "font-black",
+      }[element.weight || "normal"];
 
       const alignClass = {
         left: "text-left",
@@ -292,10 +326,73 @@ function renderElementContent(element, theme) {
         right: "text-right",
       }[element.align || "left"];
 
+      const customFont = element.fontId && element.fontId !== "inherit"
+        ? FONT_OPTIONS.find((f) => f.id === element.fontId)?.font
+        : undefined;
+
+      const styleObj = {
+        fontFamily: customFont,
+        color: element.color === "primary" ? primaryColor : undefined,
+      };
+
       return (
         <div className={`py-1 ${alignClass}`}>
-          <div className={`${sizeClasses} text-slate-700 whitespace-pre-line font-normal`}>
+          <div
+            className={`${sizeClasses} ${weightClass} ${element.italic ? "italic" : ""} ${element.underline ? "underline underline-offset-4" : ""} ${element.color === "muted" ? "text-slate-500" : element.color === "primary" ? "" : "text-slate-700"} whitespace-pre-line`}
+            style={styleObj}
+          >
             {text}
+          </div>
+        </div>
+      );
+    }
+
+    case "image": {
+      const url = element.url;
+      const caption = interpolateDocumentVariables(element.caption || "", variables);
+
+      const alignWrapperClass = {
+        left: "flex justify-start",
+        center: "flex justify-center",
+        right: "flex justify-end",
+      }[element.align || "center"];
+
+      const sizeClasses = {
+        sm: "max-w-[140px]",
+        md: "max-w-[280px]",
+        lg: "max-w-[460px]",
+        full: "w-full max-w-full",
+      }[element.size || "md"];
+
+      const shapeClass = {
+        rounded: "rounded-2xl",
+        square: "rounded-none",
+        circle: "rounded-full aspect-square object-cover",
+      }[element.shape || "rounded"];
+
+      return (
+        <div className={`py-2 ${alignWrapperClass}`}>
+          <div className={`${sizeClasses} text-center`}>
+            {url ? (
+              <img
+                src={url}
+                alt={caption || "Illustration du document"}
+                className={`w-full object-cover max-h-[460px] mx-auto ${shapeClass} ${
+                  element.border ? "border-2 border-slate-200 p-1 bg-white" : ""
+                } ${element.shadow ? "shadow-md" : ""}`}
+              />
+            ) : (
+              <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center bg-slate-50/50">
+                <p className="text-xs font-semibold text-slate-500">
+                  Aucune image sélectionnée. Importez une image dans le panneau de gauche.
+                </p>
+              </div>
+            )}
+            {caption && (
+              <p className="text-xs text-slate-500 italic mt-2 text-center">
+                {caption}
+              </p>
+            )}
           </div>
         </div>
       );
