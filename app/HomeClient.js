@@ -2349,6 +2349,10 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
 
     try {
       const created = await createEvent(sanitizedFormData, currentUser.id);
+      if (sanitizedFormData.contactPhone && currentUser?.phone !== sanitizedFormData.contactPhone) {
+        setCurrentUser(prev => ({ ...prev, phone: sanitizedFormData.contactPhone }));
+        safeLocalStorageSet("eventzone_user", { ...currentUser, phone: sanitizedFormData.contactPhone });
+      }
       setUserEvents(prev => [created, ...prev]);
       setPublicEvents(prev => [created, ...prev]);
       setEventDetails(created);
