@@ -89,6 +89,7 @@ export default function SearchableSelect({
     return normalizedOptions.filter((opt) =>
       opt.label.toLowerCase().includes(query) ||
       opt.value.toLowerCase().includes(query) ||
+      (opt.badge && String(opt.badge).toLowerCase().includes(query)) ||
       (opt.description && opt.description.toLowerCase().includes(query))
     );
   }, [normalizedOptions, searchTerm]);

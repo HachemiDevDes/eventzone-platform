@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { 
   Sparkles, Calendar, MapPin, Building2, 
   Image as ImageIcon, Users, ArrowRight, ArrowLeft, 
@@ -81,16 +81,59 @@ const INDUSTRIES = [
 
 const DEFAULT_FALLBACK_BANNER = "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80";
 
-const TIMEZONES = [
-  { id: "Africa/Algiers", name: "Africa/Algiers", offset: "GMT+1", time: "1:08 PM now" },
-  { id: "Africa/Lagos", name: "Africa/Lagos", offset: "GMT+1", time: "1:08 PM now" },
-  { id: "Africa/Cairo", name: "Africa/Cairo", offset: "GMT+3", time: "3:08 PM now" },
-  { id: "Europe/Paris", name: "Europe/Paris", offset: "GMT+2", time: "2:08 PM now" },
-  { id: "Europe/London", name: "Europe/London", offset: "GMT+1", time: "1:08 PM now" },
-  { id: "Asia/Dubai", name: "Asia/Dubai", offset: "GMT+4", time: "4:08 PM now" },
-  { id: "America/New_York", name: "America/New_York", offset: "GMT-4", time: "8:08 AM now" },
-  { id: "America/Los_Angeles", name: "America/Los_Angeles", offset: "GMT-7", time: "5:08 AM now" },
-  { id: "UTC", name: "UTC (Coordinated Universal Time)", offset: "GMT+0", time: "12:08 PM now" }
+const TIMEZONE_DEFINITIONS = [
+  // North Africa & Middle East (MENA)
+  { id: "Africa/Algiers", name: "Africa/Algiers", city: "Algiers", country: "Algeria" },
+  { id: "Africa/Casablanca", name: "Africa/Casablanca", city: "Casablanca", country: "Morocco" },
+  { id: "Africa/Tunis", name: "Africa/Tunis", city: "Tunis", country: "Tunisia" },
+  { id: "Africa/Tripoli", name: "Africa/Tripoli", city: "Tripoli", country: "Libya" },
+  { id: "Africa/Cairo", name: "Africa/Cairo", city: "Cairo", country: "Egypt" },
+  { id: "Asia/Dubai", name: "Asia/Dubai", city: "Dubai", country: "United Arab Emirates" },
+  { id: "Asia/Riyadh", name: "Asia/Riyadh", city: "Riyadh", country: "Saudi Arabia" },
+  { id: "Asia/Doha", name: "Asia/Doha", city: "Doha", country: "Qatar" },
+  { id: "Asia/Kuwait", name: "Asia/Kuwait", city: "Kuwait City", country: "Kuwait" },
+  { id: "Asia/Beirut", name: "Asia/Beirut", city: "Beirut", country: "Lebanon" },
+  { id: "Asia/Amman", name: "Asia/Amman", city: "Amman", country: "Jordan" },
+  { id: "Asia/Baghdad", name: "Asia/Baghdad", city: "Baghdad", country: "Iraq" },
+
+  // Sub-Saharan Africa
+  { id: "Africa/Lagos", name: "Africa/Lagos", city: "Lagos", country: "Nigeria" },
+  { id: "Africa/Accra", name: "Africa/Accra", city: "Accra", country: "Ghana" },
+  { id: "Africa/Dakar", name: "Africa/Dakar", city: "Dakar", country: "Senegal" },
+  { id: "Africa/Nairobi", name: "Africa/Nairobi", city: "Nairobi", country: "Kenya" },
+  { id: "Africa/Johannesburg", name: "Africa/Johannesburg", city: "Johannesburg", country: "South Africa" },
+
+  // Europe
+  { id: "Europe/Paris", name: "Europe/Paris", city: "Paris", country: "France" },
+  { id: "Europe/London", name: "Europe/London", city: "London", country: "United Kingdom" },
+  { id: "Europe/Madrid", name: "Europe/Madrid", city: "Madrid", country: "Spain" },
+  { id: "Europe/Rome", name: "Europe/Rome", city: "Rome", country: "Italy" },
+  { id: "Europe/Berlin", name: "Europe/Berlin", city: "Berlin", country: "Germany" },
+  { id: "Europe/Brussels", name: "Europe/Brussels", city: "Brussels", country: "Belgium" },
+  { id: "Europe/Geneva", name: "Europe/Geneva", city: "Geneva", country: "Switzerland" },
+  { id: "Europe/Amsterdam", name: "Europe/Amsterdam", city: "Amsterdam", country: "Netherlands" },
+  { id: "Europe/Istanbul", name: "Europe/Istanbul", city: "Istanbul", country: "Turkey" },
+
+  // Americas
+  { id: "America/New_York", name: "America/New_York", city: "New York", country: "USA (Eastern)" },
+  { id: "America/Chicago", name: "America/Chicago", city: "Chicago", country: "USA (Central)" },
+  { id: "America/Denver", name: "America/Denver", city: "Denver", country: "USA (Mountain)" },
+  { id: "America/Los_Angeles", name: "America/Los_Angeles", city: "Los Angeles", country: "USA (Pacific)" },
+  { id: "America/Toronto", name: "America/Toronto", city: "Toronto", country: "Canada (Eastern)" },
+  { id: "America/Vancouver", name: "America/Vancouver", city: "Vancouver", country: "Canada (Pacific)" },
+  { id: "America/Sao_Paulo", name: "America/Sao_Paulo", city: "São Paulo", country: "Brazil" },
+
+  // Asia & Pacific
+  { id: "Asia/Singapore", name: "Asia/Singapore", city: "Singapore", country: "Singapore" },
+  { id: "Asia/Hong_Kong", name: "Asia/Hong_Kong", city: "Hong Kong", country: "Hong Kong" },
+  { id: "Asia/Tokyo", name: "Asia/Tokyo", city: "Tokyo", country: "Japan" },
+  { id: "Asia/Shanghai", name: "Asia/Shanghai", city: "Shanghai / Beijing", country: "China" },
+  { id: "Asia/Kolkata", name: "Asia/Kolkata", city: "Mumbai / New Delhi", country: "India" },
+  { id: "Asia/Seoul", name: "Asia/Seoul", city: "Seoul", country: "South Korea" },
+  { id: "Australia/Sydney", name: "Australia/Sydney", city: "Sydney", country: "Australia" },
+
+  // Universal
+  { id: "UTC", name: "UTC", city: "Coordinated Universal Time", country: "UTC" },
 ];
 
 export default function EventCreationWizard({ onCancel, onEventCreated, userId, onUploadFile, currentUser, userEventsCount = 0 }) {
@@ -135,6 +178,31 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
 
   // Determine initial capacity constrained by organizer quota
   const initialCapacity = currentUser?.maxAttendees ? Math.min(800, currentUser.maxAttendees) : 800;
+
+  // Dynamically compute real timezone offsets and live local times
+  const timezoneOptions = useMemo(() => {
+    const now = new Date();
+    return TIMEZONE_DEFINITIONS.map(tz => {
+      let offset = "";
+      try {
+        const parts = new Intl.DateTimeFormat("en-US", { timeZone: tz.id, timeZoneName: "shortOffset" }).formatToParts(now);
+        offset = parts.find(p => p.type === "timeZoneName")?.value || "";
+      } catch (e) {}
+      if (!offset) offset = "GMT";
+
+      let localTime = "";
+      try {
+        localTime = new Intl.DateTimeFormat("en-US", { timeZone: tz.id, hour: "numeric", minute: "2-digit", hour12: true }).format(now);
+      } catch (e) {}
+
+      return {
+        value: tz.id,
+        label: tz.name,
+        badge: offset,
+        description: tz.city ? `${tz.city}, ${tz.country}${localTime ? ` • Current time: ${localTime}` : ""}` : (localTime ? `Current time: ${localTime}` : ""),
+      };
+    });
+  }, []);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -864,11 +932,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
                 <SearchableSelect
                   value={formData.timezone}
                   onChange={(val) => handleChange("timezone", val)}
-                  options={TIMEZONES.map(tz => ({
-                    value: tz.id,
-                    label: `${tz.name} (${tz.offset}) — ${tz.time}`,
-                    badge: tz.offset
-                  }))}
+                  options={timezoneOptions}
                   placeholder="Select timezone..."
                   searchPlaceholder="Search timezone by city, country or offset..."
                 />
