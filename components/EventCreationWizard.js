@@ -16,6 +16,7 @@ import { getLocalizedIndustry } from "../lib/constants";
 import CustomDatePicker from "./CustomDatePicker";
 import CustomTimePicker from "./CustomTimePicker";
 import SearchableSelect from "./SearchableSelect";
+import CountryPhoneInput from "./CountryPhoneInput";
 
 const PRESET_BANNERS = [
   {
@@ -1442,12 +1443,12 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
                   <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1 sm:mb-1.5">
                     Phone / WhatsApp Support
                   </label>
-                  <input
-                    type="tel"
+                  <CountryPhoneInput
                     value={formData.contactPhone}
-                    onChange={(e) => handleChange("contactPhone", e.target.value)}
-                    placeholder="e.g. +213 550 12 34 56 (Optional)"
-                    className="w-full px-3.5 sm:px-4 py-2.5 sm:py-3 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-xl text-xs font-semibold text-slate-900 outline-none"
+                    onChange={(val) => handleChange("contactPhone", val)}
+                    placeholder="550 12 34 56"
+                    defaultCountry="DZ"
+                    inputClassName="py-2.5 sm:py-3"
                   />
                 </div>
 
