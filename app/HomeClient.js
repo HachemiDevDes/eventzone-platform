@@ -1478,9 +1478,10 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
         // 1. Parallel coordinated entity fetches to guarantee accurate & complete data
         triggerGranularFetches();
 
-        // 2. Parallel non-blocking fetches for rsvps & logistics
+        // 2. Parallel non-blocking fetches for rsvps, logistics & documents
         fetchAndSet(fetchRSVPs(activeEventId), setRsvps, "rsvps");
         fetchAndSet(fetchLogistics(activeEventId), setLogisticsData, "logisticsData");
+        fetchAndSet(fetchDocuments(activeEventId), setDocuments, "documents");
 
         // 3. Single coordinated parallel fetch for attendees, pending & submissions
         const [loadedTickets, loadedSubmissions, rawAttendees, rawPending] = await Promise.all([
@@ -6069,11 +6070,38 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               onBack={() => setCurrentView("home")}
               onSaveDocument={async (designedDoc) => {
                 if (typeof window !== "undefined") {
-                  localStorage.setItem(`eventzone_designed_doc_${designedDoc.id}`, JSON.stringify(designedDoc));
+                  try {
+                    localStorage.setItem(`eventzone_designed_doc_${designedDoc.id}`, JSON.stringify(designedDoc));
+                  } catch (e) {
+                    console.warn("Local storage warning:", e);
+                  }
                 }
+                return await handleSaveDocument({
+                  id: designedDoc.id,
+                  name: designedDoc.name,
+                  fileName: `${(designedDoc.name || "document").replace(/[^a-zA-Z0-9_-]/g, "_")}.pdf`,
+                  fileType: "designed",
+                  category: designedDoc.category || "Official",
+                  accessLevel: "team",
+                  description: `Document A4 créé avec Eventzone Document Studio.`,
+                  isDesignedDocument: true,
+                  designerData: designedDoc,
+                  designedDocumentData: designedDoc,
+                  elements: designedDoc.elements || [],
+                  orientation: designedDoc.orientation || "portrait",
+                  colorId: designedDoc.colorId || "blue",
+                  customColor: designedDoc.customColor || "",
+                  fontId: designedDoc.fontId || "sans",
+                  variables: designedDoc.variables || {},
+                  updatedAt: designedDoc.updatedAt || new Date().toISOString(),
+                });
               }}
               onSaveToDocuments={handleSaveDocument}
               onDeleteDocument={handleDeleteDocument}
+              onRefreshDocuments={async () => {
+                const fresh = await fetchDocuments(activeEventId);
+                if (fresh) setDocuments(fresh);
+              }}
               effectivePermissions={effectivePermissions}
             />
           )}

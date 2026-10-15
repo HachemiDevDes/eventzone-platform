@@ -32,6 +32,7 @@ export default function DocumentDesigner({
   onSaveDocument,
   onSaveToDocuments,
   onDeleteDocument,
+  onRefreshDocuments,
   effectivePermissions,
 }) {
   // View mode: 'list' (consult documents) or 'editor' (edit single A4 document)
@@ -64,7 +65,7 @@ export default function DocumentDesigner({
   // Local storage cache for designed documents
   const [localDocs, setLocalDocs] = useState([]);
 
-  // Load local storage documents on mount
+  // Load local storage documents on mount and refresh from backend
   useEffect(() => {
     if (typeof window === "undefined" || !activeEventId) return;
     try {
@@ -76,7 +77,11 @@ export default function DocumentDesigner({
     } catch (e) {
       console.error("Failed to load local designed docs:", e);
     }
-  }, [activeEventId]);
+
+    if (onRefreshDocuments) {
+      onRefreshDocuments().catch(() => {});
+    }
+  }, [activeEventId, onRefreshDocuments]);
 
   // Combined documents list: from props (supabase) + local storage
   const combinedDocuments = useMemo(() => {
@@ -84,20 +89,46 @@ export default function DocumentDesigner({
 
     // From Supabase props
     (documents || []).forEach((d) => {
-      if (d.isDesignedDocument && d.designedDocumentData) {
+      const isDesigned = Boolean(
+        d.isDesignedDocument ||
+        d.designerData ||
+        d.fileType === "designed" ||
+        d.designedDocumentData ||
+        (Array.isArray(d.elements) && d.elements.length > 0)
+      );
+
+      if (isDesigned) {
+        const payload = d.designerData || d.designedDocumentData || d;
         map.set(d.id, {
-          ...d.designedDocumentData,
+          ...payload,
           id: d.id,
-          name: d.name || d.designedDocumentData.name,
-          updatedAt: d.updatedAt || d.createdAt,
+          name: d.name || payload.name || "Document sans titre",
+          orientation: payload.orientation || d.orientation || "portrait",
+          colorId: payload.colorId || d.colorId || "blue",
+          customColor: payload.customColor || d.customColor || "",
+          fontId: payload.fontId || d.fontId || "sans",
+          elements: payload.elements || d.elements || [],
+          variables: payload.variables || d.variables || {},
+          updatedAt: d.updatedAt || payload.updatedAt || d.createdAt,
+          createdAt: d.createdAt || payload.createdAt,
+          isCloudSynced: true,
         });
       }
     });
 
-    // From local storage
+    // From local storage (only add if not already in map or if local is newer)
     (localDocs || []).forEach((d) => {
       if (d && d.id) {
-        map.set(d.id, d);
+        if (!map.has(d.id)) {
+          map.set(d.id, { ...d, isCloudSynced: false });
+        } else {
+          const cloudDoc = map.get(d.id);
+          const localTime = new Date(d.updatedAt || 0).getTime();
+          const cloudTime = new Date(cloudDoc.updatedAt || 0).getTime();
+          if (localTime > cloudTime) {
+            map.set(d.id, { ...d, isCloudSynced: true });
+          }
+        }
       }
     });
 
@@ -208,14 +239,28 @@ export default function DocumentDesigner({
   };
 
   // Duplicate a document
-  const handleDuplicateDocument = (docItem) => {
+  const handleDuplicateDocument = async (docItem) => {
+    const newId = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+          const r = Math.random() * 16 | 0;
+          return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+        });
+
     const duplicate = {
       ...docItem,
-      id: `doc-${Date.now()}`,
-      name: `${docItem.name} (Copie)`,
+      id: newId,
+      name: `${docItem.name || "Document"} (Copie)`,
       updatedAt: new Date().toISOString(),
     };
     saveToLocalStorage(duplicate);
+    if (onSaveDocument) {
+      try {
+        await onSaveDocument(duplicate);
+      } catch (e) {
+        console.warn("Auto-sync duplicate warning:", e);
+      }
+    }
   };
 
   // Delete a document
@@ -225,7 +270,12 @@ export default function DocumentDesigner({
     if (typeof window !== "undefined" && activeEventId) {
       setLocalDocs((prev) => {
         const next = prev.filter((d) => d.id !== docId);
-        localStorage.setItem(`eventzone_designed_docs_${activeEventId}`, JSON.stringify(next));
+        try {
+          localStorage.setItem(`eventzone_designed_docs_${activeEventId}`, JSON.stringify(next));
+          localStorage.removeItem(`eventzone_designed_doc_${docId}`);
+        } catch (e) {
+          console.warn("Local storage delete warning:", e);
+        }
         return next;
       });
     }
@@ -234,7 +284,7 @@ export default function DocumentDesigner({
       try {
         await onDeleteDocument(docId);
       } catch (e) {
-        console.error("Error deleting document:", e);
+        console.error("Error deleting document from backend:", e);
       }
     }
   };
@@ -250,24 +300,36 @@ export default function DocumentDesigner({
     saveToLocalStorage(updated);
 
     try {
+      let savedDoc = null;
       if (onSaveDocument) {
-        await onSaveDocument(updated);
-      }
-
-      if (onSaveToDocuments) {
+        savedDoc = await onSaveDocument(updated);
+      } else if (onSaveToDocuments) {
         const publishedDoc = {
           id: updated.id,
           name: updated.name,
-          fileName: `${updated.name.replace(/[^a-zA-Z0-9_-]/g, "_")}.pdf`,
-          fileType: "pdf",
+          fileName: `${(updated.name || "document").replace(/[^a-zA-Z0-9_-]/g, "_")}.pdf`,
+          fileType: "designed",
           category: "Official",
           accessLevel: "team",
           description: `Document A4 créé avec Eventzone Document Studio.`,
           isDesignedDocument: true,
+          designerData: updated,
           designedDocumentData: updated,
+          elements: updated.elements,
+          orientation: updated.orientation,
+          colorId: updated.colorId,
+          customColor: updated.customColor,
+          fontId: updated.fontId,
+          variables: updated.variables,
           updatedAt: updated.updatedAt,
         };
-        await onSaveToDocuments(publishedDoc);
+        savedDoc = await onSaveToDocuments(publishedDoc);
+      }
+
+      if (savedDoc && savedDoc.id && savedDoc.id !== updated.id) {
+        const reconciled = { ...updated, id: savedDoc.id };
+        setActiveDoc(reconciled);
+        saveToLocalStorage(reconciled);
       }
 
       setSaveSuccessNotice(true);
@@ -591,9 +653,21 @@ export default function DocumentDesigner({
                       <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
                         <FileText size={18} />
                       </div>
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 bg-slate-50 border border-slate-150 px-2.5 py-1 rounded-md">
-                        A4 {item.orientation === "landscape" ? "Paysage" : "Portrait"}
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                        {item.isCloudSynced !== false ? (
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/70 px-2 py-0.5 rounded-md inline-flex items-center gap-1" title="Synchronisé avec la base Supabase">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            Cloud Synced
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200/70 px-2 py-0.5 rounded-md inline-flex items-center gap-1" title="Brouillon local non encore synchronisé">
+                            Local
+                          </span>
+                        )}
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 bg-slate-50 border border-slate-150 px-2.5 py-1 rounded-md">
+                          A4 {item.orientation === "landscape" ? "Paysage" : "Portrait"}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Card Title */}
@@ -768,6 +842,12 @@ export default function DocumentDesigner({
             <span className="hidden md:inline">Imprimer / PDF</span>
           </button>
 
+          {/* Cloud Status Indicator */}
+          <div className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold text-slate-600 bg-slate-50 border border-slate-200 rounded-lg">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Cloud Supabase</span>
+          </div>
+
           {/* Save Button */}
           <button
             onClick={handleSaveActiveDocument}
@@ -781,11 +861,12 @@ export default function DocumentDesigner({
             {saveSuccessNotice ? (
               <>
                 <Check size={16} />
-                <span>Enregistré !</span>
+                <span>Enregistré dans le Cloud !</span>
               </>
             ) : (
               <>
-                <span>{isSaving ? "Enregistrement..." : "Enregistrer"}</span>
+                {isSaving && <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin shrink-0" />}
+                <span>{isSaving ? "Synchronisation..." : "Enregistrer"}</span>
               </>
             )}
           </button>
