@@ -2761,21 +2761,15 @@ export default function EventPublicLandingPage({
                     key={session.id || idx}
                     className="group relative bg-white border border-slate-200/90 hover:border-blue-500/60 rounded-3xl p-6 sm:p-7 shadow-xs hover:shadow-xl hover:shadow-blue-500/5 transition-all duration-300 flex flex-col gap-5 text-start rtl:text-right text-left overflow-hidden"
                   >
-                    {/* Left vertical hover accent bar */}
-                    <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-blue-600 via-indigo-600 to-blue-500 opacity-0 group-hover:opacity-100 transition-opacity rounded-l-3xl" />
-
                     <div className="flex flex-col md:flex-row md:items-start gap-6 lg:gap-8">
                       {/* ─── LEFT TIME & DATE RAIL ─── */}
                       <div className="md:w-44 md:shrink-0 flex flex-col gap-2.5">
                         <div className="flex flex-col">
-                          <div className="flex items-center gap-1.5 text-slate-900">
-                            <Clock size={16} className="text-blue-600 shrink-0" />
-                            <span className="text-xl sm:text-2xl font-black tracking-tight leading-none">
-                              {formatSessionTime(session.startTime || session.time) || "09:00 AM"}
-                            </span>
-                          </div>
+                          <span className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-none">
+                            {formatSessionTime(session.startTime || session.time) || "09:00 AM"}
+                          </span>
                           {session.endTime && (
-                            <span className="text-xs sm:text-sm font-semibold text-slate-400 mt-1 pl-5">
+                            <span className="text-xs sm:text-sm font-semibold text-slate-400 mt-1">
                               to {formatSessionTime(session.endTime)}
                             </span>
                           )}
@@ -2809,19 +2803,13 @@ export default function EventPublicLandingPage({
 
                       {/* ─── CENTER & RIGHT MAIN CONTENT ─── */}
                       <div className="flex-1 min-w-0 space-y-4">
-                        {/* Top Meta & Bookmark Toolbar */}
-                        <div className="flex items-center justify-between gap-3 flex-wrap">
-                          <div className="flex flex-wrap items-center gap-2">
-                            {/* Format / Type Badge */}
-                            {virtualLink ? (
+                        {/* Optional Meta Tags (virtual link or track) */}
+                        {(virtualLink || session.track) && (
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {virtualLink && (
                               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200/60">
                                 <Video size={13} className="text-blue-600" />
                                 <span>{t("event.onlineVideoMeeting", "Online video meeting")}</span>
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-bold border border-slate-200/70">
-                                <MapPin size={12} className="text-slate-500" />
-                                <span>{locationLabel || t("event.onSiteMeeting", "On-site meeting")}</span>
                               </span>
                             )}
 
@@ -2831,21 +2819,7 @@ export default function EventPublicLandingPage({
                               </span>
                             )}
                           </div>
-
-                          {/* Bookmark Action */}
-                          <button
-                            type="button"
-                            onClick={() => toggleBookmark(session.id)}
-                            className={`p-2 rounded-xl border transition-all cursor-pointer ${
-                              isBookmarked
-                                ? "bg-amber-50 border-amber-300 text-amber-500 shadow-2xs"
-                                : "bg-white border-slate-200 text-slate-400 hover:text-amber-500 hover:border-amber-200"
-                            }`}
-                            title={isBookmarked ? t("event.bookmarked", "Bookmarked") : t("event.bookmarkSession", "Bookmark session")}
-                          >
-                            <Star size={15} className={isBookmarked ? "fill-amber-500" : ""} />
-                          </button>
-                        </div>
+                        )}
 
                         {/* Session Title */}
                         <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-snug group-hover:text-blue-600 transition-colors">
