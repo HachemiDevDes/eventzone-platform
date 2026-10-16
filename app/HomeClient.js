@@ -176,6 +176,7 @@ function getModuleKeyFromView(view) {
   if (view === "page-builder") return "event-details";
   if (view === "invoices") return "invoicing";
   if (view === "document-designer") return "documents";
+  if (view === "pending_companies" || view === "pending_organizations") return "organizations";
   return view;
 }
 
@@ -522,7 +523,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
     if (["attendees", "pending", "speakers"].includes(currentView)) {
       setParticipantsOpen(true);
     }
-    if (["organizations", "sponsors", "exhibitors"].includes(currentView)) {
+    if (["organizations", "pending_companies", "sponsors", "exhibitors"].includes(currentView)) {
       setCompaniesOpen(true);
     }
     if (currentView === "logistics") {
@@ -538,7 +539,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
     // Only apply to module dashboard views
     const eventDashboardViews = [
       "overview", "event-details", "page-builder", "calendar", "speakers", "opportunities", 
-      "organizations", "sponsors", "exhibitors", "influencers", "tickets", "attendees", 
+      "organizations", "pending_companies", "sponsors", "exhibitors", "influencers", "tickets", "attendees", 
       "pending", "rsvp", "floor-plan", "logistics", "documents", "check-in", "forms", 
       "communications", "certificates", "analytics", "my-team", "developers", "portal-settings", "invoicing", "invoices", "document-designer"
     ];
@@ -4934,15 +4935,21 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
   const showSubSpeakers = canViewModule("speakers", effectivePermissions.permissions) && (!tabQuery || matchGroupParticipants || matchSubSpeakers);
 
   // Companies
+  const pendingCompaniesCount = useMemo(() => {
+    return (organizations || []).filter(o => !o.isArchived && o.status === "pending").length;
+  }, [organizations]);
+
   const matchGroupCompanies = matchesTabQuery(t("dash.allCompanies", "Companies"), ["Companies", "enterprises", "firms"]);
   const matchSubOrganizations = canViewModule("organizations", effectivePermissions.permissions) && matchesTabQuery(t("dash.organizations", "Organizations"), ["Organizations", "partners", "companies", "institutions"]);
+  const matchSubPendingCompanies = canViewModule("organizations", effectivePermissions.permissions) && matchesTabQuery(t("dash.pendingCompanies", "Pending"), ["Pending", "pending companies", "pending organizations", "approvals", "applications"]);
   const matchSubSponsors = canViewModule("sponsors", effectivePermissions.permissions) && matchesTabQuery(t("dash.sponsors", "Sponsors"), ["Sponsors", "sponsorship", "patrons", "donors"]);
   const matchSubExhibitors = canViewModule("exhibitors", effectivePermissions.permissions) && matchesTabQuery(t("dash.exhibitors", "Exhibitors"), ["Exhibitors", "booths", "stands", "expo"]);
 
   const hasAnyCompanies = canViewModule("organizations", effectivePermissions.permissions) || canViewModule("sponsors", effectivePermissions.permissions) || canViewModule("exhibitors", effectivePermissions.permissions);
-  const showGroupCompanies = hasAnyCompanies && (!tabQuery || matchGroupCompanies || matchSubOrganizations || matchSubSponsors || matchSubExhibitors);
-  const isCompaniesExpanded = tabQuery ? (matchGroupCompanies || matchSubOrganizations || matchSubSponsors || matchSubExhibitors) : companiesOpen;
+  const showGroupCompanies = hasAnyCompanies && (!tabQuery || matchGroupCompanies || matchSubOrganizations || matchSubPendingCompanies || matchSubSponsors || matchSubExhibitors);
+  const isCompaniesExpanded = tabQuery ? (matchGroupCompanies || matchSubOrganizations || matchSubPendingCompanies || matchSubSponsors || matchSubExhibitors) : companiesOpen;
   const showSubOrganizations = canViewModule("organizations", effectivePermissions.permissions) && (!tabQuery || matchGroupCompanies || matchSubOrganizations);
+  const showSubPendingCompanies = canViewModule("organizations", effectivePermissions.permissions) && (!tabQuery || matchGroupCompanies || matchSubPendingCompanies);
   const showSubSponsors = canViewModule("sponsors", effectivePermissions.permissions) && (!tabQuery || matchGroupCompanies || matchSubSponsors);
   const showSubExhibitors = canViewModule("exhibitors", effectivePermissions.permissions) && (!tabQuery || matchGroupCompanies || matchSubExhibitors);
 
@@ -5272,10 +5279,10 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               <div className="flex flex-col">
                 <button 
                   onClick={() => setCompaniesOpen(!isCompaniesExpanded)}
-                  className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${["organizations", "sponsors", "exhibitors"].includes(currentView) ? "text-blue-700 bg-blue-50/50 font-extrabold" : "text-slate-600 hover:bg-slate-50"}`}
+                  className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${["organizations", "pending_companies", "sponsors", "exhibitors"].includes(currentView) ? "text-blue-700 bg-blue-50/50 font-extrabold" : "text-slate-600 hover:bg-slate-50"}`}
                 >
                   <div className="flex items-center gap-2">
-                    <Building2 size={14} className={`shrink-0 ${["organizations", "sponsors", "exhibitors"].includes(currentView) ? "text-blue-600" : "text-slate-400 group-hover:text-blue-600"}`} />
+                    <Building2 size={14} className={`shrink-0 ${["organizations", "pending_companies", "sponsors", "exhibitors"].includes(currentView) ? "text-blue-600" : "text-slate-400 group-hover:text-blue-600"}`} />
                     <span>{t("dash.allCompanies", "Companies")}</span>
                   </div>
                   <ChevronDown size={11} className={`text-slate-400 transition-transform ${isCompaniesExpanded ? "rotate-180" : ""}`} />
@@ -5293,6 +5300,27 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
                           <span className="truncate">{t("dash.organizations", "Organizations")}</span>
                         </div>
                         <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "organizations" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{organizations.length}</span>
+                      </button>
+                    )}
+
+                    {showSubPendingCompanies && (
+                      <button 
+                        onClick={() => setCurrentView("pending_companies")}
+                        className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "pending_companies" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
+                      >
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Clock size={12} className={`shrink-0 ${currentView === "pending_companies" ? "text-blue-600" : "text-slate-400"}`} />
+                          <span className="truncate">{t("dash.pendingCompanies", "Pending")}</span>
+                        </div>
+                        <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${
+                          currentView === "pending_companies" 
+                            ? "bg-blue-600 text-white" 
+                            : pendingCompaniesCount > 0 
+                              ? "bg-amber-100 text-amber-800 font-extrabold border border-amber-200" 
+                              : "bg-slate-100 text-slate-500"
+                        }`}>
+                          {pendingCompaniesCount}
+                        </span>
                       </button>
                     )}
 
@@ -5768,6 +5796,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
                 case "attendees":
                 case "pending":
                 case "organizations":
+                case "pending_companies":
                 case "sponsors":
                 case "exhibitors":
                 case "speakers":

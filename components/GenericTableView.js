@@ -169,7 +169,10 @@ export default function GenericTableView({
     case "pending":
       return <PendingView state={state} onUpdateState={onUpdateState} />;
     case "organizations":
-      return <OrganizationsView state={state} onUpdateState={onUpdateState} onOpenModal={onOpenModal} />;
+      return <OrganizationsView state={state} onUpdateState={onUpdateState} onOpenModal={onOpenModal} initialTab="all" onSwitchView={onSwitchView} />;
+    case "pending_companies":
+    case "pending_organizations":
+      return <OrganizationsView state={state} onUpdateState={onUpdateState} onOpenModal={onOpenModal} initialTab="pending" onSwitchView={onSwitchView} />;
     case "sponsors":
       return <SponsorsView state={state} onUpdateState={onUpdateState} onOpenModal={onOpenModal} />;
     case "exhibitors":
@@ -3184,17 +3187,23 @@ function PendingView({ state, onUpdateState }) {
 }
 
 // 4. PARTNER ORGANIZATIONS VIEW
-function OrganizationsView({ state, onUpdateState, onOpenModal }) {
+function OrganizationsView({ state, onUpdateState, onOpenModal, initialTab = "all", onSwitchView }) {
   const { t, lang, isRTL } = useLanguage();
   const canEdit = canEditModule("organizations", state?.effectivePermissions);
   const { organizations = [], sponsors = [], exhibitors = [], attendees = [] } = state;
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedIndustry, setSelectedIndustry] = useState("all");
-  const [statusTab, setStatusTab] = useState("all"); // "all" | "pending" | "active" | "sponsors" | "exhibitors" | "archived"
+  const [statusTab, setStatusTab] = useState(initialTab || "all"); // "all" | "pending" | "active" | "sponsors" | "exhibitors" | "archived"
   const [viewMode, setViewMode] = useState("grid"); // "grid" | "table"
   const [reviewingOrg, setReviewingOrg] = useState(null);
   const [approvingLoading, setApprovingLoading] = useState(false);
   const [copiedTokenId, setCopiedTokenId] = useState(null);
+
+  useEffect(() => {
+    if (initialTab) {
+      setStatusTab(initialTab);
+    }
+  }, [initialTab]);
 
   const handleArchive = (id) => {
     if (!canEdit) return;
@@ -3372,12 +3381,26 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
     return { isSponsor, isExhibitor };
   };
 
-  // KPI Counts
+  // KPI Counts & Statistical Metrics
+  const totalOrgs = organizations.filter(o => !o.isArchived).length;
   const pendingCount = organizations.filter(o => !o.isArchived && o.status === 'pending').length;
-  const activeCount = organizations.filter(o => !o.isArchived && (o.status === 'active' || !o.status)).length;
+  const activeCount = organizations.filter(o => !o.isArchived && (o.status === 'active' || o.status === 'confirmed' || !o.status)).length;
   const archivedCount = organizations.filter(o => o.isArchived || o.status === 'archived').length;
   const activeSponsorsCount = sponsors.filter(s => !s.isArchived && s.status !== 'archived').length;
   const activeExhibitorsCount = exhibitors.filter(e => !e.isArchived && e.status !== 'archived').length;
+
+  // Stands allocation metrics
+  const standsAllocatedCount = organizations.filter(o => !o.isArchived && (o.selectedBooth || o.fiscalDetails?.selectedBooth || o.companyRole === 'exhibitor')).length;
+  const totalBooths = (state.floorPlans || []).reduce((acc, fp) => acc + (fp.elements?.filter(el => el.type === 'booth')?.length || 0), 0);
+  const standOccupancyPct = totalBooths > 0 ? Math.round((standsAllocatedCount / totalBooths) * 100) : 0;
+
+  // Delegate badges metrics
+  const totalPassesAllotted = organizations.filter(o => !o.isArchived).reduce((acc, o) => acc + (Number(o.badgesIncluded) || 2), 0);
+  const totalDelegatesClaimed = organizations.filter(o => !o.isArchived).reduce((acc, o) => {
+    const dels = Array.isArray(o.delegates) ? o.delegates : (Array.isArray(o.fiscalDetails?.delegates) ? o.fiscalDetails.delegates : []);
+    return acc + dels.length;
+  }, 0);
+  const badgeClaimPct = totalPassesAllotted > 0 ? Math.round((totalDelegatesClaimed / totalPassesAllotted) * 100) : 0;
 
   // Extract unique industries for SearchableSelect
   const industryOptions = useMemo(() => {
@@ -3456,86 +3479,121 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
         )}
       </header>
 
-      {/* 2. KPI Executive Stat Cards */}
-      {/* 2. KPI Executive Stat Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        <div 
-          onClick={() => setStatusTab("all")}
-          className={`p-4 rounded-2xl border transition-all cursor-pointer shadow-xs flex items-center gap-3.5 ${
-            statusTab === "all" ? "bg-blue-50/60 border-blue-300 ring-2 ring-blue-400/20" : "bg-white border-slate-200/80 hover:border-blue-200"
-          }`}
-        >
-          <div className="w-11 h-11 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0">
-            <Building2 size={20} />
-          </div>
-          <div>
-            <div className="text-xl font-black text-slate-800 leading-tight">{organizations.length}</div>
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">{t("table.totalCompanies", "Total Companies")}</div>
-          </div>
-        </div>
-
-        <div 
-          onClick={() => setStatusTab("pending")}
-          className={`p-4 rounded-2xl border transition-all cursor-pointer shadow-xs flex items-center gap-3.5 ${
-            statusTab === "pending" 
-              ? "bg-amber-50/70 border-amber-300 ring-2 ring-amber-400/20" 
-              : pendingCount > 0 
-                ? "bg-amber-50/30 border-amber-200 hover:border-amber-300" 
-                : "bg-white border-slate-200/80 hover:border-amber-200"
-          }`}
-        >
-          <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-bold shrink-0 ${
-            pendingCount > 0 ? "bg-amber-500 text-white shadow-sm" : "bg-amber-50 text-amber-600"
-          }`}>
-            <Clock size={20} />
-          </div>
-          <div>
-            <div className={`text-xl font-black leading-tight ${pendingCount > 0 ? "text-amber-700" : "text-slate-800"}`}>
-              {pendingCount}
+      {/* 2. KPI Executive Stat Widgets (Informational, not tabs) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+        
+        {/* Card 1: Total Organizations */}
+        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+              {t("table.statTotalCompanies", "Total Organizations")}
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+              <Building2 size={16} />
             </div>
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">{t("table.pendingReview", "Pending Applications")}</div>
+          </div>
+          <div>
+            <div className="text-2xl font-black text-slate-900 tracking-tight leading-none mb-1.5">
+              {totalOrgs}
+            </div>
+            <div className="text-[11px] font-semibold text-slate-500 flex items-center gap-1.5 truncate">
+              <span className="text-emerald-600 font-bold">{activeCount} {t("common.active", "active")}</span>
+              <span>•</span>
+              <span className={pendingCount > 0 ? "text-amber-600 font-bold" : "text-slate-400"}>
+                {pendingCount} {t("common.pending", "pending")}
+              </span>
+            </div>
           </div>
         </div>
 
-        <div 
-          onClick={() => setStatusTab("sponsors")}
-          className={`p-4 rounded-2xl border transition-all cursor-pointer shadow-xs flex items-center gap-3.5 ${
-            statusTab === "sponsors" ? "bg-amber-50/60 border-amber-300 ring-2 ring-amber-400/20" : "bg-white border-slate-200/80 hover:border-amber-200"
-          }`}
-        >
-          <div className="w-11 h-11 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold shrink-0">
-            <Award size={20} />
+        {/* Card 2: Review Queue / Application Status */}
+        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+              {t("table.statReviewQueue", "Review Queue")}
+            </span>
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+              pendingCount > 0 ? "bg-amber-50 text-amber-600" : "bg-emerald-50 text-emerald-600"
+            }`}>
+              {pendingCount > 0 ? <Clock size={16} /> : <CheckCircle2 size={16} />}
+            </div>
           </div>
           <div>
-            <div className="text-xl font-black text-amber-700 leading-tight">{activeSponsorsCount}</div>
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">{t("table.activeSponsors", "Active Sponsors")}</div>
+            <div className={`text-2xl font-black tracking-tight leading-none mb-1.5 ${
+              pendingCount > 0 ? "text-amber-700" : "text-emerald-700"
+            }`}>
+              {pendingCount > 0 ? `${pendingCount} ${t("common.pending", "Pending")}` : "100%"}
+            </div>
+            <div className="text-[11px] font-semibold text-slate-500 truncate">
+              {pendingCount > 0 
+                ? t("table.statAwaitingReview", "Awaiting organizer review") 
+                : t("table.statAllReviewed", "All applications reviewed")}
+            </div>
           </div>
         </div>
 
-        <div 
-          onClick={() => setStatusTab("exhibitors")}
-          className={`p-4 rounded-2xl border transition-all cursor-pointer shadow-xs flex items-center gap-3.5 ${
-            statusTab === "exhibitors" ? "bg-blue-50/60 border-blue-300 ring-2 ring-blue-400/20" : "bg-white border-slate-200/80 hover:border-blue-200"
-          }`}
-        >
-          <div className="w-11 h-11 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0">
-            <Store size={20} />
+        {/* Card 3: Stand Allocation */}
+        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+              {t("table.statStandAllocation", "Stand Allocation")}
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+              <Store size={16} />
+            </div>
           </div>
           <div>
-            <div className="text-xl font-black text-blue-700 leading-tight">{activeExhibitorsCount}</div>
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">{t("table.activeExhibitors", "Active Exhibitors")}</div>
+            <div className="text-2xl font-black text-slate-900 tracking-tight leading-none mb-1.5">
+              {totalBooths > 0 ? `${standsAllocatedCount} / ${totalBooths}` : standsAllocatedCount}
+            </div>
+            <div className="text-[11px] font-semibold text-slate-500 truncate">
+              {totalBooths > 0 
+                ? `${standOccupancyPct}% ${t("table.standsReserved", "stands reserved")}` 
+                : `${activeExhibitorsCount} ${t("table.activeExhibitors", "confirmed exhibitors")}`}
+            </div>
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-3.5">
-          <div className="w-11 h-11 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center font-bold shrink-0">
-            <Layers size={20} />
+        {/* Card 4: Delegate Badges Allotted vs Issued */}
+        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+              {t("table.statDelegatePasses", "Delegate Badges")}
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center shrink-0">
+              <Ticket size={16} />
+            </div>
           </div>
           <div>
-            <div className="text-xl font-black text-sky-700 leading-tight">{Math.max(1, industryOptions.length - 1)}</div>
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">{t("table.sectorsRepresented", "Sectors Represented")}</div>
+            <div className="text-2xl font-black text-slate-900 tracking-tight leading-none mb-1.5">
+              {totalDelegatesClaimed} <span className="text-sm font-bold text-slate-400">/ {totalPassesAllotted}</span>
+            </div>
+            <div className="text-[11px] font-semibold text-slate-500 truncate">
+              {badgeClaimPct}% {t("table.passesClaimed", "passes issued via portal")}
+            </div>
           </div>
         </div>
+
+        {/* Card 5: Market Representation */}
+        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+              {t("table.statMarketDiversity", "Market Diversity")}
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center shrink-0">
+              <Layers size={16} />
+            </div>
+          </div>
+          <div>
+            <div className="text-2xl font-black text-slate-900 tracking-tight leading-none mb-1.5">
+              {Math.max(1, industryOptions.length - 1)} {industryOptions.length - 1 === 1 ? t("common.sector", "Sector") : t("common.sectors", "Sectors")}
+            </div>
+            <div className="text-[11px] font-semibold text-slate-500 truncate">
+              {activeSponsorsCount} {t("dash.sponsors", "sponsors")} • {activeExhibitorsCount} {t("dash.exhibitors", "exhibitors")}
+            </div>
+          </div>
+        </div>
+
       </div>
 
       {/* 3. Search & Filter Bar with Status Tabs & View Switcher */}
