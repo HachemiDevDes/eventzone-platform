@@ -5727,12 +5727,14 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
       )}
 
       {/* Main Viewport */}
-      <main className="flex-1 min-w-0 flex flex-col">
+      <main className={`flex-1 min-w-0 flex flex-col ${currentView === "calendar" ? "h-screen max-h-screen overflow-hidden" : ""}`}>
         {/* Dynamic content views router */}
         <div className={`flex-1 ${
           isEditingFloorPlan
             ? "overflow-hidden h-screen flex flex-col p-0" 
-            : "p-6 md:p-8"
+            : currentView === "calendar"
+              ? "h-full max-h-full overflow-hidden flex flex-col p-3 md:p-5 min-h-0"
+              : "p-6 md:p-8"
         }`}>
           {/* Top Banner when Role Simulation is Active */}
           {simulatedMemberId && (
@@ -5893,22 +5895,24 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
           )}
 
           {currentView === "calendar" && (
-            <CalendarView 
-              sessions={sessions}
-              attendees={attendees}
-              effectivePermissions={effectivePermissions}
-              onSaveSessions={(newSessions) => {
-                syncArrayToDb(sessions, newSessions, upsertSession, deleteSession);
-                setSessions(newSessions);
-              }}
-              onClearAllSessions={async () => {
-                if (confirm("Are you sure you want to clear all sessions?")) {
-                  await Promise.all(sessions.map(s => deleteSession(s.id).catch(console.error)));
-                  setSessions([]);
-                }
-              }}
-              onUploadFile={uploadFileToBucket}
-            />
+            <div className="flex-1 min-h-0 h-full flex flex-col">
+              <CalendarView 
+                sessions={sessions}
+                attendees={attendees}
+                effectivePermissions={effectivePermissions}
+                onSaveSessions={(newSessions) => {
+                  syncArrayToDb(sessions, newSessions, upsertSession, deleteSession);
+                  setSessions(newSessions);
+                }}
+                onClearAllSessions={async () => {
+                  if (confirm("Are you sure you want to clear all sessions?")) {
+                    await Promise.all(sessions.map(s => deleteSession(s.id).catch(console.error)));
+                    setSessions([]);
+                  }
+                }}
+                onUploadFile={uploadFileToBucket}
+              />
+            </div>
           )}
 
           {currentView === "floor-plan" && !isEditingFloorPlan && (

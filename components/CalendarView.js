@@ -57,6 +57,7 @@ export default function CalendarView({
   // Sidebar Resizing state
   const [sidebarWidth, setSidebarWidth] = useState(420);
   const isResizing = useRef(false);
+  const formPanelRef = useRef(null);
 
   // Initialize sidebar width from local storage
   useEffect(() => {
@@ -411,6 +412,9 @@ export default function CalendarView({
     setLogoLabel("");
     setLogoImg("");
     setEditingSessionId(null);
+    if (formPanelRef.current) {
+      formPanelRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
   };
 
   const startEdit = (session) => {
@@ -423,6 +427,15 @@ export default function CalendarView({
     setSpeakersList(session.speakers || []);
     setModeratorsList(session.moderators || []);
     setLogosList(session.logos || []);
+    setSpeakerName("");
+    setSpeakerImg("");
+    setModeratorName("");
+    setModeratorImg("");
+    setLogoLabel("");
+    setLogoImg("");
+    if (formPanelRef.current) {
+      formPanelRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
   };
 
   const handleArchive = (id) => {
@@ -507,12 +520,13 @@ export default function CalendarView({
   }
 
   return (
-    <div className="flex flex-1 w-full min-h-[calc(100vh-140px)] bg-white border border-slate-200 rounded-3xl shadow-xs overflow-hidden">
+    <div className="flex flex-1 w-full h-full min-h-0 max-h-[calc(100vh-2rem)] md:max-h-[calc(100vh-3rem)] bg-white border border-slate-200 rounded-3xl shadow-xs overflow-hidden">
       {/* ─────────────────────────────────────────────────────────────────── */}
       {/* LEFT PANEL: CREATE A SESSION / EDIT A SESSION                      */}
       {/* ─────────────────────────────────────────────────────────────────── */}
       <aside 
-        className="bg-white border-r border-slate-200 p-6 sm:p-7 flex flex-col gap-5 overflow-y-auto shrink-0 select-none"
+        ref={formPanelRef}
+        className="bg-white border-r border-slate-200 p-6 sm:p-7 flex flex-col gap-5 overflow-y-auto shrink-0 select-none h-full min-h-0 relative scroll-smooth"
         style={{ width: `${sidebarWidth}px` }}
       >
         {/* Viewer Mode Alert Banner */}
@@ -991,8 +1005,8 @@ export default function CalendarView({
             </div>
           </fieldset>
 
-          {/* Form Action Buttons */}
-          <div className="flex flex-col gap-2 pt-2 border-t border-slate-100">
+          {/* Form Action Buttons (Sticky at bottom of left panel) */}
+          <div className="sticky bottom-0 bg-white/95 backdrop-blur-xs pt-3 pb-2 border-t border-slate-100 flex flex-col gap-2 z-10 -mx-6 sm:-mx-7 px-6 sm:px-7 mt-2 shadow-2xs">
             {canEdit && (
               <button 
                 type="submit" 
@@ -1029,7 +1043,7 @@ export default function CalendarView({
       {/* ─────────────────────────────────────────────────────────────────── */}
       {/* RIGHT PANEL: EVENT TIMELINE & SESSIONS                              */}
       {/* ─────────────────────────────────────────────────────────────────── */}
-      <section className="flex-1 bg-slate-50/70 p-6 sm:p-8 flex flex-col overflow-y-auto">
+      <section className="flex-1 bg-slate-50/70 p-6 sm:p-8 flex flex-col overflow-y-auto h-full min-h-0 scroll-smooth">
         <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
           <div>
             <h2 className="text-2xl font-bold text-slate-900">
@@ -1109,6 +1123,7 @@ export default function CalendarView({
               let lastDate = null;
               return filteredSessions.map(session => {
                 const isArchivedSession = session.status === "archived" || session.isArchived;
+                const isCurrentlyEditing = session.id === editingSessionId;
                 const renderSeparator = activeFilter === "all" && session.date !== lastDate;
                 if (renderSeparator) {
                   lastDate = session.date;
@@ -1125,12 +1140,30 @@ export default function CalendarView({
                       </div>
                     )}
 
-                    <div className={`bg-white border ${isArchivedSession ? 'border-slate-200 opacity-80' : 'border-slate-200'} rounded-3xl p-6 flex flex-col gap-4 hover:shadow-md transition-all relative group`}>
+                    <div 
+                      id={`session-card-${session.id}`}
+                      className={`bg-white border ${
+                        isCurrentlyEditing 
+                          ? 'border-blue-500 ring-2 ring-blue-500/25 shadow-md bg-blue-50/15' 
+                          : isArchivedSession 
+                            ? 'border-slate-200 opacity-80' 
+                            : 'border-slate-200'
+                      } rounded-3xl p-6 flex flex-col gap-4 hover:shadow-md transition-all relative group`}
+                    >
                       <div className="flex justify-between items-start gap-4">
                         <div className="flex items-center gap-2">
-                          <div className="px-3 py-1 bg-blue-50 border border-blue-200/80 rounded-full text-blue-700 font-extrabold text-xs select-none">
+                          <div className={`px-3 py-1 ${
+                            isCurrentlyEditing 
+                              ? 'bg-blue-600 text-white shadow-2xs' 
+                              : 'bg-blue-50 border border-blue-200/80 text-blue-700'
+                          } rounded-full font-extrabold text-xs select-none transition-colors`}>
                             <span>{session.startTime} — {session.endTime}</span>
                           </div>
+                          {isCurrentlyEditing && (
+                            <span className="text-[10px] font-black uppercase tracking-wider text-blue-700 bg-blue-100 border border-blue-300 px-2.5 py-0.5 rounded-full animate-pulse">
+                              Editing
+                            </span>
+                          )}
                           {isArchivedSession && (
                             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
                               Archived
@@ -1138,16 +1171,20 @@ export default function CalendarView({
                           )}
                         </div>
 
-                        <div className={`flex items-center gap-1.5 ${!canEdit ? "opacity-100" : "opacity-0 group-hover:opacity-100 transition-opacity"}`}>
+                        <div className={`flex items-center gap-1.5 ${(!canEdit || isCurrentlyEditing) ? "opacity-100" : "opacity-0 group-hover:opacity-100 transition-opacity"}`}>
                           {!isArchivedSession && (
                             <button 
                               type="button"
                               onClick={() => startEdit(session)}
-                              className="px-2.5 py-1 bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
-                              title={canEdit ? "Edit Session" : "View Session"}
+                              className={`px-2.5 py-1 ${
+                                isCurrentlyEditing 
+                                  ? 'bg-blue-600 text-white shadow-xs' 
+                                  : 'bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700'
+                              } rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1`}
+                              title={canEdit ? (isCurrentlyEditing ? "Currently Editing" : "Edit Session") : "View Session"}
                             >
                               {!canEdit && <Eye size={12} />}
-                              <span>{canEdit ? t("common.edit", "Edit") : t("common.view", "View")}</span>
+                              <span>{canEdit ? (isCurrentlyEditing ? "Editing..." : t("common.edit", "Edit")) : t("common.view", "View")}</span>
                             </button>
                           )}
 
