@@ -3259,7 +3259,8 @@ function OrganizationsView({ state, onUpdateState, onOpenModal, initialTab = "al
       // 2. If Exhibitor role, link/create exhibitor
       if (org.companyRole === 'exhibitor' || org.selectedBooth) {
         const boothNum = org.selectedBooth?.boothNumber || org.selectedBooth?.label || (typeof org.selectedBooth === 'string' ? org.selectedBooth : '');
-        const newExhibitor = {
+        const allocatedBadges = parseInt(org.badgesIncluded || org.fiscalDetails?.badgesIncluded) || 2;
+        const exhibitorData = {
           id: org.id || Date.now(),
           orgId: org.id,
           org_id: org.id,
@@ -3267,15 +3268,48 @@ function OrganizationsView({ state, onUpdateState, onOpenModal, initialTab = "al
           logo: org.logo || '',
           booth: boothNum,
           boothNumber: boothNum,
+          boothType: org.ticketType || 'Standard',
           description: org.description || '',
           website: org.website || '',
+          contact: org.contact || org.contactPerson || '',
+          contactPerson: org.contact || org.contactPerson || '',
+          email: org.email || org.contactEmail || '',
+          contactEmail: org.email || org.contactEmail || '',
+          phone: org.phone || org.contactPhone || '',
+          contactPhone: org.phone || org.contactPhone || '',
+          jobTitle: org.jobTitle || '',
           status: 'confirmed',
-          category: org.industry || 'General'
+          category: org.industry || 'General',
+          staffCount: allocatedBadges,
+          badgeCount: allocatedBadges,
+          badgesIncluded: allocatedBadges,
+          ticketId: org.ticketId || null,
+          ticketType: org.ticketType || null
         };
-        const existsEx = exhibitors.some(e => e.orgId === org.id || e.org_id === org.id);
-        if (!existsEx) {
-          onUpdateState("exhibitors", [...exhibitors, newExhibitor]);
+        const existsExIdx = exhibitors.findIndex(e => 
+          (e.orgId && String(e.orgId) === String(org.id)) || 
+          (e.org_id && String(e.org_id) === String(org.id)) ||
+          (e.name && org.name && e.name.trim().toLowerCase() === org.name.trim().toLowerCase())
+        );
+        let nextExhibitors;
+        if (existsExIdx >= 0) {
+          const merged = {
+            ...exhibitors[existsExIdx],
+            ...exhibitorData,
+            id: exhibitors[existsExIdx].id || exhibitorData.id
+          };
+          nextExhibitors = [...exhibitors];
+          nextExhibitors[existsExIdx] = merged;
+          if (state.onSaveExhibitor) {
+            await state.onSaveExhibitor(merged);
+          }
+        } else {
+          nextExhibitors = [...exhibitors, exhibitorData];
+          if (state.onSaveExhibitor) {
+            await state.onSaveExhibitor(exhibitorData);
+          }
         }
+        onUpdateState("exhibitors", nextExhibitors);
 
         // 3. If booth has a linked floor plan, reserve the booth in floor_plans
         if (state.floorPlans && state.floorPlans.length > 0 && org.selectedBooth) {
@@ -5245,7 +5279,7 @@ function SponsorsView({ state, onUpdateState, onOpenModal }) {
 // 6. EVENT EXHIBITORS VIEW
 function ExhibitorsView({ state, onUpdateState, onOpenModal }) {
   const { t, lang, isRTL } = useLanguage();
-  const { exhibitors = [], organizations = [], attendees = [] } = state;
+  const { exhibitors = [], organizations = [], attendees = [], tickets = [] } = state;
   const canEdit = canEditModule("exhibitors", state?.effectivePermissions);
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState("grid"); // "grid" | "table"
@@ -5373,7 +5407,26 @@ function ExhibitorsView({ state, onUpdateState, onOpenModal }) {
       ) : viewMode === "grid" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredExhibitors.map((e, index) => {
-            const matchedOrg = organizations.find(o => o.id === e.orgId || o.id === e.org_id);
+            const matchedOrg = (organizations || []).find(o => 
+              (e.orgId && String(o.id) === String(e.orgId)) || 
+              (e.org_id && String(o.id) === String(e.org_id)) ||
+              (o.name && e.name && o.name.trim().toLowerCase() === e.name.trim().toLowerCase())
+            );
+            const allTickets = (state?.tickets || tickets || []);
+            const matchedTicket = allTickets.find(t => 
+              (e.ticketId && String(t.id) === String(e.ticketId)) ||
+              (matchedOrg?.ticketId && String(t.id) === String(matchedOrg.ticketId)) ||
+              (e.ticketType && (t.name === e.ticketType || t.title === e.ticketType || t.tier === e.ticketType)) ||
+              (matchedOrg?.ticketType && (t.name === matchedOrg.ticketType || t.title === matchedOrg.ticketType || t.tier === matchedOrg.ticketType)) ||
+              (e.boothType && (t.name === e.boothType || t.title === e.boothType || t.tier === e.boothType))
+            );
+            const orgPasses = parseInt(matchedOrg?.badgesIncluded ?? matchedOrg?.fiscalDetails?.badgesIncluded);
+            const ticketPasses = parseInt(matchedTicket?.badgesIncluded ?? matchedTicket?.badgeSettings?.badgesIncluded);
+            const explicitPasses = parseInt(e.badgesIncluded || e.staffCount || e.badgeCount);
+            const packagePasses = orgPasses || ticketPasses || 0;
+            const staffLimit = packagePasses > 0 
+              ? Math.max(packagePasses, explicitPasses > 2 ? explicitPasses : packagePasses)
+              : (explicitPasses || 2);
             const cleanBooth = formatBoothDisplay(e.booth || e.boothNumber);
             const boothDisplay = cleanBooth ? (cleanBooth.toUpperCase().startsWith('BOOTH') ? cleanBooth : `Booth ${cleanBooth}`) : "Unassigned";
             const itemKey = e.id ? `exhibitor-${e.id}` : `exhibitor-idx-${index}-${e.name || 'unnamed'}`;
@@ -5381,7 +5434,6 @@ function ExhibitorsView({ state, onUpdateState, onOpenModal }) {
             const liaisonEmail = e.email || e.contactEmail || matchedOrg?.email || matchedOrg?.contactEmail || '';
             const liaisonPhone = e.phone || e.contactPhone || matchedOrg?.phone || matchedOrg?.contactPhone || '';
             const liaisonTitle = e.jobTitle || e.contactPosition || matchedOrg?.jobTitle || matchedOrg?.contactPosition || '';
-            const staffLimit = parseInt(e.staffCount || e.badgeCount) || 2;
             const targetExId = e.id ? String(e.id) : null;
             const targetOrgId = (e.orgId || e.org_id || matchedOrg?.id) ? String(e.orgId || e.org_id || matchedOrg?.id) : null;
             const targetCompName = (e.name || matchedOrg?.name || '').trim().toLowerCase();
@@ -5543,11 +5595,29 @@ function ExhibitorsView({ state, onUpdateState, onOpenModal }) {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredExhibitors.map((e, index) => {
-                  const matchedOrg = organizations.find(o => o.id === e.orgId || o.id === e.org_id);
+                  const matchedOrg = (organizations || []).find(o => 
+                    (e.orgId && String(o.id) === String(e.orgId)) || 
+                    (e.org_id && String(o.id) === String(e.org_id)) ||
+                    (o.name && e.name && o.name.trim().toLowerCase() === e.name.trim().toLowerCase())
+                  );
+                  const allTickets = (state?.tickets || tickets || []);
+                  const matchedTicket = allTickets.find(t => 
+                    (e.ticketId && String(t.id) === String(e.ticketId)) ||
+                    (matchedOrg?.ticketId && String(t.id) === String(matchedOrg.ticketId)) ||
+                    (e.ticketType && (t.name === e.ticketType || t.title === e.ticketType || t.tier === e.ticketType)) ||
+                    (matchedOrg?.ticketType && (t.name === matchedOrg.ticketType || t.title === matchedOrg.ticketType || t.tier === matchedOrg.ticketType)) ||
+                    (e.boothType && (t.name === e.boothType || t.title === e.boothType || t.tier === e.boothType))
+                  );
+                  const orgPasses = parseInt(matchedOrg?.badgesIncluded ?? matchedOrg?.fiscalDetails?.badgesIncluded);
+                  const ticketPasses = parseInt(matchedTicket?.badgesIncluded ?? matchedTicket?.badgeSettings?.badgesIncluded);
+                  const explicitPasses = parseInt(e.badgesIncluded || e.staffCount || e.badgeCount);
+                  const packagePasses = orgPasses || ticketPasses || 0;
+                  const staffLimit = packagePasses > 0 
+                    ? Math.max(packagePasses, explicitPasses > 2 ? explicitPasses : packagePasses)
+                    : (explicitPasses || 2);
                   const itemKey = e.id ? `exhibitor-row-${e.id}` : `exhibitor-row-idx-${index}-${e.name || 'unnamed'}`;
                   const liaisonName = e.contact || e.contactPerson || matchedOrg?.contact || matchedOrg?.contactPerson || '';
                   const liaisonEmail = e.email || e.contactEmail || matchedOrg?.email || matchedOrg?.contactEmail || '';
-                  const staffLimit = parseInt(e.staffCount || e.badgeCount) || 2;
                   const targetExId = e.id ? String(e.id) : null;
                   const targetOrgId = (e.orgId || e.org_id || matchedOrg?.id) ? String(e.orgId || e.org_id || matchedOrg?.id) : null;
                   const targetCompName = (e.name || matchedOrg?.name || '').trim().toLowerCase();

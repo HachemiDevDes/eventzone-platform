@@ -1535,7 +1535,7 @@ export default function EventPublicLandingPage({
           ticketId: selectedTicket?.id || null,
           ticketTarget: selectedTicket?.ticketTarget || (isCompanyTicket ? "company" : "individual"),
           companyRole: selectedTicket?.companyRole || (isCompanyTicket ? "exhibitor" : null),
-          badgesIncluded: selectedTicket?.badgesIncluded || (isCompanyTicket ? 2 : 1),
+          badgesIncluded: Number(selectedTicket?.badgesIncluded ?? selectedTicket?.badgeSettings?.badgesIncluded ?? (isCompanyTicket ? 2 : 1)),
           selectedBooth: resolvedBooth,
           requiresApproval: isCompanyTicket ? true : Boolean(selectedTicket?.requiresApproval || selectedTicket?.requires_approval),
           referralCode: activeRefCode,

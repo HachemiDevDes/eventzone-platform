@@ -3388,6 +3388,9 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
           contactEmail: liaisonEmail || existingExhibitor.contactEmail || '',
           phone: liaisonPhone || existingExhibitor.phone || '',
           contactPhone: liaisonPhone || existingExhibitor.contactPhone || '',
+          staffCount: linkOptions.exhibitorStaffCount || saved.badgesIncluded || existingExhibitor.staffCount || 2,
+          badgeCount: linkOptions.exhibitorStaffCount || saved.badgesIncluded || existingExhibitor.badgeCount || 2,
+          badgesIncluded: linkOptions.exhibitorStaffCount || saved.badgesIncluded || existingExhibitor.badgesIncluded || 2,
           specificEquipment: linkOptions.specificEquipment !== undefined ? linkOptions.specificEquipment : (existingExhibitor.specificEquipment || existingExhibitor.specific_equipment || [])
         };
         try {
@@ -3419,7 +3422,9 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
           booth: linkOptions.exhibitorBooth || 'Not Assigned',
           boothNumber: linkOptions.exhibitorBooth || 'Not Assigned',
           boothType: linkOptions.exhibitorBoothType || 'Standard 3x3m (9 m²)',
-          staffCount: linkOptions.exhibitorStaffCount || 2,
+          staffCount: linkOptions.exhibitorStaffCount || saved.badgesIncluded || 2,
+          badgeCount: linkOptions.exhibitorStaffCount || saved.badgesIncluded || 2,
+          badgesIncluded: linkOptions.exhibitorStaffCount || saved.badgesIncluded || 2,
           description: linkOptions.exhibitorProducts || '',
           industry: saved.industry || '',
           contact: liaisonContact,
@@ -6367,6 +6372,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
         organizations={organizations}
         sponsors={sponsors}
         exhibitors={exhibitors}
+        tickets={tickets}
         floorPlans={floorPlans}
         attendees={attendees}
         onSaveOrganization={handleSaveOrganization}

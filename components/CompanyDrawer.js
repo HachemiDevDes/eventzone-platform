@@ -150,6 +150,7 @@ export default function CompanyDrawer({
   exhibitors = [],
   floorPlans = [],
   attendees = [],
+  tickets = [],
   onSaveOrganization,
   onSaveSponsor,
   onSaveExhibitor,
@@ -841,7 +842,10 @@ export default function CompanyDrawer({
             setAlsoCreateExhibitor(true);
             setExhibitorBooth(existingExhibitor.booth || existingExhibitor.boothNumber || existingExhibitor.booth_number || "");
             setExhibitorBoothType(existingExhibitor.boothType || "Standard 3x3m (9 m²)");
-            setExhibitorStaffCount(existingExhibitor.staffCount || existingExhibitor.badgeCount || 2);
+            const orgPasses = parseInt(item?.badgesIncluded || item?.fiscalDetails?.badgesIncluded);
+            const exStaff = parseInt(existingExhibitor.staffCount || existingExhibitor.badgeCount || existingExhibitor.badgesIncluded);
+            const resolvedStaff = (orgPasses > 0 && (!exStaff || exStaff <= 2)) ? orgPasses : (exStaff || orgPasses || 2);
+            setExhibitorStaffCount(resolvedStaff);
             setExhibitorProducts(existingExhibitor.description || existingExhibitor.products || "");
             const eqList = Array.isArray(existingExhibitor.specificEquipment) 
               ? existingExhibitor.specificEquipment 
@@ -851,7 +855,7 @@ export default function CompanyDrawer({
             setAlsoCreateExhibitor(false);
             setExhibitorBooth(availableBooths.length > 0 ? availableBooths[0].value : "Booth A-01");
             setExhibitorBoothType("Standard 3x3m (9 m²)");
-            setExhibitorStaffCount(2);
+            setExhibitorStaffCount(parseInt(item?.badgesIncluded || item?.fiscalDetails?.badgesIncluded) || 2);
             setExhibitorProducts("");
             setAssignedEquipment([]);
           }
@@ -1016,18 +1020,36 @@ export default function CompanyDrawer({
           setOrgLogo(item.logo || item.logo_url || "");
           setExhibitorBooth(item.booth || item.boothNumber || item.booth_number || "");
           setExhibitorBoothType(item.boothType || "Standard 3x3m (9 m²)");
-          setExhibitorStaffCount(item.staffCount || item.badgeCount || 2);
-          setExhibitorProducts(item.description || item.products || "");
-          const eqList = Array.isArray(item.specificEquipment) 
-            ? item.specificEquipment 
-            : (Array.isArray(item.specific_equipment) ? item.specific_equipment : []);
-          setAssignedEquipment(eqList);
 
           const matchedOrg = (organizations || []).find(o => 
             (item.orgId && String(o.id) === String(item.orgId)) || 
             (item.org_id && String(o.id) === String(item.org_id)) || 
             (o.name && item.name && o.name.trim().toLowerCase() === item.name.trim().toLowerCase())
           );
+
+          const allTickets = tickets || [];
+          const matchedTicket = allTickets.find(t => 
+            (item.ticketId && String(t.id) === String(item.ticketId)) ||
+            (matchedOrg?.ticketId && String(t.id) === String(matchedOrg.ticketId)) ||
+            (item.ticketType && (t.name === item.ticketType || t.title === item.ticketType || t.tier === item.ticketType)) ||
+            (matchedOrg?.ticketType && (t.name === matchedOrg.ticketType || t.title === matchedOrg.ticketType || t.tier === matchedOrg.ticketType)) ||
+            (item.boothType && (t.name === item.boothType || t.title === item.boothType || t.tier === item.boothType))
+          );
+
+          const orgPasses = parseInt(matchedOrg?.badgesIncluded || matchedOrg?.fiscalDetails?.badgesIncluded);
+          const ticketPasses = parseInt(matchedTicket?.badgesIncluded ?? matchedTicket?.badgeSettings?.badgesIncluded);
+          const explicitStaff = parseInt(item.staffCount || item.badgeCount || item.badgesIncluded);
+          const packagePasses = orgPasses || ticketPasses || 0;
+          const resolvedStaff = packagePasses > 0 
+            ? Math.max(packagePasses, explicitStaff > 2 ? explicitStaff : packagePasses)
+            : (explicitStaff || 2);
+
+          setExhibitorStaffCount(resolvedStaff);
+          setExhibitorProducts(item.description || item.products || "");
+          const eqList = Array.isArray(item.specificEquipment) 
+            ? item.specificEquipment 
+            : (Array.isArray(item.specific_equipment) ? item.specific_equipment : []);
+          setAssignedEquipment(eqList);
 
           if (matchedOrg) {
             setExhibitorSourceType("existing");
@@ -1336,6 +1358,7 @@ export default function CompanyDrawer({
           logo: orgLogo || (selectedOrg?.logo || ""),
           staffCount: parseInt(exhibitorStaffCount) || 2,
           badgeCount: parseInt(exhibitorStaffCount) || 2,
+          badgesIncluded: parseInt(exhibitorStaffCount) || 2,
           products: exhibitorProducts.trim(),
           description: exhibitorProducts.trim(),
           specificEquipment: assignedEquipment,
