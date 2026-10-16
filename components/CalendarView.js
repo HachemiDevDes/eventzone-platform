@@ -100,59 +100,92 @@ export default function CalendarView({
     };
   }, []);
 
-  // Extract all unique speakers across all sessions and attendees in the event
-  const allEventSpeakers = useMemo(() => {
+  // Unified directory of all experts (speakers + moderators + attendee experts) across the entire event
+  const allEventExperts = useMemo(() => {
     const map = new Map();
-    // 1. From all sessions
+
+    // 1. From all sessions: extract both speakers and moderators
     sessions.forEach(sess => {
       (sess.speakers || []).forEach(sp => {
         if (sp && sp.name && sp.name.trim()) {
           const key = sp.name.trim().toLowerCase();
-          if (!map.has(key)) {
+          const existing = map.get(key);
+          if (existing) {
+            existing.isSpeaker = true;
+            if (!existing.image && sp.image) existing.image = sp.image;
+            if (!existing.title && (sp.title || sp.jobTitle)) existing.title = sp.title || sp.jobTitle;
+            if (!existing.company && sp.company) existing.company = sp.company;
+          } else {
             map.set(key, {
               id: sp.id || `spk-${key}`,
               name: sp.name.trim(),
-              image: sp.image || ""
+              image: sp.image || sp.avatar_url || "",
+              title: sp.title || sp.jobTitle || "",
+              company: sp.company || "",
+              isSpeaker: true,
+              isModerator: false
+            });
+          }
+        }
+      });
+
+      (sess.moderators || []).forEach(mod => {
+        if (mod && mod.name && mod.name.trim()) {
+          const key = mod.name.trim().toLowerCase();
+          const existing = map.get(key);
+          if (existing) {
+            existing.isModerator = true;
+            if (!existing.image && mod.image) existing.image = mod.image;
+            if (!existing.title && (mod.title || mod.jobTitle)) existing.title = mod.title || mod.jobTitle;
+            if (!existing.company && mod.company) existing.company = mod.company;
+          } else {
+            map.set(key, {
+              id: mod.id || `mod-${key}`,
+              name: mod.name.trim(),
+              image: mod.image || mod.avatar_url || "",
+              title: mod.title || mod.jobTitle || "",
+              company: mod.company || "",
+              isSpeaker: false,
+              isModerator: true
             });
           }
         }
       });
     });
-    // 2. From attendees marked as isSpeaker or speaker ticket
+
+    // 2. From attendees marked as isSpeaker or speaker/moderator ticket
     attendees.forEach(att => {
-      if (att && (att.isSpeaker || (typeof att.ticketType === 'string' && att.ticketType.toLowerCase().includes("speaker"))) && att.name && att.name.trim()) {
+      if (!att || !att.name || !att.name.trim()) return;
+      const tType = typeof att.ticketType === 'string' ? att.ticketType.toLowerCase() : '';
+      const isAttSpeaker = Boolean(att.isSpeaker || tType.includes("speaker"));
+      const isAttMod = Boolean(att.isModerator || tType.includes("moderator"));
+      if (isAttSpeaker || isAttMod) {
         const key = att.name.trim().toLowerCase();
-        if (!map.has(key)) {
+        const existing = map.get(key);
+        if (existing) {
+          if (isAttSpeaker) existing.isSpeaker = true;
+          if (isAttMod) existing.isModerator = true;
+          if (!existing.image && att.image) existing.image = att.image;
+        } else {
           map.set(key, {
             id: att.id || `att-${key}`,
             name: att.name.trim(),
-            image: att.image || ""
+            image: att.image || "",
+            title: att.jobTitle || att.title || "",
+            company: att.company || "",
+            isSpeaker: isAttSpeaker,
+            isModerator: isAttMod
           });
         }
       }
     });
-    return Array.from(map.values());
+
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [sessions, attendees]);
 
-  // Extract all unique moderators across all sessions in the event
-  const allEventModerators = useMemo(() => {
-    const map = new Map();
-    sessions.forEach(sess => {
-      (sess.moderators || []).forEach(mod => {
-        if (mod && mod.name && mod.name.trim()) {
-          const key = mod.name.trim().toLowerCase();
-          if (!map.has(key)) {
-            map.set(key, {
-              id: mod.id || `mod-${key}`,
-              name: mod.name.trim(),
-              image: mod.image || ""
-            });
-          }
-        }
-      });
-    });
-    return Array.from(map.values());
-  }, [sessions]);
+  // Aliases for speaker & moderator candidate lists
+  const allEventSpeakers = allEventExperts;
+  const allEventModerators = allEventExperts;
 
   // Add an existing speaker from event directory to current session
   const handleAddExistingSpeaker = (speaker) => {
@@ -165,7 +198,10 @@ export default function CalendarView({
     const newSpeaker = {
       id: Date.now(),
       name: speaker.name.trim(),
-      image: speaker.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(speaker.name.trim())}&background=2563eb&color=fff`
+      image: speaker.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(speaker.name.trim())}&background=2563eb&color=fff`,
+      title: speaker.title || "",
+      company: speaker.company || "",
+      role: "Speaker"
     };
     setSpeakersList(prev => [...prev, newSpeaker]);
     setSelectedSpeakerFromList("");
@@ -182,7 +218,10 @@ export default function CalendarView({
     const newModerator = {
       id: Date.now(),
       name: moderator.name.trim(),
-      image: moderator.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(moderator.name.trim())}&background=4f46e5&color=fff`
+      image: moderator.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(moderator.name.trim())}&background=4f46e5&color=fff`,
+      title: moderator.title || "",
+      company: moderator.company || "",
+      role: "Moderator"
     };
     setModeratorsList(prev => [...prev, newModerator]);
     setSelectedModeratorFromList("");
@@ -411,6 +450,8 @@ export default function CalendarView({
     setLogosList([]);
     setLogoLabel("");
     setLogoImg("");
+    setSelectedSpeakerFromList("");
+    setSelectedModeratorFromList("");
     setEditingSessionId(null);
     if (formPanelRef.current) {
       formPanelRef.current.scrollTo({ top: 0, behavior: "smooth" });
@@ -433,6 +474,8 @@ export default function CalendarView({
     setModeratorImg("");
     setLogoLabel("");
     setLogoImg("");
+    setSelectedSpeakerFromList("");
+    setSelectedModeratorFromList("");
     if (formPanelRef.current) {
       formPanelRef.current.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -678,7 +721,7 @@ export default function CalendarView({
                           </div>
                         ),
                         badge: speakersList.some(item => item.name.toLowerCase() === s.name.toLowerCase()) ? "Added" : undefined,
-                        description: "Event Speaker"
+                        description: s.isSpeaker && s.isModerator ? "Event Speaker & Moderator" : s.isModerator ? "Event Moderator" : "Event Speaker"
                       }))}
                       placeholder="-- Select speaker from list --"
                       searchPlaceholder="Search event speakers..."
@@ -816,7 +859,7 @@ export default function CalendarView({
               </div>
 
               {/* From List Selector */}
-              {canEdit && moderatorMode === "list" && (allEventModerators.length > 0 || allEventSpeakers.length > 0) ? (
+              {canEdit && moderatorMode === "list" && allEventModerators.length > 0 ? (
                 <div className="flex gap-2 items-center">
                   <div className="flex-1">
                     <SearchableSelect
@@ -824,11 +867,10 @@ export default function CalendarView({
                       disabled={!canEdit}
                       onChange={(val) => {
                         setSelectedModeratorFromList(val);
-                        const list = allEventModerators.length > 0 ? allEventModerators : allEventSpeakers;
-                        const found = list.find(m => m.name === val);
+                        const found = allEventModerators.find(m => m.name === val);
                         if (found) handleAddExistingModerator(found);
                       }}
-                      options={(allEventModerators.length > 0 ? allEventModerators : allEventSpeakers).map(m => ({
+                      options={allEventModerators.map(m => ({
                         value: m.name,
                         label: m.name,
                         icon: m.image ? (
@@ -840,7 +882,7 @@ export default function CalendarView({
                           </div>
                         ),
                         badge: moderatorsList.some(item => item.name.toLowerCase() === m.name.toLowerCase()) ? "Added" : undefined,
-                        description: "Event Moderator / Speaker"
+                        description: m.isModerator && m.isSpeaker ? "Event Moderator & Speaker" : m.isModerator ? "Event Moderator" : "Event Speaker"
                       }))}
                       placeholder="-- Select moderator from list --"
                       searchPlaceholder="Search event moderators..."
@@ -854,8 +896,7 @@ export default function CalendarView({
                         alert("Please select a moderator from the dropdown.");
                         return;
                       }
-                      const list = allEventModerators.length > 0 ? allEventModerators : allEventSpeakers;
-                      const found = list.find(m => m.name === selectedModeratorFromList);
+                      const found = allEventModerators.find(m => m.name === selectedModeratorFromList);
                       if (found) handleAddExistingModerator(found);
                     }}
                     className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer flex items-center gap-1"
