@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { 
-  Building2, Store, Ticket, Users, Check, Clock, AlertCircle, 
-  Plus, Mail, Phone, User, QrCode, ArrowRight, Download, CheckCircle2,
-  Calendar, MapPin, Sparkles, ExternalLink, ShieldCheck, Loader2
+  Building2, Store, Users, Check, Clock, AlertCircle, 
+  Plus, Mail, Phone, QrCode, ArrowRight, Download, CheckCircle2,
+  Calendar, MapPin, Sparkles, ExternalLink, Loader2
 } from "lucide-react";
 import QRCode from "qrcode";
 import { fetchOrganizationByDelegationToken, assignCompanyDelegate } from "../lib/db";
