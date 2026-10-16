@@ -1015,6 +1015,10 @@ export default function EventPublicLandingPage({
       return [startDate.split("T")[0].trim()];
     }
 
+    if (eventSessions.length > 0) {
+      return ["day-1"];
+    }
+
     return [];
   }, [eventSessions, startDate]);
 
@@ -2707,7 +2711,7 @@ export default function EventPublicLandingPage({
             </div>
 
             {/* Day Filters */}
-            {distinctDays.length > 1 && (
+            {distinctDays.length > 0 && (
               <div className="flex items-center bg-white p-1 rounded-full border border-slate-200 shadow-xs w-fit max-w-full overflow-x-auto no-scrollbar self-start md:self-auto shrink-0">
                 {["All", ...distinctDays].map((day, idx) => (
                   <button
@@ -2826,6 +2830,13 @@ export default function EventPublicLandingPage({
                           {session.title || "Session"}
                         </h3>
 
+                        {/* Description / Theme Quote Block */}
+                        {session.description && (
+                          <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-100 text-xs sm:text-sm text-slate-600 leading-relaxed font-normal whitespace-pre-line">
+                            {session.description}
+                          </div>
+                        )}
+
                         {/* ─── MODERATOR(S) AT THE TOP ─── */}
                         {sessionModerators.length > 0 && (
                           <div className="space-y-2 pt-1">
@@ -2927,13 +2938,6 @@ export default function EventPublicLandingPage({
                                 </div>
                               ))}
                             </div>
-                          </div>
-                        )}
-
-                        {/* Description / Theme Quote Block */}
-                        {session.description && (
-                          <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-100 text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
-                            {session.description}
                           </div>
                         )}
 
