@@ -7,7 +7,7 @@ import {
   Layers, Users, Clock, Ticket, Award, CheckCircle2, 
   ExternalLink, Share2, Compass, ShieldCheck, 
   ChevronRight, ChevronLeft, Building2, Check, Download, Mail, X, Globe, Video,
-  Star, MessageSquare, Printer, User, Briefcase, Phone, QrCode as QrIcon, FileText, FileSpreadsheet,
+  Star, MessageSquare, Printer, User, Briefcase, Phone, QrCode as QrIcon,
   Tag, AlertCircle, RefreshCw, Smartphone, ChevronDown, ChevronUp, Lock, Image as ImageIcon, Play,
   Store
 } from "lucide-react";
@@ -27,7 +27,6 @@ import { getYouTubeEmbedUrl } from "./EventDetailsView";
 import { recordInfluencerClick, fetchEventDetails, fetchTickets } from "../lib/db";
 import { LandingPageSkeleton } from "./SkeletonLoaders";
 import Footer from "./Footer";
-import { downloadAgendaPdf, exportAgendaToExcel } from "@/lib/agendaExport";
 
 function getLocalizedCheckoutFieldLabel(field, t) {
   if (!field) return "";
@@ -231,8 +230,6 @@ export default function EventPublicLandingPage({
   const [isSpeakersExpanded, setIsSpeakersExpanded] = useState(false);
   const [isSponsorsExpanded, setIsSponsorsExpanded] = useState(false);
   const [isExhibitorsExpanded, setIsExhibitorsExpanded] = useState(false);
-  const [isExportingAgendaPdf, setIsExportingAgendaPdf] = useState(false);
-  const [isExportingAgendaExcel, setIsExportingAgendaExcel] = useState(false);
 
   // Scroll restore references to return to exact top where it was opened
   const agendaOpenScrollY = useRef(null);
@@ -1874,71 +1871,6 @@ export default function EventPublicLandingPage({
     };
   };
 
-  const getEnrichedSessionsForExport = (sessionsToExport) => {
-    return (sessionsToExport || []).map(sess => {
-      const sps = (sess.speakers || []).map(sp => getEnrichedSpeaker(sp, false)).filter(Boolean);
-      const mods = (sess.moderators || []).map(m => getEnrichedSpeaker(m, true)).filter(Boolean);
-      return {
-        ...sess,
-        speakers: sps,
-        moderators: mods
-      };
-    });
-  };
-
-  const handleDownloadLandingPdf = async () => {
-    if (isExportingAgendaPdf) return;
-    setIsExportingAgendaPdf(true);
-    try {
-      const sessionsToUse = selectedDay && selectedDay !== "All" ? filteredSessions : eventSessions;
-      const enriched = getEnrichedSessionsForExport(sessionsToUse);
-      const filterLabel = selectedDay && selectedDay !== "All" ? selectedDay : "Full Agenda";
-      await downloadAgendaPdf({
-        eventId: eventDetails?.id || eventId,
-        eventDetails: {
-          title: title || eventDetails?.title || "Event Agenda",
-          start_date: startDate || eventDetails?.start_date,
-          end_date: endDate || eventDetails?.end_date,
-          location: location || eventDetails?.location,
-          organizer: hostName || organizer || eventDetails?.organizer || eventDetails?.host
-        },
-        sessions: enriched,
-        filterLabel
-      });
-    } catch (err) {
-      console.error("Failed to export PDF:", err);
-      alert("Failed to export PDF. Please try again.");
-    } finally {
-      setIsExportingAgendaPdf(false);
-    }
-  };
-
-  const handleExportLandingExcel = () => {
-    if (isExportingAgendaExcel) return;
-    setIsExportingAgendaExcel(true);
-    try {
-      const sessionsToUse = selectedDay && selectedDay !== "All" ? filteredSessions : eventSessions;
-      const enriched = getEnrichedSessionsForExport(sessionsToUse);
-      const filterLabel = selectedDay && selectedDay !== "All" ? selectedDay : "Full Agenda";
-      exportAgendaToExcel({
-        eventDetails: {
-          title: title || eventDetails?.title || "Event Agenda",
-          start_date: startDate || eventDetails?.start_date,
-          end_date: endDate || eventDetails?.end_date,
-          location: location || eventDetails?.location,
-          organizer: hostName || organizer || eventDetails?.organizer || eventDetails?.host
-        },
-        sessions: enriched,
-        filterLabel
-      });
-    } catch (err) {
-      console.error("Failed to export Excel:", err);
-      alert("Failed to export Excel. Please try again.");
-    } finally {
-      setIsExportingAgendaExcel(false);
-    }
-  };
-
   const getSessionGoogleCalendarUrl = (session) => {
     try {
       const cleanTitle = encodeURIComponent(`${session.title || "Session"} - ${title || eventDetails?.title || "Event"}`);
@@ -2832,58 +2764,32 @@ export default function EventPublicLandingPage({
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2.5 self-start md:self-auto">
-              {/* Day Filters */}
-              {distinctDays.length > 0 && (
-                <div className="flex items-center bg-white p-1 rounded-full border border-slate-200 shadow-xs w-fit max-w-full overflow-x-auto no-scrollbar shrink-0">
-                  {["All", ...distinctDays].map((day, idx) => (
-                    <button
-                      key={day}
-                      onClick={() => {
-                        setSelectedDay(day);
-                        setIsAgendaExpanded(false);
-                        agendaOpenScrollY.current = null;
-                      }}
-                      className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-                        selectedDay === day ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:text-slate-900"
-                      }`}
-                    >
-                      {day === "All" 
-                        ? t("event.allDays", "All Days") 
-                        : (idx === 1 
-                          ? t("event.day1", "Day 1") 
-                          : (idx === 2 
-                            ? t("event.day2", "Day 2") 
-                            : t("event.dayNum", `Day ${idx}`).replace("{num}", idx)))}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Agenda Export Action Buttons */}
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={handleDownloadLandingPdf}
-                  disabled={isExportingAgendaPdf}
-                  title="Download agenda as PDF"
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 hover:text-blue-600 text-xs font-bold shadow-2xs hover:shadow-sm transition-all cursor-pointer disabled:opacity-50 active:scale-95"
-                >
-                  <FileText size={14} className="text-blue-600" />
-                  <span>{isExportingAgendaPdf ? "Generating..." : "Download PDF"}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleExportLandingExcel}
-                  disabled={isExportingAgendaExcel}
-                  title="Export agenda to Excel (.xlsx)"
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 hover:text-emerald-600 text-xs font-bold shadow-2xs hover:shadow-sm transition-all cursor-pointer disabled:opacity-50 active:scale-95"
-                >
-                  <FileSpreadsheet size={14} className="text-emerald-600" />
-                  <span>{isExportingAgendaExcel ? "Exporting..." : "Excel"}</span>
-                </button>
+            {/* Day Filters */}
+            {distinctDays.length > 0 && (
+              <div className="flex items-center bg-white p-1 rounded-full border border-slate-200 shadow-xs w-fit max-w-full overflow-x-auto no-scrollbar self-start md:self-auto shrink-0">
+                {["All", ...distinctDays].map((day, idx) => (
+                  <button
+                    key={day}
+                    onClick={() => {
+                      setSelectedDay(day);
+                      setIsAgendaExpanded(false);
+                      agendaOpenScrollY.current = null;
+                    }}
+                    className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                      selectedDay === day ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    {day === "All" 
+                      ? t("event.allDays", "All Days") 
+                      : (idx === 1 
+                        ? t("event.day1", "Day 1") 
+                        : (idx === 2 
+                          ? t("event.day2", "Day 2") 
+                          : t("event.dayNum", `Day ${idx}`).replace("{num}", idx)))}
+                  </button>
+                ))}
               </div>
-            </div>
+            )}
           </div>
 
           {/* Sessions List */}
