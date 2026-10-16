@@ -4303,7 +4303,7 @@ function OrganizationsView({ state, onUpdateState, onOpenModal, initialTab = "al
 
       {/* Corporate Application Review Modal */}
       {reviewingOrg && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-fade-in overflow-y-auto">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md animate-fade-in overflow-y-auto">
           <div className="bg-white border border-slate-200 w-full max-w-2xl rounded-3xl shadow-2xl p-6 sm:p-7 space-y-6 animate-scale-up relative my-8 text-slate-900">
             {/* Header */}
             <div className="flex items-start justify-between pb-4 border-b border-slate-100">
@@ -4343,8 +4343,7 @@ function OrganizationsView({ state, onUpdateState, onOpenModal, initialTab = "al
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Stand / Booth Allocation */}
               <div className="bg-slate-50/80 rounded-2xl p-4 border border-slate-200/80 space-y-2">
-                <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                  <Store size={14} className="text-blue-600" />
+                <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                   <span>Exhibition Stand / Booth</span>
                 </div>
                 {reviewingOrg.selectedBooth ? (
@@ -4370,8 +4369,7 @@ function OrganizationsView({ state, onUpdateState, onOpenModal, initialTab = "al
 
               {/* Pass Allotment */}
               <div className="bg-slate-50/80 rounded-2xl p-4 border border-slate-200/80 space-y-2">
-                <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                  <Ticket size={14} className="text-amber-600" />
+                <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                   <span>Representative Passes</span>
                 </div>
                 <div>
@@ -4427,9 +4425,8 @@ function OrganizationsView({ state, onUpdateState, onOpenModal, initialTab = "al
 
             {/* Delegation Portal Dispatch Notice */}
             <div className="bg-blue-50/60 border border-blue-200/80 rounded-2xl p-4 text-xs text-blue-900 space-y-1.5">
-              <div className="font-bold flex items-center gap-1.5 text-blue-800">
-                <ShieldCheck size={16} className="text-blue-600 shrink-0" />
-                <span>Mode B: Delegation Portal Link Dispatch</span>
+              <div className="font-bold text-blue-800">
+                <span>Delegation Portal Link Dispatch</span>
               </div>
               <p className="text-blue-700 font-medium leading-relaxed">
                 Approving this company will reserve their stand and immediately dispatch a secure <strong>Delegation Portal Link</strong> to <span className="font-bold">{reviewingOrg.email || 'the primary contact'}</span>. They can add badges for their {reviewingOrg.badgesIncluded || 2} representatives without sharing organizer credentials.
