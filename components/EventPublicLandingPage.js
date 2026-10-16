@@ -2826,11 +2826,66 @@ export default function EventPublicLandingPage({
                           {session.title || "Session"}
                         </h3>
 
-                        {/* THE HERO: Bold, Prominent Speakers & Presenters */}
-                        {allSessionPeople.length > 0 && (
-                          <div className="space-y-2.5 pt-1">
+                        {/* ─── MODERATOR(S) AT THE TOP ─── */}
+                        {sessionModerators.length > 0 && (
+                          <div className="space-y-2 pt-1">
+                            <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 block">
+                              {sessionModerators.length > 1 ? t("event.moderatorsTitle", "Moderators") : t("event.moderatorTitle", "Moderator")}
+                            </span>
                             <div className="flex flex-wrap items-center gap-4 sm:gap-6">
-                              {allSessionPeople.map((sp, i) => (
+                              {sessionModerators.map((sp, i) => (
+                                <div
+                                  key={i}
+                                  className="flex items-center gap-3.5 group/sp py-1"
+                                >
+                                  {/* Moderator Avatar */}
+                                  <div className="relative shrink-0">
+                                    <img
+                                      src={sp.image}
+                                      alt={sp.name}
+                                      className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border-2 border-white shadow-xs ring-2 ring-indigo-500/20 group-hover/sp:ring-indigo-500 transition-all"
+                                      onError={(e) => {
+                                        e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(sp.name)}&background=4f46e5&color=fff`;
+                                      }}
+                                    />
+                                  </div>
+
+                                  {/* Name, Verified Badge, Position & Company */}
+                                  <div className="flex flex-col min-w-0">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="text-sm sm:text-base font-extrabold text-slate-900 group-hover/sp:text-blue-600 transition-colors">
+                                        {sp.name}
+                                      </span>
+                                      <CheckCircle2 size={16} className="text-blue-600 fill-blue-50 shrink-0" />
+                                    </div>
+
+                                    {/* Position & Company */}
+                                    <div className="text-xs sm:text-sm text-slate-500 font-medium leading-tight mt-0.5">
+                                      {sp.title && sp.company ? (
+                                        <span>{sp.title} <span className="text-slate-300">•</span> <span className="text-slate-600 font-semibold">{sp.company}</span></span>
+                                      ) : sp.title ? (
+                                        <span>{sp.title}</span>
+                                      ) : sp.company ? (
+                                        <span className="text-slate-600 font-semibold">{sp.company}</span>
+                                      ) : (
+                                        <span className="text-slate-400">{sp.role || t("event.moderator", "Moderator")}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* ─── SPEAKERS ─── */}
+                        {sessionSpeakers.length > 0 && (
+                          <div className="space-y-2 pt-1">
+                            <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 block">
+                              {sessionSpeakers.length > 1 ? t("event.speakersTitle", "Speakers") : t("event.speakerTitle", "Speaker")}
+                            </span>
+                            <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+                              {sessionSpeakers.map((sp, i) => (
                                 <div
                                   key={i}
                                   className="flex items-center gap-3.5 group/sp py-1"
@@ -2845,14 +2900,6 @@ export default function EventPublicLandingPage({
                                         e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(sp.name)}&background=2563eb&color=fff`;
                                       }}
                                     />
-                                    {sp.isModerator && (
-                                      <div 
-                                        className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[9px] font-bold border-2 border-white shadow-2xs"
-                                        title="Moderator"
-                                      >
-                                        M
-                                      </div>
-                                    )}
                                   </div>
 
                                   {/* Name, Verified Badge, Position & Company */}
@@ -2862,11 +2909,6 @@ export default function EventPublicLandingPage({
                                         {sp.name}
                                       </span>
                                       <CheckCircle2 size={16} className="text-blue-600 fill-blue-50 shrink-0" />
-                                      {sp.isModerator && (
-                                        <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200/80 uppercase tracking-wider">
-                                          {t("event.moderator", "Moderator")}
-                                        </span>
-                                      )}
                                     </div>
 
                                     {/* Position & Company */}
