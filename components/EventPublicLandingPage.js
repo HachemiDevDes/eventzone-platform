@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { 
   Calendar, CalendarPlus, MapPin, Sparkles, ArrowRight, ArrowLeft, ArrowUp,
   Layers, Users, Clock, Ticket, Award, CheckCircle2, 
@@ -102,6 +102,99 @@ function getLocalizedCheckoutFieldPlaceholder(field, t) {
   return ph;
 }
 
+/**
+ * SmoothCollapsible
+ * Animates max-height smoothly using scrollHeight measurements without layout snaps.
+ */
+function SmoothCollapsible({
+  isExpanded,
+  collapsedHeight = 600,
+  enabled = true,
+  children,
+  className = "",
+}) {
+  const innerRef = useRef(null);
+  const [maxHeightStyle, setMaxHeightStyle] = useState(() => 
+    !enabled ? "none" : (isExpanded ? "none" : `${collapsedHeight}px`)
+  );
+  const isFirstRender = useRef(true);
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
+    if (!enabled) {
+      setMaxHeightStyle("none");
+      return;
+    }
+
+    const inner = innerRef.current;
+    if (!inner) return;
+
+    if (isExpanded) {
+      // Expanding: start from collapsedHeight, animate to target scrollHeight, then release to "none"
+      const targetHeight = inner.scrollHeight;
+      setMaxHeightStyle(`${collapsedHeight}px`);
+
+      const raf = requestAnimationFrame(() => {
+        void inner.offsetHeight;
+        setMaxHeightStyle(`${targetHeight}px`);
+      });
+
+      const timer = setTimeout(() => {
+        setMaxHeightStyle("none");
+      }, 620);
+
+      return () => {
+        cancelAnimationFrame(raf);
+        clearTimeout(timer);
+      };
+    } else {
+      // Collapsing: set current pixel height first, then next frame animate down to collapsedHeight
+      const startHeight = inner.scrollHeight;
+      setMaxHeightStyle(`${startHeight}px`);
+
+      const raf = requestAnimationFrame(() => {
+        void inner.offsetHeight;
+        setMaxHeightStyle(`${collapsedHeight}px`);
+      });
+
+      return () => {
+        cancelAnimationFrame(raf);
+      };
+    }
+  }, [isExpanded, collapsedHeight, enabled]);
+
+  // If expanded and content changes or window resizes, keep height aligned if not "none"
+  useEffect(() => {
+    if (!isExpanded || !enabled || maxHeightStyle === "none" || !innerRef.current) return;
+    const inner = innerRef.current;
+    const observer = new ResizeObserver(() => {
+      if (inner && isExpanded && maxHeightStyle !== "none") {
+        setMaxHeightStyle(`${inner.scrollHeight}px`);
+      }
+    });
+    observer.observe(inner);
+    return () => observer.disconnect();
+  }, [isExpanded, enabled, maxHeightStyle]);
+
+  return (
+    <div
+      style={{
+        maxHeight: maxHeightStyle,
+        transition: isFirstRender.current ? "none" : "max-height 600ms cubic-bezier(0.16, 1, 0.3, 1)",
+      }}
+      className={`${maxHeightStyle !== "none" ? "overflow-hidden" : ""} ${className}`}
+    >
+      <div ref={innerRef}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export default function EventPublicLandingPage({
   eventId,
   eventDetails,
@@ -137,6 +230,48 @@ export default function EventPublicLandingPage({
   const [isSpeakersExpanded, setIsSpeakersExpanded] = useState(false);
   const [isSponsorsExpanded, setIsSponsorsExpanded] = useState(false);
   const [isExhibitorsExpanded, setIsExhibitorsExpanded] = useState(false);
+
+  // Scroll restore references to return to exact top where it was opened
+  const agendaOpenScrollY = useRef(null);
+  const speakersOpenScrollY = useRef(null);
+  const exhibitorsOpenScrollY = useRef(null);
+  const sponsorsOpenScrollY = useRef(null);
+
+  const handleCloseAgenda = () => {
+    setIsAgendaExpanded(false);
+    const target = (agendaOpenScrollY.current !== null && agendaOpenScrollY.current > 0)
+      ? agendaOpenScrollY.current
+      : "#schedule";
+    agendaOpenScrollY.current = null;
+    smoothScrollTo(target, { duration: 600, offset: 25, easing: "easeInOutCubic" });
+  };
+
+  const handleCloseSpeakers = () => {
+    setIsSpeakersExpanded(false);
+    const target = (speakersOpenScrollY.current !== null && speakersOpenScrollY.current > 0)
+      ? speakersOpenScrollY.current
+      : "#speakers";
+    speakersOpenScrollY.current = null;
+    smoothScrollTo(target, { duration: 600, offset: 25, easing: "easeInOutCubic" });
+  };
+
+  const handleCloseExhibitors = () => {
+    setIsExhibitorsExpanded(false);
+    const target = (exhibitorsOpenScrollY.current !== null && exhibitorsOpenScrollY.current > 0)
+      ? exhibitorsOpenScrollY.current
+      : "#exhibitors";
+    exhibitorsOpenScrollY.current = null;
+    smoothScrollTo(target, { duration: 600, offset: 25, easing: "easeInOutCubic" });
+  };
+
+  const handleCloseSponsors = () => {
+    setIsSponsorsExpanded(false);
+    const target = (sponsorsOpenScrollY.current !== null && sponsorsOpenScrollY.current > 0)
+      ? sponsorsOpenScrollY.current
+      : "#sponsors";
+    sponsorsOpenScrollY.current = null;
+    smoothScrollTo(target, { duration: 600, offset: 25, easing: "easeInOutCubic" });
+  };
 
   // Booth Picker Modal state for corporate & exhibitor booth selection
   const [boothPickerState, setBoothPickerState] = useState({
@@ -2384,45 +2519,59 @@ export default function EventPublicLandingPage({
               </p>
             </div>
 
-            <div className={`relative transition-all duration-500 ease-in-out ${!isSpeakersExpanded && eventSpeakers.length > 8 ? "max-h-[580px] sm:max-h-[640px] overflow-hidden" : ""}`}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {eventSpeakers.map((speaker, idx) => (
-                  <div 
-                    key={idx} 
-                    className="bg-slate-50 border border-slate-200/90 rounded-3xl p-5 text-center flex flex-col items-center justify-between space-y-4 hover:shadow-lg hover:border-blue-300 transition-all group"
-                  >
-                    <div className="space-y-3">
-                      <div className="w-24 h-24 rounded-full overflow-hidden mx-auto border-2 border-blue-500/30 group-hover:border-blue-600 transition-colors shadow-sm">
-                        <img src={speaker.image} alt={speaker.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+            <div className="relative">
+              <SmoothCollapsible
+                isExpanded={isSpeakersExpanded}
+                collapsedHeight={580}
+                enabled={eventSpeakers.length > 8}
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {eventSpeakers.map((speaker, idx) => (
+                    <div 
+                      key={idx} 
+                      className="bg-slate-50 border border-slate-200/90 rounded-3xl p-5 text-center flex flex-col items-center justify-between space-y-4 hover:shadow-lg hover:border-blue-300 transition-all group"
+                    >
+                      <div className="space-y-3">
+                        <div className="w-24 h-24 rounded-full overflow-hidden mx-auto border-2 border-blue-500/30 group-hover:border-blue-600 transition-colors shadow-sm">
+                          <img src={speaker.image} alt={speaker.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{speaker.name}</h4>
+                          <span className="text-xs text-blue-600 font-semibold block">{speaker.role}</span>
+                          {speaker.title && <span className="text-[11px] text-slate-500 block leading-tight mt-1">{speaker.title}</span>}
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{speaker.name}</h4>
-                        <span className="text-xs text-blue-600 font-semibold block">{speaker.role}</span>
-                        {speaker.title && <span className="text-[11px] text-slate-500 block leading-tight mt-1">{speaker.title}</span>}
-                      </div>
-                    </div>
 
-                    {speaker.company && (
-                      <div className="pt-2 border-t border-slate-200/70 w-full">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate block">
-                          {speaker.company}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+                      {speaker.company && (
+                        <div className="pt-2 border-t border-slate-200/70 w-full">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate block">
+                            {speaker.company}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </SmoothCollapsible>
 
               {/* Gradient Fade Overlay & Expand Trigger */}
-              {!isSpeakersExpanded && eventSpeakers.length > 8 && (
+              {eventSpeakers.length > 8 && (
                 <div 
-                  onClick={() => setIsSpeakersExpanded(true)}
-                  className="absolute bottom-0 inset-x-0 h-44 sm:h-52 bg-gradient-to-t from-white via-white/95 to-transparent flex items-end justify-center pb-3 z-10 cursor-pointer group"
+                  onClick={() => {
+                    speakersOpenScrollY.current = window.pageYOffset;
+                    setIsSpeakersExpanded(true);
+                  }}
+                  className={`absolute bottom-0 inset-x-0 h-44 sm:h-52 bg-gradient-to-t from-white via-white/95 to-transparent flex items-end justify-center pb-3 z-10 transition-all duration-300 ${
+                    !isSpeakersExpanded
+                      ? "opacity-100 pointer-events-auto cursor-pointer group"
+                      : "opacity-0 pointer-events-none"
+                  }`}
                 >
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
+                      speakersOpenScrollY.current = window.pageYOffset;
                       setIsSpeakersExpanded(true);
                     }}
                     className="inline-flex items-center gap-2.5 px-6 py-3 rounded-full bg-white border border-slate-200/90 group-hover:border-blue-500 text-slate-800 group-hover:text-blue-600 font-bold text-xs sm:text-sm shadow-md group-hover:shadow-xl group-hover:shadow-blue-500/10 transition-all cursor-pointer active:scale-95"
@@ -2439,10 +2588,7 @@ export default function EventPublicLandingPage({
               <div className="flex justify-center pt-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsSpeakersExpanded(false);
-                    smoothScrollTo("#speakers", { duration: 600, offset: 70, easing: "easeInOutCubic" });
-                  }}
+                  onClick={handleCloseSpeakers}
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 hover:text-slate-900 font-bold text-xs transition-all cursor-pointer active:scale-95 shadow-2xs"
                 >
                   <span>{t("event.showLess", "Show less")}</span>
@@ -2478,6 +2624,7 @@ export default function EventPublicLandingPage({
                     onClick={() => {
                       setSelectedDay(day);
                       setIsAgendaExpanded(false);
+                      agendaOpenScrollY.current = null;
                     }}
                     className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
                       selectedDay === day ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:text-slate-900"
@@ -2497,8 +2644,13 @@ export default function EventPublicLandingPage({
           </div>
 
           {/* Sessions List */}
-          <div className={`relative transition-all duration-500 ease-in-out ${!isAgendaExpanded && filteredSessions.length > 3 ? "max-h-[640px] sm:max-h-[680px] overflow-hidden" : ""}`}>
-            <div className="space-y-4">
+          <div className="relative">
+            <SmoothCollapsible
+              isExpanded={isAgendaExpanded}
+              collapsedHeight={680}
+              enabled={filteredSessions.length > 3}
+            >
+              <div className="space-y-4">
               {filteredSessions.map((session, idx) => {
                 const isBookmarked = bookmarkedSessions.has(session.id);
 
@@ -2654,45 +2806,51 @@ export default function EventPublicLandingPage({
                 );
               })}
             </div>
+          </SmoothCollapsible>
 
-            {/* Gradient Fade Overlay & Expand Trigger */}
-            {!isAgendaExpanded && filteredSessions.length > 3 && (
-              <div 
-                onClick={() => setIsAgendaExpanded(true)}
-                className="absolute bottom-0 inset-x-0 h-44 sm:h-52 bg-gradient-to-t from-white via-white/95 to-transparent flex items-end justify-center pb-3 z-10 cursor-pointer group"
-              >
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsAgendaExpanded(true);
-                  }}
-                  className="inline-flex items-center gap-2.5 px-6 py-3 rounded-full bg-white border border-slate-200/90 group-hover:border-blue-500 text-slate-800 group-hover:text-blue-600 font-bold text-xs sm:text-sm shadow-md group-hover:shadow-xl group-hover:shadow-blue-500/10 transition-all cursor-pointer active:scale-95"
-                >
-                  <span>{t("event.viewAllSessions", "View all {count} sessions").replace("{count}", filteredSessions.length)}</span>
-                  <ChevronDown size={16} className="text-blue-600 group-hover:translate-y-0.5 transition-transform" />
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Collapse / Show Less Button */}
-          {isAgendaExpanded && filteredSessions.length > 3 && (
-            <div className="flex justify-center pt-2">
+          {/* Gradient Fade Overlay & Expand Trigger */}
+          {filteredSessions.length > 3 && (
+            <div 
+              onClick={() => {
+                agendaOpenScrollY.current = window.pageYOffset;
+                setIsAgendaExpanded(true);
+              }}
+              className={`absolute bottom-0 inset-x-0 h-44 sm:h-52 bg-gradient-to-t from-white via-white/95 to-transparent flex items-end justify-center pb-3 z-10 transition-all duration-300 ${
+                !isAgendaExpanded
+                  ? "opacity-100 pointer-events-auto cursor-pointer group"
+                  : "opacity-0 pointer-events-none"
+              }`}
+            >
               <button
                 type="button"
-                onClick={() => {
-                  setIsAgendaExpanded(false);
-                  smoothScrollTo("#schedule", { duration: 600, offset: 70, easing: "easeInOutCubic" });
+                onClick={(e) => {
+                  e.stopPropagation();
+                  agendaOpenScrollY.current = window.pageYOffset;
+                  setIsAgendaExpanded(true);
                 }}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 hover:text-slate-900 font-bold text-xs transition-all cursor-pointer active:scale-95 shadow-2xs"
+                className="inline-flex items-center gap-2.5 px-6 py-3 rounded-full bg-white border border-slate-200/90 group-hover:border-blue-500 text-slate-800 group-hover:text-blue-600 font-bold text-xs sm:text-sm shadow-md group-hover:shadow-xl group-hover:shadow-blue-500/10 transition-all cursor-pointer active:scale-95"
               >
-                <span>{t("event.showLess", "Show less")}</span>
-                <ChevronUp size={15} />
+                <span>{t("event.viewAllSessions", "View all {count} sessions").replace("{count}", filteredSessions.length)}</span>
+                <ChevronDown size={16} className="text-blue-600 group-hover:translate-y-0.5 transition-transform" />
               </button>
             </div>
           )}
-        </section>
+        </div>
+
+        {/* Collapse / Show Less Button */}
+        {isAgendaExpanded && filteredSessions.length > 3 && (
+          <div className="flex justify-center pt-2">
+            <button
+              type="button"
+              onClick={handleCloseAgenda}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 hover:text-slate-900 font-bold text-xs transition-all cursor-pointer active:scale-95 shadow-2xs"
+            >
+              <span>{t("event.showLess", "Show less")}</span>
+              <ChevronUp size={15} />
+            </button>
+          </div>
+        )}
+      </section>
       )}
 
       {/* ==================================================================== */}
@@ -2711,118 +2869,129 @@ export default function EventPublicLandingPage({
             </div>
 
             <div className="space-y-8">
-              <div className={`relative transition-all duration-500 ease-in-out ${!isExhibitorsExpanded && eventExhibitors.length > 10 ? "max-h-[460px] overflow-hidden" : ""}`}>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
-                  {eventExhibitors.map((ex, idx) => {
-                  const org = organizations?.find(o => String(o.id) === String(ex.orgId || ex.org_id || ex.organizationId || ex.organization_id));
-                  const logoUrl = ex.logo || ex.image || ex.image_url || ex.logo_url || ex.imageUrl || ex.logoUrl || org?.logo || org?.image || org?.image_url || "";
+              <div className="relative">
+                <SmoothCollapsible
+                  isExpanded={isExhibitorsExpanded}
+                  collapsedHeight={460}
+                  enabled={eventExhibitors.length > 10}
+                >
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
+                    {eventExhibitors.map((ex, idx) => {
+                    const org = organizations?.find(o => String(o.id) === String(ex.orgId || ex.org_id || ex.organizationId || ex.organization_id));
+                    const logoUrl = ex.logo || ex.image || ex.image_url || ex.logo_url || ex.imageUrl || ex.logoUrl || org?.logo || org?.image || org?.image_url || "";
 
-                  return (
-                    <div 
-                      key={ex.id || idx}
-                      className="group bg-white border border-slate-200/80 hover:border-blue-400/80 rounded-2xl sm:rounded-3xl p-5 sm:p-6 flex flex-col items-center justify-between text-center shadow-xs hover:shadow-xl hover:shadow-blue-600/5 transition-all duration-300 relative min-h-[190px]"
-                    >
-                      <div className="flex flex-col items-center w-full space-y-3">
-                        {/* Exhibitor Logo Area */}
-                        <div className="w-full h-16 sm:h-20 flex items-center justify-center">
-                          {logoUrl ? (
-                            <img 
-                              src={logoUrl} 
-                              alt={ex.name} 
-                              className="max-h-14 sm:max-h-16 max-w-[85%] w-auto h-auto object-contain group-hover:scale-105 transition-transform duration-300" 
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                                const fallback = e.currentTarget.parentElement?.querySelector('.exhibitor-fallback');
-                                if (fallback) fallback.classList.remove('hidden');
-                              }}
-                            />
-                          ) : null}
-                          <div className={`exhibitor-fallback w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 items-center justify-center font-black text-lg ${logoUrl ? 'hidden' : 'flex'}`}>
-                            <Building2 size={24} className="text-blue-600" />
+                    return (
+                      <div 
+                        key={ex.id || idx} 
+                        className="group bg-white border border-slate-200/80 hover:border-blue-400/80 rounded-2xl sm:rounded-3xl p-5 sm:p-6 flex flex-col items-center justify-between text-center shadow-xs hover:shadow-xl hover:shadow-blue-600/5 transition-all duration-300 relative min-h-[190px]"
+                      >
+                        <div className="flex flex-col items-center w-full space-y-3">
+                          {/* Exhibitor Logo Area */}
+                          <div className="w-full h-16 sm:h-20 flex items-center justify-center">
+                            {logoUrl ? (
+                              <img 
+                                src={logoUrl} 
+                                alt={ex.name} 
+                                className="max-h-14 sm:max-h-16 max-w-[85%] w-auto h-auto object-contain group-hover:scale-105 transition-transform duration-300" 
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                  const fallback = e.currentTarget.parentElement?.querySelector('.exhibitor-fallback');
+                                  if (fallback) fallback.classList.remove('hidden');
+                                }}
+                              />
+                            ) : null}
+                            <div className={`exhibitor-fallback w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 items-center justify-center font-black text-lg ${logoUrl ? 'hidden' : 'flex'}`}>
+                              <Building2 size={24} className="text-blue-600" />
+                            </div>
+                          </div>
+
+                          {/* Exhibitor Name & Optional Industry */}
+                          <div className="w-full px-1 space-y-1">
+                            <h4 className="text-sm sm:text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-2 tracking-tight">
+                              {ex.name}
+                            </h4>
+                            {(ex.industry || getLocalizedIndustry(ex.industry, t)) && (
+                              <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider truncate">
+                                {getLocalizedIndustry(ex.industry, t) || ex.industry}
+                              </p>
+                            )}
                           </div>
                         </div>
 
-                        {/* Exhibitor Name & Optional Industry */}
-                        <div className="w-full px-1 space-y-1">
-                          <h4 className="text-sm sm:text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-2 tracking-tight">
-                            {ex.name}
-                          </h4>
-                          {(ex.industry || getLocalizedIndustry(ex.industry, t)) && (
-                            <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider truncate">
-                              {getLocalizedIndustry(ex.industry, t) || ex.industry}
-                            </p>
+                        {/* Booth Badge & Optional Website */}
+                        <div className="pt-3 w-full flex flex-col items-center gap-1.5 border-t border-slate-100/80 mt-2">
+                          {(ex.booth || ex.boothNumber) ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200/80">
+                              <MapPin size={10} className="text-blue-600 shrink-0" />
+                              <span className="truncate max-w-[120px]">{ex.booth || ex.boothNumber}</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200">
+                              {t("dash.exhibitor", "Exhibitor")}
+                            </span>
+                          )}
+
+                          {ex.website && (
+                            <a
+                              href={ex.website.startsWith("http") ? ex.website : `https://${ex.website}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:text-blue-700 transition-colors mt-0.5"
+                            >
+                              <span>{t("common.visitWebsite", "Visit Website")}</span>
+                              <ExternalLink size={11} />
+                            </a>
                           )}
                         </div>
                       </div>
+                    );
+                  })}
+                  </div>
+                </SmoothCollapsible>
 
-                      {/* Booth Badge & Optional Website */}
-                      <div className="pt-3 w-full flex flex-col items-center gap-1.5 border-t border-slate-100/80 mt-2">
-                        {(ex.booth || ex.boothNumber) ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200/80">
-                            <MapPin size={10} className="text-blue-600 shrink-0" />
-                            <span className="truncate max-w-[120px]">{ex.booth || ex.boothNumber}</span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200">
-                            {t("dash.exhibitor", "Exhibitor")}
-                          </span>
-                        )}
-
-                        {ex.website && (
-                          <a
-                            href={ex.website.startsWith("http") ? ex.website : `https://${ex.website}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:text-blue-700 transition-colors mt-0.5"
-                          >
-                            <span>{t("common.visitWebsite", "Visit Website")}</span>
-                            <ExternalLink size={11} />
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Gradient Fade Overlay & Expand Trigger */}
-              {!isExhibitorsExpanded && eventExhibitors.length > 10 && (
-                <div 
-                  onClick={() => setIsExhibitorsExpanded(true)}
-                  className="absolute bottom-0 inset-x-0 h-40 sm:h-48 bg-gradient-to-t from-white via-white/95 to-transparent flex items-end justify-center pb-3 z-10 cursor-pointer group"
-                >
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
+                {/* Gradient Fade Overlay & Expand Trigger */}
+                {eventExhibitors.length > 10 && (
+                  <div 
+                    onClick={() => {
+                      exhibitorsOpenScrollY.current = window.pageYOffset;
                       setIsExhibitorsExpanded(true);
                     }}
-                    className="inline-flex items-center gap-2.5 px-6 py-3 rounded-full bg-white border border-slate-200/90 group-hover:border-blue-500 text-slate-800 group-hover:text-blue-600 font-bold text-xs sm:text-sm shadow-md group-hover:shadow-xl group-hover:shadow-blue-500/10 transition-all cursor-pointer active:scale-95"
+                    className={`absolute bottom-0 inset-x-0 h-40 sm:h-48 bg-gradient-to-t from-white via-white/95 to-transparent flex items-end justify-center pb-3 z-10 transition-all duration-300 ${
+                      !isExhibitorsExpanded
+                        ? "opacity-100 pointer-events-auto cursor-pointer group"
+                        : "opacity-0 pointer-events-none"
+                    }`}
                   >
-                    <span>{t("event.viewAllExhibitors", "View all {count} exhibitors").replace("{count}", eventExhibitors.length)}</span>
-                    <ChevronDown size={16} className="text-blue-600 group-hover:translate-y-0.5 transition-transform" />
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        exhibitorsOpenScrollY.current = window.pageYOffset;
+                        setIsExhibitorsExpanded(true);
+                      }}
+                      className="inline-flex items-center gap-2.5 px-6 py-3 rounded-full bg-white border border-slate-200/90 group-hover:border-blue-500 text-slate-800 group-hover:text-blue-600 font-bold text-xs sm:text-sm shadow-md group-hover:shadow-xl group-hover:shadow-blue-500/10 transition-all cursor-pointer active:scale-95"
+                    >
+                      <span>{t("event.viewAllExhibitors", "View all {count} exhibitors").replace("{count}", eventExhibitors.length)}</span>
+                      <ChevronDown size={16} className="text-blue-600 group-hover:translate-y-0.5 transition-transform" />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Collapse / Show Less Button */}
+              {isExhibitorsExpanded && eventExhibitors.length > 10 && (
+                <div className="flex justify-center pt-2">
+                  <button
+                    type="button"
+                    onClick={handleCloseExhibitors}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 hover:text-slate-900 font-bold text-xs transition-all cursor-pointer active:scale-95 shadow-2xs"
+                  >
+                    <span>{t("event.showLess", "Show less")}</span>
+                    <ChevronUp size={15} />
                   </button>
                 </div>
               )}
             </div>
-
-            {/* Collapse / Show Less Button */}
-            {isExhibitorsExpanded && eventExhibitors.length > 10 && (
-              <div className="flex justify-center pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsExhibitorsExpanded(false);
-                    smoothScrollTo("#exhibitors", { duration: 600, offset: 70, easing: "easeInOutCubic" });
-                  }}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 hover:text-slate-900 font-bold text-xs transition-all cursor-pointer active:scale-95 shadow-2xs"
-                >
-                  <span>{t("event.showLess", "Show less")}</span>
-                  <ChevronUp size={15} />
-                </button>
-              </div>
-            )}
-          </div>
         </div>
       </section>
       )}
@@ -2842,90 +3011,104 @@ export default function EventPublicLandingPage({
           </div>
 
           <div className="space-y-8">
-            <div className={`relative transition-all duration-500 ease-in-out ${!isSponsorsExpanded && eventSponsors.length > 10 ? "max-h-[460px] overflow-hidden" : ""}`}>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
-                {eventSponsors.map((sp, idx) => {
-                const org = organizations?.find(o => String(o.id) === String(sp.orgId || sp.org_id));
-                const logoUrl = sp.logo || sp.image || sp.image_url || sp.logo_url || sp.imageUrl || sp.logoUrl || org?.logo || org?.image || org?.image_url || "";
-                const tierKey = String(sp.tier || "").toLowerCase().trim();
-                const tierBadgeStyle = tierKey.includes("diamond")
-                  ? "bg-sky-50 text-sky-700 border border-sky-200/80"
-                  : tierKey.includes("platinum")
-                  ? "bg-indigo-50 text-indigo-700 border border-indigo-200/80"
-                  : tierKey.includes("gold")
-                  ? "bg-amber-50 text-amber-700 border border-amber-200/80"
-                  : tierKey.includes("silver")
-                  ? "bg-slate-100 text-slate-700 border border-slate-200"
-                  : tierKey.includes("bronze")
-                  ? "bg-orange-50 text-orange-700 border border-orange-200/80"
-                  : "bg-slate-100 text-slate-600 border border-slate-200";
+            <div className="relative">
+              <SmoothCollapsible
+                isExpanded={isSponsorsExpanded}
+                collapsedHeight={460}
+                enabled={eventSponsors.length > 10}
+              >
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
+                  {eventSponsors.map((sp, idx) => {
+                  const org = organizations?.find(o => String(o.id) === String(sp.orgId || sp.org_id));
+                  const logoUrl = sp.logo || sp.image || sp.image_url || sp.logo_url || sp.imageUrl || sp.logoUrl || org?.logo || org?.image || org?.image_url || "";
+                  const tierKey = String(sp.tier || "").toLowerCase().trim();
+                  const tierBadgeStyle = tierKey.includes("diamond")
+                    ? "bg-sky-50 text-sky-700 border border-sky-200/80"
+                    : tierKey.includes("platinum")
+                    ? "bg-indigo-50 text-indigo-700 border border-indigo-200/80"
+                    : tierKey.includes("gold")
+                    ? "bg-amber-50 text-amber-700 border border-amber-200/80"
+                    : tierKey.includes("silver")
+                    ? "bg-slate-100 text-slate-700 border border-slate-200"
+                    : tierKey.includes("bronze")
+                    ? "bg-orange-50 text-orange-700 border border-orange-200/80"
+                    : "bg-slate-100 text-slate-600 border border-slate-200";
 
-                return (
-                  <div 
-                    key={sp.id || idx} 
-                    className="group bg-white border border-slate-200/80 hover:border-blue-400/80 rounded-2xl sm:rounded-3xl p-5 sm:p-6 flex flex-col items-center justify-between text-center shadow-xs hover:shadow-xl hover:shadow-blue-600/5 transition-all duration-300 relative min-h-[190px]"
-                  >
-                    <div className="flex flex-col items-center w-full space-y-3">
-                      {/* Sponsor Logo Area */}
-                      <div className="w-full h-16 sm:h-20 flex items-center justify-center">
-                        {logoUrl ? (
-                          <img 
-                            src={logoUrl} 
-                            alt={sp.name} 
-                            className="max-h-14 sm:max-h-16 max-w-[85%] w-auto h-auto object-contain group-hover:scale-105 transition-transform duration-300"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                              const fallback = e.currentTarget.parentElement?.querySelector('.sponsor-fallback');
-                              if (fallback) fallback.classList.remove('hidden');
-                            }}
-                          />
-                        ) : null}
-                        <div className={`sponsor-fallback w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 items-center justify-center font-black text-lg ${logoUrl ? 'hidden' : 'flex'}`}>
-                          <Building2 size={24} className="text-blue-600" />
+                  return (
+                    <div 
+                      key={sp.id || idx} 
+                      className="group bg-white border border-slate-200/80 hover:border-blue-400/80 rounded-2xl sm:rounded-3xl p-5 sm:p-6 flex flex-col items-center justify-between text-center shadow-xs hover:shadow-xl hover:shadow-blue-600/5 transition-all duration-300 relative min-h-[190px]"
+                    >
+                      <div className="flex flex-col items-center w-full space-y-3">
+                        {/* Sponsor Logo Area */}
+                        <div className="w-full h-16 sm:h-20 flex items-center justify-center">
+                          {logoUrl ? (
+                            <img 
+                              src={logoUrl} 
+                              alt={sp.name} 
+                              className="max-h-14 sm:max-h-16 max-w-[85%] w-auto h-auto object-contain group-hover:scale-105 transition-transform duration-300"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                const fallback = e.currentTarget.parentElement?.querySelector('.sponsor-fallback');
+                                if (fallback) fallback.classList.remove('hidden');
+                              }}
+                            />
+                          ) : null}
+                          <div className={`sponsor-fallback w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 items-center justify-center font-black text-lg ${logoUrl ? 'hidden' : 'flex'}`}>
+                            <Building2 size={24} className="text-blue-600" />
+                          </div>
+                        </div>
+
+                        {/* Sponsor Name */}
+                        <div className="w-full px-1">
+                          <h4 className="text-sm sm:text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-2 tracking-tight">
+                            {sp.name}
+                          </h4>
                         </div>
                       </div>
 
-                      {/* Sponsor Name */}
-                      <div className="w-full px-1">
-                        <h4 className="text-sm sm:text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-2 tracking-tight">
-                          {sp.name}
-                        </h4>
+                      {/* Tier Badge & Optional Website */}
+                      <div className="pt-3 w-full flex flex-col items-center gap-1.5 border-t border-slate-100/80 mt-2">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${tierBadgeStyle}`}>
+                          {sp.tier || t("common.partner", "Partner")}
+                        </span>
+
+                        {sp.website && (
+                          <a
+                            href={sp.website.startsWith("http") ? sp.website : `https://${sp.website}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:text-blue-700 transition-colors mt-0.5"
+                          >
+                            <span>{t("common.visitWebsite", "Visit Website")}</span>
+                            <ExternalLink size={11} />
+                          </a>
+                        )}
                       </div>
                     </div>
-
-                    {/* Tier Badge & Optional Website */}
-                    <div className="pt-3 w-full flex flex-col items-center gap-1.5 border-t border-slate-100/80 mt-2">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${tierBadgeStyle}`}>
-                        {sp.tier || t("common.partner", "Partner")}
-                      </span>
-
-                      {sp.website && (
-                        <a
-                          href={sp.website.startsWith("http") ? sp.website : `https://${sp.website}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:text-blue-700 transition-colors mt-0.5"
-                        >
-                          <span>{t("common.visitWebsite", "Visit Website")}</span>
-                          <ExternalLink size={11} />
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-              </div>
+                  );
+                })}
+                </div>
+              </SmoothCollapsible>
 
               {/* Gradient Fade Overlay & Expand Trigger */}
-              {!isSponsorsExpanded && eventSponsors.length > 10 && (
+              {eventSponsors.length > 10 && (
                 <div 
-                  onClick={() => setIsSponsorsExpanded(true)}
-                  className="absolute bottom-0 inset-x-0 h-40 sm:h-48 bg-gradient-to-t from-white via-white/95 to-transparent flex items-end justify-center pb-3 z-10 cursor-pointer group"
+                  onClick={() => {
+                    sponsorsOpenScrollY.current = window.pageYOffset;
+                    setIsSponsorsExpanded(true);
+                  }}
+                  className={`absolute bottom-0 inset-x-0 h-40 sm:h-48 bg-gradient-to-t from-white via-white/95 to-transparent flex items-end justify-center pb-3 z-10 transition-all duration-300 ${
+                    !isSponsorsExpanded
+                      ? "opacity-100 pointer-events-auto cursor-pointer group"
+                      : "opacity-0 pointer-events-none"
+                  }`}
                 >
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
+                      sponsorsOpenScrollY.current = window.pageYOffset;
                       setIsSponsorsExpanded(true);
                     }}
                     className="inline-flex items-center gap-2.5 px-6 py-3 rounded-full bg-white border border-slate-200/90 group-hover:border-blue-500 text-slate-800 group-hover:text-blue-600 font-bold text-xs sm:text-sm shadow-md group-hover:shadow-xl group-hover:shadow-blue-500/10 transition-all cursor-pointer active:scale-95"
@@ -2942,10 +3125,7 @@ export default function EventPublicLandingPage({
               <div className="flex justify-center pt-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsSponsorsExpanded(false);
-                    smoothScrollTo("#sponsors", { duration: 600, offset: 70, easing: "easeInOutCubic" });
-                  }}
+                  onClick={handleCloseSponsors}
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 hover:text-slate-900 font-bold text-xs transition-all cursor-pointer active:scale-95 shadow-2xs"
                 >
                   <span>{t("event.showLess", "Show less")}</span>
