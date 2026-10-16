@@ -133,6 +133,10 @@ export default function EventPublicLandingPage({
   const [selectedDay, setSelectedDay] = useState("All");
   const [bookmarkedSessions, setBookmarkedSessions] = useState(new Set());
   const [copiedUrl, setCopiedUrl] = useState(false);
+  const [isAgendaExpanded, setIsAgendaExpanded] = useState(false);
+  const [isSpeakersExpanded, setIsSpeakersExpanded] = useState(false);
+  const [isSponsorsExpanded, setIsSponsorsExpanded] = useState(false);
+  const [isExhibitorsExpanded, setIsExhibitorsExpanded] = useState(false);
 
   // Booth Picker Modal state for corporate & exhibitor booth selection
   const [boothPickerState, setBoothPickerState] = useState({
@@ -879,6 +883,18 @@ export default function EventPublicLandingPage({
     return [];
   }, [eventSessions, startDate]);
 
+  // Memoized filtered sessions based on active selected day
+  const filteredSessions = useMemo(() => {
+    return eventSessions.filter(s => {
+      if (selectedDay === "All") return true;
+      const sDate = getSessionDateStr(s);
+      if (!sDate) {
+        return selectedDay === distinctDays[0];
+      }
+      return sDate === selectedDay;
+    });
+  }, [eventSessions, selectedDay, distinctDays]);
+
   // Real Database Speakers extracted from real sessions
   const eventSpeakers = [];
   const speakerNames = new Set();
@@ -935,6 +951,7 @@ export default function EventPublicLandingPage({
     if (selectedDay !== "All" && distinctDays.length > 0 && !distinctDays.includes(selectedDay)) {
       setSelectedDay("All");
     }
+    setIsAgendaExpanded(false);
   }, [distinctDays, selectedDay]);
 
   const handleShare = () => {
@@ -2367,33 +2384,72 @@ export default function EventPublicLandingPage({
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {eventSpeakers.map((speaker, idx) => (
-                <div 
-                  key={idx} 
-                  className="bg-slate-50 border border-slate-200/90 rounded-3xl p-5 text-center flex flex-col items-center justify-between space-y-4 hover:shadow-lg hover:border-blue-300 transition-all group"
-                >
-                  <div className="space-y-3">
-                    <div className="w-24 h-24 rounded-full overflow-hidden mx-auto border-2 border-blue-500/30 group-hover:border-blue-600 transition-colors shadow-sm">
-                      <img src={speaker.image} alt={speaker.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+            <div className={`relative transition-all duration-500 ease-in-out ${!isSpeakersExpanded && eventSpeakers.length > 8 ? "max-h-[580px] sm:max-h-[640px] overflow-hidden" : ""}`}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {eventSpeakers.map((speaker, idx) => (
+                  <div 
+                    key={idx} 
+                    className="bg-slate-50 border border-slate-200/90 rounded-3xl p-5 text-center flex flex-col items-center justify-between space-y-4 hover:shadow-lg hover:border-blue-300 transition-all group"
+                  >
+                    <div className="space-y-3">
+                      <div className="w-24 h-24 rounded-full overflow-hidden mx-auto border-2 border-blue-500/30 group-hover:border-blue-600 transition-colors shadow-sm">
+                        <img src={speaker.image} alt={speaker.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{speaker.name}</h4>
+                        <span className="text-xs text-blue-600 font-semibold block">{speaker.role}</span>
+                        {speaker.title && <span className="text-[11px] text-slate-500 block leading-tight mt-1">{speaker.title}</span>}
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{speaker.name}</h4>
-                      <span className="text-xs text-blue-600 font-semibold block">{speaker.role}</span>
-                      {speaker.title && <span className="text-[11px] text-slate-500 block leading-tight mt-1">{speaker.title}</span>}
-                    </div>
-                  </div>
 
-                  {speaker.company && (
-                    <div className="pt-2 border-t border-slate-200/70 w-full">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate block">
-                        {speaker.company}
-                      </span>
-                    </div>
-                  )}
+                    {speaker.company && (
+                      <div className="pt-2 border-t border-slate-200/70 w-full">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate block">
+                          {speaker.company}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Gradient Fade Overlay & Expand Trigger */}
+              {!isSpeakersExpanded && eventSpeakers.length > 8 && (
+                <div 
+                  onClick={() => setIsSpeakersExpanded(true)}
+                  className="absolute bottom-0 inset-x-0 h-44 sm:h-52 bg-gradient-to-t from-white via-white/95 to-transparent flex items-end justify-center pb-3 z-10 cursor-pointer group"
+                >
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsSpeakersExpanded(true);
+                    }}
+                    className="inline-flex items-center gap-2.5 px-6 py-3 rounded-full bg-white border border-slate-200/90 group-hover:border-blue-500 text-slate-800 group-hover:text-blue-600 font-bold text-xs sm:text-sm shadow-md group-hover:shadow-xl group-hover:shadow-blue-500/10 transition-all cursor-pointer active:scale-95"
+                  >
+                    <span>{t("event.viewAllSpeakers", "View all {count} speakers").replace("{count}", eventSpeakers.length)}</span>
+                    <ChevronDown size={16} className="text-blue-600 group-hover:translate-y-0.5 transition-transform" />
+                  </button>
                 </div>
-              ))}
+              )}
             </div>
+
+            {/* Collapse / Show Less Button */}
+            {isSpeakersExpanded && eventSpeakers.length > 8 && (
+              <div className="flex justify-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSpeakersExpanded(false);
+                    smoothScrollTo("#speakers", { duration: 600, offset: 70, easing: "easeInOutCubic" });
+                  }}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 hover:text-slate-900 font-bold text-xs transition-all cursor-pointer active:scale-95 shadow-2xs"
+                >
+                  <span>{t("event.showLess", "Show less")}</span>
+                  <ChevronUp size={15} />
+                </button>
+              </div>
+            )}
           </div>
         </section>
       )}
@@ -2419,7 +2475,10 @@ export default function EventPublicLandingPage({
                 {["All", ...distinctDays].map((day, idx) => (
                   <button
                     key={day}
-                    onClick={() => setSelectedDay(day)}
+                    onClick={() => {
+                      setSelectedDay(day);
+                      setIsAgendaExpanded(false);
+                    }}
                     className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
                       selectedDay === day ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:text-slate-900"
                     }`}
@@ -2438,17 +2497,9 @@ export default function EventPublicLandingPage({
           </div>
 
           {/* Sessions List */}
-          <div className="space-y-4">
-            {eventSessions
-              .filter(s => {
-                if (selectedDay === "All") return true;
-                const sDate = getSessionDateStr(s);
-                if (!sDate) {
-                  return selectedDay === distinctDays[0];
-                }
-                return sDate === selectedDay;
-              })
-              .map((session, idx) => {
+          <div className={`relative transition-all duration-500 ease-in-out ${!isAgendaExpanded && filteredSessions.length > 3 ? "max-h-[640px] sm:max-h-[680px] overflow-hidden" : ""}`}>
+            <div className="space-y-4">
+              {filteredSessions.map((session, idx) => {
                 const isBookmarked = bookmarkedSessions.has(session.id);
 
                 return (
@@ -2602,7 +2653,45 @@ export default function EventPublicLandingPage({
                   </div>
                 );
               })}
+            </div>
+
+            {/* Gradient Fade Overlay & Expand Trigger */}
+            {!isAgendaExpanded && filteredSessions.length > 3 && (
+              <div 
+                onClick={() => setIsAgendaExpanded(true)}
+                className="absolute bottom-0 inset-x-0 h-44 sm:h-52 bg-gradient-to-t from-white via-white/95 to-transparent flex items-end justify-center pb-3 z-10 cursor-pointer group"
+              >
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsAgendaExpanded(true);
+                  }}
+                  className="inline-flex items-center gap-2.5 px-6 py-3 rounded-full bg-white border border-slate-200/90 group-hover:border-blue-500 text-slate-800 group-hover:text-blue-600 font-bold text-xs sm:text-sm shadow-md group-hover:shadow-xl group-hover:shadow-blue-500/10 transition-all cursor-pointer active:scale-95"
+                >
+                  <span>{t("event.viewAllSessions", "View all {count} sessions").replace("{count}", filteredSessions.length)}</span>
+                  <ChevronDown size={16} className="text-blue-600 group-hover:translate-y-0.5 transition-transform" />
+                </button>
+              </div>
+            )}
           </div>
+
+          {/* Collapse / Show Less Button */}
+          {isAgendaExpanded && filteredSessions.length > 3 && (
+            <div className="flex justify-center pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAgendaExpanded(false);
+                  smoothScrollTo("#schedule", { duration: 600, offset: 70, easing: "easeInOutCubic" });
+                }}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 hover:text-slate-900 font-bold text-xs transition-all cursor-pointer active:scale-95 shadow-2xs"
+              >
+                <span>{t("event.showLess", "Show less")}</span>
+                <ChevronUp size={15} />
+              </button>
+            </div>
+          )}
         </section>
       )}
 
@@ -2622,8 +2711,9 @@ export default function EventPublicLandingPage({
             </div>
 
             <div className="space-y-8">
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
-                {eventExhibitors.map((ex, idx) => {
+              <div className={`relative transition-all duration-500 ease-in-out ${!isExhibitorsExpanded && eventExhibitors.length > 10 ? "max-h-[460px] overflow-hidden" : ""}`}>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
+                  {eventExhibitors.map((ex, idx) => {
                   const org = organizations?.find(o => String(o.id) === String(ex.orgId || ex.org_id || ex.organizationId || ex.organization_id));
                   const logoUrl = ex.logo || ex.image || ex.image_url || ex.logo_url || ex.imageUrl || ex.logoUrl || org?.logo || org?.image || org?.image_url || "";
 
@@ -2694,16 +2784,54 @@ export default function EventPublicLandingPage({
                   );
                 })}
               </div>
+
+              {/* Gradient Fade Overlay & Expand Trigger */}
+              {!isExhibitorsExpanded && eventExhibitors.length > 10 && (
+                <div 
+                  onClick={() => setIsExhibitorsExpanded(true)}
+                  className="absolute bottom-0 inset-x-0 h-40 sm:h-48 bg-gradient-to-t from-white via-white/95 to-transparent flex items-end justify-center pb-3 z-10 cursor-pointer group"
+                >
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsExhibitorsExpanded(true);
+                    }}
+                    className="inline-flex items-center gap-2.5 px-6 py-3 rounded-full bg-white border border-slate-200/90 group-hover:border-blue-500 text-slate-800 group-hover:text-blue-600 font-bold text-xs sm:text-sm shadow-md group-hover:shadow-xl group-hover:shadow-blue-500/10 transition-all cursor-pointer active:scale-95"
+                  >
+                    <span>{t("event.viewAllExhibitors", "View all {count} exhibitors").replace("{count}", eventExhibitors.length)}</span>
+                    <ChevronDown size={16} className="text-blue-600 group-hover:translate-y-0.5 transition-transform" />
+                  </button>
+                </div>
+              )}
             </div>
+
+            {/* Collapse / Show Less Button */}
+            {isExhibitorsExpanded && eventExhibitors.length > 10 && (
+              <div className="flex justify-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsExhibitorsExpanded(false);
+                    smoothScrollTo("#exhibitors", { duration: 600, offset: 70, easing: "easeInOutCubic" });
+                  }}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 hover:text-slate-900 font-bold text-xs transition-all cursor-pointer active:scale-95 shadow-2xs"
+                >
+                  <span>{t("event.showLess", "Show less")}</span>
+                  <ChevronUp size={15} />
+                </button>
+              </div>
+            )}
           </div>
-        </section>
+        </div>
+      </section>
       )}
 
       {/* ==================================================================== */}
       {/* 9. SPONSORS SHOWCASE                                                 */}
       {/* ==================================================================== */}
       {eventSponsors.length > 0 && (
-        <section className="py-16 max-w-6xl mx-auto px-6 sm:px-8 w-full space-y-10">
+        <section id="sponsors" className="py-16 max-w-6xl mx-auto px-6 sm:px-8 w-full space-y-10">
           <div className="text-start rtl:text-right text-left space-y-3">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
               {t("event.officialSponsors", "Official Event Sponsors")}
@@ -2714,8 +2842,9 @@ export default function EventPublicLandingPage({
           </div>
 
           <div className="space-y-8">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
-              {eventSponsors.map((sp, idx) => {
+            <div className={`relative transition-all duration-500 ease-in-out ${!isSponsorsExpanded && eventSponsors.length > 10 ? "max-h-[460px] overflow-hidden" : ""}`}>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
+                {eventSponsors.map((sp, idx) => {
                 const org = organizations?.find(o => String(o.id) === String(sp.orgId || sp.org_id));
                 const logoUrl = sp.logo || sp.image || sp.image_url || sp.logo_url || sp.imageUrl || sp.logoUrl || org?.logo || org?.image || org?.image_url || "";
                 const tierKey = String(sp.tier || "").toLowerCase().trim();
@@ -2785,7 +2914,45 @@ export default function EventPublicLandingPage({
                   </div>
                 );
               })}
+              </div>
+
+              {/* Gradient Fade Overlay & Expand Trigger */}
+              {!isSponsorsExpanded && eventSponsors.length > 10 && (
+                <div 
+                  onClick={() => setIsSponsorsExpanded(true)}
+                  className="absolute bottom-0 inset-x-0 h-40 sm:h-48 bg-gradient-to-t from-white via-white/95 to-transparent flex items-end justify-center pb-3 z-10 cursor-pointer group"
+                >
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsSponsorsExpanded(true);
+                    }}
+                    className="inline-flex items-center gap-2.5 px-6 py-3 rounded-full bg-white border border-slate-200/90 group-hover:border-blue-500 text-slate-800 group-hover:text-blue-600 font-bold text-xs sm:text-sm shadow-md group-hover:shadow-xl group-hover:shadow-blue-500/10 transition-all cursor-pointer active:scale-95"
+                  >
+                    <span>{t("event.viewAllSponsors", "View all {count} sponsors").replace("{count}", eventSponsors.length)}</span>
+                    <ChevronDown size={16} className="text-blue-600 group-hover:translate-y-0.5 transition-transform" />
+                  </button>
+                </div>
+              )}
             </div>
+
+            {/* Collapse / Show Less Button */}
+            {isSponsorsExpanded && eventSponsors.length > 10 && (
+              <div className="flex justify-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSponsorsExpanded(false);
+                    smoothScrollTo("#sponsors", { duration: 600, offset: 70, easing: "easeInOutCubic" });
+                  }}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 hover:text-slate-900 font-bold text-xs transition-all cursor-pointer active:scale-95 shadow-2xs"
+                >
+                  <span>{t("event.showLess", "Show less")}</span>
+                  <ChevronUp size={15} />
+                </button>
+              </div>
+            )}
           </div>
         </section>
       )}
