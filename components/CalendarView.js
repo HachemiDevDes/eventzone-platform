@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import { Calendar, Archive, RotateCcw, Camera, Upload, Check, Loader2, X, Trash2, Users, Plus, UserPlus, Eye } from "lucide-react";
+import { Calendar, Archive, RotateCcw, Camera, Upload, Check, Loader2, X, Trash2, Users, Plus, UserPlus, Eye, FileText, FileSpreadsheet, Download } from "lucide-react";
 import CustomDatePicker from "./CustomDatePicker";
 import CustomTimePicker from "./CustomTimePicker";
 import SearchableSelect from "./SearchableSelect";
@@ -10,10 +10,13 @@ import { CalendarSkeleton } from "./SkeletonLoaders";
 import { uploadMedia } from "@/lib/storage";
 import { useLanguage } from "../lib/i18n";
 import { canEditModule } from "../lib/permissions";
+import { downloadAgendaPdf, exportAgendaToExcel } from "@/lib/agendaExport";
 
 export default function CalendarView({
   sessions = [],
   attendees = [],
+  eventDetails = null,
+  eventId = "",
   isLoading = false,
   effectivePermissions = null,
   onSaveSessions,
@@ -25,6 +28,8 @@ export default function CalendarView({
   // Database states
   const [editingSessionId, setEditingSessionId] = useState(null);
   const [activeFilter, setActiveFilter] = useState("all");
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
 
   // Form states
   const [title, setTitle] = useState("");
@@ -597,6 +602,88 @@ export default function CalendarView({
     return `${baseUrl}&text=${titleText}&details=${descText}&dates=${dates}`;
   };
 
+  // Helper to enrich sessions for export with full talent directory
+  const getEnrichedSessionsForExport = (targetSessions) => {
+    return targetSessions.map(sess => {
+      const spks = (sess.speakers || []).map(s => {
+        const name = typeof s === "string" ? s : s?.name || "";
+        const match = allEventExperts.find(e => e.name.toLowerCase() === name.trim().toLowerCase());
+        return {
+          id: s?.id || match?.id,
+          name,
+          title: s?.title || s?.jobTitle || match?.title || "",
+          company: s?.company || match?.company || "",
+          role: s?.role || "Speaker"
+        };
+      });
+
+      const mods = (sess.moderators || []).map(m => {
+        const name = typeof m === "string" ? m : m?.name || "";
+        const match = allEventExperts.find(e => e.name.toLowerCase() === name.trim().toLowerCase());
+        return {
+          id: m?.id || match?.id,
+          name,
+          title: m?.title || m?.jobTitle || match?.title || "",
+          company: m?.company || match?.company || "",
+          role: m?.role || "Moderator"
+        };
+      });
+
+      return {
+        ...sess,
+        speakers: spks,
+        moderators: mods
+      };
+    });
+  };
+
+  const handleDownloadPdf = async () => {
+    if (sessions.length === 0) return;
+    setIsExportingPdf(true);
+    try {
+      const targetSessions = activeFilter === "all" ? activeSessions : filteredSessions;
+      const enriched = getEnrichedSessionsForExport(targetSessions);
+      const filterLabel = activeFilter === "all" 
+        ? "Full Event Agenda" 
+        : `Day Agenda (${formatDateLabel(activeFilter)})`;
+
+      await downloadAgendaPdf({
+        eventId,
+        eventDetails: eventDetails || { title: "Event Agenda" },
+        sessions: enriched,
+        filterLabel
+      });
+    } catch (err) {
+      console.error("Failed to export agenda PDF:", err);
+      alert(err.message || "Failed to generate agenda PDF.");
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
+  const handleExportExcel = () => {
+    if (sessions.length === 0) return;
+    setIsExportingExcel(true);
+    try {
+      const targetSessions = activeFilter === "all" ? activeSessions : filteredSessions;
+      const enriched = getEnrichedSessionsForExport(targetSessions);
+      const filterLabel = activeFilter === "all" 
+        ? "Full Event Agenda" 
+        : `Day Agenda (${formatDateLabel(activeFilter)})`;
+
+      exportAgendaToExcel({
+        eventDetails: eventDetails || { title: "Event Agenda" },
+        sessions: enriched,
+        filterLabel
+      });
+    } catch (err) {
+      console.error("Failed to export agenda Excel:", err);
+      alert(err.message || "Failed to export Excel spreadsheet.");
+    } finally {
+      setIsExportingExcel(false);
+    }
+  };
+
   if (isLoading) {
     return <CalendarSkeleton />;
   }
@@ -1133,6 +1220,43 @@ export default function CalendarView({
               {t("calendar.timelineSubtitle", "Sort, view, edit, and organize scheduled sessions by day.")}
             </p>
           </div>
+
+          {/* Export / Download Agenda Buttons */}
+          {sessions.length > 0 && (
+            <div className="flex items-center gap-2 self-start sm:self-auto shrink-0 flex-wrap">
+              {/* PDF Download Button */}
+              <button
+                type="button"
+                onClick={handleDownloadPdf}
+                disabled={isExportingPdf}
+                className="inline-flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-200/90 hover:border-blue-300 text-slate-700 hover:text-blue-600 rounded-xl text-xs font-bold transition-all shadow-2xs hover:shadow-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed group active:scale-95"
+                title="Download formatted executive agenda PDF"
+              >
+                {isExportingPdf ? (
+                  <Loader2 size={14} className="animate-spin text-blue-600" />
+                ) : (
+                  <FileText size={14} className="text-rose-500 group-hover:scale-110 transition-transform shrink-0" />
+                )}
+                <span>{isExportingPdf ? t("export.generating", "Generating...") : t("calendar.downloadPdf", "Download PDF")}</span>
+              </button>
+
+              {/* Excel Export Button */}
+              <button
+                type="button"
+                onClick={handleExportExcel}
+                disabled={isExportingExcel}
+                className="inline-flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-200/90 hover:border-emerald-300 text-slate-700 hover:text-emerald-600 rounded-xl text-xs font-bold transition-all shadow-2xs hover:shadow-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed group active:scale-95"
+                title="Export agenda spreadsheet to Excel (.xlsx)"
+              >
+                {isExportingExcel ? (
+                  <Loader2 size={14} className="animate-spin text-emerald-600" />
+                ) : (
+                  <FileSpreadsheet size={14} className="text-emerald-600 group-hover:scale-110 transition-transform shrink-0" />
+                )}
+                <span>{isExportingExcel ? t("export.generating", "Generating...") : t("calendar.exportExcel", "Export Excel")}</span>
+              </button>
+            </div>
+          )}
         </header>
 
         {/* Dynamic Day Filter Tabs */}

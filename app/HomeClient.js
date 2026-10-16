@@ -5899,6 +5899,8 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               <CalendarView 
                 sessions={sessions}
                 attendees={attendees}
+                eventDetails={eventDetails}
+                eventId={activeEventId || eventDetails?.id}
                 effectivePermissions={effectivePermissions}
                 onSaveSessions={(newSessions) => {
                   syncArrayToDb(sessions, newSessions, upsertSession, deleteSession);
