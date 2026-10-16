@@ -1030,32 +1030,57 @@ export default function EventPublicLandingPage({
     });
   }, [eventSessions, selectedDay, distinctDays]);
 
-  // Real Database Speakers extracted from real sessions
+  // Real Database Speakers extracted from real sessions and event details
   const eventSpeakers = [];
   const speakerNames = new Set();
+
+  // 1. Gather from eventDetails / effectiveDetails speakers if defined
+  const rawRootSpeakers = Array.isArray(effectiveDetails?.speakers) 
+    ? effectiveDetails.speakers 
+    : (Array.isArray(eventDetails?.speakers) ? eventDetails.speakers : []);
+  rawRootSpeakers.forEach(sp => {
+    const spName = typeof sp === "string" ? sp.trim() : (sp?.name || sp?.fullName || "").trim();
+    if (spName && !speakerNames.has(spName.toLowerCase())) {
+      speakerNames.add(spName.toLowerCase());
+      const spObj = typeof sp === "object" ? sp : {};
+      eventSpeakers.push({
+        name: spName,
+        role: spObj.role || "Speaker",
+        title: spObj.title || spObj.jobTitle || spObj.position || "",
+        company: spObj.company || spObj.organization || spObj.org || (organization !== "Eventzone" ? organization : ""),
+        image: spObj.image || spObj.avatar || spObj.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(spName)}&background=2563eb&color=fff`
+      });
+    }
+  });
+
+  // 2. Gather from session speakers and moderators
   eventSessions.forEach(s => {
     (s.speakers || []).forEach(sp => {
-      if (sp?.name && !speakerNames.has(sp.name)) {
-        speakerNames.add(sp.name);
+      const spName = typeof sp === "string" ? sp.trim() : (sp?.name || sp?.fullName || "").trim();
+      if (spName && !speakerNames.has(spName.toLowerCase())) {
+        speakerNames.add(spName.toLowerCase());
+        const spObj = typeof sp === "object" ? sp : {};
         eventSpeakers.push({
-          name: sp.name,
-          role: sp.role || "Speaker",
-          title: sp.title || "",
-          company: sp.company || organization || "",
-          image: sp.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(sp.name)}&background=2563eb&color=fff`
+          name: spName,
+          role: spObj.role || "Speaker",
+          title: spObj.title || spObj.jobTitle || spObj.position || "",
+          company: spObj.company || spObj.organization || spObj.org || (organization !== "Eventzone" ? organization : ""),
+          image: spObj.image || spObj.avatar || spObj.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(spName)}&background=2563eb&color=fff`
         });
       }
     });
 
     (s.moderators || []).forEach(mod => {
-      if (mod?.name && !speakerNames.has(mod.name)) {
-        speakerNames.add(mod.name);
+      const modName = typeof mod === "string" ? mod.trim() : (mod?.name || mod?.fullName || "").trim();
+      if (modName && !speakerNames.has(modName.toLowerCase())) {
+        speakerNames.add(modName.toLowerCase());
+        const modObj = typeof mod === "object" ? mod : {};
         eventSpeakers.push({
-          name: mod.name,
+          name: modName,
           role: "Moderator",
-          title: mod.title || "",
-          company: mod.company || organization || "",
-          image: mod.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(mod.name)}&background=4f46e5&color=fff`
+          title: modObj.title || modObj.jobTitle || modObj.position || "",
+          company: modObj.company || modObj.organization || modObj.org || (organization !== "Eventzone" ? organization : ""),
+          image: modObj.image || modObj.avatar || modObj.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(modName)}&background=4f46e5&color=fff`
         });
       }
     });
@@ -1736,6 +1761,60 @@ export default function EventPublicLandingPage({
       return `${String(displayH).padStart(2, "0")}:${m} ${suffix}`;
     }
     return trimmed;
+  };
+
+  const getSessionDurationText = (startTime, endTime) => {
+    if (!startTime || !endTime) return "";
+    try {
+      const parseMinutes = (t) => {
+        const trimmed = String(t).trim();
+        const match = trimmed.match(/(\d+):(\d+)\s*(am|pm)?/i);
+        if (!match) return null;
+        let h = parseInt(match[1], 10);
+        const m = parseInt(match[2], 10);
+        const ampm = match[3]?.toLowerCase();
+        if (ampm === "pm" && h < 12) h += 12;
+        if (ampm === "am" && h === 12) h = 0;
+        return h * 60 + m;
+      };
+      const sMin = parseMinutes(startTime);
+      const eMin = parseMinutes(endTime);
+      if (sMin !== null && eMin !== null && eMin > sMin) {
+        const diff = eMin - sMin;
+        const h = Math.floor(diff / 60);
+        const m = diff % 60;
+        if (h > 0 && m > 0) return `${h}h ${m}m`;
+        if (h > 0) return `${h} hr${h > 1 ? "s" : ""}`;
+        return `${m} min`;
+      }
+    } catch {}
+    return "";
+  };
+
+  const getEnrichedSpeaker = (sp, isModerator = false) => {
+    if (!sp) return null;
+    const rawName = typeof sp === "string" ? sp.trim() : (sp?.name || sp?.fullName || "").trim();
+    if (!rawName) return null;
+
+    const matched = (eventSpeakers || []).find(
+      es => es.name && es.name.toLowerCase().trim() === rawName.toLowerCase().trim()
+    );
+
+    const spObj = typeof sp === "object" ? sp : {};
+    const role = spObj.role || (isModerator ? "Moderator" : matched?.role || "Speaker");
+    const title = spObj.title || spObj.jobTitle || spObj.position || matched?.title || "";
+    const rawCompany = spObj.company || spObj.organization || spObj.org || matched?.company || "";
+    const company = (rawCompany && rawCompany !== "Eventzone") ? rawCompany : "";
+    const image = spObj.image || spObj.avatar || spObj.photo || matched?.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(rawName)}&background=${isModerator ? "4f46e5" : "2563eb"}&color=fff`;
+
+    return {
+      name: rawName,
+      role,
+      title,
+      company,
+      image,
+      isModerator
+    };
   };
 
   const getSessionGoogleCalendarUrl = (session) => {
@@ -2665,154 +2744,235 @@ export default function EventPublicLandingPage({
               <div className="space-y-4">
               {filteredSessions.map((session, idx) => {
                 const isBookmarked = bookmarkedSessions.has(session.id);
+                const sessionSpeakers = (session.speakers || [])
+                  .map(sp => getEnrichedSpeaker(sp, false))
+                  .filter(Boolean);
+                const sessionModerators = (session.moderators || [])
+                  .map(mod => getEnrichedSpeaker(mod, true))
+                  .filter(Boolean);
+                const allSessionPeople = [...sessionSpeakers, ...sessionModerators];
+                const durationText = getSessionDurationText(session.startTime || session.time, session.endTime);
+                const sessionDateStr = getSessionDateStr(session);
+                const locationLabel = session.room || session.stage || session.location || "";
+                const virtualLink = session.virtualUrl || session.meetingUrl || session.streamUrl || session.link;
 
                 return (
                   <div
                     key={session.id || idx}
-                    className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-7 shadow-xs hover:shadow-md transition-all flex flex-col gap-4 text-start rtl:text-right text-left"
+                    className="group relative bg-white border border-slate-200/90 hover:border-blue-500/60 rounded-3xl p-6 sm:p-7 shadow-xs hover:shadow-xl hover:shadow-blue-500/5 transition-all duration-300 flex flex-col gap-5 text-start rtl:text-right text-left overflow-hidden"
                   >
-                    {/* Time & Date Badges */}
-                    <div className="flex flex-wrap items-center gap-2.5">
-                      <span className="px-3.5 py-1.5 rounded-xl bg-blue-50 text-blue-700 text-xs font-bold flex items-center gap-1.5">
-                        <Clock size={13} className="text-blue-600 shrink-0" />
-                        <span>
-                          {formatSessionTime(session.startTime || session.time) || "09:00 AM"} — {formatSessionTime(session.endTime) || "10:00 AM"}
-                        </span>
-                      </span>
+                    {/* Left vertical hover accent bar */}
+                    <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-blue-600 via-indigo-600 to-blue-500 opacity-0 group-hover:opacity-100 transition-opacity rounded-l-3xl" />
 
-                      {(session.date || session.session_date || session.sessionDate) && (
-                        <span className="px-2.5 py-1.5 rounded-xl bg-slate-100 text-slate-600 text-xs font-semibold">
-                          {getSessionDateStr(session)}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Title */}
-                    <h3 className="text-lg sm:text-xl font-bold text-slate-900 leading-snug">
-                      {session.title || "Session"}
-                    </h3>
-
-                    {/* Speakers & Moderators Grid */}
-                    {((session.speakers && session.speakers.length > 0) || (session.moderators && session.moderators.length > 0)) && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                        {/* Speakers */}
-                        {session.speakers && session.speakers.length > 0 && (
-                          <div className="flex flex-col gap-1.5">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                              {t("event.speakersTitle", "Speakers")}
+                    <div className="flex flex-col md:flex-row md:items-start gap-6 lg:gap-8">
+                      {/* ─── LEFT TIME & DATE RAIL ─── */}
+                      <div className="md:w-44 md:shrink-0 flex flex-col gap-2.5">
+                        <div className="flex flex-col">
+                          <div className="flex items-center gap-1.5 text-slate-900">
+                            <Clock size={16} className="text-blue-600 shrink-0" />
+                            <span className="text-xl sm:text-2xl font-black tracking-tight leading-none">
+                              {formatSessionTime(session.startTime || session.time) || "09:00 AM"}
                             </span>
-                            <div className="flex flex-wrap items-center gap-2">
-                              {session.speakers.map((sp, i) => {
-                                const spName = typeof sp === "string" ? sp : (sp.name || "Speaker");
-                                const spImage = typeof sp === "object" ? (sp.image || sp.avatar) : "";
-                                return (
-                                  <div
-                                    key={i}
-                                    className="flex items-center gap-2 pl-1 pr-3 py-1 bg-white border border-slate-200/90 rounded-full text-xs font-semibold text-slate-800 shadow-2xs"
-                                  >
-                                    {spImage ? (
-                                      // eslint-disable-next-line @next/next/no-img-element
-                                      <img
-                                        src={spImage}
-                                        alt={spName}
-                                        className="w-5 h-5 rounded-full object-cover border border-slate-200 shrink-0"
-                                      />
-                                    ) : (
-                                      <div className="w-5 h-5 rounded-full bg-blue-600 text-white font-bold text-[9px] flex items-center justify-center shrink-0">
-                                        {spName.charAt(0).toUpperCase()}
-                                      </div>
-                                    )}
-                                    <span className="truncate max-w-[140px]">{spName}</span>
-                                  </div>
-                                );
-                              })}
-                            </div>
                           </div>
-                        )}
-
-                        {/* Moderators */}
-                        {session.moderators && session.moderators.length > 0 && (
-                          <div className="flex flex-col gap-1.5">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                              {t("event.moderatorsTitle", "Moderators")}
+                          {session.endTime && (
+                            <span className="text-xs sm:text-sm font-semibold text-slate-400 mt-1 pl-5">
+                              to {formatSessionTime(session.endTime)}
                             </span>
-                            <div className="flex flex-wrap items-center gap-2">
-                              {session.moderators.map((mod, i) => {
-                                const modName = typeof mod === "string" ? mod : (mod.name || "Moderator");
-                                const modImage = typeof mod === "object" ? (mod.image || mod.avatar) : "";
-                                return (
-                                  <div
-                                    key={i}
-                                    className="flex items-center gap-2 pl-1 pr-3 py-1 bg-white border border-slate-200/90 rounded-full text-xs font-semibold text-slate-800 shadow-2xs"
-                                  >
-                                    {modImage ? (
-                                      // eslint-disable-next-line @next/next/no-img-element
-                                      <img
-                                        src={modImage}
-                                        alt={modName}
-                                        className="w-5 h-5 rounded-full object-cover border border-indigo-200 shrink-0"
-                                      />
-                                    ) : (
-                                      <div className="w-5 h-5 rounded-full bg-indigo-950 text-white font-bold text-[9px] flex items-center justify-center shrink-0">
-                                        {modName.charAt(0).toUpperCase()}
-                                      </div>
-                                    )}
-                                    <span className="truncate max-w-[140px]">{modName}</span>
-                                  </div>
-                                );
-                              })}
-                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                          {durationText && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-[11px] font-bold">
+                              {durationText}
+                            </span>
+                          )}
+
+                          {sessionDateStr && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 text-[11px] font-semibold">
+                              <Calendar size={11} className="text-slate-400 shrink-0" />
+                              <span>{sessionDateStr}</span>
+                            </span>
+                          )}
+                        </div>
+
+                        {locationLabel && (
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50/80 border border-indigo-100 text-indigo-700 text-[11px] font-bold w-fit">
+                            <MapPin size={11} className="text-indigo-600 shrink-0" />
+                            <span className="truncate max-w-[140px]">{locationLabel}</span>
                           </div>
                         )}
                       </div>
-                    )}
 
-                    {/* Session Partner / Sponsor Logos */}
-                    {Array.isArray(session.logos) && session.logos.length > 0 && (
-                      <div className="flex flex-wrap items-center gap-2 pt-1">
-                        {session.logos.map((logo, idx) => {
-                          const logoImg = typeof logo === "string" ? logo : (logo?.image || logo?.url || logo?.logo || "");
-                          const logoLabel = typeof logo === "object" ? (logo?.label || "Partner") : "Partner";
-                          if (!logoImg) return null;
+                      {/* Subtle Vertical Divider on Desktop */}
+                      <div className="hidden md:block w-px self-stretch bg-slate-100 shrink-0" />
 
-                          return (
-                            <div
-                              key={logo?.id || idx}
-                              className="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl shadow-2xs"
-                            >
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={logoImg}
-                                alt={logoLabel}
-                                className="h-4 object-contain max-w-[70px]"
-                              />
-                              <span className="text-[10px] font-bold text-slate-500">
-                                {logoLabel}
+                      {/* ─── CENTER & RIGHT MAIN CONTENT ─── */}
+                      <div className="flex-1 min-w-0 space-y-4">
+                        {/* Top Meta & Bookmark Toolbar */}
+                        <div className="flex items-center justify-between gap-3 flex-wrap">
+                          <div className="flex flex-wrap items-center gap-2">
+                            {/* Format / Type Badge */}
+                            {virtualLink ? (
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200/60">
+                                <Video size={13} className="text-blue-600" />
+                                <span>{t("event.onlineVideoMeeting", "Online video meeting")}</span>
                               </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-bold border border-slate-200/70">
+                                <MapPin size={12} className="text-slate-500" />
+                                <span>{locationLabel || t("event.onSiteMeeting", "On-site meeting")}</span>
+                              </span>
+                            )}
+
+                            {session.track && (
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 text-[11px] font-bold border border-indigo-200/60">
+                                {session.track}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Bookmark Action */}
+                          <button
+                            type="button"
+                            onClick={() => toggleBookmark(session.id)}
+                            className={`p-2 rounded-xl border transition-all cursor-pointer ${
+                              isBookmarked
+                                ? "bg-amber-50 border-amber-300 text-amber-500 shadow-2xs"
+                                : "bg-white border-slate-200 text-slate-400 hover:text-amber-500 hover:border-amber-200"
+                            }`}
+                            title={isBookmarked ? t("event.bookmarked", "Bookmarked") : t("event.bookmarkSession", "Bookmark session")}
+                          >
+                            <Star size={15} className={isBookmarked ? "fill-amber-500" : ""} />
+                          </button>
+                        </div>
+
+                        {/* Session Title */}
+                        <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-snug group-hover:text-blue-600 transition-colors">
+                          {session.title || "Session"}
+                        </h3>
+
+                        {/* THE HERO: Bold, Prominent Speakers & Presenters */}
+                        {allSessionPeople.length > 0 && (
+                          <div className="space-y-2.5 pt-1">
+                            <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+                              {allSessionPeople.map((sp, i) => (
+                                <div
+                                  key={i}
+                                  className="flex items-center gap-3.5 group/sp py-1"
+                                >
+                                  {/* Speaker Avatar */}
+                                  <div className="relative shrink-0">
+                                    <img
+                                      src={sp.image}
+                                      alt={sp.name}
+                                      className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border-2 border-white shadow-xs ring-2 ring-blue-500/20 group-hover/sp:ring-blue-500 transition-all"
+                                      onError={(e) => {
+                                        e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(sp.name)}&background=2563eb&color=fff`;
+                                      }}
+                                    />
+                                    {sp.isModerator && (
+                                      <div 
+                                        className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[9px] font-bold border-2 border-white shadow-2xs"
+                                        title="Moderator"
+                                      >
+                                        M
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Name, Verified Badge, Position & Company */}
+                                  <div className="flex flex-col min-w-0">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="text-sm sm:text-base font-extrabold text-slate-900 group-hover/sp:text-blue-600 transition-colors">
+                                        {sp.name}
+                                      </span>
+                                      <CheckCircle2 size={16} className="text-blue-600 fill-blue-50 shrink-0" />
+                                      {sp.isModerator && (
+                                        <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200/80 uppercase tracking-wider">
+                                          {t("event.moderator", "Moderator")}
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    {/* Position & Company */}
+                                    <div className="text-xs sm:text-sm text-slate-500 font-medium leading-tight mt-0.5">
+                                      {sp.title && sp.company ? (
+                                        <span>{sp.title} <span className="text-slate-300">•</span> <span className="text-slate-600 font-semibold">{sp.company}</span></span>
+                                      ) : sp.title ? (
+                                        <span>{sp.title}</span>
+                                      ) : sp.company ? (
+                                        <span className="text-slate-600 font-semibold">{sp.company}</span>
+                                      ) : (
+                                        <span className="text-slate-400">{sp.role || t("event.speaker", "Speaker")}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
                             </div>
-                          );
-                        })}
+                          </div>
+                        )}
+
+                        {/* Description / Theme Quote Block */}
+                        {session.description && (
+                          <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-100 text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
+                            {session.description}
+                          </div>
+                        )}
+
+                        {/* Session Partner / Sponsor Logos */}
+                        {Array.isArray(session.logos) && session.logos.length > 0 && (
+                          <div className="flex flex-wrap items-center gap-2 pt-1">
+                            {session.logos.map((logo, lIdx) => {
+                              const logoImg = typeof logo === "string" ? logo : (logo?.image || logo?.url || logo?.logo || "");
+                              const logoLabel = typeof logo === "object" ? (logo?.label || "Partner") : "Partner";
+                              if (!logoImg) return null;
+
+                              return (
+                                <div
+                                  key={logo?.id || lIdx}
+                                  className="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200/80 px-2.5 py-1 rounded-xl shadow-2xs"
+                                >
+                                  <img
+                                    src={logoImg}
+                                    alt={logoLabel}
+                                    className="h-4 object-contain max-w-[70px]"
+                                  />
+                                  <span className="text-[10px] font-bold text-slate-500">
+                                    {logoLabel}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* Action Footer */}
+                        <div className="pt-2 flex flex-wrap items-center justify-end gap-2.5">
+                          {virtualLink && (
+                            <a
+                              href={virtualLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all shadow-xs hover:shadow-md cursor-pointer"
+                            >
+                              <Video size={14} className="shrink-0" />
+                              <span>{t("event.join", "Join")}</span>
+                            </a>
+                          )}
+
+                          <a
+                            href={getSessionGoogleCalendarUrl(session)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-700 hover:text-blue-600 text-xs font-bold transition-all shadow-2xs hover:border-blue-300 cursor-pointer"
+                          >
+                            <Calendar size={14} className="text-blue-600 shrink-0" />
+                            <span>{t("event.addToGoogleCalendar", "Add to Google Calendar")}</span>
+                          </a>
+                        </div>
                       </div>
-                    )}
-
-                    {/* Description */}
-                    {session.description && (
-                      <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal pt-1">
-                        {session.description}
-                      </p>
-                    )}
-
-                    {/* Add to Google Calendar Action Button */}
-                    <div className="pt-2">
-                      <a
-                        href={getSessionGoogleCalendarUrl(session)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-700 hover:text-blue-600 text-xs font-bold transition-all shadow-2xs cursor-pointer w-fit"
-                      >
-                        <Calendar size={14} className="text-blue-600 shrink-0" />
-                        <span>{t("event.addToGoogleCalendar", "Add to Google Calendar")}</span>
-                      </a>
                     </div>
                   </div>
                 );
