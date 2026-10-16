@@ -260,31 +260,7 @@ export default function CompanyDelegationPortal({ event, initialOrg = null, toke
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-100/70 to-slate-50 text-slate-900 font-sans antialiased pb-20">
-      {/* Top Banner Navigation */}
-      <header className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-30">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {event?.eventLogo || event?.logo ? (
-              <img src={event.eventLogo || event.logo} alt={event.title} className="w-9 h-9 rounded-xl object-contain bg-white border border-slate-200" />
-            ) : (
-              <div className="w-9 h-9 rounded-xl bg-blue-600 text-white font-black flex items-center justify-center text-sm shadow-xs">
-                EZ
-              </div>
-            )}
-            <div>
-              <h1 className="text-sm font-extrabold text-slate-900 leading-tight truncate max-w-xs sm:max-w-md">{event?.title || "Corporate Portal"}</h1>
-              <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Representative Pass Delegation</span>
-            </div>
-          </div>
 
-          <div className="flex items-center gap-2">
-            <span className="hidden sm:inline-block text-[11px] font-bold text-slate-400">Powered by</span>
-            <span className="text-xs font-black tracking-tight text-blue-700 bg-blue-50 border border-blue-200/80 px-2.5 py-1 rounded-lg">
-              Eventzone
-            </span>
-          </div>
-        </div>
-      </header>
 
       {/* Main Container */}
       <main className="max-w-5xl mx-auto px-4 sm:px-6 pt-8 space-y-6">
@@ -335,9 +311,8 @@ export default function CompanyDelegationPortal({ event, initialOrg = null, toke
           <div className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-5 items-center">
             <div className="md:col-span-2 space-y-2">
               <div className="flex items-center justify-between text-xs font-bold">
-                <span className="text-slate-600 flex items-center gap-1.5">
-                  <Ticket size={14} className="text-blue-600" />
-                  <span>Representative Passes Allotment</span>
+                <span className="text-slate-600 font-bold">
+                  Representative Passes Allotment
                 </span>
                 <span className="text-slate-900 font-black">
                   {delegates.length} of {badgesIncluded} Passes Assigned
@@ -379,14 +354,9 @@ export default function CompanyDelegationPortal({ event, initialOrg = null, toke
           <div className="lg:col-span-5">
             <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-6 sm:p-7 space-y-5 sticky top-20">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100 flex-wrap gap-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-                    <User size={18} />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-extrabold text-slate-900">Assign Representative Pass</h3>
-                    <p className="text-[11px] text-slate-500 font-medium">Add a team member to receive an exhibitor pass</p>
-                  </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900">Assign Representative Pass</h3>
+                  <p className="text-[11px] text-slate-500 font-medium">Add a team member to receive an exhibitor pass</p>
                 </div>
                 {activeDelegateForm && (
                   <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded-full">
@@ -672,9 +642,8 @@ export default function CompanyDelegationPortal({ event, initialOrg = null, toke
 
             {/* Event Guidance / Access Note */}
             <div className="bg-slate-50 rounded-2xl border border-slate-200/80 p-4.5 text-xs text-slate-600 space-y-2">
-              <div className="font-bold text-slate-800 flex items-center gap-1.5">
-                <ShieldCheck size={16} className="text-blue-600" />
-                <span>Exhibition Badges Information</span>
+              <div className="font-bold text-slate-800">
+                Exhibition Badges Information
               </div>
               <p className="leading-relaxed font-medium">
                 All registered delegates will have badges printed at the venue check-in desk or can show their digital QR code at security gates for express entry.
