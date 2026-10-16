@@ -829,7 +829,7 @@ function SubmissionDetailsModal({ item, type = "attendee", forms = [], tickets =
   const ticketName = getResolvedTicketName(item, tickets);
   const matchedTicket = (tickets || []).find(t => t.name === ticketName || t.tier === ticketName || t.id === ticketName);
   const matchedForm = matchedTicket?.formId 
-    ? (forms || []).find(f => f.id === (matchedTicket.formId || matchedTicket.form_id))
+    ? (forms || []).find(f => f.id === (matchedTicket.formId || matchedTicket.form_id) && f.status !== "archived" && !f.isArchived)
     : null;
 
   const answers = item.answers || item.customAnswers || item.formAnswers || {};
@@ -5763,7 +5763,7 @@ function TicketsView({ state, onUpdateState, onOpenModal, onSwitchView }) {
           {filteredTickets.map((ticket, idx) => {
             const isArchived = ticket.isArchived || ticket.status === 'Archived';
             const tierSold = attendees.filter(a => a.ticketType === ticket.name).length;
-            const linkedForm = forms.find(f => f.id === ticket.formId);
+            const linkedForm = (forms || []).find(f => f.id === ticket.formId && f.status !== "archived" && !f.isArchived);
             const badgeType = ticket.badgeType || "thermal_qr";
             const itemKey = ticket.id ? `ticket-${ticket.id}` : `ticket-idx-${idx}-${ticket.name || 'unnamed'}`;
 

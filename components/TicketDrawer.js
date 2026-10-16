@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   X,
   Ticket,
@@ -33,6 +33,11 @@ import A4BadgeSheet from "./A4BadgeSheet";
 import SearchableSelect from "./SearchableSelect";
 import { uploadMedia } from "@/lib/storage";
 import { useLanguage } from "../lib/i18n";
+import {
+  CORPORATE_CATEGORIES,
+  CORPORATE_TIER_SUGGESTIONS,
+  CORPORATE_PERK_SUGGESTIONS
+} from "@/lib/constants";
 
 // Standard preset tier name chips
 const TIER_NAME_SUGGESTIONS = [
@@ -55,6 +60,37 @@ const TIER_SUGGESTIONS_MAP = [
   { id: "exhibitor", key: "tickets.suggestionExhibitor", fallback: "Exhibitor Pass" },
   { id: "workshop", key: "tickets.suggestionWorkshop", fallback: "Workshop Pass" },
   { id: "virtual", key: "tickets.suggestionVirtual", fallback: "Virtual Attendee" }
+];
+
+// Corporate & B2B preset tier name chips
+const CORPORATE_TIER_SUGGESTIONS_MAP = [
+  { id: "stand_std", key: "tickets.suggestionStandStd", fallback: "Exhibition Stand (Standard 9m²)" },
+  { id: "stand_equipped", key: "tickets.suggestionStandEquipped", fallback: "Equipped Booth (12m²)" },
+  { id: "stand_corner", key: "tickets.suggestionStandCorner", fallback: "Corner Stand / Premium Booth" },
+  { id: "sponsor_gold", key: "tickets.suggestionSponsorGold", fallback: "Gold Sponsor Package" },
+  { id: "sponsor_silver", key: "tickets.suggestionSponsorSilver", fallback: "Silver Sponsor Package" },
+  { id: "sponsor_platinum", key: "tickets.suggestionSponsorPlatinum", fallback: "Platinum Sponsor Package" },
+  { id: "partner_official", key: "tickets.suggestionPartnerOfficial", fallback: "Official Partner" },
+  { id: "partner_media", key: "tickets.suggestionPartnerMedia", fallback: "Official Media Partner" },
+  { id: "constructor", key: "tickets.suggestionConstructor", fallback: "Stand Builder / Constructor Pass" },
+  { id: "institutional", key: "tickets.suggestionInstitutional", fallback: "Institutional Pavilion" },
+  { id: "startup_kiosk", key: "tickets.suggestionStartupKiosk", fallback: "Startup Kiosk / Pod" },
+  { id: "corp_delegation", key: "tickets.suggestionCorpDelegation", fallback: "Corporate Delegation Package" }
+];
+
+const CORPORATE_SUGGESTED_PERKS_MAP = [
+  { id: "corp_space", key: "perk.corpSpace", fallback: "Exhibition Floor Space Included" },
+  { id: "corp_shell", key: "perk.corpShell", fallback: "Shell Scheme & Fascia Board with Company Name" },
+  { id: "corp_badges", key: "perk.corpBadges", fallback: "Representative Badges Included" },
+  { id: "corp_logo_web", key: "perk.corpLogoWeb", fallback: "Logo & Profile on Official Website & Catalog" },
+  { id: "corp_vip", key: "perk.corpVip", fallback: "VIP Networking Dinner & Lounge Access" },
+  { id: "corp_power", key: "perk.corpPower", fallback: "Electricity & 220V Power Supply" },
+  { id: "corp_furniture", key: "perk.corpFurniture", fallback: "Booth Furniture (Table & 2 Chairs)" },
+  { id: "corp_b2b", key: "perk.corpB2B", fallback: "B2B Matchmaking & Lead Capture Tool" },
+  { id: "corp_guide", key: "perk.corpGuide", fallback: "Full Page Ad in Official Event Guide" },
+  { id: "corp_screens", key: "perk.corpScreens", fallback: "Main Stage Screen Logo Rotation" },
+  { id: "corp_social", key: "perk.corpSocial", fallback: "Official Social Media Announcement" },
+  { id: "corp_freight", key: "perk.corpFreight", fallback: "Dedicated Parking & Freight Delivery Pass" }
 ];
 
 
@@ -127,6 +163,11 @@ export default function TicketDrawer({
   // Navigation Tabs
   const [activeTab, setActiveTab] = useState("general"); // 'general' | 'form' | 'badge'
 
+  // Active (Non-archived) Registration Forms
+  const activeForms = useMemo(() => {
+    return (forms || []).filter(f => f && f.status !== "archived" && !f.isArchived);
+  }, [forms]);
+
   // Form Fields
   const [name, setName] = useState("");
   const [isFree, setIsFree] = useState(false);
@@ -186,7 +227,9 @@ export default function TicketDrawer({
       setIsPopular(Boolean(ticket.isPopular || ticket.is_popular));
       
       setFeatures(Array.isArray(ticket.features) ? [...ticket.features] : []);
-      setSelectedFormId(ticket.formId || "default");
+      const rawFormId = ticket.formId || "default";
+      const isFormActive = rawFormId === "default" || activeForms.some(f => f.id === rawFormId);
+      setSelectedFormId(isFormActive ? rawFormId : "default");
       setBadgeType(ticket.badgeType || "thermal_qr");
       setBadgeUrl(ticket.badgeUrl || "");
       setTicketTarget(ticket.ticketTarget || ticket.badgeSettings?.ticketTarget || "individual");
@@ -233,7 +276,7 @@ export default function TicketDrawer({
       });
     }
     setActiveTab("general");
-  }, [ticket, isOpen]);
+  }, [ticket, isOpen, activeForms]);
 
   if (!isOpen) return null;
 
@@ -344,7 +387,7 @@ export default function TicketDrawer({
     }
   };
 
-  const activeFormObj = forms.find(f => f.id === selectedFormId);
+  const activeFormObj = activeForms.find(f => f.id === selectedFormId);
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end animate-fade-in">
@@ -523,7 +566,7 @@ export default function TicketDrawer({
                 {/* Small Clean Chips Underneath */}
                 <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                   <span className="text-[11px] font-semibold text-slate-400 mr-1">{t("tickets.suggestionsLabel", "Suggestions:")}</span>
-                  {TIER_SUGGESTIONS_MAP.map((item) => {
+                  {(ticketTarget === "company" ? CORPORATE_TIER_SUGGESTIONS_MAP : TIER_SUGGESTIONS_MAP).map((item) => {
                     const translatedLabel = t(item.key, item.fallback);
                     const isSelected = name === translatedLabel || name === item.fallback;
                     return (
@@ -556,15 +599,18 @@ export default function TicketDrawer({
                     {/* Corporate Role */}
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-slate-700">{t("tickets.corporateRole", "Corporate Category")}</label>
-                      <select
+                      <SearchableSelect
                         value={companyRole}
-                        onChange={(e) => setCompanyRole(e.target.value)}
-                        className="px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-600"
-                      >
-                        <option value="exhibitor">{t("tickets.roleExhibitor", "Exhibition Stand / Booth")}</option>
-                        <option value="sponsor">{t("tickets.roleSponsor", "Sponsorship Package")}</option>
-                        <option value="corporate">{t("tickets.roleCorporate", "Corporate Delegation / Partner")}</option>
-                      </select>
+                        onChange={(val) => setCompanyRole(val || "exhibitor")}
+                        options={CORPORATE_CATEGORIES.map(cat => ({
+                          value: cat.value,
+                          label: cat.label,
+                          sublabel: cat.sublabel
+                        }))}
+                        placeholder={t("tickets.selectCategory", "Select corporate category...")}
+                        searchPlaceholder={t("tickets.searchCategory", "Search category...")}
+                        isClearable={false}
+                      />
                     </div>
 
                     {/* Included Badges */}
@@ -594,18 +640,20 @@ export default function TicketDrawer({
                       </span>
                       <span className="text-[10px] font-semibold text-blue-600">{t("common.optional", "Optional")}</span>
                     </label>
-                    <select
-                      value={linkedFloorPlanId}
-                      onChange={(e) => setLinkedFloorPlanId(e.target.value)}
-                      className="px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-600"
-                    >
-                      <option value="">{t("tickets.noFloorPlan", "-- No Floor Plan (Standard Registration) --")}</option>
-                      {(floorPlans || []).map((fp) => (
-                        <option key={fp.id} value={fp.id}>
-                          {fp.name || "Floor Plan"} {fp.elements?.length ? `(${fp.elements.filter(el => el.type === 'booth').length} booths)` : ''}
-                        </option>
-                      ))}
-                    </select>
+                    <SearchableSelect
+                      value={linkedFloorPlanId || ""}
+                      onChange={(val) => setLinkedFloorPlanId(val || "")}
+                      options={[
+                        { value: "", label: t("tickets.noFloorPlan", "No Floor Plan (Standard Registration)") },
+                        ...(floorPlans || []).map((fp) => ({
+                          value: fp.id,
+                          label: `${fp.name || "Floor Plan"} ${fp.elements?.length ? `(${fp.elements.filter(el => el.type === 'booth').length} booths)` : ''}`
+                        }))
+                      ]}
+                      placeholder={t("tickets.selectFloorPlan", "Select Floor Plan...")}
+                      searchPlaceholder={t("tickets.searchFloorPlan", "Search floor plan...")}
+                      isClearable={true}
+                    />
                     <p className="text-[10px] text-slate-500 font-medium">
                       {t("tickets.linkFloorPlanDesc", "When linked, exhibitors can pick an available booth directly from this floor plan during registration.")}
                     </p>
@@ -930,10 +978,12 @@ export default function TicketDrawer({
                 {!isReadOnly && (
                   <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 flex flex-col gap-2">
                     <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
-                      {t("tickets.suggestedPerksLabel", "Suggested Perks (Click to add)")}
+                      {ticketTarget === "company"
+                        ? t("tickets.suggestedCorporatePerksLabel", "Suggested Corporate Perks (Click to add)")
+                        : t("tickets.suggestedPerksLabel", "Suggested Perks (Click to add)")}
                     </span>
                     <div className="flex flex-wrap gap-1.5">
-                      {SUGGESTED_PERKS_MAP.map((item) => {
+                      {(ticketTarget === "company" ? CORPORATE_SUGGESTED_PERKS_MAP : SUGGESTED_PERKS_MAP).map((item) => {
                         const translatedPerk = t(item.key, item.fallback);
                         const isAdded = features.includes(translatedPerk) || features.includes(item.fallback);
                         return (
@@ -994,11 +1044,21 @@ export default function TicketDrawer({
           {activeTab === "form" && (
             <div className="flex flex-col gap-5 animate-fade-in">
               <div className="bg-blue-50/70 border border-blue-200 rounded-2xl p-4 flex items-start gap-3.5">
-                <FileCheck className="text-blue-600 shrink-0 mt-0.5" size={18} />
+                {ticketTarget === "company" ? (
+                  <Building2 className="text-blue-600 shrink-0 mt-0.5" size={18} />
+                ) : (
+                  <FileCheck className="text-blue-600 shrink-0 mt-0.5" size={18} />
+                )}
                 <div className="text-xs">
-                  <div className="font-bold text-blue-950">{t("tickets.regQuestionnaireTitle", "Registration Questionnaire")}</div>
+                  <div className="font-bold text-blue-950">
+                    {ticketTarget === "company"
+                      ? t("tickets.corpQuestionnaireTitle", "Corporate Registration & Stand Intake")
+                      : t("tickets.regQuestionnaireTitle", "Registration Questionnaire")}
+                  </div>
                   <div className="text-blue-800/80 mt-0.5 leading-relaxed">
-                    {t("tickets.regQuestionnaireDesc", "Select which registration questionnaire attendees must complete when applying for or purchasing this ticket tier.")}
+                    {ticketTarget === "company"
+                      ? t("tickets.corpQuestionnaireDesc", "Select which registration form companies & exhibitors must complete when applying for or booking this corporate package.")
+                      : t("tickets.regQuestionnaireDesc", "Select which registration questionnaire attendees must complete when applying for or purchasing this ticket tier.")}
                   </div>
                 </div>
               </div>
@@ -1016,14 +1076,38 @@ export default function TicketDrawer({
                 >
                   <div className="flex items-start gap-3.5">
                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${selectedFormId === "default" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>
-                      <FileText size={17} />
+                      {ticketTarget === "company" ? <Building2 size={17} /> : <FileText size={17} />}
                     </div>
                     <div>
-                      <div className="text-sm font-bold text-slate-900">{t("tickets.standardRegForm", "Standard Event Registration (Default)")}</div>
-                      <div className="text-xs text-slate-500 mt-0.5">{t("tickets.standardRegDesc", "Captures Full Name & Email Address with instant badge generation.")}</div>
+                      <div className="text-sm font-bold text-slate-900">
+                        {ticketTarget === "company"
+                          ? t("tickets.standardCorpRegForm", "Standard Corporate & Exhibitor Registration (Default)")
+                          : t("tickets.standardRegForm", "Standard Event Registration (Default)")}
+                      </div>
+                      <div className="text-xs text-slate-500 mt-0.5">
+                        {ticketTarget === "company"
+                          ? t("tickets.standardCorpRegDesc", "Captures Company Name, Industry, Contact Liaison, Logo, Stand Requirements & Representative Allotment.")
+                          : t("tickets.standardRegDesc", "Captures Full Name & Email Address with instant badge generation.")}
+                      </div>
                       <div className="flex items-center gap-2 mt-2">
-                        <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-md">{t("tickets.twoStandardFields", "2 Standard Fields")}</span>
-                        <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-md">{t("tickets.fastIntake", "Fast Intake")}</span>
+                        {ticketTarget === "company" ? (
+                          <>
+                            <span className="text-[10px] font-bold bg-blue-100/70 text-blue-800 px-2.5 py-0.5 rounded-md">
+                              {t("tickets.corpProfileTag", "Corporate Profile")}
+                            </span>
+                            <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-0.5 rounded-md">
+                              {t("tickets.standSelectionTag", "Stand Selection")}
+                            </span>
+                            <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-md">
+                              {t("tickets.delegationPortalTag", "Delegation Portal")}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-md">{t("tickets.twoStandardFields", "2 Standard Fields")}</span>
+                            <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-md">{t("tickets.fastIntake", "Fast Intake")}</span>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1035,7 +1119,7 @@ export default function TicketDrawer({
                 </div>
 
                 {/* Custom User Forms */}
-                {forms.map((form) => {
+                {activeForms.map((form) => {
                   const isSelected = selectedFormId === form.id;
                   const fieldCount = form.fields?.length || 0;
                   return (
@@ -1122,12 +1206,26 @@ export default function TicketDrawer({
             <div className="flex flex-col gap-5 animate-fade-in">
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">
-                  {t("tickets.badgeDesignTitle", "Badge Design & Printing Layout")}
+                  {ticketTarget === "company"
+                    ? t("tickets.corpBadgeDesignTitle", "Representative & Staff Badge Layout")
+                    : t("tickets.badgeDesignTitle", "Badge Design & Printing Layout")}
                 </label>
                 <p className="text-xs text-slate-500">
-                  {t("tickets.badgeDesignDesc", "Select the physical print format for attendee credentials.")}
+                  {ticketTarget === "company"
+                    ? t("tickets.corpBadgeDesignDesc", "Select the physical print format for badges issued to company representatives, exhibitors, and crew.")
+                    : t("tickets.badgeDesignDesc", "Select the physical print format for attendee credentials.")}
                 </p>
               </div>
+
+              {ticketTarget === "company" && (
+                <div className="bg-indigo-50/70 border border-indigo-200 rounded-2xl p-3.5 flex items-start gap-3">
+                  <Award className="text-indigo-600 shrink-0 mt-0.5" size={17} />
+                  <div className="text-xs leading-relaxed text-indigo-950">
+                    <span className="font-bold">{t("tickets.delegationBadgeNoteTitle", "Corporate Pass Allotment:")} </span>
+                    {t("tickets.delegationBadgeNoteDesc", "Each confirmed company representative added via the Delegation Portal will inherit this badge format with their company branding and role pass.")}
+                  </div>
+                </div>
+              )}
 
               {/* 3 Layout Option Cards */}
               <div className="grid grid-cols-1 gap-3">

@@ -714,7 +714,7 @@ export default function AttendeeDrawer({
                         <div className="flex items-center justify-between text-[11px]">
                           <span className="font-extrabold text-blue-600">{priceLabel}</span>
                           <span className="text-[10px] text-slate-400 font-medium truncate max-w-[120px]">
-                            {tItem.formId && tItem.formId !== 'default' ? t("drawer.customForm", "Custom Form") : t("drawer.standardForm", "Standard Form")}
+                            {tItem.formId && tItem.formId !== 'default' && (forms || []).some(f => f.id === tItem.formId && f.status !== 'archived' && !f.isArchived) ? t("drawer.customForm", "Custom Form") : t("drawer.standardForm", "Standard Form")}
                           </span>
                         </div>
                       </div>

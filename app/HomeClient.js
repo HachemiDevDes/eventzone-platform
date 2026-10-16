@@ -5972,14 +5972,17 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               onArchiveForm={async (formId) => {
                 await archiveForm(formId);
                 setForms(prev => prev.map(f => f.id === formId ? { ...f, status: 'archived', isArchived: true } : f));
+                setTickets(prev => prev.map(t => (t.formId === formId || t.form_id === formId) ? { ...t, formId: null, form_id: null } : t));
               }}
               onDeleteForm={async (formId) => {
                 await deleteForm(formId);
                 setForms(prev => prev.filter(f => f.id !== formId));
+                setTickets(prev => prev.map(t => (t.formId === formId || t.form_id === formId) ? { ...t, formId: null, form_id: null } : t));
               }}
               onPermanentDeleteForm={async (formId) => {
                 await deleteForm(formId);
                 setForms(prev => prev.filter(f => f.id !== formId));
+                setTickets(prev => prev.map(t => (t.formId === formId || t.form_id === formId) ? { ...t, formId: null, form_id: null } : t));
               }}
               onRestoreForm={async (formId) => {
                 const formToRestore = forms.find(f => f.id === formId);

@@ -118,7 +118,7 @@ export default function EasyUploadModal({
   const currentForm = useMemo(() => {
     if (!currentTicket?.formId && !currentTicket?.form_id) return null;
     const targetFormId = currentTicket.formId || currentTicket.form_id;
-    return (forms || []).find((f) => f.id === targetFormId);
+    return (forms || []).find((f) => f.id === targetFormId && f.status !== "archived" && !f.isArchived);
   }, [forms, currentTicket]);
 
   // Download template handler
