@@ -483,6 +483,21 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
     return (organizations || []).filter(o => !o.isArchived && o.status === "pending").length;
   }, [organizations]);
 
+  const pendingAttendeesCount = useMemo(() => {
+    return (pending || []).filter(p => {
+      if (p.ticketTarget === "company" || p.isCompany || p.companyRole) return false;
+      if (p.note && typeof p.note === "string") {
+        if (p.note.includes('"ticketTarget":"company"') || p.note.includes('"isCompany":true')) return false;
+      }
+      const match = (tickets || []).find(t => 
+        (t.id && (t.id === p.ticketId || t.id === p.ticket_id)) ||
+        (t.name && (t.name.toLowerCase().trim() === (p.ticketType || p.ticket_type || "").toLowerCase().trim()))
+      );
+      if (match && (match.ticketTarget === "company" || match.badgeSettings?.ticketTarget === "company")) return false;
+      return true;
+    }).length;
+  }, [pending, tickets]);
+
   const [isLoading, setIsLoading] = useState(() => {
     if (typeof window !== "undefined") {
       if (!navigator.onLine) return false;
@@ -5283,7 +5298,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
                           <Clock size={12} className="shrink-0" />
                           <span className="truncate">{t("dash.pending", "Pending")}</span>
                         </div>
-                        <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "pending" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{pending.length}</span>
+                        <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "pending" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>{pendingAttendeesCount}</span>
                       </button>
                     )}
 

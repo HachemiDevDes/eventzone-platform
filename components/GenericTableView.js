@@ -2780,22 +2780,48 @@ function PendingView({ state, onUpdateState }) {
     return itemType === target;
   };
 
-  // Ticket Types Switcher for Pending Queue (Authoritative from tickets)
+  // Helper to determine if a pending registration belongs to a corporate / company ticket
+  const isCompanyRegistration = (p) => {
+    if (!p) return false;
+    if (p.ticketTarget === "company" || p.isCompany || p.companyRole) return true;
+    if (p.note && typeof p.note === "string") {
+      if (p.note.includes('"ticketTarget":"company"') || p.note.includes('"isCompany":true')) {
+        return true;
+      }
+    }
+    const matchedTicket = (tickets || []).find(t => 
+      (t.id && (t.id === p.ticketId || t.id === p.ticket_id)) ||
+      (t.name && (t.name.toLowerCase().trim() === (p.ticketType || p.ticket_type || "").toLowerCase().trim()))
+    );
+    if (matchedTicket && (matchedTicket.ticketTarget === "company" || matchedTicket.badgeSettings?.ticketTarget === "company")) {
+      return true;
+    }
+    return false;
+  };
+
+  // Dedicated list of individual attendee registrations awaiting approval (excluding companies)
+  const pendingAttendees = useMemo(() => {
+    return (pending || []).filter(p => !isCompanyRegistration(p));
+  }, [pending, tickets]);
+
+  // Ticket Types Switcher for Pending Queue (Authoritative from tickets, excluding company tickets)
   const ticketTypes = useMemo(() => {
     const list = [{ id: "all", label: "All Tickets" }];
     const seen = new Set();
     
-    // Official tickets configured for the event
-    (tickets || []).forEach(t => {
-      const name = t.name || t.tier;
-      if (name && !seen.has(name.toLowerCase())) {
-        seen.add(name.toLowerCase());
-        list.push({ id: name, label: name });
-      }
-    });
+    // Official tickets configured for the event (ONLY individual attendee tickets)
+    (tickets || [])
+      .filter(t => t.ticketTarget !== "company" && t.badgeSettings?.ticketTarget !== "company")
+      .forEach(t => {
+        const name = t.name || t.tier;
+        if (name && !seen.has(name.toLowerCase())) {
+          seen.add(name.toLowerCase());
+          list.push({ id: name, label: name });
+        }
+      });
 
     if ((tickets || []).length === 0) {
-      (pending || []).forEach(p => {
+      pendingAttendees.forEach(p => {
         const tType = p.ticketType || p.ticket_type;
         if (tType && !seen.has(tType.toLowerCase())) {
           seen.add(tType.toLowerCase());
@@ -2805,7 +2831,7 @@ function PendingView({ state, onUpdateState }) {
     }
 
     return list;
-  }, [tickets, pending]);
+  }, [tickets, pendingAttendees]);
 
   const handleDecline = (id) => {
     if (!canEdit) return;
@@ -2904,10 +2930,10 @@ function PendingView({ state, onUpdateState }) {
     }
   };
 
-  // Filtered Pending Items by Ticket Type and Search
+  // Filtered Pending Items by Ticket Type and Search (strictly individual attendees)
   const filtered = useMemo(() => {
     const seen = new Set();
-    return pending.filter(p => {
+    return pendingAttendees.filter(p => {
       if (p.id) {
         if (seen.has(p.id)) return false;
         seen.add(p.id);
@@ -2927,7 +2953,7 @@ function PendingView({ state, onUpdateState }) {
 
       return nameMatch || emailMatch || compMatch || noteMatch || ansMatch;
     });
-  }, [pending, selectedTicketType, search, tickets]);
+  }, [pendingAttendees, selectedTicketType, search, tickets]);
 
   // Reset page on filter or search
   useEffect(() => {
@@ -2952,7 +2978,7 @@ function PendingView({ state, onUpdateState }) {
           <div className="flex items-center gap-2">
             <h2 className="text-2xl font-bold text-slate-900">{t("dash.pending", "Pending Approvals")}</h2>
             <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 font-bold text-xs">
-              {pending.length} {t("table.awaitingReview", "Awaiting Review")}
+              {pendingAttendees.length} {t("table.awaitingReview", "Awaiting Review")}
             </span>
           </div>
           <p className="text-sm text-slate-500 mt-0.5">{t("table.pendingSubtitle", "Review registrations, intake questionnaires, and validate passes awaiting organizer approval.")}</p>
@@ -2963,8 +2989,8 @@ function PendingView({ state, onUpdateState }) {
       <div className="flex items-center gap-1 border-b border-slate-200 overflow-x-auto select-none bg-white">
         {ticketTypes.map(tt => {
           const count = tt.id === "all" 
-            ? pending.length 
-            : pending.filter(p => isPendingInTicketTier(p, tt.id)).length;
+            ? pendingAttendees.length 
+            : pendingAttendees.filter(p => isPendingInTicketTier(p, tt.id)).length;
           const isSelected = selectedTicketType === tt.id;
 
           return (

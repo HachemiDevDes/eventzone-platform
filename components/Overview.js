@@ -60,7 +60,18 @@ export default function Overview({
 
   // 2. Calculations & KPIs
   const totalAttendees = attendees.length;
-  const pendingCount = pending.length;
+  const pendingCount = (pending || []).filter(p => {
+    if (p.ticketTarget === "company" || p.isCompany || p.companyRole) return false;
+    if (p.note && typeof p.note === "string") {
+      if (p.note.includes('"ticketTarget":"company"') || p.note.includes('"isCompany":true')) return false;
+    }
+    const match = (tickets || []).find(t => 
+      (t.id && (t.id === p.ticketId || t.id === p.ticket_id)) ||
+      (t.name && (t.name.toLowerCase().trim() === (p.ticketType || p.ticket_type || "").toLowerCase().trim()))
+    );
+    if (match && (match.ticketTarget === "company" || match.badgeSettings?.ticketTarget === "company")) return false;
+    return true;
+  }).length;
   const checkedInCount = attendees.filter(a => a.status === 'checked-in' || a.status === 'checked_in' || a.checkedIn || a.checked_in).length;
   const checkinPct = totalAttendees > 0 ? (checkedInCount / totalAttendees) * 100 : 0;
   const capacityPct = capacity > 0 ? Math.min(100, Math.round((totalAttendees / capacity) * 100)) : 0;
