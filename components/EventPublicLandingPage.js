@@ -17,7 +17,7 @@ import PublicRSVPModal from "./PublicRSVPModal";
 import CountryPhoneInput from "./CountryPhoneInput";
 import { CountrySelect, CitySelect } from "./LocationInputs";
 import SearchableSelect from "./SearchableSelect";
-import { getLocalizedIndustry } from "../lib/constants";
+import { getLocalizedIndustry, getCorporateRoleLabel } from "../lib/constants";
 import FormImageUploader from "./FormImageUploader";
 import FormFileUploader from "./FormFileUploader";
 import BoothPickerModal from "./BoothPickerModal";
@@ -1406,6 +1406,11 @@ export default function EventPublicLandingPage({
 
     // If on section 0, validate core credentials
     if (safeCheckoutIdx === 0) {
+      if (selectedTicket?.ticketTarget === "company") {
+        if (!resolvedCompany?.trim() && !rsvpCompany?.trim()) {
+          errors["rsvpCompany"] = t("rsvp.errorCompanyRequired", "Company / Organization name is required.");
+        }
+      }
       if (!rsvpName?.trim()) errors["rsvpName"] = t("rsvp.errorNameRequired", "Full name is required.");
       if (!rsvpEmail?.trim()) errors["rsvpEmail"] = t("rsvp.errorEmailRequired", "Email address is required.");
       if (!rsvpPhone?.trim()) errors["rsvpPhone"] = t("rsvp.errorPhoneRequired", "Phone number is required.");
@@ -1450,6 +1455,12 @@ export default function EventPublicLandingPage({
     setRsvpLoading(true);
 
     try {
+      if (selectedTicket?.ticketTarget === "company" && !resolvedCompany?.trim() && !rsvpCompany?.trim()) {
+        setRsvpError(t("rsvp.errorCompanyRequired", "Company / Organization name is required."));
+        setRsvpLoading(false);
+        return;
+      }
+
       if (onRegisterForEvent) {
         const activeRefCode = (referralCode || "").trim().toUpperCase();
         const discountVal = referralDiscount?.isEligible ? (referralDiscount.discountAmount || 0) : 0;
@@ -3184,7 +3195,7 @@ export default function EventPublicLandingPage({
                           <h3 className="text-lg font-bold text-slate-900">{ticket.name || ticket.tier}</h3>
                           {ticket.ticketTarget === "company" && (
                             <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-extrabold uppercase border border-blue-200">
-                              Corporate
+                              {getCorporateRoleLabel(ticket.companyRole)}
                             </span>
                           )}
                         </div>
@@ -3677,12 +3688,49 @@ export default function EventPublicLandingPage({
                           {/* ATTENDEE CREDENTIALS */}
                           <div className="space-y-4 pt-1">
                             <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">
-                              {t("reg.badgeCredentials", "Attendee Badge Credentials")}
+                              {selectedTicket?.ticketTarget === "company"
+                                ? t("reg.companyCredentials", "Company & Primary Liaison Credentials")
+                                : t("reg.badgeCredentials", "Attendee Badge Credentials")}
                             </label>
+
+                            {/* Prominent Company Name Field for Corporate Registrations */}
+                            {selectedTicket?.ticketTarget === "company" && (
+                              <div>
+                                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                  {t("reg.companyName", "Company / Organization Name")} <span className="text-rose-500">*</span>
+                                </label>
+                                <input
+                                  type="text"
+                                  required
+                                  value={rsvpCompany}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setRsvpCompany(val);
+                                    setCustomAnswers(prev => ({
+                                      ...prev,
+                                      ...(prev?.preset_company !== undefined || activeTicketForm?.fields?.some(f => f.id === "preset_company") ? { preset_company: val } : {})
+                                    }));
+                                    if (checkoutSectionErrors["rsvpCompany"]) {
+                                      setCheckoutSectionErrors(prev => ({ ...prev, rsvpCompany: undefined }));
+                                    }
+                                  }}
+                                  placeholder={t("reg.placeholderCompanyName", "e.g. Acme Corporation / Global Tech")}
+                                  className={`w-full px-3.5 py-3 bg-slate-50 border focus:bg-white rounded-xl text-xs font-semibold text-slate-900 outline-none transition-all ${
+                                    checkoutSectionErrors["rsvpCompany"] ? "border-rose-400 bg-rose-50/40" : "border-slate-200 focus:border-blue-600"
+                                  }`}
+                                />
+                                {checkoutSectionErrors["rsvpCompany"] && (
+                                  <p className="text-[10px] font-bold text-rose-600 mt-1">{checkoutSectionErrors["rsvpCompany"]}</p>
+                                )}
+                              </div>
+                            )}
 
                             <div>
                               <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                {t("reg.fullName", "Your Full Name")} <span className="text-rose-500">*</span>
+                                {selectedTicket?.ticketTarget === "company"
+                                  ? t("reg.liaisonName", "Primary Contact / Liaison Full Name")
+                                  : t("reg.fullName", "Your Full Name")}{" "}
+                                <span className="text-rose-500">*</span>
                               </label>
                               <input
                                 type="text"
@@ -3694,7 +3742,11 @@ export default function EventPublicLandingPage({
                                     setCheckoutSectionErrors(prev => ({ ...prev, rsvpName: undefined }));
                                   }
                                 }}
-                                placeholder={t("reg.placeholderName", "e.g. Sarah Jenkins")}
+                                placeholder={
+                                  selectedTicket?.ticketTarget === "company"
+                                    ? t("reg.placeholderLiaisonName", "e.g. Sarah Jenkins (Exhibition Manager / Delegate)")
+                                    : t("reg.placeholderName", "e.g. Sarah Jenkins")
+                                }
                                 className={`w-full px-3.5 py-3 bg-slate-50 border focus:bg-white rounded-xl text-xs font-semibold text-slate-900 outline-none transition-all ${
                                   checkoutSectionErrors["rsvpName"] ? "border-rose-400 bg-rose-50/40" : "border-slate-200 focus:border-blue-600"
                                 }`}
@@ -3707,7 +3759,10 @@ export default function EventPublicLandingPage({
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <div>
                                 <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                  {t("reg.email", "Your Email Address")} <span className="text-rose-500">*</span>
+                                  {selectedTicket?.ticketTarget === "company"
+                                    ? t("reg.liaisonEmail", "Official Company / Liaison Email")
+                                    : t("reg.email", "Your Email Address")}{" "}
+                                  <span className="text-rose-500">*</span>
                                 </label>
                                 <input
                                   type="email"
@@ -3719,7 +3774,11 @@ export default function EventPublicLandingPage({
                                       setCheckoutSectionErrors(prev => ({ ...prev, rsvpEmail: undefined }));
                                     }
                                   }}
-                                  placeholder={t("reg.placeholderEmail", "e.g. alex@company.com")}
+                                  placeholder={
+                                    selectedTicket?.ticketTarget === "company"
+                                      ? t("reg.placeholderLiaisonEmail", "e.g. contact@company.com")
+                                      : t("reg.placeholderEmail", "e.g. alex@company.com")
+                                  }
                                   className={`w-full px-3.5 py-3 bg-slate-50 border focus:bg-white rounded-xl text-xs font-semibold text-slate-900 outline-none transition-all ${
                                     checkoutSectionErrors["rsvpEmail"] ? "border-rose-400 bg-rose-50/40" : "border-slate-200 focus:border-blue-600"
                                   }`}
@@ -3731,7 +3790,10 @@ export default function EventPublicLandingPage({
 
                               <div>
                                 <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                  {t("reg.phone", "Phone Number")} <span className="text-rose-500">*</span>
+                                  {selectedTicket?.ticketTarget === "company"
+                                    ? t("reg.liaisonPhone", "Official Liaison Phone")
+                                    : t("reg.phone", "Phone Number")}{" "}
+                                  <span className="text-rose-500">*</span>
                                 </label>
                                 <CountryPhoneInput
                                   value={rsvpPhone}
@@ -3755,7 +3817,12 @@ export default function EventPublicLandingPage({
                           {(!hasMultiSections ? activeTicketForm?.fields : ticketFormSections[0]?.fields) && (
                             <div className="space-y-3">
                               {((!hasMultiSections ? activeTicketForm?.fields : ticketFormSections[0]?.fields) || [])
-                                .filter(f => !["f_core_name", "f_core_email", "f_core_phone"].includes(f.id) && f.type !== "section")
+                                .filter(f => {
+                                  if (["f_core_name", "f_core_email", "f_core_phone"].includes(f.id)) return false;
+                                  if (f.type === "section") return false;
+                                  if (selectedTicket?.ticketTarget === "company" && (f.id === "preset_company" || f.id === "f_core_company")) return false;
+                                  return true;
+                                })
                                 .map(field => {
                                   const hasError = Boolean(checkoutSectionErrors[field.id]);
                                   return (

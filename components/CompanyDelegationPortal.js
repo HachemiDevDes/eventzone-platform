@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import QRCode from "qrcode";
 import { fetchOrganizationByDelegationToken, assignCompanyDelegate } from "../lib/db";
-import { formatBoothDisplay } from "../lib/constants";
+import { formatBoothDisplay, getCorporateRoleLabel, getCorporateRoleBadgePass } from "../lib/constants";
 
 export default function CompanyDelegationPortal({ event, initialOrg = null, token = "" }) {
   const [org, setOrg] = useState(initialOrg);
@@ -207,7 +207,7 @@ export default function CompanyDelegationPortal({ event, initialOrg = null, toke
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 font-medium mt-1">
-                  {org.industry || "General Industry"} • {org.ticketType || `${org.companyRole === 'sponsor' ? 'Sponsor' : 'Exhibitor'} Package`}
+                  {org.industry || "General Industry"} • {org.ticketType || getCorporateRoleLabel(org.companyRole)}
                 </p>
               </div>
             </div>
@@ -443,7 +443,7 @@ export default function CompanyDelegationPortal({ event, initialOrg = null, toke
                         <div className="flex items-center gap-2">
                           <h4 className="text-sm font-extrabold text-slate-900">{del.name}</h4>
                           <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                            {org.companyRole === 'sponsor' ? 'Sponsor' : 'Exhibitor'} Pass
+                            {getCorporateRoleBadgePass(org.companyRole)}
                           </span>
                         </div>
                         <div className="text-xs text-slate-500 font-medium mt-0.5 flex items-center gap-2 flex-wrap">

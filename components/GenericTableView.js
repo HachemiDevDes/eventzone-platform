@@ -1,7 +1,7 @@
 
 "use client";
 
-import { getLocalizedIndustry } from "../lib/constants";
+import { getLocalizedIndustry, getCorporateRoleLabel } from "../lib/constants";
 
 // Helper to localize ticket tier names
 // Uses getLocalizedIndustry from lib/constants
@@ -4321,7 +4321,7 @@ function OrganizationsView({ state, onUpdateState, onOpenModal }) {
                     {reviewingOrg.badgesIncluded || 2} Passes Allotted
                   </div>
                   <div className="text-xs text-slate-500 font-medium mt-0.5">
-                    Category: {reviewingOrg.companyRole === 'sponsor' ? 'Sponsor Representative' : 'Exhibitor Delegate'}
+                    Category: {getCorporateRoleLabel(reviewingOrg.companyRole)}
                   </div>
                   <span className="inline-block mt-2 text-[10px] font-extrabold text-amber-700 bg-amber-100/70 border border-amber-200 px-2 py-0.5 rounded-full">
                     Self-managed via Delegation Portal
