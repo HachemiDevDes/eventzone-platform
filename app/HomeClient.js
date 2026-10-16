@@ -4467,6 +4467,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
         organizations={organizations}
         attendees={attendees}
         tickets={tickets}
+        floorPlans={floorPlans}
         influencers={influencers}
         forms={forms}
         formSubmissions={formSubmissions}
@@ -5953,6 +5954,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               forms={forms}
               submissions={formSubmissions}
               tickets={tickets}
+              floorPlans={floorPlans}
               effectivePermissions={effectivePermissions}
               onSaveForm={async (form) => {
                 try {
@@ -6281,6 +6283,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
         activeEventId={activeEventId}
         eventTitle={eventDetails?.title || "Eventzone Summit"}
         eventDetails={eventDetails}
+        floorPlans={floorPlans}
         onSwitchView={setCurrentView}
         isReadOnly={!canEditModule("tickets", effectivePermissions)}
       />

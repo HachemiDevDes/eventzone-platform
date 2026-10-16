@@ -2,7 +2,7 @@ import { fetchPublicEvents } from "../lib/db";
 import { POPULAR_CITIES, POPULAR_CATEGORIES } from "../lib/seoCategories";
 
 export default async function sitemap() {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://eventzone.pro";
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.eventzone.pro";
 
   let eventUrls = [];
   try {

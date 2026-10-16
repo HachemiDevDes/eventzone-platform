@@ -12,7 +12,8 @@ import {
   QrCode, Award, UserCheck, AlertCircle, X, Layers, RefreshCw,
   Lock, Archive, RotateCcw, Globe, MapPin, Camera, Users,
   Briefcase, Megaphone, Target, Presentation, FileSpreadsheet, Paperclip,
-  Pencil, Building2, FoldVertical, UnfoldVertical, ArrowUp, ArrowDown
+  Pencil, Building2, FoldVertical, UnfoldVertical, ArrowUp, ArrowDown,
+  Store
 } from "lucide-react";
 import QRCode from "qrcode";
 import CountryPhoneInput from "./CountryPhoneInput";
@@ -46,6 +47,9 @@ const FIELD_TYPES = [
   { type: "csv", label: "CSV Data File", icon: FileSpreadsheet, description: "Upload data files (.csv) up to 10 MB", category: "Files & Docs" },
   { type: "word", label: "Word Document", icon: FileText, description: "Upload text documents (.docx, .doc) up to 10 MB", category: "Files & Docs" },
   { type: "file", label: "Any Document / Attachment", icon: Paperclip, description: "Upload PDF, Word, Excel, PPT, ZIP up to 10 MB", category: "Files & Docs" },
+
+  // Corporate & Venue Elements
+  { type: "booth_selection", label: "Booth / Stand Selector", icon: Store, description: "Interactive floor plan stand selector for exhibitors", category: "Corporate" },
 
   // Choices & Feedback
   { type: "select", label: "Dropdown Menu", icon: ChevronDown, description: "Single option from a dropdown list", category: "Choices" },
@@ -138,7 +142,8 @@ const getFieldTypeLabel = (ft, t) => {
     switch: "forms.typeSwitch",
     rating: "forms.typeRating",
     nps: "forms.typeNps",
-    section: "forms.typeSection"
+    section: "forms.typeSection",
+    booth_selection: "forms.typeBoothSelection"
   };
   const key = keyMap[ft.type || ft];
   return key && typeof t === "function" ? t(key, ft.label || ft) : (ft.label || ft);
@@ -168,7 +173,8 @@ const getFieldTypeDescription = (ft, t) => {
     switch: "forms.typeSwitchDesc",
     rating: "forms.typeRatingDesc",
     nps: "forms.typeNpsDesc",
-    section: "forms.typeSectionDesc"
+    section: "forms.typeSectionDesc",
+    booth_selection: "forms.typeBoothSelectionDesc"
   };
   const key = keyMap[ft.type || ft];
   return key && typeof t === "function" ? t(key, ft.description || "") : (ft.description || "");
@@ -178,6 +184,7 @@ const getCategoryLabel = (cat, t) => {
   if (typeof t !== "function") return `${cat} Elements`;
   const map = {
     "Standard": t("forms.catStandardElements", "Standard Elements"),
+    "Corporate": t("forms.catCorporateElements", "Corporate & Venue Elements"),
     "Files & Docs": t("forms.catFilesDocsElements", "Files & Docs Elements"),
     "Choices": t("forms.catChoicesElements", "Choices Elements"),
     "Feedback": t("forms.catFeedbackElements", "Feedback Elements"),
@@ -224,7 +231,8 @@ export default function FormsView({
   onRestoreForm,
   onSubmitResponse,
   activeEventTitle = "Eventzone Conference",
-  effectivePermissions = null
+  effectivePermissions = null,
+  floorPlans = []
 }) {
   const { t, lang, isRTL } = useLanguage();
   const canEdit = canEditModule("forms", effectivePermissions);
@@ -562,10 +570,11 @@ function generateUuid() {
     const newField = {
       id: isSection ? `f_sec_${Date.now()}` : `field_${Date.now()}`,
       type: type,
-      label: isSection ? `Section ${existingSectionsCount + 2}: Section Title` : `New ${typeDef.label}`,
+      label: isSection ? `Section ${existingSectionsCount + 2}: Section Title` : (type === "booth_selection" ? "Select Your Exhibition Booth / Stand" : `New ${typeDef.label}`),
       placeholder: isSection ? "" : (type === "text" ? "Type answer here..." : ""),
-      helpText: isSection ? "Section instructions or description..." : "",
-      required: false,
+      helpText: isSection ? "Section instructions or description..." : (type === "booth_selection" ? "Choose an available booth on the venue floor plan for your exhibition space." : ""),
+      required: type === "booth_selection" ? true : false,
+      floorPlanId: type === "booth_selection" && floorPlans?.length > 0 ? floorPlans[0].id : "",
       options: ["select", "radio", "checkbox"].includes(type) 
         ? ["Option 1", "Option 2", "Option 3"] 
         : [],
@@ -589,6 +598,7 @@ function generateUuid() {
       helpText: preset.description || "",
       required: preset.required ?? false,
       showsOnBadge: Boolean(preset.showsOnBadge),
+      floorPlanId: preset.floorPlanId || (preset.type === "booth_selection" && floorPlans?.length > 0 ? floorPlans[0].id : ""),
       options: preset.options ? [...preset.options] : [],
       isLocked: false
     };
@@ -1023,7 +1033,7 @@ function generateUuid() {
                   </div>
 
                   {/* Standard Grouped Field Types */}
-                  {["Standard", "Files & Docs", "Choices", "Feedback", "Layout"].map(cat => (
+                  {["Standard", "Corporate", "Files & Docs", "Choices", "Feedback", "Layout"].map(cat => (
                     <div key={cat} className="flex flex-col gap-2">
                       <span className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">
                         {getCategoryLabel(cat, t)}
@@ -1676,6 +1686,45 @@ function generateUuid() {
                         </div>
                       )}
 
+                      {/* Booth / Stand Selection Floor Plan Config */}
+                      {field.type === "booth_selection" && (
+                        <div className="bg-gradient-to-br from-blue-50/70 to-indigo-50/70 border border-blue-200/80 rounded-2xl p-4 flex flex-col gap-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-xs font-bold text-blue-900">
+                              <Store size={16} className="text-blue-600" />
+                              <span>{t("forms.boothConfigTitle", "Exhibition Floor Plan & Booth Assignment")}</span>
+                            </div>
+                            <span className="text-[10px] font-bold text-blue-700 bg-white px-2 py-0.5 rounded-full border border-blue-200 shadow-2xs">
+                              {t("forms.interactive", "Interactive")}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-blue-700/80 leading-relaxed">
+                            {t("forms.boothConfigHint", "Connect this question to a venue floor plan. When corporate registrants fill this form, they will browse available stands and choose an unoccupied booth.")}
+                          </p>
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                              {t("forms.selectTargetFloorPlan", "Assigned Floor Plan")}
+                            </label>
+                            <SearchableSelect
+                              options={[
+                                { value: "", label: t("forms.allFloorPlans", "Default / Primary Floor Plan") },
+                                ...(floorPlans || []).map(fp => {
+                                  const boothCount = (fp.elements || []).filter(el => el.type && (el.type.startsWith("booth") || el.type === "exhibitor-space")).length;
+                                  return {
+                                    value: fp.id,
+                                    label: `${fp.name || fp.title || "Floor Plan"} (${boothCount} ${t("forms.booths", "booths")})`
+                                  };
+                                })
+                              ]}
+                              value={field.floorPlanId || ""}
+                              onChange={(val) => handleUpdateField(field.id, { floorPlanId: val })}
+                              placeholder={t("forms.chooseFloorPlanPlaceholder", "Select floor plan...")}
+                              isClearable={false}
+                            />
+                          </div>
+                        </div>
+                      )}
+
                       {/* Rating Scale Details */}
                       {field.type === "rating" && (
                         <div className="flex items-center gap-4 text-xs font-semibold text-slate-600 bg-amber-50/50 border border-amber-200/50 rounded-2xl p-3">
@@ -2288,6 +2337,52 @@ function generateUuid() {
                                 {previewAnswers[field.id] ? t("forms.yesConsented", "Yes, consented") : t("forms.no", "No")}
                               </span>
                             </label>
+                          )}
+
+                          {/* Booth / Stand Selection Preview */}
+                          {field.type === "booth_selection" && (
+                            <div className="mt-1">
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-gradient-to-r from-blue-50/70 via-slate-50 to-indigo-50/70 border border-blue-200/90 rounded-2xl shadow-2xs">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                                    <Store size={18} />
+                                  </div>
+                                  <div>
+                                    <div className="text-xs font-bold text-slate-900">
+                                      {previewAnswers[field.id] ? (
+                                        <span className="text-emerald-700 flex items-center gap-1.5 font-extrabold">
+                                          <Check size={14} className="text-emerald-600" />
+                                          {t("forms.boothSelected", "Booth")} #{typeof previewAnswers[field.id] === 'object' ? previewAnswers[field.id].boothNumber : previewAnswers[field.id]}
+                                        </span>
+                                      ) : (
+                                        t("forms.noBoothSelectedYet", "No booth chosen yet")
+                                      )}
+                                    </div>
+                                    <div className="text-[10px] text-slate-500">
+                                      {previewAnswers[field.id]
+                                        ? (typeof previewAnswers[field.id] === 'object' && previewAnswers[field.id].dimensions ? previewAnswers[field.id].dimensions : t("forms.boothReservedForApp", "Reserved for this application"))
+                                        : t("forms.clickToBrowseBooths", "Browse available stands on the interactive venue floor plan")}
+                                    </div>
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const sampleBooth = { boothNumber: "B-14", dimensions: "3x3m (9m²)", status: "available" };
+                                    setPreviewAnswers(prev => ({
+                                      ...prev,
+                                      [field.id]: prev[field.id] ? null : sampleBooth
+                                    }));
+                                    if (previewSectionErrors[field.id]) {
+                                      setPreviewSectionErrors(prev => ({ ...prev, [field.id]: undefined }));
+                                    }
+                                  }}
+                                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-2xs shrink-0"
+                                >
+                                  {previewAnswers[field.id] ? t("forms.changeStand", "Change Stand") : t("forms.chooseStand", "Select Stand")}
+                                </button>
+                              </div>
+                            </div>
                           )}
                         </div>
                       );

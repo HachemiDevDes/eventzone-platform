@@ -23,7 +23,11 @@ import {
   Users,
   Star,
   Sparkle,
-  Eye
+  Eye,
+  Building2,
+  Store,
+  Award,
+  MapPin
 } from "lucide-react";
 import A4BadgeSheet from "./A4BadgeSheet";
 import SearchableSelect from "./SearchableSelect";
@@ -110,6 +114,7 @@ export default function TicketDrawer({
   onClose,
   ticket = null,
   forms = [],
+  floorPlans = [],
   onSaveTicket,
   onUploadFile,
   activeEventId,
@@ -132,6 +137,12 @@ export default function TicketDrawer({
   const [status, setStatus] = useState("Active"); // 'Active' | 'Draft'
   const [requiresApproval, setRequiresApproval] = useState(false); // Auto vs Pending
   const [isPopular, setIsPopular] = useState(false); // Only one ticket can be popular
+
+  // Corporate Ticket & Booth Configuration
+  const [ticketTarget, setTicketTarget] = useState("individual"); // 'individual' | 'company'
+  const [companyRole, setCompanyRole] = useState("exhibitor"); // 'exhibitor' | 'sponsor' | 'corporate'
+  const [badgesIncluded, setBadgesIncluded] = useState(2);
+  const [linkedFloorPlanId, setLinkedFloorPlanId] = useState("");
   
   // Perks / Features
   const [features, setFeatures] = useState([]);
@@ -178,6 +189,10 @@ export default function TicketDrawer({
       setSelectedFormId(ticket.formId || "default");
       setBadgeType(ticket.badgeType || "thermal_qr");
       setBadgeUrl(ticket.badgeUrl || "");
+      setTicketTarget(ticket.ticketTarget || ticket.badgeSettings?.ticketTarget || "individual");
+      setCompanyRole(ticket.companyRole || ticket.badgeSettings?.companyRole || "exhibitor");
+      setBadgesIncluded(ticket.badgesIncluded ?? ticket.badgeSettings?.badgesIncluded ?? 2);
+      setLinkedFloorPlanId(ticket.linkedFloorPlanId || ticket.badgeSettings?.linkedFloorPlanId || "");
       setBadgeSettings({
         orientation: "portrait",
         showFoldGuide: true,
@@ -203,6 +218,10 @@ export default function TicketDrawer({
       setSelectedFormId("default");
       setBadgeType("thermal_qr");
       setBadgeUrl("");
+      setTicketTarget("individual");
+      setCompanyRole("exhibitor");
+      setBadgesIncluded(2);
+      setLinkedFloorPlanId("");
       setBadgeSettings({
         orientation: "portrait",
         showFoldGuide: true,
@@ -298,9 +317,19 @@ export default function TicketDrawer({
         formId: selectedFormId === "default" ? null : selectedFormId,
         badgeType: badgeType,
         badgeUrl: badgeUrl,
-        badgeSettings: badgeSettings,
+        badgeSettings: {
+          ...badgeSettings,
+          ticketTarget,
+          companyRole,
+          badgesIncluded: Number(badgesIncluded || 2),
+          linkedFloorPlanId: linkedFloorPlanId || null,
+        },
         requiresApproval: Boolean(requiresApproval),
         isPopular: Boolean(isPopular),
+        ticketTarget: ticketTarget,
+        companyRole: companyRole,
+        badgesIncluded: Number(badgesIncluded || 2),
+        linkedFloorPlanId: linkedFloorPlanId || null,
       };
 
       if (onSaveTicket) {
@@ -426,6 +455,56 @@ export default function TicketDrawer({
           {activeTab === "general" && (
             <div className="flex flex-col gap-6 animate-fade-in">
               
+              {/* Ticket Target Audience: Individual vs Company / B2B */}
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center justify-between">
+                  <span>{t("tickets.targetAudience", "Ticket Target")}</span>
+                  <span className="text-[11px] font-semibold text-slate-400">
+                    {ticketTarget === "company" ? t("tickets.corporateEntity", "Corporate / Stand") : t("tickets.individualPerson", "Individual Attendee")}
+                  </span>
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setTicketTarget("individual")}
+                    className={`p-3 rounded-2xl border-2 flex items-center gap-3 transition-all cursor-pointer ${
+                      ticketTarget === "individual"
+                        ? "border-blue-600 bg-blue-50/50 shadow-xs text-blue-900 font-bold"
+                        : "border-slate-200 bg-white hover:border-slate-300 text-slate-600 font-semibold"
+                    }`}
+                  >
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${ticketTarget === "individual" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>
+                      <Users size={16} />
+                    </div>
+                    <div className="text-start">
+                      <div className="text-xs font-extrabold">{t("tickets.individual", "Individual")}</div>
+                      <div className="text-[10px] text-slate-500 leading-none mt-0.5">{t("tickets.singleAttendeePass", "Single attendee pass")}</div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTicketTarget("company");
+                      setRequiresApproval(true);
+                    }}
+                    className={`p-3 rounded-2xl border-2 flex items-center gap-3 transition-all cursor-pointer ${
+                      ticketTarget === "company"
+                        ? "border-blue-600 bg-blue-50/50 shadow-xs text-blue-900 font-bold"
+                        : "border-slate-200 bg-white hover:border-slate-300 text-slate-600 font-semibold"
+                    }`}
+                  >
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${ticketTarget === "company" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>
+                      <Building2 size={16} />
+                    </div>
+                    <div className="text-start">
+                      <div className="text-xs font-extrabold">{t("tickets.companyCorporate", "Company / B2B")}</div>
+                      <div className="text-[10px] text-slate-500 leading-none mt-0.5">{t("tickets.standExhibitorPasses", "Stand, booth & team passes")}</div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
               {/* Ticket Tier Name & Small Suggestion Chips */}
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">
@@ -437,7 +516,7 @@ export default function TicketDrawer({
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder={t("tickets.tierNamePlaceholder", "e.g. VIP Access Pass")}
+                  placeholder={ticketTarget === "company" ? t("tickets.tierCompanyPlaceholder", "e.g. Standard Exhibition Stand (9m²)") : t("tickets.tierNamePlaceholder", "e.g. VIP Access Pass")}
                   className="px-4 py-3 border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all bg-white"
                 />
 
@@ -464,6 +543,75 @@ export default function TicketDrawer({
                   })}
                 </div>
               </div>
+
+              {/* Corporate & Booth Settings Panel (Visible only when ticketTarget === "company") */}
+              {ticketTarget === "company" && (
+                <div className="bg-gradient-to-br from-blue-50/60 to-slate-50 border border-blue-200/80 rounded-2xl p-4.5 flex flex-col gap-4 animate-fade-in shadow-xs">
+                  <div className="flex items-center gap-2 text-blue-900">
+                    <Building2 size={16} className="text-blue-600" />
+                    <span className="text-xs font-extrabold uppercase tracking-wider">{t("tickets.corporateConfig", "Corporate & Booth Configuration")}</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Corporate Role */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-slate-700">{t("tickets.corporateRole", "Corporate Category")}</label>
+                      <select
+                        value={companyRole}
+                        onChange={(e) => setCompanyRole(e.target.value)}
+                        className="px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-600"
+                      >
+                        <option value="exhibitor">{t("tickets.roleExhibitor", "Exhibition Stand / Booth")}</option>
+                        <option value="sponsor">{t("tickets.roleSponsor", "Sponsorship Package")}</option>
+                        <option value="corporate">{t("tickets.roleCorporate", "Corporate Delegation / Partner")}</option>
+                      </select>
+                    </div>
+
+                    {/* Included Badges */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-slate-700">{t("tickets.badgesIncluded", "Representative Badges Included")}</label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min="1"
+                          max="100"
+                          value={badgesIncluded}
+                          onChange={(e) => setBadgesIncluded(Math.max(1, parseInt(e.target.value) || 1))}
+                          className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-600"
+                        />
+                        <span className="text-xs font-bold text-slate-500 shrink-0">{t("tickets.passes", "passes")}</span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 font-medium">{t("tickets.badgesIncludedDesc", "Company receives delegation portal link to assign these passes upon approval.")}</p>
+                    </div>
+                  </div>
+
+                  {/* Link Floor Plan for Booth Selection */}
+                  <div className="flex flex-col gap-1.5 pt-2 border-t border-blue-100">
+                    <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <MapPin size={13} className="text-blue-600" />
+                        <span>{t("tickets.linkFloorPlan", "Link Floor Plan for Stand / Booth Selection")}</span>
+                      </span>
+                      <span className="text-[10px] font-semibold text-blue-600">{t("common.optional", "Optional")}</span>
+                    </label>
+                    <select
+                      value={linkedFloorPlanId}
+                      onChange={(e) => setLinkedFloorPlanId(e.target.value)}
+                      className="px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-600"
+                    >
+                      <option value="">{t("tickets.noFloorPlan", "-- No Floor Plan (Standard Registration) --")}</option>
+                      {(floorPlans || []).map((fp) => (
+                        <option key={fp.id} value={fp.id}>
+                          {fp.name || "Floor Plan"} {fp.elements?.length ? `(${fp.elements.filter(el => el.type === 'booth').length} booths)` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-[10px] text-slate-500 font-medium">
+                      {t("tickets.linkFloorPlanDesc", "When linked, exhibitors can pick an available booth directly from this floor plan during registration.")}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Price & Capacity Grid in DZD */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">

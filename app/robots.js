@@ -1,5 +1,5 @@
 export default function robots() {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://eventzone.pro";
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.eventzone.pro";
 
   return {
     rules: [

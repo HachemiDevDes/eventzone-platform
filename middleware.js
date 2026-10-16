@@ -4,6 +4,17 @@ export function middleware(request) {
   const url = request.nextUrl.clone();
   const hostname = request.headers.get("host") || "";
 
+  // Redirect legacy landing subdomain directly to the main platform
+  if (hostname.startsWith("landing.")) {
+    return NextResponse.redirect("https://www.eventzone.pro/", 301);
+  }
+
+  // Redirect /landing route directly to the Eventzone app landing page
+  const pathname = (url.pathname || "").toLowerCase();
+  if (pathname === "/landing" || pathname === "/landing/") {
+    return NextResponse.redirect("https://app.eventzone.pro", 307);
+  }
+
   // Check if hostname is 'ci.eventzone.pro', 'ci.localhost', 'checkin.eventzone.pro', etc.
   const isCiSubdomain =
     hostname.startsWith("ci.") ||
@@ -19,7 +30,6 @@ export function middleware(request) {
   }
 
   // Redirect /en, /fr, and /ar locale prefix paths to root /
-  const pathname = (url.pathname || "").toLowerCase();
   if (pathname === "/en" || pathname === "/fr" || pathname === "/ar") {
     url.pathname = "/";
     return NextResponse.redirect(url, 308);

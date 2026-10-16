@@ -18,7 +18,7 @@ function parseToIso(dateStr, fallbackHour = 8) {
   return undefined;
 }
 
-function ensureAbsoluteUrl(url, baseUrl = "https://eventzone.pro") {
+function ensureAbsoluteUrl(url, baseUrl = "https://www.eventzone.pro") {
   if (!url || typeof url !== "string") return `${baseUrl}/og-image.png`;
   const trimmed = url.trim();
   if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
@@ -28,7 +28,7 @@ function ensureAbsoluteUrl(url, baseUrl = "https://eventzone.pro") {
 
 export async function generateMetadata(props) {
   const searchParams = (await props?.searchParams) || {};
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://eventzone.pro";
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.eventzone.pro";
 
   const eventIdOrSlug = searchParams.eventId || searchParams.id || searchParams.slug || searchParams.event;
   const rawTicketParam = searchParams.ticket || searchParams.ticketId;
@@ -134,15 +134,18 @@ export async function generateMetadata(props) {
 
   // Default homepage metadata
   return {
-    title: "Eventzone - All in One Event Management Platform",
-    description: "The all-in-one event management platform for organizers. Host conferences & expos with interactive floor plans, online ticketing, custom badges, and QR check-in.",
+    title: "Eventzone — Plateforme de Gestion d'Événements & Billetterie | Algeria",
+    description: "De l'inscription en ligne au badge en main. Eventzone est la plateforme tout-en-un de gestion d'événements, billetterie, badges QR, plans interactifs et check-in en Algérie.",
     keywords: [
       "Eventzone",
+      "Plateforme de Gestion d'Événements",
       "events Algeria",
       "conferences Algeria",
       "summits",
       "expositions",
       "salons Algerie",
+      "billetterie algerie",
+      "badges QR",
       "ticketing",
       "event management",
       "event discovery",
@@ -153,8 +156,8 @@ export async function generateMetadata(props) {
       canonical: baseUrl,
     },
     openGraph: {
-      title: "Eventzone - All in One Event Management Platform",
-      description: "The all-in-one event management platform for organizers. Host conferences & expos with interactive floor plans, online ticketing, custom badges, and QR check-in.",
+      title: "Eventzone — Plateforme de Gestion d'Événements & Billetterie | Algeria",
+      description: "De l'inscription en ligne au badge en main. Eventzone est la plateforme tout-en-un de gestion d'événements, billetterie, badges QR, plans interactifs et check-in en Algérie.",
       url: baseUrl,
       siteName: "Eventzone",
       images: [
@@ -165,13 +168,13 @@ export async function generateMetadata(props) {
           alt: "Eventzone",
         },
       ],
-      locale: "en_US",
+      locale: "fr_FR",
       type: "website",
     },
     twitter: {
       card: "summary_large_image",
-      title: "Eventzone - All in One Event Management Platform",
-      description: "The all-in-one event management platform for organizers. Host conferences & expos with interactive floor plans, online ticketing, custom badges, and QR check-in.",
+      title: "Eventzone — Plateforme de Gestion d'Événements & Billetterie | Algeria",
+      description: "De l'inscription en ligne au badge en main. Eventzone est la plateforme tout-en-un de gestion d'événements, billetterie, badges QR, plans interactifs et check-in en Algérie.",
       images: [`${baseUrl}/og-image.png`],
     },
   };
@@ -211,7 +214,7 @@ export default async function Page(props) {
     console.warn("Home page event fetch notice:", err);
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://eventzone.pro";
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.eventzone.pro";
 
   // Google Schema.org WebSite with Sitelinks Searchbox
   const websiteLd = {

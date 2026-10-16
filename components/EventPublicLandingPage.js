@@ -8,7 +8,8 @@ import {
   ExternalLink, Share2, Compass, ShieldCheck, 
   ChevronRight, ChevronLeft, Building2, Check, Download, Mail, X, Globe, Video,
   Star, MessageSquare, Printer, User, Briefcase, Phone, QrCode as QrIcon, FileText,
-  Tag, AlertCircle, RefreshCw, Smartphone, ChevronDown, ChevronUp, Lock, Image as ImageIcon, Play
+  Tag, AlertCircle, RefreshCw, Smartphone, ChevronDown, ChevronUp, Lock, Image as ImageIcon, Play,
+  Store
 } from "lucide-react";
 import QRCode from "qrcode";
 import { useLanguage } from "../lib/i18n";
@@ -19,6 +20,7 @@ import SearchableSelect from "./SearchableSelect";
 import { getLocalizedIndustry } from "../lib/constants";
 import FormImageUploader from "./FormImageUploader";
 import FormFileUploader from "./FormFileUploader";
+import BoothPickerModal from "./BoothPickerModal";
 import { getFormSections, getLocalizedPresetOption } from "../lib/formPresets";
 import { smoothScrollTo } from "../lib/smoothScroll";
 import { getYouTubeEmbedUrl } from "./EventDetailsView";
@@ -121,7 +123,8 @@ export default function EventPublicLandingPage({
   onBackToHome,
   onViewFloorPlan,
   onRegisterForEvent,
-  onOpenAuth
+  onOpenAuth,
+  floorPlans = []
 }) {
   const { t, lang, setLang, isRTL, languages } = useLanguage();
   const curLang = languages.find(l => l.code === lang) || languages[0];
@@ -130,6 +133,13 @@ export default function EventPublicLandingPage({
   const [selectedDay, setSelectedDay] = useState("All");
   const [bookmarkedSessions, setBookmarkedSessions] = useState(new Set());
   const [copiedUrl, setCopiedUrl] = useState(false);
+
+  // Booth Picker Modal state for corporate & exhibitor booth selection
+  const [boothPickerState, setBoothPickerState] = useState({
+    isOpen: false,
+    fieldId: null,
+    targetFloorPlanId: null
+  });
 
   // Dedicated RSVP Modal State: initialized synchronously from URL query param to eliminate delay
   const [showPublicRsvpModal, setShowPublicRsvpModal] = useState(() => {
@@ -1339,6 +1349,17 @@ export default function EventPublicLandingPage({
           }
         }
 
+        const isCompanyTicket = selectedTicket?.ticketTarget === "company";
+        let resolvedBooth = null;
+        if (customAnswers && typeof customAnswers === "object") {
+          for (const [k, v] of Object.entries(customAnswers)) {
+            if (v && typeof v === "object" && (v.boothNumber || v.dimensions)) {
+              resolvedBooth = v;
+              break;
+            }
+          }
+        }
+
         const pass = await onRegisterForEvent(eventId || eventDetails?.id, {
           name: rsvpName || currentUser?.fullName || "Attendee",
           email: rsvpEmail || currentUser?.email || "visitor@eventzone.io",
@@ -1349,7 +1370,11 @@ export default function EventPublicLandingPage({
           photo: badgePhotoUrl || "",
           ticketType: selectedTier,
           ticketId: selectedTicket?.id || null,
-          requiresApproval: Boolean(selectedTicket?.requiresApproval || selectedTicket?.requires_approval),
+          ticketTarget: selectedTicket?.ticketTarget || (isCompanyTicket ? "company" : "individual"),
+          companyRole: selectedTicket?.companyRole || (isCompanyTicket ? "exhibitor" : null),
+          badgesIncluded: selectedTicket?.badgesIncluded || (isCompanyTicket ? 2 : 1),
+          selectedBooth: resolvedBooth,
+          requiresApproval: isCompanyTicket ? true : Boolean(selectedTicket?.requiresApproval || selectedTicket?.requires_approval),
           referralCode: activeRefCode,
           referral_code: activeRefCode,
           influencerId: matchedInfluencer?.id || null,
@@ -2808,13 +2833,29 @@ export default function EventPublicLandingPage({
 
                     <div className="space-y-5 text-start rtl:text-right text-left">
                       <div>
-                        <h3 className="text-lg font-bold text-slate-900">{ticket.name || ticket.tier}</h3>
+                        <div className="flex items-center justify-between gap-2">
+                          <h3 className="text-lg font-bold text-slate-900">{ticket.name || ticket.tier}</h3>
+                          {ticket.ticketTarget === "company" && (
+                            <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-extrabold uppercase border border-blue-200">
+                              Corporate
+                            </span>
+                          )}
+                        </div>
                         {ticket.description && <p className="text-xs text-slate-500 mt-1 leading-relaxed">{ticket.description}</p>}
                       </div>
 
+                      {ticket.ticketTarget === "company" && (
+                        <div className="flex items-center gap-2 p-2.5 rounded-xl bg-blue-50/80 border border-blue-200/70 text-[11px] font-bold text-blue-900">
+                          <Store size={15} className="text-blue-600 shrink-0" />
+                          <span>
+                            {ticket.badgesIncluded || 2} {t("event.representativePassesIncluded", "Representative Passes Included")}
+                          </span>
+                        </div>
+                      )}
+
                       <div className="flex items-baseline gap-1.5">
                         <span className="text-3xl font-black text-slate-900">{priceNum === 0 ? t("common.free", "Free") : <><bdi dir="ltr">{priceNum.toLocaleString()}</bdi> {t("common.dzd", "DZD")}</>}</span>
-                        {priceNum > 0 && <span className="text-xs text-slate-400 font-semibold">{t("event.perAttendee", "/ attendee")}</span>}
+                        {priceNum > 0 && <span className="text-xs text-slate-400 font-semibold">{ticket.ticketTarget === "company" ? t("event.perCompany", "/ company") : t("event.perAttendee", "/ attendee")}</span>}
                       </div>
 
                       {ticket.features && ticket.features.length > 0 && (
@@ -3455,6 +3496,55 @@ export default function EventPublicLandingPage({
                                         />
                                       )}
 
+                                      {field.type === "booth_selection" && (
+                                        <div className="flex flex-col gap-2 mt-1">
+                                          <div className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                                            customAnswers[field.id]
+                                              ? "bg-blue-50/70 border-blue-200"
+                                              : "bg-slate-50 border-slate-200/90"
+                                          }`}>
+                                            <div className="flex items-center gap-3">
+                                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                                                customAnswers[field.id] ? "bg-blue-600 text-white shadow-xs" : "bg-slate-200 text-slate-600"
+                                              }`}>
+                                                <Store size={20} />
+                                              </div>
+                                              <div>
+                                                <div className="text-xs font-black text-slate-900">
+                                                  {customAnswers[field.id] ? (
+                                                    <span className="text-emerald-700 flex items-center gap-1.5 font-extrabold">
+                                                      <Check size={14} className="text-emerald-600" />
+                                                      {t("forms.boothSelected", "Stand")} #{typeof customAnswers[field.id] === 'object' ? customAnswers[field.id].boothNumber : customAnswers[field.id]}
+                                                    </span>
+                                                  ) : (
+                                                    t("forms.noBoothSelectedYet", "No booth selected yet")
+                                                  )}
+                                                </div>
+                                                <div className="text-[11px] text-slate-500 font-medium">
+                                                  {customAnswers[field.id]
+                                                    ? (typeof customAnswers[field.id] === 'object' && customAnswers[field.id].dimensions ? customAnswers[field.id].dimensions : t("forms.boothReservedForApp", "Reserved for this application"))
+                                                    : t("forms.clickToBrowseBooths", "Browse available stands on the interactive venue floor plan")}
+                                                </div>
+                                              </div>
+                                            </div>
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                setBoothPickerState({
+                                                  isOpen: true,
+                                                  fieldId: field.id,
+                                                  targetFloorPlanId: field.floorPlanId || selectedTicket?.linkedFloorPlanId || ""
+                                                });
+                                              }}
+                                              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-2xs flex items-center justify-center gap-2 shrink-0"
+                                            >
+                                              <Store size={14} />
+                                              <span>{customAnswers[field.id] ? t("forms.changeStand", "Change Stand") : t("forms.chooseStand", "Select Stand")}</span>
+                                            </button>
+                                          </div>
+                                        </div>
+                                      )}
+
                                       {["text", "email", "number"].includes(field.type) && field.id !== "f_core_phone" && (
                                         <input
                                           type={field.type}
@@ -3730,6 +3820,55 @@ export default function EventPublicLandingPage({
                                     placeholder={getLocalizedCheckoutFieldPlaceholder(field, t)}
                                     required={field.required}
                                   />
+                                )}
+
+                                {field.type === "booth_selection" && (
+                                  <div className="flex flex-col gap-2 mt-1">
+                                    <div className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                                      customAnswers[field.id]
+                                        ? "bg-blue-50/70 border-blue-200"
+                                        : "bg-slate-50 border-slate-200/90"
+                                    }`}>
+                                      <div className="flex items-center gap-3">
+                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                                          customAnswers[field.id] ? "bg-blue-600 text-white shadow-xs" : "bg-slate-200 text-slate-600"
+                                        }`}>
+                                          <Store size={20} />
+                                        </div>
+                                        <div>
+                                          <div className="text-xs font-black text-slate-900">
+                                            {customAnswers[field.id] ? (
+                                              <span className="text-emerald-700 flex items-center gap-1.5 font-extrabold">
+                                                <Check size={14} className="text-emerald-600" />
+                                                {t("forms.boothSelected", "Stand")} #{typeof customAnswers[field.id] === 'object' ? customAnswers[field.id].boothNumber : customAnswers[field.id]}
+                                              </span>
+                                            ) : (
+                                              t("forms.noBoothSelectedYet", "No booth selected yet")
+                                            )}
+                                          </div>
+                                          <div className="text-[11px] text-slate-500 font-medium">
+                                            {customAnswers[field.id]
+                                              ? (typeof customAnswers[field.id] === 'object' && customAnswers[field.id].dimensions ? customAnswers[field.id].dimensions : t("forms.boothReservedForApp", "Reserved for this application"))
+                                              : t("forms.clickToBrowseBooths", "Browse available stands on the interactive venue floor plan")}
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setBoothPickerState({
+                                            isOpen: true,
+                                            fieldId: field.id,
+                                            targetFloorPlanId: field.floorPlanId || selectedTicket?.linkedFloorPlanId || ""
+                                          });
+                                        }}
+                                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-2xs flex items-center justify-center gap-2 shrink-0"
+                                      >
+                                        <Store size={14} />
+                                        <span>{customAnswers[field.id] ? t("forms.changeStand", "Change Stand") : t("forms.chooseStand", "Select Stand")}</span>
+                                      </button>
+                                    </div>
+                                  </div>
                                 )}
 
                                 {["text", "email", "number"].includes(field.type) && field.id !== "f_core_phone" && (
@@ -4189,6 +4328,23 @@ export default function EventPublicLandingPage({
         existingHeadcount={rsvps.filter(r => (r.status || 'attending').toLowerCase() === 'attending').reduce((sum, r) => sum + 1 + (r.plusOnes || r.plus_ones || 0), 0)}
         onSubmitRSVP={onSubmitRSVP}
         currentUser={currentUser}
+      />
+
+      {/* Booth Picker Modal for Corporate & Exhibitor Stand Selection */}
+      <BoothPickerModal
+        isOpen={boothPickerState.isOpen}
+        onClose={() => setBoothPickerState({ isOpen: false, fieldId: null, targetFloorPlanId: null })}
+        onSelectBooth={(booth) => {
+          if (boothPickerState.fieldId) {
+            setCustomAnswers(prev => ({ ...prev, [boothPickerState.fieldId]: booth }));
+            if (checkoutSectionErrors[boothPickerState.fieldId]) {
+              setCheckoutSectionErrors(prev => ({ ...prev, [boothPickerState.fieldId]: undefined }));
+            }
+          }
+        }}
+        floorPlans={floorPlans}
+        targetFloorPlanId={boothPickerState.targetFloorPlanId}
+        selectedBooth={boothPickerState.fieldId ? customAnswers[boothPickerState.fieldId] : null}
       />
     </div>
   );

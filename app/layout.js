@@ -19,17 +19,17 @@ const cairo = Cairo({
 });
 
 export const metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://eventzone.pro"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://www.eventzone.pro"),
   title: {
-    default: "Eventzone - All in One Event Management Platform",
+    default: "Eventzone — Plateforme de Gestion d'Événements & Billetterie | Algeria",
     template: "%s | Eventzone",
   },
-  description: "The all-in-one event management platform for organizers. Host conferences & expos with interactive floor plans, online ticketing, custom badges, and QR check-in.",
-  keywords: ["Eventzone", "events", "conferences", "summits", "expos", "tickets", "event management", "Algeria"],
+  description: "De l'inscription en ligne au badge en main. Eventzone est la plateforme tout-en-un de gestion d'événements, billetterie, badges QR, plans interactifs et check-in en Algérie.",
+  keywords: ["Eventzone", "Plateforme de Gestion d'Événements", "events", "conferences", "summits", "expos", "tickets", "event management", "Algeria"],
   openGraph: {
-    title: "Eventzone - All in One Event Management Platform",
-    description: "The all-in-one event management platform for organizers. Host conferences & expos with interactive floor plans, online ticketing, custom badges, and QR check-in.",
-    url: "https://eventzone.pro",
+    title: "Eventzone — Plateforme de Gestion d'Événements & Billetterie | Algeria",
+    description: "De l'inscription en ligne au badge en main. Eventzone est la plateforme tout-en-un de gestion d'événements, billetterie, badges QR, plans interactifs et check-in en Algérie.",
+    url: process.env.NEXT_PUBLIC_APP_URL || "https://www.eventzone.pro",
     siteName: "Eventzone",
     images: [
       {

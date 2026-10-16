@@ -6,6 +6,7 @@ import {
   sendExhibitorPacketEmail,
   sendCertificateEmail,
   sendTeamInviteEmail,
+  sendCompanyApprovalDelegationEmail,
   sendEmail
 } from "@/lib/mailer";
 import { getServiceSupabase, verifyOrganizerSession } from "@/lib/apiAuth";
@@ -267,6 +268,26 @@ export async function POST(request) {
           organizerName: rest.organizerName || "Eventzone Organizing Team",
           message: rest.message || rest.notes || "",
           inviteUrl: rest.inviteUrl || "",
+          eventId,
+          ...rest
+        });
+        break;
+      }
+
+      case "company_approval_delegation": {
+        result = await sendCompanyApprovalDelegationEmail({
+          to,
+          companyName: rest.companyName || "Partner Company",
+          contactName: rest.contactName || "Representative",
+          eventTitle: rest.eventTitle || "Eventzone Event",
+          eventDate: rest.eventDate || "",
+          eventLocation: rest.eventLocation || "",
+          standNumber: rest.standNumber || "",
+          standDimensions: rest.standDimensions || "",
+          badgesIncluded: rest.badgesIncluded || 2,
+          delegationUrl: rest.delegationUrl || "",
+          organizerName: rest.organizerName || "Eventzone Organizing Team",
+          subject: finalSubject,
           eventId,
           ...rest
         });
