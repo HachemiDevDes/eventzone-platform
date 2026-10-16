@@ -27,6 +27,7 @@ export default function CompanyDelegationPortal({ event, initialOrg = null, toke
   const [customAnswers, setCustomAnswers] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [assignError, setAssignError] = useState("");
 
   // Resolve matched ticket & delegate form
   const matchedTicket = useMemo(() => {
@@ -115,20 +116,70 @@ export default function CompanyDelegationPortal({ event, initialOrg = null, toke
     }
   };
 
-  // Submit delegate pass assignment
+  // Submit delegate pass assignment with duplicate prevention
   const handleAssignSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.firstName.trim() || !formData.lastName.trim() || !formData.email.trim()) {
-      alert("Please enter First Name, Last Name, and Email.");
+    setAssignError("");
+
+    const normFirst = formData.firstName.trim();
+    const normLast = formData.lastName.trim();
+    const rawFullName = `${normFirst} ${normLast}`.trim();
+    const cleanName = rawFullName.toLowerCase().replace(/\s+/g, ' ');
+    const cleanEmail = formData.email.trim().toLowerCase();
+    const cleanPhone = (formData.phone || '').trim().replace(/\D/g, '');
+
+    if (!normFirst || !normLast || !cleanEmail) {
+      const msg = "Please enter First Name, Last Name, and Email.";
+      setAssignError(msg);
+      alert(msg);
       return;
     }
 
-    // Validate custom required questions
+    // 1. Validate custom required questions
     for (const q of customQuestions) {
       const key = q.id || q.label;
       if (q.required && (!customAnswers[key] || !String(customAnswers[key]).trim())) {
-        alert(`Please answer required field: ${q.label}`);
+        const msg = `Please answer required field: ${q.label}`;
+        setAssignError(msg);
+        alert(msg);
         return;
+      }
+    }
+
+    // 2. Prevent duplicate passes by Name, Email, or Phone among already assigned passes
+    const currentDelegatesList = Array.isArray(delegates) ? delegates : [];
+    for (const d of currentDelegatesList) {
+      const dFirst = (d.firstName || '').trim();
+      const dLast = (d.lastName || '').trim();
+      const dFullName = (d.name || `${dFirst} ${dLast}`).trim();
+      const dCleanName = dFullName.toLowerCase().replace(/\s+/g, ' ');
+      const dEmail = (d.email || '').trim().toLowerCase();
+      const dPhone = (d.phone || '').trim().replace(/\D/g, '');
+
+      // Name uniqueness check
+      if (cleanName && dCleanName && cleanName === dCleanName) {
+        const msg = `A representative pass has already been assigned to "${dFullName}". Each pass must have a unique name.`;
+        setAssignError(msg);
+        alert(msg);
+        return;
+      }
+
+      // Email uniqueness check
+      if (cleanEmail && dEmail && cleanEmail === dEmail) {
+        const msg = `A representative pass has already been assigned to "${d.email}". Each pass must have a unique email address.`;
+        setAssignError(msg);
+        alert(msg);
+        return;
+      }
+
+      // Phone number uniqueness check
+      if (cleanPhone && dPhone && cleanPhone.length >= 4 && dPhone.length >= 4) {
+        if (cleanPhone === dPhone || (cleanPhone.length >= 8 && dPhone.length >= 8 && (cleanPhone.endsWith(dPhone.slice(-8)) || dPhone.endsWith(cleanPhone.slice(-8))))) {
+          const msg = `A representative pass has already been assigned with phone number "${d.phone}". Each pass must have a unique phone number.`;
+          setAssignError(msg);
+          alert(msg);
+          return;
+        }
       }
     }
 
@@ -138,6 +189,7 @@ export default function CompanyDelegationPortal({ event, initialOrg = null, toke
     try {
       const delegatePayload = {
         ...formData,
+        name: rawFullName,
         customAnswers
       };
       const result = await assignCompanyDelegate(org, delegatePayload, event?.id);
@@ -153,10 +205,13 @@ export default function CompanyDelegationPortal({ event, initialOrg = null, toke
       });
       setCustomAnswers({});
       setSubmitSuccess(true);
+      setAssignError("");
       setTimeout(() => setSubmitSuccess(false), 4000);
     } catch (err) {
       console.error("Failed to assign representative pass:", err);
-      alert("Failed to assign pass: " + err.message);
+      const msg = err.message || "Failed to assign pass. Please try again.";
+      setAssignError(msg);
+      alert(msg);
     } finally {
       setSubmitting(false);
     }
@@ -345,6 +400,15 @@ export default function CompanyDelegationPortal({ event, initialOrg = null, toke
                   <CheckCircle2 size={20} className="text-emerald-600 shrink-0" />
                   <p className="font-semibold">
                     Representative badge pass successfully issued and added to event roster!
+                  </p>
+                </div>
+              )}
+
+              {assignError && (
+                <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 text-xs text-rose-800 flex items-center gap-3 animate-fade-in">
+                  <AlertCircle size={20} className="text-rose-600 shrink-0" />
+                  <p className="font-semibold">
+                    {assignError}
                   </p>
                 </div>
               )}

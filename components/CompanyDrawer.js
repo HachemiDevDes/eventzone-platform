@@ -578,6 +578,33 @@ export default function CompanyDrawer({
       setErrorMessage("Please provide a full name and email for the new personnel.");
       return;
     }
+
+    const normStaffName = newStaffName.trim().toLowerCase().replace(/\s+/g, ' ');
+    const normStaffEmail = newStaffEmail.trim().toLowerCase();
+    const normStaffPhone = (newStaffPhone || '').trim().replace(/\D/g, '');
+
+    // Duplicate validation against already assigned personnel
+    for (const p of (assignedPersonnel || [])) {
+      const pName = (p.name || '').trim().toLowerCase().replace(/\s+/g, ' ');
+      const pEmail = (p.email || '').trim().toLowerCase();
+      const pPhone = (p.phone || '').trim().replace(/\D/g, '');
+
+      if (normStaffName && pName && normStaffName === pName) {
+        setErrorMessage(`Personnel with name "${p.name}" is already assigned to this company. Each pass must have a unique name.`);
+        return;
+      }
+      if (normStaffEmail && pEmail && normStaffEmail === pEmail) {
+        setErrorMessage(`Personnel with email "${p.email}" is already assigned to this company. Each pass must have a unique email address.`);
+        return;
+      }
+      if (normStaffPhone && pPhone && normStaffPhone.length >= 4 && pPhone.length >= 4) {
+        if (normStaffPhone === pPhone || (normStaffPhone.length >= 8 && pPhone.length >= 8 && (normStaffPhone.endsWith(pPhone.slice(-8)) || pPhone.endsWith(normStaffPhone.slice(-8))))) {
+          setErrorMessage(`Personnel with phone number "${p.phone}" is already assigned to this company. Each pass must have a unique phone number.`);
+          return;
+        }
+      }
+    }
+
     if (isQuotaReached) {
       setErrorMessage(`Cannot register more personnel. Staff badge quota reached (${assignedPersonnel.length} of ${maxStaffBadges}). Increase the Staff Badge Count to add more.`);
       return;
