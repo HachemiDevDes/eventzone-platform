@@ -17,6 +17,8 @@ import {
   ChevronRight,
   FileCheck,
   ArrowRight,
+  ArrowLeft,
+  Mail,
   Clock,
   CheckCircle2,
   Loader2,
@@ -191,6 +193,8 @@ export default function TicketDrawer({
 
   // Registration Form Binding
   const [selectedFormId, setSelectedFormId] = useState("default");
+  const [selectedDelegateFormId, setSelectedDelegateFormId] = useState("default");
+  const [corporateFormStep, setCorporateFormStep] = useState("company"); // 'company' | 'delegate'
 
   // Badge Design State
   const [badgeType, setBadgeType] = useState("thermal_qr"); // 'thermal_qr' | 'a4'
@@ -388,6 +392,7 @@ export default function TicketDrawer({
   };
 
   const activeFormObj = activeForms.find(f => f.id === selectedFormId);
+  const activeDelegateFormObj = activeForms.find(f => f.id === selectedDelegateFormId);
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end animate-fade-in">
@@ -1043,143 +1048,443 @@ export default function TicketDrawer({
              ══════════════════════════════════════════════════════════════════ */}
           {activeTab === "form" && (
             <div className="flex flex-col gap-5 animate-fade-in">
-              <div className="bg-blue-50/70 border border-blue-200 rounded-2xl p-4 flex items-start gap-3.5">
-                {ticketTarget === "company" ? (
-                  <Building2 className="text-blue-600 shrink-0 mt-0.5" size={18} />
-                ) : (
-                  <FileCheck className="text-blue-600 shrink-0 mt-0.5" size={18} />
-                )}
-                <div className="text-xs">
-                  <div className="font-bold text-blue-950">
-                    {ticketTarget === "company"
-                      ? t("tickets.corpQuestionnaireTitle", "Corporate Registration & Stand Intake")
-                      : t("tickets.regQuestionnaireTitle", "Registration Questionnaire")}
-                  </div>
-                  <div className="text-blue-800/80 mt-0.5 leading-relaxed">
-                    {ticketTarget === "company"
-                      ? t("tickets.corpQuestionnaireDesc", "Select which registration form companies & exhibitors must complete when applying for or booking this corporate package.")
-                      : t("tickets.regQuestionnaireDesc", "Select which registration questionnaire attendees must complete when applying for or purchasing this ticket tier.")}
-                  </div>
-                </div>
-              </div>
+              {ticketTarget === "company" ? (
+                <>
+                  {/* Two-step Header Stepper for Corporate Ticket Forms */}
+                  <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-2 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCorporateFormStep("company")}
+                      className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                        corporateFormStep === "company"
+                          ? "bg-white text-blue-900 shadow-xs border border-blue-200"
+                          : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                      }`}
+                    >
+                      <span className={`w-5 h-5 rounded-full text-[11px] font-black flex items-center justify-center ${
+                        corporateFormStep === "company" ? "bg-blue-600 text-white" : "bg-slate-200 text-slate-700"
+                      }`}>
+                        1
+                      </span>
+                      <Building2 size={14} className={corporateFormStep === "company" ? "text-blue-600" : "text-slate-400"} />
+                      <span>{t("tickets.step1CompanyForm", "1. Company Registration Form")}</span>
+                      {selectedFormId !== "default" && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+                      )}
+                    </button>
 
-              {/* Form Options List */}
-              <div className="flex flex-col gap-3">
-                {/* Standard Default Form */}
-                <div
-                  onClick={() => setSelectedFormId("default")}
-                  className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-start justify-between ${
-                    selectedFormId === "default"
-                      ? "border-blue-600 bg-blue-50/30 shadow-xs"
-                      : "border-slate-200 bg-white hover:border-slate-300"
-                  }`}
-                >
-                  <div className="flex items-start gap-3.5">
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${selectedFormId === "default" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>
-                      {ticketTarget === "company" ? <Building2 size={17} /> : <FileText size={17} />}
-                    </div>
-                    <div>
-                      <div className="text-sm font-bold text-slate-900">
-                        {ticketTarget === "company"
-                          ? t("tickets.standardCorpRegForm", "Standard Corporate & Exhibitor Registration (Default)")
-                          : t("tickets.standardRegForm", "Standard Event Registration (Default)")}
-                      </div>
-                      <div className="text-xs text-slate-500 mt-0.5">
-                        {ticketTarget === "company"
-                          ? t("tickets.standardCorpRegDesc", "Captures Company Name, Industry, Contact Liaison, Logo, Stand Requirements & Representative Allotment.")
-                          : t("tickets.standardRegDesc", "Captures Full Name & Email Address with instant badge generation.")}
-                      </div>
-                      <div className="flex items-center gap-2 mt-2">
-                        {ticketTarget === "company" ? (
-                          <>
-                            <span className="text-[10px] font-bold bg-blue-100/70 text-blue-800 px-2.5 py-0.5 rounded-md">
-                              {t("tickets.corpProfileTag", "Corporate Profile")}
-                            </span>
-                            <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-0.5 rounded-md">
-                              {t("tickets.standSelectionTag", "Stand Selection")}
-                            </span>
-                            <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-md">
-                              {t("tickets.delegationPortalTag", "Delegation Portal")}
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-md">{t("tickets.twoStandardFields", "2 Standard Fields")}</span>
-                            <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-md">{t("tickets.fastIntake", "Fast Intake")}</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
+                    <ChevronRight size={14} className="text-slate-400 shrink-0" />
+
+                    <button
+                      type="button"
+                      onClick={() => setCorporateFormStep("delegate")}
+                      className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                        corporateFormStep === "delegate"
+                          ? "bg-white text-indigo-900 shadow-xs border border-indigo-200"
+                          : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                      }`}
+                    >
+                      <span className={`w-5 h-5 rounded-full text-[11px] font-black flex items-center justify-center ${
+                        corporateFormStep === "delegate" ? "bg-indigo-600 text-white" : "bg-slate-200 text-slate-700"
+                      }`}>
+                        2
+                      </span>
+                      <Mail size={14} className={corporateFormStep === "delegate" ? "text-indigo-600" : "text-slate-400"} />
+                      <span>{t("tickets.step2PassesForm", "2. Passes Delegation Form")}</span>
+                      {selectedDelegateFormId !== "default" && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-600"></span>
+                      )}
+                    </button>
                   </div>
-                  {selectedFormId === "default" && (
-                    <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0">
-                      <Check size={12} />
+
+                  {corporateFormStep === "company" ? (
+                    /* Step 1: Company Registration & Stand Intake Form */
+                    <div className="flex flex-col gap-4 animate-fade-in">
+                      <div className="bg-blue-50/70 border border-blue-200 rounded-2xl p-4 flex items-start gap-3.5">
+                        <Building2 className="text-blue-600 shrink-0 mt-0.5" size={18} />
+                        <div className="text-xs">
+                          <div className="font-bold text-blue-950 flex items-center gap-2">
+                            <span>{t("tickets.corpQuestionnaireTitle", "Corporate Registration & Stand Intake (Step 1 of 2)")}</span>
+                            <span className="text-[10px] bg-blue-200/70 text-blue-900 px-2 py-0.5 rounded-full font-bold">Public Booking Form</span>
+                          </div>
+                          <div className="text-blue-800/80 mt-1 leading-relaxed">
+                            {t("tickets.corpQuestionnaireDesc", "Select which registration form companies & exhibitors must complete when applying for or booking this corporate package on the event website.")}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Company Form Options List */}
+                      <div className="flex flex-col gap-3">
+                        {/* Standard Default Form */}
+                        <div
+                          onClick={() => setSelectedFormId("default")}
+                          className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-start justify-between ${
+                            selectedFormId === "default"
+                              ? "border-blue-600 bg-blue-50/30 shadow-xs"
+                              : "border-slate-200 bg-white hover:border-slate-300"
+                          }`}
+                        >
+                          <div className="flex items-start gap-3.5">
+                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${selectedFormId === "default" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>
+                              <Building2 size={17} />
+                            </div>
+                            <div>
+                              <div className="text-sm font-bold text-slate-900">
+                                {t("tickets.standardCorpRegForm", "Standard Corporate & Exhibitor Registration (Default)")}
+                              </div>
+                              <div className="text-xs text-slate-500 mt-0.5">
+                                {t("tickets.standardCorpRegDesc", "Captures Company Name, Industry, Contact Liaison, Logo, Stand Requirements & Representative Allotment.")}
+                              </div>
+                              <div className="flex items-center gap-2 mt-2">
+                                <span className="text-[10px] font-bold bg-blue-100/70 text-blue-800 px-2.5 py-0.5 rounded-md">
+                                  {t("tickets.corpProfileTag", "Corporate Profile")}
+                                </span>
+                                <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-0.5 rounded-md">
+                                  {t("tickets.standSelectionTag", "Stand Selection")}
+                                </span>
+                                <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-md">
+                                  {t("tickets.delegationPortalTag", "Delegation Portal")}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          {selectedFormId === "default" && (
+                            <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0">
+                              <Check size={12} />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Custom User Forms for Company */}
+                        {activeForms.map((form) => {
+                          const isSelected = selectedFormId === form.id;
+                          const fieldCount = form.fields?.length || 0;
+                          return (
+                            <div
+                              key={form.id}
+                              onClick={() => setSelectedFormId(form.id)}
+                              className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-start justify-between ${
+                                isSelected
+                                  ? "border-blue-600 bg-blue-50/30 shadow-xs"
+                                  : "border-slate-200 bg-white hover:border-slate-300"
+                              }`}
+                            >
+                              <div className="flex items-start gap-3.5">
+                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${isSelected ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>
+                                  <FileText size={17} />
+                                </div>
+                                <div>
+                                  <div className="text-sm font-bold text-slate-900">{form.title}</div>
+                                  <div className="text-xs text-slate-500 mt-0.5 line-clamp-1">{form.description || t("tickets.customRegDesc", "Custom registration questionnaire")}</div>
+                                  <div className="flex items-center gap-2 mt-2">
+                                    <span className="text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-0.5 rounded-md">
+                                      {t("tickets.questionsCount", "{count} Questions", { count: fieldCount })}
+                                    </span>
+                                    <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-md capitalize">
+                                      {form.type?.replace("_", " ") || t("tickets.customForm", "Custom Form")}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                              {isSelected && (
+                                <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0">
+                                  <Check size={12} />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Live Preview of Selected Company Form */}
+                      {activeFormObj && activeFormObj.fields && activeFormObj.fields.length > 0 && (
+                        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col gap-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                              {t("tickets.previewFields", "Company Form Preview ({count} Fields)", { count: activeFormObj.fields.length })}
+                            </span>
+                            <span className="text-xs font-bold text-blue-600">{activeFormObj.title}</span>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            {activeFormObj.fields.map((field, fIdx) => (
+                              <div key={fIdx} className="bg-white border border-slate-200 rounded-xl p-2.5 text-xs">
+                                <div className="font-bold text-slate-800 flex items-center justify-between">
+                                  <span className="truncate">{field.label}</span>
+                                  {field.required && <span className="text-rose-500 text-[10px] font-bold shrink-0">*</span>}
+                                </div>
+                                <div className="text-[10px] text-slate-400 capitalize mt-0.5">{t("tickets.fieldType", "{type} Field", { type: field.type })}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Navigation to Step 2 */}
+                      <div className="pt-2 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => setCorporateFormStep("delegate")}
+                          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs flex items-center gap-2 transition-all shadow-xs cursor-pointer"
+                        >
+                          <span>{t("tickets.nextPassesForm", "Continue to Passes Registration Form")}</span>
+                          <ArrowRight size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Step 2: Passes Registration Form (sent via email) */
+                    <div className="flex flex-col gap-4 animate-fade-in">
+                      <div className="bg-indigo-50/70 border border-indigo-200 rounded-2xl p-4 flex items-start gap-3.5">
+                        <Mail className="text-indigo-600 shrink-0 mt-0.5" size={18} />
+                        <div className="text-xs">
+                          <div className="font-bold text-indigo-950 flex items-center gap-2">
+                            <span>{t("tickets.delegateQuestionnaireTitle", "Representative Passes Intake Form (Step 2 of 2)")}</span>
+                            <span className="text-[10px] bg-indigo-200/70 text-indigo-900 px-2 py-0.5 rounded-full font-bold">Email Delegation Portal</span>
+                          </div>
+                          <div className="text-indigo-800/80 mt-1 leading-relaxed">
+                            {t("tickets.delegateQuestionnaireDesc", "Select which registration questionnaire the company's team representatives must complete when claiming their badge passes via the portal link sent to them.")}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Passes Form Options List */}
+                      <div className="flex flex-col gap-3">
+                        {/* Standard Default Delegate Form */}
+                        <div
+                          onClick={() => setSelectedDelegateFormId("default")}
+                          className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-start justify-between ${
+                            selectedDelegateFormId === "default"
+                              ? "border-indigo-600 bg-indigo-50/30 shadow-xs"
+                              : "border-slate-200 bg-white hover:border-slate-300"
+                          }`}
+                        >
+                          <div className="flex items-start gap-3.5">
+                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${selectedDelegateFormId === "default" ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-500"}`}>
+                              <Users size={17} />
+                            </div>
+                            <div>
+                              <div className="text-sm font-bold text-slate-900">
+                                {t("tickets.standardDelegateRegForm", "Standard Representative Badge Pass (Default)")}
+                              </div>
+                              <div className="text-xs text-slate-500 mt-0.5">
+                                {t("tickets.standardDelegateRegDesc", "Captures representative's Full Name, Job Title, Work Email & Phone Number with personalized QR pass.")}
+                              </div>
+                              <div className="flex items-center gap-2 mt-2">
+                                <span className="text-[10px] font-bold bg-indigo-100/70 text-indigo-800 px-2.5 py-0.5 rounded-md">
+                                  {t("tickets.repContactTag", "Representative Contact")}
+                                </span>
+                                <span className="text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200 px-2.5 py-0.5 rounded-md">
+                                  {t("tickets.standRoleTag", "Stand Role & Title")}
+                                </span>
+                                <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-md">
+                                  {t("tickets.fastIssuance", "Fast Pass Issuance")}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          {selectedDelegateFormId === "default" && (
+                            <div className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center shrink-0">
+                              <Check size={12} />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Custom User Forms for Delegates */}
+                        {activeForms.map((form) => {
+                          const isSelected = selectedDelegateFormId === form.id;
+                          const fieldCount = form.fields?.length || 0;
+                          return (
+                            <div
+                              key={form.id}
+                              onClick={() => setSelectedDelegateFormId(form.id)}
+                              className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-start justify-between ${
+                                isSelected
+                                  ? "border-indigo-600 bg-indigo-50/30 shadow-xs"
+                                  : "border-slate-200 bg-white hover:border-slate-300"
+                              }`}
+                            >
+                              <div className="flex items-start gap-3.5">
+                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${isSelected ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-500"}`}>
+                                  <FileText size={17} />
+                                </div>
+                                <div>
+                                  <div className="text-sm font-bold text-slate-900">{form.title}</div>
+                                  <div className="text-xs text-slate-500 mt-0.5 line-clamp-1">{form.description || t("tickets.customRegDesc", "Custom registration questionnaire")}</div>
+                                  <div className="flex items-center gap-2 mt-2">
+                                    <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-0.5 rounded-md">
+                                      {t("tickets.questionsCount", "{count} Questions", { count: fieldCount })}
+                                    </span>
+                                    <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-md capitalize">
+                                      {form.type?.replace("_", " ") || t("tickets.customForm", "Custom Form")}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                              {isSelected && (
+                                <div className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center shrink-0">
+                                  <Check size={12} />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Live Preview of Selected Delegate Form */}
+                      {activeDelegateFormObj && activeDelegateFormObj.fields && activeDelegateFormObj.fields.length > 0 && (
+                        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col gap-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                              {t("tickets.previewDelegateFields", "Passes Form Preview ({count} Fields)", { count: activeDelegateFormObj.fields.length })}
+                            </span>
+                            <span className="text-xs font-bold text-indigo-600">{activeDelegateFormObj.title}</span>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            {activeDelegateFormObj.fields.map((field, fIdx) => (
+                              <div key={fIdx} className="bg-white border border-slate-200 rounded-xl p-2.5 text-xs">
+                                <div className="font-bold text-slate-800 flex items-center justify-between">
+                                  <span className="truncate">{field.label}</span>
+                                  {field.required && <span className="text-rose-500 text-[10px] font-bold shrink-0">*</span>}
+                                </div>
+                                <div className="text-[10px] text-slate-400 capitalize mt-0.5">{t("tickets.fieldType", "{type} Field", { type: field.type })}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Navigation between steps */}
+                      <div className="pt-2 flex items-center justify-between">
+                        <button
+                          type="button"
+                          onClick={() => setCorporateFormStep("company")}
+                          className="text-slate-600 hover:text-slate-900 font-bold py-2.5 px-3 rounded-xl text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                          <ArrowLeft size={14} />
+                          <span>{t("tickets.backToCompanyForm", "Back to Company Form")}</span>
+                        </button>
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl">
+                          <CheckCircle2 size={14} className="text-emerald-600" />
+                          <span>{t("tickets.bothFormsConfigured", "Both Forms Configured")}</span>
+                        </div>
+                      </div>
                     </div>
                   )}
-                </div>
+                </>
+              ) : (
+                /* Individual Ticket Form Selector (Preserved) */
+                <>
+                  <div className="bg-blue-50/70 border border-blue-200 rounded-2xl p-4 flex items-start gap-3.5">
+                    <FileCheck className="text-blue-600 shrink-0 mt-0.5" size={18} />
+                    <div className="text-xs">
+                      <div className="font-bold text-blue-950">
+                        {t("tickets.regQuestionnaireTitle", "Registration Questionnaire")}
+                      </div>
+                      <div className="text-blue-800/80 mt-0.5 leading-relaxed">
+                        {t("tickets.regQuestionnaireDesc", "Select which registration questionnaire attendees must complete when applying for or purchasing this ticket tier.")}
+                      </div>
+                    </div>
+                  </div>
 
-                {/* Custom User Forms */}
-                {activeForms.map((form) => {
-                  const isSelected = selectedFormId === form.id;
-                  const fieldCount = form.fields?.length || 0;
-                  return (
+                  {/* Form Options List */}
+                  <div className="flex flex-col gap-3">
+                    {/* Standard Default Form */}
                     <div
-                      key={form.id}
-                      onClick={() => setSelectedFormId(form.id)}
+                      onClick={() => setSelectedFormId("default")}
                       className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-start justify-between ${
-                        isSelected
+                        selectedFormId === "default"
                           ? "border-blue-600 bg-blue-50/30 shadow-xs"
                           : "border-slate-200 bg-white hover:border-slate-300"
                       }`}
                     >
                       <div className="flex items-start gap-3.5">
-                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${isSelected ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${selectedFormId === "default" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>
                           <FileText size={17} />
                         </div>
                         <div>
-                          <div className="text-sm font-bold text-slate-900">{form.title}</div>
-                          <div className="text-xs text-slate-500 mt-0.5 line-clamp-1">{form.description || t("tickets.customRegDesc", "Custom registration questionnaire")}</div>
+                          <div className="text-sm font-bold text-slate-900">
+                            {t("tickets.standardRegForm", "Standard Event Registration (Default)")}
+                          </div>
+                          <div className="text-xs text-slate-500 mt-0.5">
+                            {t("tickets.standardRegDesc", "Captures Full Name & Email Address with instant badge generation.")}
+                          </div>
                           <div className="flex items-center gap-2 mt-2">
-                            <span className="text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-0.5 rounded-md">
-                              {t("tickets.questionsCount", "{count} Questions", { count: fieldCount })}
-                            </span>
-                            <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-md capitalize">
-                              {form.type?.replace("_", " ") || t("tickets.customForm", "Custom Form")}
-                            </span>
+                            <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-md">{t("tickets.twoStandardFields", "2 Standard Fields")}</span>
+                            <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-md">{t("tickets.fastIntake", "Fast Intake")}</span>
                           </div>
                         </div>
                       </div>
-                      {isSelected && (
+                      {selectedFormId === "default" && (
                         <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0">
                           <Check size={12} />
                         </div>
                       )}
                     </div>
-                  );
-                })}
-              </div>
 
-              {/* Live Preview of Selected Form */}
-              {activeFormObj && activeFormObj.fields && activeFormObj.fields.length > 0 && (
-                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col gap-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                      {t("tickets.previewFields", "Questionnaire Preview ({count} Fields)", { count: activeFormObj.fields.length })}
-                    </span>
-                    <span className="text-xs font-bold text-blue-600">{activeFormObj.title}</span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    {activeFormObj.fields.map((field, fIdx) => (
-                      <div key={fIdx} className="bg-white border border-slate-200 rounded-xl p-2.5 text-xs">
-                        <div className="font-bold text-slate-800 flex items-center justify-between">
-                          <span className="truncate">{field.label}</span>
-                          {field.required && <span className="text-rose-500 text-[10px] font-bold shrink-0">*</span>}
+                    {/* Custom User Forms */}
+                    {activeForms.map((form) => {
+                      const isSelected = selectedFormId === form.id;
+                      const fieldCount = form.fields?.length || 0;
+                      return (
+                        <div
+                          key={form.id}
+                          onClick={() => setSelectedFormId(form.id)}
+                          className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-start justify-between ${
+                            isSelected
+                              ? "border-blue-600 bg-blue-50/30 shadow-xs"
+                              : "border-slate-200 bg-white hover:border-slate-300"
+                          }`}
+                        >
+                          <div className="flex items-start gap-3.5">
+                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${isSelected ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>
+                              <FileText size={17} />
+                            </div>
+                            <div>
+                              <div className="text-sm font-bold text-slate-900">{form.title}</div>
+                              <div className="text-xs text-slate-500 mt-0.5 line-clamp-1">{form.description || t("tickets.customRegDesc", "Custom registration questionnaire")}</div>
+                              <div className="flex items-center gap-2 mt-2">
+                                <span className="text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-0.5 rounded-md">
+                                  {t("tickets.questionsCount", "{count} Questions", { count: fieldCount })}
+                                </span>
+                                <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-md capitalize">
+                                  {form.type?.replace("_", " ") || t("tickets.customForm", "Custom Form")}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          {isSelected && (
+                            <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0">
+                              <Check size={12} />
+                            </div>
+                          )}
                         </div>
-                        <div className="text-[10px] text-slate-400 capitalize mt-0.5">{t("tickets.fieldType", "{type} Field", { type: field.type })}</div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
-                </div>
+
+                  {/* Live Preview of Selected Form */}
+                  {activeFormObj && activeFormObj.fields && activeFormObj.fields.length > 0 && (
+                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col gap-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                          {t("tickets.previewFields", "Questionnaire Preview ({count} Fields)", { count: activeFormObj.fields.length })}
+                        </span>
+                        <span className="text-xs font-bold text-blue-600">{activeFormObj.title}</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        {activeFormObj.fields.map((field, fIdx) => (
+                          <div key={fIdx} className="bg-white border border-slate-200 rounded-xl p-2.5 text-xs">
+                            <div className="font-bold text-slate-800 flex items-center justify-between">
+                              <span className="truncate">{field.label}</span>
+                              {field.required && <span className="text-rose-500 text-[10px] font-bold shrink-0">*</span>}
+                            </div>
+                            <div className="text-[10px] text-slate-400 capitalize mt-0.5">{t("tickets.fieldType", "{type} Field", { type: field.type })}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
 
               {/* Form Builder Shortcut */}

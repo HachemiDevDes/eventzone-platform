@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { 
   Building2, Store, Ticket, Users, Check, Clock, AlertCircle, 
   Plus, Mail, Phone, User, QrCode, ArrowRight, Download, CheckCircle2,
@@ -9,8 +9,9 @@ import {
 import QRCode from "qrcode";
 import { fetchOrganizationByDelegationToken, assignCompanyDelegate } from "../lib/db";
 import { formatBoothDisplay, getCorporateRoleLabel, getCorporateRoleBadgePass } from "../lib/constants";
+import SearchableSelect from "./SearchableSelect";
 
-export default function CompanyDelegationPortal({ event, initialOrg = null, token = "" }) {
+export default function CompanyDelegationPortal({ event, initialOrg = null, token = "", forms = [], tickets = [] }) {
   const [org, setOrg] = useState(initialOrg);
   const [loading, setLoading] = useState(!initialOrg);
   const [error, setError] = useState(null);
@@ -23,8 +24,40 @@ export default function CompanyDelegationPortal({ event, initialOrg = null, toke
     phone: "",
     jobTitle: ""
   });
+  const [customAnswers, setCustomAnswers] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+
+  // Resolve matched ticket & delegate form
+  const matchedTicket = useMemo(() => {
+    return (tickets || []).find(t => 
+      (t.id && (t.id === org?.ticketTierId || t.id === org?.fiscalDetails?.ticketTierId)) ||
+      (t.name && (t.name === org?.ticketType || t.name === org?.fiscalDetails?.ticketType))
+    ) || null;
+  }, [tickets, org]);
+
+  const activeDelegateFormId = useMemo(() => {
+    return org?.delegateFormId || 
+      org?.fiscalDetails?.delegateFormId || 
+      matchedTicket?.delegateFormId || 
+      matchedTicket?.badgeSettings?.delegateFormId || 
+      null;
+  }, [org, matchedTicket]);
+
+  const activeDelegateForm = useMemo(() => {
+    if (!activeDelegateFormId || activeDelegateFormId === "default") return null;
+    return (forms || []).find(f => f.id === activeDelegateFormId) || null;
+  }, [forms, activeDelegateFormId]);
+
+  const customQuestions = useMemo(() => {
+    if (!activeDelegateForm || !Array.isArray(activeDelegateForm.fields)) return [];
+    const standardKeys = ["firstname", "first_name", "lastname", "last_name", "fullname", "full_name", "email", "phone", "jobtitle", "job_title", "title", "position"];
+    return activeDelegateForm.fields.filter(f => {
+      const normalizedLabel = (f.label || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+      const normalizedId = (f.id || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+      return !standardKeys.includes(normalizedLabel) && !standardKeys.includes(normalizedId);
+    });
+  }, [activeDelegateForm]);
 
   // QR preview state
   const [viewingPass, setViewingPass] = useState(null);
@@ -90,11 +123,24 @@ export default function CompanyDelegationPortal({ event, initialOrg = null, toke
       return;
     }
 
+    // Validate custom required questions
+    for (const q of customQuestions) {
+      const key = q.id || q.label;
+      if (q.required && (!customAnswers[key] || !String(customAnswers[key]).trim())) {
+        alert(`Please answer required field: ${q.label}`);
+        return;
+      }
+    }
+
     setSubmitting(true);
     setSubmitSuccess(false);
 
     try {
-      const result = await assignCompanyDelegate(org, formData, event?.id);
+      const delegatePayload = {
+        ...formData,
+        customAnswers
+      };
+      const result = await assignCompanyDelegate(org, delegatePayload, event?.id);
       if (result?.organization) {
         setOrg(result.organization);
       }
@@ -105,6 +151,7 @@ export default function CompanyDelegationPortal({ event, initialOrg = null, toke
         phone: "",
         jobTitle: ""
       });
+      setCustomAnswers({});
       setSubmitSuccess(true);
       setTimeout(() => setSubmitSuccess(false), 4000);
     } catch (err) {
@@ -276,14 +323,21 @@ export default function CompanyDelegationPortal({ event, initialOrg = null, toke
           {/* Left Column: Form to assign passes */}
           <div className="lg:col-span-5">
             <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-6 sm:p-7 space-y-5 sticky top-20">
-              <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-                <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-                  <User size={18} />
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                    <User size={18} />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-extrabold text-slate-900">Assign Representative Pass</h3>
+                    <p className="text-[11px] text-slate-500 font-medium">Add a team member to receive an exhibitor pass</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-base font-extrabold text-slate-900">Assign Representative Pass</h3>
-                  <p className="text-[11px] text-slate-500 font-medium">Add a team member to receive an exhibitor pass</p>
-                </div>
+                {activeDelegateForm && (
+                  <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded-full">
+                    {activeDelegateForm.title}
+                  </span>
+                )}
               </div>
 
               {submitSuccess && (
@@ -371,6 +425,87 @@ export default function CompanyDelegationPortal({ event, initialOrg = null, toke
                       className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 focus:bg-white transition-all"
                     />
                   </div>
+
+                  {/* Custom Questions from Passes Registration Form */}
+                  {customQuestions.length > 0 && (
+                    <div className="space-y-3 pt-2 border-t border-slate-100">
+                      <div className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                        Additional Badge Details
+                      </div>
+                      {customQuestions.map((q) => {
+                        const key = q.id || q.label;
+                        const val = customAnswers[key] || "";
+
+                        if (q.type === "select" || q.type === "dropdown") {
+                          const rawOpts = Array.isArray(q.options) 
+                            ? q.options 
+                            : (typeof q.options === "string" ? q.options.split(",").map(s => s.trim()) : []);
+                          return (
+                            <div key={key}>
+                              <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                                {q.label} {q.required && <span className="text-rose-500">*</span>}
+                              </label>
+                              <SearchableSelect
+                                value={val}
+                                onChange={(newVal) => setCustomAnswers(prev => ({ ...prev, [key]: newVal }))}
+                                options={rawOpts}
+                                placeholder={q.placeholder || `Select ${q.label}...`}
+                              />
+                            </div>
+                          );
+                        }
+
+                        if (q.type === "textarea") {
+                          return (
+                            <div key={key}>
+                              <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                                {q.label} {q.required && <span className="text-rose-500">*</span>}
+                              </label>
+                              <textarea
+                                rows={2}
+                                value={val}
+                                onChange={(e) => setCustomAnswers(prev => ({ ...prev, [key]: e.target.value }))}
+                                placeholder={q.placeholder || ""}
+                                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 focus:bg-white transition-all resize-none"
+                              />
+                            </div>
+                          );
+                        }
+
+                        if (q.type === "checkbox") {
+                          return (
+                            <div key={key} className="flex items-center gap-2 pt-1">
+                              <input
+                                type="checkbox"
+                                id={`custom-${key}`}
+                                checked={Boolean(val)}
+                                onChange={(e) => setCustomAnswers(prev => ({ ...prev, [key]: e.target.checked }))}
+                                className="w-4 h-4 rounded text-blue-600 border-slate-300 focus:ring-blue-500 cursor-pointer"
+                              />
+                              <label htmlFor={`custom-${key}`} className="text-xs font-semibold text-slate-700 cursor-pointer">
+                                {q.label} {q.required && <span className="text-rose-500">*</span>}
+                              </label>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div key={key}>
+                            <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                              {q.label} {q.required && <span className="text-rose-500">*</span>}
+                            </label>
+                            <input
+                              type={q.type === "number" ? "number" : q.type === "date" ? "date" : "text"}
+                              value={val}
+                              onChange={(e) => setCustomAnswers(prev => ({ ...prev, [key]: e.target.value }))}
+                              placeholder={q.placeholder || ""}
+                              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 focus:bg-white transition-all"
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
 
                   <div className="pt-2">
                     <button

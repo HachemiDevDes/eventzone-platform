@@ -1,5 +1,5 @@
 import React from "react";
-import { fetchEventDetails } from "../../../lib/db";
+import { fetchEventDetails, fetchEventBundle } from "../../../lib/db";
 import CompanyDelegationPortal from "../../../components/CompanyDelegationPortal";
 
 export async function generateMetadata(props) {
@@ -38,7 +38,24 @@ export default async function DelegationPage(props) {
     );
   }
 
-  const event = await fetchEventDetails(slug);
+  let event = null;
+  let forms = [];
+  let tickets = [];
+
+  try {
+    const bundle = await fetchEventBundle(slug);
+    if (bundle) {
+      event = bundle.event;
+      forms = bundle.forms || [];
+      tickets = bundle.tickets || [];
+    }
+  } catch (err) {
+    console.warn("fetchEventBundle notice in delegation page:", err);
+  }
+
+  if (!event || !event.id) {
+    event = await fetchEventDetails(slug);
+  }
 
   if (!event || !event.id) {
     return (
@@ -55,6 +72,8 @@ export default async function DelegationPage(props) {
     <CompanyDelegationPortal 
       event={event} 
       token={token} 
+      forms={forms}
+      tickets={tickets}
     />
   );
 }
