@@ -1053,16 +1053,6 @@ export default function CalendarView({
               {t("calendar.timelineSubtitle", "Sort, view, edit, and organize scheduled sessions by day.")}
             </p>
           </div>
-
-          {sessions.length > 0 && canEdit && (
-            <button 
-              type="button"
-              onClick={onClearAllSessions}
-              className="px-3.5 py-2 bg-white border border-slate-200 hover:bg-rose-50 hover:border-rose-200 hover:text-rose-600 text-slate-600 rounded-xl text-xs font-bold transition-all cursor-pointer self-start sm:self-auto shadow-2xs"
-            >
-              {t("calendar.clearAll", "Clear All")}
-            </button>
-          )}
         </header>
 
         {/* Dynamic Day Filter Tabs */}
