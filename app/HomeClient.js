@@ -3268,7 +3268,31 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
 
   const handleSaveOrganization = async (orgData, linkOptions = {}) => {
     try {
-      const saved = await upsertOrganization(orgData, activeEventId);
+      const existingOrg = (organizations || []).find(o => 
+        (orgData.id && String(o.id) === String(orgData.id)) ||
+        (orgData.name && o.name && o.name.trim().toLowerCase() === orgData.name.trim().toLowerCase())
+      );
+
+      const mergedOrgData = {
+        ...(existingOrg || {}),
+        ...orgData,
+        delegationToken: orgData.delegationToken || orgData.fiscalDetails?.delegationToken || existingOrg?.delegationToken || existingOrg?.fiscalDetails?.delegationToken || null,
+        delegates: (Array.isArray(orgData.delegates) && orgData.delegates.length > 0) ? orgData.delegates : (existingOrg?.delegates || []),
+        selectedBooth: orgData.selectedBooth || existingOrg?.selectedBooth || null,
+        companyRole: orgData.companyRole || existingOrg?.companyRole || 'corporate',
+        badgesIncluded: orgData.badgesIncluded ?? existingOrg?.badgesIncluded ?? 2,
+        fiscalDetails: {
+          ...(existingOrg?.fiscalDetails || {}),
+          ...(orgData.fiscalDetails || {}),
+          delegationToken: orgData.delegationToken || orgData.fiscalDetails?.delegationToken || existingOrg?.delegationToken || existingOrg?.fiscalDetails?.delegationToken || null,
+          delegates: (Array.isArray(orgData.delegates) && orgData.delegates.length > 0) ? orgData.delegates : (existingOrg?.delegates || []),
+          selectedBooth: orgData.selectedBooth || existingOrg?.selectedBooth || null,
+          companyRole: orgData.companyRole || existingOrg?.companyRole || 'corporate',
+          badgesIncluded: orgData.badgesIncluded ?? existingOrg?.badgesIncluded ?? 2,
+        }
+      };
+
+      const saved = await upsertOrganization(mergedOrgData, activeEventId);
       const cleanTargetId = String(saved.id);
       const cleanName = (saved.name || '').trim().toLowerCase();
 

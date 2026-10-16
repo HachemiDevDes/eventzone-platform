@@ -3961,38 +3961,53 @@ function OrganizationsView({ state, onUpdateState, onOpenModal, initialTab = "al
                   </div>
                 ) : !isArchived && (
                   <div className="mt-4 pt-3 border-t border-slate-100 flex flex-col gap-2">
-                    {o.delegationToken && (
-                      <div className="flex items-center justify-between bg-slate-50 border border-slate-200/80 rounded-xl px-2.5 py-1.5 text-[11px]">
-                        <span className="text-slate-600 font-semibold flex items-center gap-1">
-                          <Ticket size={12} className="text-blue-600" />
-                          <span>Delegation Portal</span>
-                        </span>
-                        <button
-                          onClick={() => {
-                            const eventDetails = state?.eventDetails || {};
-                            const eventSlug = eventDetails.slug || state.activeEventId || "";
-                            const url = `${window.location.origin}/${eventSlug}/delegation?token=${o.delegationToken}`;
-                            navigator.clipboard.writeText(url);
-                            setCopiedTokenId(o.id);
-                            setTimeout(() => setCopiedTokenId(null), 2000);
-                          }}
-                          className="font-bold text-blue-600 hover:text-blue-700 cursor-pointer flex items-center gap-1"
-                          title="Copy Delegation Link"
-                        >
-                          {copiedTokenId === o.id ? (
-                            <>
-                              <Check size={11} className="text-emerald-600" />
-                              <span className="text-emerald-600">Copied!</span>
-                            </>
-                          ) : (
-                            <>
-                              <Copy size={11} />
-                              <span>Copy Link</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    )}
+                    {(() => {
+                      const effectiveToken = o.delegationToken || o.fiscalDetails?.delegationToken || o.id;
+                      const eventDetails = state?.eventDetails || {};
+                      const eventSlug = eventDetails.slug || state.activeEventId || "";
+                      const portalUrl = typeof window !== "undefined" ? `${window.location.origin}/${eventSlug}/delegation?token=${effectiveToken}` : "";
+                      return (
+                        <div className="flex items-center justify-between bg-slate-50 border border-slate-200/80 rounded-xl px-2.5 py-1.5 text-[11px]">
+                          <span className="text-slate-600 font-semibold flex items-center gap-1">
+                            <Ticket size={12} className="text-blue-600" />
+                            <span>Passes Portal</span>
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(portalUrl);
+                                setCopiedTokenId(o.id);
+                                setTimeout(() => setCopiedTokenId(null), 2000);
+                              }}
+                              className="font-bold text-blue-600 hover:text-blue-700 cursor-pointer flex items-center gap-1"
+                              title="Copy Delegation Link"
+                            >
+                              {copiedTokenId === o.id ? (
+                                <>
+                                  <Check size={11} className="text-emerald-600" />
+                                  <span className="text-emerald-600">Copied!</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy size={11} />
+                                  <span>Copy</span>
+                                </>
+                              )}
+                            </button>
+                            <a
+                              href={`/${eventSlug}/delegation?token=${effectiveToken}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-slate-400 hover:text-blue-600 transition-colors p-0.5"
+                              title="Open Portal in New Tab"
+                            >
+                              <ExternalLink size={12} />
+                            </a>
+                          </div>
+                        </div>
+                      );
+                    })()}
                     <div className="flex items-center gap-2">
                       {!isSponsor && (
                         <button
@@ -4204,32 +4219,47 @@ function OrganizationsView({ state, onUpdateState, onOpenModal, initialTab = "al
                                 </button>
                               ) : (
                                 <>
-                                  {o.delegationToken && (
-                                    <button
-                                      onClick={() => {
-                                        const eventDetails = state?.eventDetails || {};
-                                        const eventSlug = eventDetails.slug || state.activeEventId || "";
-                                        const url = `${window.location.origin}/${eventSlug}/delegation?token=${o.delegationToken}`;
-                                        navigator.clipboard.writeText(url);
-                                        setCopiedTokenId(o.id);
-                                        setTimeout(() => setCopiedTokenId(null), 2000);
-                                      }}
-                                      className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1"
-                                      title="Copy Delegation Portal Link"
-                                    >
-                                      {copiedTokenId === o.id ? (
-                                        <>
-                                          <Check size={11} className="text-emerald-600" />
-                                          <span className="text-emerald-600">Copied</span>
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Copy size={11} />
-                                          <span>Portal</span>
-                                        </>
-                                      )}
-                                    </button>
-                                  )}
+                                  {(() => {
+                                     const effectiveToken = o.delegationToken || o.fiscalDetails?.delegationToken || o.id;
+                                     const eventDetails = state?.eventDetails || {};
+                                     const eventSlug = eventDetails.slug || state.activeEventId || "";
+                                     const portalUrl = typeof window !== "undefined" ? `${window.location.origin}/${eventSlug}/delegation?token=${effectiveToken}` : "";
+                                     return (
+                                       <div className="flex items-center gap-1">
+                                         <button
+                                           type="button"
+                                           onClick={() => {
+                                             navigator.clipboard.writeText(portalUrl);
+                                             setCopiedTokenId(o.id);
+                                             setTimeout(() => setCopiedTokenId(null), 2000);
+                                           }}
+                                           className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1"
+                                           title="Copy Delegation Portal Link"
+                                         >
+                                           {copiedTokenId === o.id ? (
+                                             <>
+                                               <Check size={11} className="text-emerald-600" />
+                                               <span className="text-emerald-600">Copied</span>
+                                             </>
+                                           ) : (
+                                             <>
+                                               <Copy size={11} />
+                                               <span>Portal</span>
+                                             </>
+                                           )}
+                                         </button>
+                                         <a
+                                           href={`/${eventSlug}/delegation?token=${effectiveToken}`}
+                                           target="_blank"
+                                           rel="noopener noreferrer"
+                                           className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-blue-600 transition-colors"
+                                           title="Open Portal in New Tab"
+                                         >
+                                           <ExternalLink size={12} />
+                                         </a>
+                                       </div>
+                                     );
+                                   })()}
                                   {!isArchived && !isSponsor && (
                                     <button
                                       onClick={() => onOpenModal("sponsor", {

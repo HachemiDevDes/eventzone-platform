@@ -22,6 +22,7 @@ import {
   ShieldAlert,
   Info,
   ExternalLink,
+  Copy,
   Plus,
   Briefcase,
   Layers,
@@ -196,6 +197,7 @@ export default function CompanyDrawer({
   // Active drawer mode state (can switch within the drawer)
   const [currentMode, setCurrentMode] = useState(mode || "org");
   const [isDeleting, setIsDeleting] = useState(false);
+  const [portalCopied, setPortalCopied] = useState(false);
 
   // Permission evaluation for viewer role
   const canEdit = canEditModule(
@@ -1212,7 +1214,22 @@ export default function CompanyDrawer({
 
     try {
       if (currentMode === "org") {
+        const existingFiscal = item?.fiscalDetails || item?.fiscal_details || {};
+        const existingDelegationToken = item?.delegationToken || 
+          existingFiscal.delegationToken || 
+          existingFiscal.delegation_token || 
+          item?.delegation_token || 
+          `del_${Math.random().toString(36).substring(2, 10)}_${Date.now().toString(36)}`;
+        const existingDelegates = Array.isArray(item?.delegates) ? item.delegates : (Array.isArray(existingFiscal.delegates) ? existingFiscal.delegates : []);
+        const existingBooth = item?.selectedBooth || existingFiscal.selectedBooth || null;
+        const existingCompanyRole = item?.companyRole || existingFiscal.companyRole || 'corporate';
+        const existingBadgesIncluded = item?.badgesIncluded ?? existingFiscal.badgesIncluded ?? 2;
+        const existingTicketId = item?.ticketId || existingFiscal.ticketId || null;
+        const existingTicketType = item?.ticketType || existingFiscal.ticketType || null;
+        const existingDelegateFormId = item?.delegateFormId || existingFiscal.delegateFormId || null;
+
         const orgPayload = {
+          ...(item || {}),
           id: item?.id,
           name: orgName.trim(),
           industry: orgIndustry,
@@ -1232,6 +1249,15 @@ export default function CompanyDrawer({
           notes: orgNotes.trim(),
           status: orgStatus,
           isArchived: orgStatus === "archived",
+          // Preserved delegation & passes data
+          delegationToken: existingDelegationToken,
+          delegates: existingDelegates,
+          selectedBooth: existingBooth,
+          companyRole: existingCompanyRole,
+          badgesIncluded: existingBadgesIncluded,
+          ticketId: existingTicketId,
+          ticketType: existingTicketType,
+          delegateFormId: existingDelegateFormId,
           // Fiscal & Billing details
           nif: orgNif.trim(),
           rc: orgRc.trim(),
@@ -1250,6 +1276,7 @@ export default function CompanyDrawer({
           bank_name: orgBankName.trim(),
           rib: orgRib.trim(),
           fiscalDetails: {
+            ...existingFiscal,
             nif: orgNif.trim(),
             rc: orgRc.trim(),
             nis: orgNis.trim(),
@@ -1260,6 +1287,14 @@ export default function CompanyDrawer({
             invoicing_phone: orgInvoicingPhone.trim() || orgContactPhone.trim(),
             bank_name: orgBankName.trim(),
             rib: orgRib.trim(),
+            delegationToken: existingDelegationToken,
+            delegates: existingDelegates,
+            selectedBooth: existingBooth,
+            companyRole: existingCompanyRole,
+            badgesIncluded: existingBadgesIncluded,
+            ticketId: existingTicketId,
+            ticketType: existingTicketType,
+            delegateFormId: existingDelegateFormId,
           }
         };
 
@@ -1582,6 +1617,67 @@ export default function CompanyDrawer({
                 {/* 1. ORGANIZATION MODE */}
                 {currentMode === "org" && (
                   <div className="flex flex-col gap-5">
+                    {/* Delegation & Passes Portal Card */}
+                    {item?.id && (
+                      <div className="bg-gradient-to-r from-blue-50/80 to-indigo-50/80 border border-blue-200/90 rounded-2xl p-4 flex flex-col gap-2.5 shadow-2xs">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                              <Ticket size={15} />
+                            </div>
+                            <div>
+                              <div className="text-xs font-black text-slate-900 flex items-center gap-2">
+                                <span>Representative Passes Portal</span>
+                                <span className="text-[10px] font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded-md">
+                                  {item?.delegates?.length || item?.fiscalDetails?.delegates?.length || 0} / {item?.badgesIncluded ?? item?.fiscalDetails?.badgesIncluded ?? 2} Passes
+                                </span>
+                              </div>
+                              <div className="text-[11px] text-slate-500 font-medium mt-0.5">
+                                Dedicated self-service portal link for company team members to claim their representative badge passes.
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 pt-1 border-t border-blue-100/80 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const eventSlug = eventDetails?.slug || activeEventId || "";
+                              const token = item?.delegationToken || item?.fiscalDetails?.delegationToken || item?.id;
+                              const url = `${window.location.origin}/${eventSlug}/delegation?token=${token}`;
+                              navigator.clipboard.writeText(url);
+                              setPortalCopied(true);
+                              setTimeout(() => setPortalCopied(false), 2000);
+                            }}
+                            className="bg-white hover:bg-slate-50 text-blue-700 border border-blue-200 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
+                          >
+                            {portalCopied ? (
+                              <>
+                                <Check size={13} className="text-emerald-600" />
+                                <span className="text-emerald-700">Link Copied!</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy size={13} />
+                                <span>Copy Passes Portal Link</span>
+                              </>
+                            )}
+                          </button>
+
+                          <a
+                            href={`/${eventDetails?.slug || activeEventId || ""}/delegation?token=${item?.delegationToken || item?.fiscalDetails?.delegationToken || item?.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-xs"
+                          >
+                            <ExternalLink size={13} />
+                            <span>Open Passes Portal</span>
+                          </a>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Logo Uploader */}
                     <FormImageUploader
                       value={orgLogo}
