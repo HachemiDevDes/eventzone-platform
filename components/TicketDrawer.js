@@ -234,6 +234,10 @@ export default function TicketDrawer({
       const rawFormId = ticket.formId || "default";
       const isFormActive = rawFormId === "default" || activeForms.some(f => f.id === rawFormId);
       setSelectedFormId(isFormActive ? rawFormId : "default");
+      const rawDelegateFormId = ticket.delegateFormId || ticket.delegate_form_id || "default";
+      const isDelegateFormActive = rawDelegateFormId === "default" || activeForms.some(f => f.id === rawDelegateFormId);
+      setSelectedDelegateFormId(isDelegateFormActive ? rawDelegateFormId : "default");
+      setCorporateFormStep("company");
       setBadgeType(ticket.badgeType || "thermal_qr");
       setBadgeUrl(ticket.badgeUrl || "");
       setTicketTarget(ticket.ticketTarget || ticket.badgeSettings?.ticketTarget || "individual");
@@ -263,6 +267,8 @@ export default function TicketDrawer({
       setIsPopular(false);
       setFeatures([]);
       setSelectedFormId("default");
+      setSelectedDelegateFormId("default");
+      setCorporateFormStep("company");
       setBadgeType("thermal_qr");
       setBadgeUrl("");
       setTicketTarget("individual");
@@ -282,7 +288,7 @@ export default function TicketDrawer({
     setActiveTab("general");
   }, [ticket, isOpen, activeForms]);
 
-  if (!isOpen) return null;
+
 
   // Add & Remove Perks
   const handleAddPerk = (perkText) => {
@@ -394,16 +400,54 @@ export default function TicketDrawer({
   const activeFormObj = activeForms.find(f => f.id === selectedFormId);
   const activeDelegateFormObj = activeForms.find(f => f.id === selectedDelegateFormId);
 
+  // Memoize Select options to prevent heavy recalculations & re-renders
+  const floorPlanOptions = useMemo(() => [
+    { value: "", label: t("tickets.noFloorPlan", "No Floor Plan (Standard Registration)") },
+    ...(floorPlans || []).map((fp) => ({
+      value: fp.id,
+      label: `${fp.name || "Floor Plan"} ${fp.elements?.length ? `(${fp.elements.filter(el => el.type === 'booth').length} booths)` : ''}`
+    }))
+  ], [floorPlans, t]);
+
+  const corporateCategoryOptions = useMemo(() => CORPORATE_CATEGORIES.map(cat => ({
+    value: cat.value,
+    label: cat.label,
+    sublabel: cat.sublabel
+  })), []);
+  const cardThemeOptions = useMemo(() => [
+    { value: "white", label: t("tickets.cardStyleCompactWhite", "Compact White Card") },
+    { value: "glass", label: t("tickets.cardStyleTranslucentGlass", "Translucent Glass Card") },
+    { value: "floating", label: t("tickets.cardStyleBorderless", "Borderless / Direct on Artwork") },
+    { value: "clean", label: t("tickets.cardStyleMinimalOutline", "Minimal Border Outline") }
+  ], [t]);
+
+  const foldGuideOptions = useMemo(() => [
+    { value: "true", label: t("tickets.showCenterFold", "Show Center Fold Crosshairs") },
+    { value: "false", label: t("tickets.hideFoldGuidelines", "Hide Fold Guidelines") }
+  ], [t]);
+
+  const photoOptions = useMemo(() => [
+    { value: "true", label: t("tickets.showAvatarCircle", "Show Avatar / Photo Circle") },
+    { value: "false", label: t("tickets.textAndQrOnly", "Text & QR Only") }
+  ], [t]);
+
+  const qrOptions = useMemo(() => [
+    { value: "true", label: t("tickets.includeDoorCheckinQr", "Include Door Check-in QR") },
+    { value: "false", label: t("tickets.badgeIdOnly", "Badge ID Only") }
+  ], [t]);
+
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 z-50 flex justify-end animate-fade-in">
+    <div className="fixed inset-0 z-50 flex justify-end overflow-hidden">
       {/* Dark Backdrop */}
       <div 
         onClick={onClose}
-        className="fixed inset-0 bg-slate-900/35 backdrop-blur-xs transition-opacity cursor-pointer"
+        className="fixed inset-0 bg-slate-900/40 animate-fade-in cursor-pointer"
       />
 
       {/* Slide-over Drawer (Wider container max-w-2xl md:max-w-3xl) */}
-      <div className="relative w-full max-w-2xl lg:max-w-3xl bg-white h-full shadow-2xl z-10 flex flex-col border-l border-slate-200 overflow-hidden animate-slide-in-right">
+      <div className="relative w-full max-w-2xl lg:max-w-3xl bg-white h-full shadow-xl z-10 flex flex-col border-l border-slate-200 overflow-hidden animate-slide-in-right will-change-transform">
         
         {/* Clean Header: No top icon, no subheadline */}
         <header className="px-8 py-5 border-b border-slate-200 flex items-center justify-between bg-white select-none">
@@ -501,7 +545,7 @@ export default function TicketDrawer({
               TAB 1: DETAILS & PRICING
              ══════════════════════════════════════════════════════════════════ */}
           {activeTab === "general" && (
-            <div className="flex flex-col gap-6 animate-fade-in">
+            <div className="flex flex-col gap-6">
               
               {/* Ticket Target Audience: Individual vs Company / B2B */}
               <div className="flex flex-col gap-2">
@@ -594,7 +638,7 @@ export default function TicketDrawer({
 
               {/* Corporate & Booth Settings Panel (Visible only when ticketTarget === "company") */}
               {ticketTarget === "company" && (
-                <div className="bg-gradient-to-br from-blue-50/60 to-slate-50 border border-blue-200/80 rounded-2xl p-4.5 flex flex-col gap-4 animate-fade-in shadow-xs">
+                <div className="bg-gradient-to-br from-blue-50/60 to-slate-50 border border-blue-200/80 rounded-2xl p-4.5 flex flex-col gap-4 shadow-xs">
                   <div className="flex items-center gap-2 text-blue-900">
                     <Building2 size={16} className="text-blue-600" />
                     <span className="text-xs font-extrabold uppercase tracking-wider">{t("tickets.corporateConfig", "Corporate & Booth Configuration")}</span>
@@ -607,11 +651,7 @@ export default function TicketDrawer({
                       <SearchableSelect
                         value={companyRole}
                         onChange={(val) => setCompanyRole(val || "exhibitor")}
-                        options={CORPORATE_CATEGORIES.map(cat => ({
-                          value: cat.value,
-                          label: cat.label,
-                          sublabel: cat.sublabel
-                        }))}
+                        options={corporateCategoryOptions}
                         placeholder={t("tickets.selectCategory", "Select corporate category...")}
                         searchPlaceholder={t("tickets.searchCategory", "Search category...")}
                         isClearable={false}
@@ -648,13 +688,7 @@ export default function TicketDrawer({
                     <SearchableSelect
                       value={linkedFloorPlanId || ""}
                       onChange={(val) => setLinkedFloorPlanId(val || "")}
-                      options={[
-                        { value: "", label: t("tickets.noFloorPlan", "No Floor Plan (Standard Registration)") },
-                        ...(floorPlans || []).map((fp) => ({
-                          value: fp.id,
-                          label: `${fp.name || "Floor Plan"} ${fp.elements?.length ? `(${fp.elements.filter(el => el.type === 'booth').length} booths)` : ''}`
-                        }))
-                      ]}
+                      options={floorPlanOptions}
                       placeholder={t("tickets.selectFloorPlan", "Select Floor Plan...")}
                       searchPlaceholder={t("tickets.searchFloorPlan", "Search floor plan...")}
                       isClearable={true}
@@ -1693,12 +1727,7 @@ export default function TicketDrawer({
                       <SearchableSelect
                         value={badgeSettings.cardTheme || "white"}
                         onChange={(val) => setBadgeSettings({ ...badgeSettings, cardTheme: val })}
-                        options={[
-                          { value: "white", label: t("tickets.cardStyleCompactWhite", "Compact White Card") },
-                          { value: "glass", label: t("tickets.cardStyleTranslucentGlass", "Translucent Glass Card") },
-                          { value: "floating", label: t("tickets.cardStyleBorderless", "Borderless / Direct on Artwork") },
-                          { value: "clean", label: t("tickets.cardStyleMinimalOutline", "Minimal Border Outline") }
-                        ]}
+                        options={cardThemeOptions}
                         placeholder={t("tickets.selectCardStylePlaceholder", "Select card style...")}
                       />
                     </div>
@@ -1708,10 +1737,7 @@ export default function TicketDrawer({
                       <SearchableSelect
                         value={badgeSettings.showFoldGuide !== false ? "true" : "false"}
                         onChange={(val) => setBadgeSettings({ ...badgeSettings, showFoldGuide: val === "true" })}
-                        options={[
-                          { value: "true", label: t("tickets.showCenterFold", "Show Center Fold Crosshairs") },
-                          { value: "false", label: t("tickets.hideFoldGuidelines", "Hide Fold Guidelines") }
-                        ]}
+                        options={foldGuideOptions}
                         placeholder={t("tickets.foldGuidelinesPlaceholder", "Fold guidelines...")}
                       />
                     </div>
@@ -1721,10 +1747,7 @@ export default function TicketDrawer({
                       <SearchableSelect
                         value={badgeSettings.showPhoto !== false ? "true" : "false"}
                         onChange={(val) => setBadgeSettings({ ...badgeSettings, showPhoto: val === "true" })}
-                        options={[
-                          { value: "true", label: t("tickets.showAvatarCircle", "Show Avatar / Photo Circle") },
-                          { value: "false", label: t("tickets.textAndQrOnly", "Text & QR Only") }
-                        ]}
+                        options={photoOptions}
                         placeholder={t("tickets.attendeePhotoPlaceholder", "Attendee photo...")}
                       />
                     </div>
@@ -1734,10 +1757,7 @@ export default function TicketDrawer({
                       <SearchableSelect
                         value={badgeSettings.showQr !== false ? "true" : "false"}
                         onChange={(val) => setBadgeSettings({ ...badgeSettings, showQr: val === "true" })}
-                        options={[
-                          { value: "true", label: t("tickets.includeDoorCheckinQr", "Include Door Check-in QR") },
-                          { value: "false", label: t("tickets.badgeIdOnly", "Badge ID Only") }
-                        ]}
+                        options={qrOptions}
                         placeholder={t("tickets.qrCodePassPlaceholder", "QR code pass...")}
                       />
                     </div>

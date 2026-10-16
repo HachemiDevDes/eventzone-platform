@@ -580,10 +580,10 @@ export default function AttendeeDrawer({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-slate-900/40 backdrop-blur-xs flex justify-end animate-fade-in font-sans">
-      <div className="absolute inset-0" onClick={onClose} />
+    <div className="fixed inset-0 z-50 overflow-hidden flex justify-end font-sans">
+      <div className="absolute inset-0 bg-slate-900/40 animate-fade-in cursor-pointer" onClick={onClose} />
 
-      <div className="relative w-full max-w-2xl lg:max-w-3xl bg-white h-full shadow-2xl z-10 flex flex-col border-l border-slate-200 overflow-hidden animate-slide-in-right">
+      <div className="relative w-full max-w-2xl lg:max-w-3xl bg-white h-full shadow-xl z-10 flex flex-col border-l border-slate-200 overflow-hidden animate-slide-in-right will-change-transform">
         
         <header className="px-8 py-5 border-b border-slate-200 flex items-center justify-between bg-white select-none">
           <div>

@@ -128,8 +128,14 @@ button {
   }
 }
 
-
-
+/* Hardware-accelerated slide-over drawer animation with zero repaints */
+.animate-slide-in-right {
+  animation: var(--animate-slide-in-right);
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
 
 @keyframes fadeIn {
   from { opacity: 0; }
@@ -142,8 +148,8 @@ button {
 }
 
 @keyframes slideInRight {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
+  from { transform: translate3d(100%, 0, 0); }
+  to { transform: translate3d(0, 0, 0); }
 }
 
 @keyframes slideUp {
