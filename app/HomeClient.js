@@ -184,6 +184,9 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
   const searchParamsHook = useSearchParams();
   const { t, lang, setLang, isRTL, dir, languages } = useLanguage();
   const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Authentication & Role State
   const [currentUser, setCurrentUser] = useState(() => {
@@ -4207,7 +4210,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
 
 
   // Smooth auth resolution loader for protected routes (e.g. returning from Google OAuth)
-  if (!authInitialized && !currentUser && currentView !== "home" && currentView !== "event-landing" && currentView !== "register" && currentView !== "auth") {
+  if ((!mounted || (!authInitialized && !currentUser)) && currentView !== "home" && currentView !== "event-landing" && currentView !== "register" && currentView !== "auth") {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center font-sans">
         <div className="flex flex-col items-center gap-3">
@@ -4228,7 +4231,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
   // ==========================================================================
   if (currentView === "admin") {
     // 1. If auth is not yet initialized, render loader to prevent premature access denial or role flicker
-    if (!authInitialized) {
+    if (!mounted || !authInitialized) {
       return (
         <div className="min-h-screen bg-slate-50 flex items-center justify-center font-sans">
           <div className="flex flex-col items-center gap-3">
