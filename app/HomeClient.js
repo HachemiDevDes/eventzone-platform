@@ -479,6 +479,10 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
     return getEffectivePermissions(currentUser, eventDetails, team, simulatedMemberId, userEvents, activeEventId);
   }, [currentUser, eventDetails, team, simulatedMemberId, userEvents, activeEventId]);
 
+  const pendingCompaniesCount = useMemo(() => {
+    return (organizations || []).filter(o => !o.isArchived && o.status === "pending").length;
+  }, [organizations]);
+
   const [isLoading, setIsLoading] = useState(() => {
     if (typeof window !== "undefined") {
       if (!navigator.onLine) return false;
@@ -4964,9 +4968,6 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
   const showSubSpeakers = canViewModule("speakers", effectivePermissions.permissions) && (!tabQuery || matchGroupParticipants || matchSubSpeakers);
 
   // Companies
-  const pendingCompaniesCount = useMemo(() => {
-    return (organizations || []).filter(o => !o.isArchived && o.status === "pending").length;
-  }, [organizations]);
 
   const matchGroupCompanies = matchesTabQuery(t("dash.allCompanies", "Companies"), ["Companies", "enterprises", "firms"]);
   const matchSubOrganizations = canViewModule("organizations", effectivePermissions.permissions) && matchesTabQuery(t("dash.organizations", "Organizations"), ["Organizations", "partners", "companies", "institutions"]);
