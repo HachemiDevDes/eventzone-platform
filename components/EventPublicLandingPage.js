@@ -2616,8 +2616,8 @@ export default function EventPublicLandingPage({
             </div>
 
             {/* Day Filters */}
-            {distinctDays.length > 0 && (
-              <div className="flex items-center bg-white p-1 rounded-full border border-slate-200 shadow-xs">
+            {distinctDays.length > 1 && (
+              <div className="flex items-center bg-white p-1 rounded-full border border-slate-200 shadow-xs w-fit max-w-full overflow-x-auto no-scrollbar self-start md:self-auto shrink-0">
                 {["All", ...distinctDays].map((day, idx) => (
                   <button
                     key={day}
@@ -2626,7 +2626,7 @@ export default function EventPublicLandingPage({
                       setIsAgendaExpanded(false);
                       agendaOpenScrollY.current = null;
                     }}
-                    className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                       selectedDay === day ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
