@@ -153,30 +153,35 @@ export default function CalendarView({
       });
     });
 
-    // 2. From attendees marked as isSpeaker or speaker/moderator ticket
+    // 2. From attendees: enrich existing experts and add attendee speakers/moderators
     attendees.forEach(att => {
       if (!att || !att.name || !att.name.trim()) return;
+      const key = att.name.trim().toLowerCase();
       const tType = typeof att.ticketType === 'string' ? att.ticketType.toLowerCase() : '';
       const isAttSpeaker = Boolean(att.isSpeaker || tType.includes("speaker"));
       const isAttMod = Boolean(att.isModerator || tType.includes("moderator"));
-      if (isAttSpeaker || isAttMod) {
-        const key = att.name.trim().toLowerCase();
-        const existing = map.get(key);
-        if (existing) {
-          if (isAttSpeaker) existing.isSpeaker = true;
-          if (isAttMod) existing.isModerator = true;
-          if (!existing.image && att.image) existing.image = att.image;
-        } else {
-          map.set(key, {
-            id: att.id || `att-${key}`,
-            name: att.name.trim(),
-            image: att.image || "",
-            title: att.jobTitle || att.title || "",
-            company: att.company || "",
-            isSpeaker: isAttSpeaker,
-            isModerator: isAttMod
-          });
-        }
+
+      const title = att.jobTitle || att.job_title || att.title || att.headline || att.function || att.profession || "";
+      const company = att.company || att.companyName || att.organization || "";
+      const image = att.image || att.avatar || att.avatar_url || "";
+
+      const existing = map.get(key);
+      if (existing) {
+        if (isAttSpeaker) existing.isSpeaker = true;
+        if (isAttMod) existing.isModerator = true;
+        if (!existing.image && image) existing.image = image;
+        if (!existing.title && title) existing.title = title;
+        if (!existing.company && company) existing.company = company;
+      } else if (isAttSpeaker || isAttMod) {
+        map.set(key, {
+          id: att.id || `att-${key}`,
+          name: att.name.trim(),
+          image: image || "",
+          title: title,
+          company: company,
+          isSpeaker: isAttSpeaker,
+          isModerator: isAttMod
+        });
       }
     });
 
@@ -336,20 +341,32 @@ export default function CalendarView({
     if (!canEdit) return;
     if (type === "speaker") {
       if (!speakerName.trim()) return;
+      const key = speakerName.trim().toLowerCase();
+      const matched = allEventExperts.find(e => e.name.toLowerCase() === key);
       const newSpeaker = {
         id: Date.now(),
         name: speakerName.trim(),
-        image: speakerImg || `https://ui-avatars.com/api/?name=${encodeURIComponent(speakerName.trim())}&background=2563eb&color=fff`
+        image: speakerImg || matched?.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(speakerName.trim())}&background=2563eb&color=fff`,
+        title: matched?.title || "",
+        jobTitle: matched?.title || "",
+        company: matched?.company || "",
+        role: "Speaker"
       };
       setSpeakersList([...speakersList, newSpeaker]);
       setSpeakerName("");
       setSpeakerImg("");
     } else {
       if (!moderatorName.trim()) return;
+      const key = moderatorName.trim().toLowerCase();
+      const matched = allEventExperts.find(e => e.name.toLowerCase() === key);
       const newModerator = {
         id: Date.now(),
         name: moderatorName.trim(),
-        image: moderatorImg || `https://ui-avatars.com/api/?name=${encodeURIComponent(moderatorName.trim())}&background=4f46e5&color=fff`
+        image: moderatorImg || matched?.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(moderatorName.trim())}&background=4f46e5&color=fff`,
+        title: matched?.title || "",
+        jobTitle: matched?.title || "",
+        company: matched?.company || "",
+        role: "Moderator"
       };
       setModeratorsList([...moderatorsList, newModerator]);
       setModeratorName("");
@@ -399,6 +416,28 @@ export default function CalendarView({
       return;
     }
 
+    const enrichedSpeakers = speakersList.map(s => {
+      const match = allEventExperts.find(e => e.name.toLowerCase() === (s.name || "").trim().toLowerCase());
+      return {
+        ...s,
+        title: s.title || s.jobTitle || match?.title || "",
+        jobTitle: s.jobTitle || s.title || match?.title || "",
+        company: s.company || match?.company || "",
+        image: s.image || match?.image || ""
+      };
+    });
+
+    const enrichedModerators = moderatorsList.map(m => {
+      const match = allEventExperts.find(e => e.name.toLowerCase() === (m.name || "").trim().toLowerCase());
+      return {
+        ...m,
+        title: m.title || m.jobTitle || match?.title || "",
+        jobTitle: m.jobTitle || m.title || match?.title || "",
+        company: m.company || match?.company || "",
+        image: m.image || match?.image || ""
+      };
+    });
+
     if (editingSessionId) {
       const updatedSessions = sessions.map(s => {
         if (s.id === editingSessionId) {
@@ -409,8 +448,8 @@ export default function CalendarView({
             startTime: startTime || "09:00",
             endTime: endTime || "10:00",
             description,
-            speakers: speakersList,
-            moderators: moderatorsList,
+            speakers: enrichedSpeakers,
+            moderators: enrichedModerators,
             logos: logosList
           };
         }
@@ -425,8 +464,8 @@ export default function CalendarView({
         startTime: startTime || "09:00",
         endTime: endTime || "10:00",
         description,
-        speakers: speakersList,
-        moderators: moderatorsList,
+        speakers: enrichedSpeakers,
+        moderators: enrichedModerators,
         logos: logosList
       };
       onSaveSessions([newSession, ...sessions]);
@@ -1266,15 +1305,31 @@ export default function CalendarView({
                           <div className="flex flex-col gap-1.5">
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none">{t("calendar.speakers", "Speakers")}</span>
                             <div className="flex flex-wrap gap-2">
-                              {session.speakers.map((s, idx) => (
-                                s ? (
-                                  <div key={idx} className="flex items-center gap-2 bg-slate-50 border border-slate-200 pl-1.5 pr-2.5 py-1 rounded-full text-xs font-bold text-slate-700">
+                              {session.speakers.map((s, idx) => {
+                                if (!s) return null;
+                                const matched = allEventExperts.find(e => e.name.toLowerCase() === (s.name || "").trim().toLowerCase());
+                                const sTitle = s.title || s.jobTitle || matched?.title || "";
+                                const sCompany = s.company || matched?.company || "";
+                                const sImg = s.image || matched?.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name || "User")}`;
+                                return (
+                                  <div 
+                                    key={idx} 
+                                    className="flex items-center gap-2 bg-slate-50 border border-slate-200 pl-1.5 pr-2.5 py-1 rounded-full text-xs font-bold text-slate-700"
+                                    title={[s.name, sTitle, sCompany].filter(Boolean).join(" • ")}
+                                  >
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img src={s.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name || "User")}`} className="w-5 h-5 rounded-full object-cover shrink-0" alt="" />
-                                    <span className="truncate max-w-[120px]">{s.name || "Unknown"}</span>
+                                    <img src={sImg} className="w-5 h-5 rounded-full object-cover shrink-0" alt="" />
+                                    <div className="flex flex-col min-w-0 leading-tight">
+                                      <span className="truncate max-w-[140px]">{s.name || "Unknown"}</span>
+                                      {(sTitle || sCompany) && (
+                                        <span className="text-[10px] text-slate-400 font-normal truncate max-w-[140px]">
+                                          {[sTitle, sCompany].filter(Boolean).join(" • ")}
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
-                                ) : null
-                              ))}
+                                );
+                              })}
                             </div>
                           </div>
                         )}
@@ -1284,15 +1339,31 @@ export default function CalendarView({
                           <div className="flex flex-col gap-1.5">
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none">{t("calendar.moderators", "Moderators")}</span>
                             <div className="flex flex-wrap gap-2">
-                              {session.moderators.map((m, idx) => (
-                                m ? (
-                                  <div key={idx} className="flex items-center gap-2 bg-slate-50 border border-slate-200 pl-1.5 pr-2.5 py-1 rounded-full text-xs font-bold text-slate-700">
+                              {session.moderators.map((m, idx) => {
+                                if (!m) return null;
+                                const matched = allEventExperts.find(e => e.name.toLowerCase() === (m.name || "").trim().toLowerCase());
+                                const mTitle = m.title || m.jobTitle || matched?.title || "";
+                                const mCompany = m.company || matched?.company || "";
+                                const mImg = m.image || matched?.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.name || "User")}`;
+                                return (
+                                  <div 
+                                    key={idx} 
+                                    className="flex items-center gap-2 bg-slate-50 border border-slate-200 pl-1.5 pr-2.5 py-1 rounded-full text-xs font-bold text-slate-700"
+                                    title={[m.name, mTitle, mCompany].filter(Boolean).join(" • ")}
+                                  >
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img src={m.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.name || "User")}`} className="w-5 h-5 rounded-full object-cover shrink-0" alt="" />
-                                    <span className="truncate max-w-[120px]">{m.name || "Unknown"}</span>
+                                    <img src={mImg} className="w-5 h-5 rounded-full object-cover shrink-0" alt="" />
+                                    <div className="flex flex-col min-w-0 leading-tight">
+                                      <span className="truncate max-w-[140px]">{m.name || "Unknown"}</span>
+                                      {(mTitle || mCompany) && (
+                                        <span className="text-[10px] text-indigo-500 font-normal truncate max-w-[140px]">
+                                          {[mTitle, mCompany].filter(Boolean).join(" • ")}
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
-                                ) : null
-                              ))}
+                                );
+                              })}
                             </div>
                           </div>
                         )}

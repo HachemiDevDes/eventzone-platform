@@ -1034,61 +1034,106 @@ export default function EventPublicLandingPage({
     });
   }, [eventSessions, selectedDay, distinctDays]);
 
-  // Real Database Speakers extracted from real sessions and event details
-  const eventSpeakers = [];
-  const speakerNames = new Set();
+  // Real Database Speakers extracted and merged across real sessions, event details, and attendees
+  const eventSpeakers = useMemo(() => {
+    const map = new Map();
 
-  // 1. Gather from eventDetails / effectiveDetails speakers if defined
-  const rawRootSpeakers = Array.isArray(effectiveDetails?.speakers) 
-    ? effectiveDetails.speakers 
-    : (Array.isArray(eventDetails?.speakers) ? eventDetails.speakers : []);
-  rawRootSpeakers.forEach(sp => {
-    const spName = typeof sp === "string" ? sp.trim() : (sp?.name || sp?.fullName || "").trim();
-    if (spName && !speakerNames.has(spName.toLowerCase())) {
-      speakerNames.add(spName.toLowerCase());
-      const spObj = typeof sp === "object" ? sp : {};
-      eventSpeakers.push({
-        name: spName,
-        role: spObj.role || "Speaker",
-        title: spObj.title || spObj.jobTitle || spObj.position || "",
-        company: spObj.company || spObj.organization || spObj.org || (organization !== "Eventzone" ? organization : ""),
-        image: spObj.image || spObj.avatar || spObj.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(spName)}&background=2563eb&color=fff`
-      });
-    }
-  });
+    const addOrMerge = (person, defaultRole = "Speaker", isModerator = false) => {
+      if (!person) return;
+      const rawName = typeof person === "string" ? person.trim() : (person.name || person.fullName || "").trim();
+      if (!rawName) return;
+      const key = rawName.toLowerCase();
+      const pObj = typeof person === "object" ? person : {};
 
-  // 2. Gather from session speakers and moderators
-  eventSessions.forEach(s => {
-    (s.speakers || []).forEach(sp => {
-      const spName = typeof sp === "string" ? sp.trim() : (sp?.name || sp?.fullName || "").trim();
-      if (spName && !speakerNames.has(spName.toLowerCase())) {
-        speakerNames.add(spName.toLowerCase());
-        const spObj = typeof sp === "object" ? sp : {};
-        eventSpeakers.push({
-          name: spName,
-          role: spObj.role || "Speaker",
-          title: spObj.title || spObj.jobTitle || spObj.position || "",
-          company: spObj.company || spObj.organization || spObj.org || (organization !== "Eventzone" ? organization : ""),
-          image: spObj.image || spObj.avatar || spObj.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(spName)}&background=2563eb&color=fff`
+      const title = (pObj.title || pObj.jobTitle || pObj.job_title || pObj.position || pObj.headline || pObj.function || pObj.profession || "").trim();
+      const rawCompany = (pObj.company || pObj.companyName || pObj.organization || pObj.org || "").trim();
+      const company = (rawCompany && rawCompany !== "Eventzone") ? rawCompany : "";
+      const image = pObj.image || pObj.avatar || pObj.avatar_url || pObj.photo || "";
+      const bio = (pObj.bio || pObj.about || "").trim();
+      const role = pObj.role || defaultRole;
+
+      if (!map.has(key)) {
+        map.set(key, {
+          name: rawName,
+          role,
+          title,
+          company,
+          image: image || `https://ui-avatars.com/api/?name=${encodeURIComponent(rawName)}&background=${isModerator ? "4f46e5" : "2563eb"}&color=fff`,
+          bio,
+          isModerator: Boolean(isModerator || (role && role.toLowerCase().includes("moderator"))),
+          isSpeaker: Boolean(!isModerator || (role && role.toLowerCase().includes("speaker")))
         });
+      } else {
+        const existing = map.get(key);
+        if (!existing.title && title) existing.title = title;
+        if (!existing.company && company) existing.company = company;
+        if ((!existing.image || existing.image.includes("ui-avatars.com")) && image) existing.image = image;
+        if (!existing.bio && bio) existing.bio = bio;
+        if (isModerator) existing.isModerator = true;
+        if (!isModerator || (role && role.toLowerCase().includes("speaker"))) existing.isSpeaker = true;
+
+        if (existing.isSpeaker && existing.isModerator) {
+          existing.role = "Speaker & Moderator";
+        } else if (existing.isSpeaker && (!existing.role || existing.role === "Moderator")) {
+          existing.role = role || "Speaker";
+        }
+      }
+    };
+
+    // 1. Gather from session speakers (active speaker roles)
+    eventSessions.forEach(s => {
+      (s.speakers || []).forEach(sp => addOrMerge(sp, "Speaker", false));
+    });
+
+    // 2. Gather from session moderators
+    eventSessions.forEach(s => {
+      (s.moderators || []).forEach(mod => addOrMerge(mod, "Moderator", true));
+    });
+
+    // 3. Gather from root eventDetails / effectiveDetails speakers if defined
+    const rawRootSpeakers = Array.isArray(effectiveDetails?.speakers) 
+      ? effectiveDetails.speakers 
+      : (Array.isArray(eventDetails?.speakers) ? eventDetails.speakers : []);
+    rawRootSpeakers.forEach(sp => addOrMerge(sp, "Speaker", false));
+
+    // 4. Cross-reference with attendees to enrich missing job title, company, or photo
+    (attendees || []).forEach(att => {
+      if (!att) return;
+      const attName = (att.name || att.fullName || `${att.firstName || ""} ${att.lastName || ""}`).trim();
+      if (!attName) return;
+      const key = attName.toLowerCase();
+      const tType = typeof att.ticketType === 'string' ? att.ticketType.toLowerCase() : '';
+      const isAttSpeaker = Boolean(att.isSpeaker || tType.includes("speaker"));
+      const isAttMod = Boolean(att.isModerator || tType.includes("moderator"));
+
+      const title = (att.jobTitle || att.job_title || att.title || att.headline || att.function || att.profession || att.position || "").trim();
+      const rawCompany = (att.company || att.companyName || att.organization || "").trim();
+      const company = (rawCompany && rawCompany !== "Eventzone") ? rawCompany : "";
+      const image = att.image || att.avatar || att.avatar_url || att.photo || "";
+      const bio = (att.bio || att.about || "").trim();
+
+      if (map.has(key)) {
+        const existing = map.get(key);
+        if (!existing.title && title) existing.title = title;
+        if (!existing.company && company) existing.company = company;
+        if ((!existing.image || existing.image.includes("ui-avatars.com")) && image) existing.image = image;
+        if (!existing.bio && bio) existing.bio = bio;
+        if (isAttMod) existing.isModerator = true;
+        if (isAttSpeaker) existing.isSpeaker = true;
+      } else if (isAttSpeaker || isAttMod) {
+        addOrMerge({
+          name: attName,
+          title,
+          company,
+          image,
+          bio,
+          role: isAttMod && !isAttSpeaker ? "Moderator" : "Speaker"
+        }, isAttMod && !isAttSpeaker ? "Moderator" : "Speaker", isAttMod);
       }
     });
 
-    (s.moderators || []).forEach(mod => {
-      const modName = typeof mod === "string" ? mod.trim() : (mod?.name || mod?.fullName || "").trim();
-      if (modName && !speakerNames.has(modName.toLowerCase())) {
-        speakerNames.add(modName.toLowerCase());
-        const modObj = typeof mod === "object" ? mod : {};
-        eventSpeakers.push({
-          name: modName,
-          role: "Moderator",
-          title: modObj.title || modObj.jobTitle || modObj.position || "",
-          company: modObj.company || modObj.organization || modObj.org || (organization !== "Eventzone" ? organization : ""),
-          image: modObj.image || modObj.avatar || modObj.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(modName)}&background=4f46e5&color=fff`
-        });
-      }
-    });
-  });
+    return Array.from(map.values());
+  }, [eventSessions, effectiveDetails?.speakers, eventDetails?.speakers, attendees]);
 
   // Real Database Exhibitors, Sponsors & Tickets
   const eventExhibitors = exhibitors || [];
@@ -1804,12 +1849,17 @@ export default function EventPublicLandingPage({
       es => es.name && es.name.toLowerCase().trim() === rawName.toLowerCase().trim()
     );
 
+    const attMatched = (attendees || []).find(att => {
+      const attName = (att?.name || att?.fullName || `${att?.firstName || ""} ${att?.lastName || ""}`).trim();
+      return attName.toLowerCase() === rawName.toLowerCase();
+    });
+
     const spObj = typeof sp === "object" ? sp : {};
     const role = spObj.role || (isModerator ? "Moderator" : matched?.role || "Speaker");
-    const title = spObj.title || spObj.jobTitle || spObj.position || matched?.title || "";
-    const rawCompany = spObj.company || spObj.organization || spObj.org || matched?.company || "";
+    const title = (spObj.title || spObj.jobTitle || spObj.position || matched?.title || attMatched?.jobTitle || attMatched?.job_title || attMatched?.title || "").trim();
+    const rawCompany = (spObj.company || spObj.companyName || matched?.company || attMatched?.company || "").trim();
     const company = (rawCompany && rawCompany !== "Eventzone") ? rawCompany : "";
-    const image = spObj.image || spObj.avatar || spObj.photo || matched?.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(rawName)}&background=${isModerator ? "4f46e5" : "2563eb"}&color=fff`;
+    const image = spObj.image || spObj.avatar || spObj.photo || matched?.image || attMatched?.image || attMatched?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(rawName)}&background=${isModerator ? "4f46e5" : "2563eb"}&color=fff`;
 
     return {
       name: rawName,
@@ -2633,14 +2683,18 @@ export default function EventPublicLandingPage({
                         <div>
                           <h4 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{speaker.name}</h4>
                           <span className="text-xs text-blue-600 font-semibold block">{speaker.role}</span>
-                          {speaker.title && <span className="text-[11px] text-slate-500 block leading-tight mt-1">{speaker.title}</span>}
+                          {(speaker.title || speaker.jobTitle) && (
+                            <span className="text-[11px] text-slate-500 block leading-tight mt-1">
+                              {speaker.title || speaker.jobTitle}
+                            </span>
+                          )}
                         </div>
                       </div>
 
-                      {speaker.company && (
+                      {(speaker.company || speaker.companyName) && (
                         <div className="pt-2 border-t border-slate-200/70 w-full">
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate block">
-                            {speaker.company}
+                            {speaker.company || speaker.companyName}
                           </span>
                         </div>
                       )}
