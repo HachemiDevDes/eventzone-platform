@@ -37,7 +37,7 @@ import {
   Eye, Phone, Clock, CheckCircle2, XCircle, Sparkles, Filter, Info, ShieldCheck, ArrowUpRight,
   Maximize2, User, Download, Camera, Loader2, MoreVertical, MoreHorizontal,
   Store, Globe, ExternalLink, DollarSign, LayoutGrid, List, Copy, Smartphone,
-  FileSpreadsheet, ChevronDown, WifiOff, RefreshCw, DoorOpen, Shuffle, KeyRound
+  FileSpreadsheet, ChevronDown, WifiOff, RefreshCw, DoorOpen, Shuffle, KeyRound, Receipt
 } from "lucide-react";
 import QRCode from "qrcode";
 import { useLanguage } from "../lib/i18n";
@@ -4391,24 +4391,30 @@ function OrganizationsView({ state, onUpdateState, onOpenModal, initialTab = "al
         </div>
       )}
 
-      {/* Corporate Application Review Modal */}
+      {/* Corporate Application Review Drawer (Sliding Tab from Right) */}
       {reviewingOrg && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md animate-fade-in overflow-y-auto">
-          <div className="bg-white border border-slate-200 w-full max-w-2xl rounded-3xl shadow-2xl p-6 sm:p-7 space-y-6 animate-scale-up relative my-8 text-slate-900">
+        <div className="fixed inset-0 z-50 overflow-hidden flex justify-end font-sans select-none animate-fade-in">
+          {/* Backdrop with clean, subtle platform overlay */}
+          <div
+            onClick={() => !approvingLoading && setReviewingOrg(null)}
+            className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-300 cursor-pointer"
+          />
+
+          <div className="relative w-full max-w-xl lg:max-w-2xl bg-white h-full shadow-2xl z-10 flex flex-col border-l border-slate-200 overflow-hidden animate-slide-in-right will-change-transform text-slate-900">
             {/* Header */}
-            <div className="flex items-start justify-between pb-4 border-b border-slate-100">
-              <div className="flex items-center gap-3">
+            <header className="px-6 py-5 border-b border-slate-200 flex items-center justify-between bg-white shrink-0 select-none">
+              <div className="flex items-center gap-3.5 min-w-0">
                 {reviewingOrg.logo ? (
-                  <img src={reviewingOrg.logo} className="w-14 h-14 rounded-2xl object-cover border border-slate-200 bg-white shadow-xs shrink-0" alt={reviewingOrg.name} />
+                  <img src={reviewingOrg.logo} className="w-13 h-13 rounded-2xl object-cover border border-slate-200 bg-white shadow-xs shrink-0" alt={reviewingOrg.name} />
                 ) : (
-                  <div className="w-14 h-14 rounded-2xl bg-amber-500 text-white font-black text-2xl flex items-center justify-center shrink-0 shadow-xs">
+                  <div className="w-13 h-13 rounded-2xl bg-amber-500 text-white font-black text-2xl flex items-center justify-center shrink-0 shadow-xs">
                     {reviewingOrg.name ? reviewingOrg.name.charAt(0).toUpperCase() : 'C'}
                   </div>
                 )}
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-xl font-black text-slate-900 tracking-tight">{reviewingOrg.name}</h3>
-                    <span className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full ${
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-lg font-black text-slate-900 tracking-tight truncate max-w-xs">{reviewingOrg.name}</h3>
+                    <span className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full shrink-0 ${
                       reviewingOrg.status === 'pending'
                         ? 'bg-amber-100 text-amber-800 border border-amber-300'
                         : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
@@ -4416,120 +4422,173 @@ function OrganizationsView({ state, onUpdateState, onOpenModal, initialTab = "al
                       {reviewingOrg.status === 'pending' ? 'Pending Approval' : 'Active Partner'}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-500 font-medium mt-0.5">
+                  <p className="text-xs text-slate-500 font-medium mt-0.5 truncate">
                     {getLocalizedIndustry(reviewingOrg.industry, t) || 'Corporate Partner'} • {reviewingOrg.ticketType || 'Corporate Ticket'}
                   </p>
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setReviewingOrg(null)}
-                className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 cursor-pointer font-bold transition-colors"
+                className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer shrink-0"
               >
                 <X size={18} />
               </button>
-            </div>
+            </header>
 
-            {/* Application Overview Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Stand / Booth Allocation */}
-              <div className="bg-slate-50/80 rounded-2xl p-4 border border-slate-200/80 space-y-2">
-                <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                  <span>Exhibition Stand / Booth</span>
-                </div>
-                {reviewingOrg.selectedBooth ? (
-                  <div>
-                    <div className="text-lg font-black text-slate-900 flex items-center gap-2">
-                      <span>Stand: {formatBoothDisplay(reviewingOrg.selectedBooth?.boothNumber || reviewingOrg.selectedBooth?.label || (typeof reviewingOrg.selectedBooth === 'string' ? reviewingOrg.selectedBooth : ''))}</span>
-                    </div>
-                    {reviewingOrg.selectedBooth?.dimensions && (
-                      <div className="text-xs text-slate-500 font-semibold mt-0.5">
-                        Dimensions: {reviewingOrg.selectedBooth.dimensions}
+            {/* Scrollable Body */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-5">
+              {/* Application Overview Cards: Stand Allocation & Passes Allotment */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {/* Stand / Booth Allocation */}
+                <div className="bg-slate-50/80 rounded-2xl p-4 border border-slate-200/80 space-y-2">
+                  <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <Store size={13} className="text-blue-600" />
+                    <span>Exhibition Stand / Booth</span>
+                  </div>
+                  {reviewingOrg.selectedBooth ? (
+                    <div>
+                      <div className="text-base font-black text-slate-900 flex items-center gap-2">
+                        <span>Stand: {formatBoothDisplay(reviewingOrg.selectedBooth?.boothNumber || reviewingOrg.selectedBooth?.label || (typeof reviewingOrg.selectedBooth === 'string' ? reviewingOrg.selectedBooth : ''))}</span>
                       </div>
-                    )}
-                    <span className="inline-block mt-2 text-[10px] font-extrabold text-blue-700 bg-blue-100/70 border border-blue-200 px-2 py-0.5 rounded-full">
-                      Reserved upon approval
+                      {reviewingOrg.selectedBooth?.dimensions && (
+                        <div className="text-xs text-slate-500 font-semibold mt-0.5">
+                          Dimensions: {reviewingOrg.selectedBooth.dimensions}
+                        </div>
+                      )}
+                      <span className="inline-block mt-2 text-[10px] font-extrabold text-blue-700 bg-blue-100/70 border border-blue-200 px-2.5 py-0.5 rounded-full">
+                        Reserved upon approval
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="text-xs text-slate-500 font-medium py-1">
+                      No specific stand requested. General corporate participation.
+                    </div>
+                  )}
+                </div>
+
+                {/* Pass Allotment */}
+                <div className="bg-slate-50/80 rounded-2xl p-4 border border-slate-200/80 space-y-2">
+                  <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <Ticket size={13} className="text-amber-600" />
+                    <span>Representative Passes</span>
+                  </div>
+                  <div>
+                    <div className="text-base font-black text-slate-900">
+                      {reviewingOrg.badgesIncluded || 2} Passes Allotted
+                    </div>
+                    <div className="text-xs text-slate-500 font-medium mt-0.5">
+                      Category: {getCorporateRoleLabel(reviewingOrg.companyRole)}
+                    </div>
+                    <span className="inline-block mt-2 text-[10px] font-extrabold text-amber-700 bg-amber-100/70 border border-amber-200 px-2.5 py-0.5 rounded-full">
+                      Self-managed via Delegation Portal
                     </span>
                   </div>
-                ) : (
-                  <div className="text-xs text-slate-400 font-medium py-1">
-                    No specific stand requested. General corporate participation.
+                </div>
+              </div>
+
+              {/* Primary Liaison & Contact Info */}
+              <div className="bg-slate-50/80 rounded-2xl p-4.5 border border-slate-200/80 space-y-3.5 text-xs">
+                <div className="font-bold text-slate-500 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                  <Building2 size={13} className="text-slate-600" />
+                  <span>Primary Liaison & Contact Info</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-slate-700">
+                  <div>
+                    <span className="text-slate-400 font-medium block text-[11px]">Contact Person</span>
+                    <span className="font-bold text-slate-900 text-sm">{reviewingOrg.contact || reviewingOrg.contactPerson || "Not provided"}</span>
+                    {reviewingOrg.jobTitle && <span className="text-slate-500 block text-xs font-medium">{reviewingOrg.jobTitle}</span>}
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-medium block text-[11px]">Email Address</span>
+                    {reviewingOrg.email ? (
+                      <a href={`mailto:${reviewingOrg.email}`} className="font-bold text-blue-600 hover:underline">{reviewingOrg.email}</a>
+                    ) : <span className="text-slate-400">Not provided</span>}
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-medium block text-[11px]">Phone</span>
+                    <span className="font-bold text-slate-900">{reviewingOrg.phone || "Not provided"}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-medium block text-[11px]">Website</span>
+                    {reviewingOrg.website ? (
+                      <a href={reviewingOrg.website.startsWith('http') ? reviewingOrg.website : `https://${reviewingOrg.website}`} target="_blank" rel="noopener noreferrer" className="font-bold text-blue-600 hover:underline inline-flex items-center gap-1">
+                        <span>{reviewingOrg.website}</span>
+                        <ExternalLink size={11} />
+                      </a>
+                    ) : <span className="text-slate-400">Not provided</span>}
+                  </div>
+                </div>
+                {reviewingOrg.description && (
+                  <div className="pt-2.5 border-t border-slate-200/60 text-slate-600">
+                    <span className="text-slate-400 font-medium block text-[11px]">Company Profile / Notes</span>
+                    <p className="mt-0.5 text-xs font-medium leading-relaxed">{reviewingOrg.description}</p>
                   </div>
                 )}
               </div>
 
-              {/* Pass Allotment */}
-              <div className="bg-slate-50/80 rounded-2xl p-4 border border-slate-200/80 space-y-2">
-                <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                  <span>Representative Passes</span>
-                </div>
-                <div>
-                  <div className="text-lg font-black text-slate-900">
-                    {reviewingOrg.badgesIncluded || 2} Passes Allotted
+              {/* Legal & Fiscal Identification (if provided) */}
+              {(reviewingOrg.nif || reviewingOrg.rc || reviewingOrg.nis || reviewingOrg.articleImposition || reviewingOrg.legalName) && (
+                <div className="bg-slate-50/80 rounded-2xl p-4.5 border border-slate-200/80 space-y-3 text-xs">
+                  <div className="font-bold text-slate-500 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                    <Receipt size={13} className="text-slate-600" />
+                    <span>Legal & Fiscal Billing Information</span>
                   </div>
-                  <div className="text-xs text-slate-500 font-medium mt-0.5">
-                    Category: {getCorporateRoleLabel(reviewingOrg.companyRole)}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-slate-700">
+                    {reviewingOrg.legalName && (
+                      <div className="col-span-2 sm:col-span-3">
+                        <span className="text-slate-400 font-medium block text-[11px]">Legal Entity Name</span>
+                        <span className="font-bold text-slate-900">{reviewingOrg.legalName}</span>
+                      </div>
+                    )}
+                    {reviewingOrg.nif && (
+                      <div>
+                        <span className="text-slate-400 font-medium block text-[11px]">NIF</span>
+                        <span className="font-bold text-slate-900">{reviewingOrg.nif}</span>
+                      </div>
+                    )}
+                    {reviewingOrg.rc && (
+                      <div>
+                        <span className="text-slate-400 font-medium block text-[11px]">RC Number</span>
+                        <span className="font-bold text-slate-900">{reviewingOrg.rc}</span>
+                      </div>
+                    )}
+                    {reviewingOrg.nis && (
+                      <div>
+                        <span className="text-slate-400 font-medium block text-[11px]">NIS</span>
+                        <span className="font-bold text-slate-900">{reviewingOrg.nis}</span>
+                      </div>
+                    )}
+                    {reviewingOrg.articleImposition && (
+                      <div>
+                        <span className="text-slate-400 font-medium block text-[11px]">Article Imposition</span>
+                        <span className="font-bold text-slate-900">{reviewingOrg.articleImposition}</span>
+                      </div>
+                    )}
                   </div>
-                  <span className="inline-block mt-2 text-[10px] font-extrabold text-amber-700 bg-amber-100/70 border border-amber-200 px-2 py-0.5 rounded-full">
-                    Self-managed via Delegation Portal
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Liaison & Contact Credentials */}
-            <div className="bg-slate-50/80 rounded-2xl p-4 border border-slate-200/80 space-y-3 text-xs">
-              <div className="font-bold text-slate-500 uppercase tracking-wider">Primary Liaison & Contact Info</div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-slate-700">
-                <div>
-                  <span className="text-slate-400 font-medium block text-[11px]">Contact Person</span>
-                  <span className="font-bold text-slate-900 text-sm">{reviewingOrg.contact || reviewingOrg.contactPerson || "Not provided"}</span>
-                  {reviewingOrg.jobTitle && <span className="text-slate-500 block text-xs font-medium">{reviewingOrg.jobTitle}</span>}
-                </div>
-                <div>
-                  <span className="text-slate-400 font-medium block text-[11px]">Email Address</span>
-                  {reviewingOrg.email ? (
-                    <a href={`mailto:${reviewingOrg.email}`} className="font-bold text-blue-600 hover:underline">{reviewingOrg.email}</a>
-                  ) : <span className="text-slate-400">Not provided</span>}
-                </div>
-                <div>
-                  <span className="text-slate-400 font-medium block text-[11px]">Phone</span>
-                  <span className="font-bold text-slate-900">{reviewingOrg.phone || "Not provided"}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 font-medium block text-[11px]">Website</span>
-                  {reviewingOrg.website ? (
-                    <a href={reviewingOrg.website.startsWith('http') ? reviewingOrg.website : `https://${reviewingOrg.website}`} target="_blank" rel="noopener noreferrer" className="font-bold text-blue-600 hover:underline flex items-center gap-1">
-                      <span>{reviewingOrg.website}</span>
-                      <ExternalLink size={11} />
-                    </a>
-                  ) : <span className="text-slate-400">Not provided</span>}
-                </div>
-              </div>
-              {reviewingOrg.description && (
-                <div className="pt-2 border-t border-slate-200/60 text-slate-600">
-                  <span className="text-slate-400 font-medium block text-[11px]">Company Profile</span>
-                  <p className="mt-0.5 text-xs font-medium leading-relaxed">{reviewingOrg.description}</p>
                 </div>
               )}
-            </div>
 
-            {/* Delegation Portal Dispatch Notice */}
-            <div className="bg-blue-50/60 border border-blue-200/80 rounded-2xl p-4 text-xs text-blue-900 space-y-1.5">
-              <div className="font-bold text-blue-800">
-                <span>Delegation Portal Link Dispatch</span>
+              {/* Delegation Portal Dispatch Notice */}
+              <div className="bg-blue-50/60 border border-blue-200/80 rounded-2xl p-4 text-xs text-blue-900 space-y-1.5">
+                <div className="font-bold text-blue-900 flex items-center gap-1.5">
+                  <Sparkles size={14} className="text-blue-600" />
+                  <span>Delegation Portal Link Dispatch</span>
+                </div>
+                <p className="text-blue-800 font-medium leading-relaxed">
+                  Approving this company will reserve their stand and immediately dispatch a secure <strong>Delegation Portal Link</strong> to <span className="font-bold">{reviewingOrg.email || 'the primary contact'}</span>. They can add badges for their {reviewingOrg.badgesIncluded || 2} representatives without sharing organizer credentials.
+                </p>
               </div>
-              <p className="text-blue-700 font-medium leading-relaxed">
-                Approving this company will reserve their stand and immediately dispatch a secure <strong>Delegation Portal Link</strong> to <span className="font-bold">{reviewingOrg.email || 'the primary contact'}</span>. They can add badges for their {reviewingOrg.badgesIncluded || 2} representatives without sharing organizer credentials.
-              </p>
             </div>
 
-            {/* Modal Actions */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-slate-100">
+            {/* Sticky Drawer Footer */}
+            <footer className="px-6 py-4 border-t border-slate-200 bg-white flex items-center justify-between gap-3 shrink-0">
               {reviewingOrg.status === 'pending' ? (
                 <button
+                  type="button"
                   onClick={() => handleDeclineCompany(reviewingOrg)}
                   disabled={approvingLoading}
-                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-bold transition-all cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-bold transition-all cursor-pointer"
                 >
                   Decline Application
                 </button>
@@ -4537,20 +4596,22 @@ function OrganizationsView({ state, onUpdateState, onOpenModal, initialTab = "al
                 <div />
               )}
 
-              <div className="flex items-center gap-2.5 w-full sm:w-auto">
+              <div className="flex items-center gap-2.5">
                 <button
+                  type="button"
                   onClick={() => setReviewingOrg(null)}
                   disabled={approvingLoading}
-                  className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-bold transition-all cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-bold transition-all cursor-pointer"
                 >
                   Close
                 </button>
 
                 {reviewingOrg.status === 'pending' && (
                   <button
+                    type="button"
                     onClick={() => handleApproveCompany(reviewingOrg)}
                     disabled={approvingLoading}
-                    className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold transition-all shadow-md shadow-emerald-200 cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                    className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold transition-all shadow-md shadow-emerald-200 cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
                   >
                     {approvingLoading ? (
                       <>
@@ -4566,8 +4627,7 @@ function OrganizationsView({ state, onUpdateState, onOpenModal, initialTab = "al
                   </button>
                 )}
               </div>
-            </div>
-
+            </footer>
           </div>
         </div>
       )}
