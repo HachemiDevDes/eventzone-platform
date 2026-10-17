@@ -140,9 +140,11 @@ export default function FormImageUploader({
           <div className="text-xs font-bold text-slate-800">
             {isUploading
               ? t("forms.uploadingToCloud", "Uploading to Cloud Storage...")
-              : (placeholder && (placeholder.toLowerCase().includes("badge") || placeholder.toLowerCase().includes("attendee"))
-                ? t("forms.smartFieldPicturePlaceholder", "Upload or take a photo for your attendee badge...")
-                : (placeholder || t("forms.uploadPhotoPlaceholder", "Upload your photo from phone or computer")))}
+              : ((preset === "logo" || folder === "logos" || (placeholder && (placeholder.toLowerCase().includes("logo") || placeholder.toLowerCase().includes("company") || placeholder.toLowerCase().includes("شعار"))))
+                ? t("forms.smartFieldCompanyLogoPlaceholder", "Upload company logo (PNG, JPG, SVG)...")
+                : (placeholder && (placeholder.toLowerCase().includes("badge") || placeholder.toLowerCase().includes("attendee"))
+                  ? t("forms.smartFieldPicturePlaceholder", "Upload or take a photo for your attendee badge...")
+                  : (placeholder || t("forms.uploadPhotoPlaceholder", "Upload your photo from phone or computer"))))}
           </div>
           <div className="text-[11px] text-slate-400 mt-1 flex items-center justify-center gap-1.5">
             <Sparkles size={11} className="text-blue-500 shrink-0" />

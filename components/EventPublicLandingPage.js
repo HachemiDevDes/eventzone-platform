@@ -61,6 +61,21 @@ function getLocalizedCheckoutFieldLabel(field, t) {
   if (fid === "preset_referral" || cleaned === "how did you hear about us?" || cleaned.includes("hear about")) {
     return t ? t("forms.smartFieldReferralLabel", "How did you hear about us?") : "How did you hear about us?";
   }
+  if (fid === "preset_company_logo" || cleaned === "company logo" || cleaned === "logo" || (cleaned.includes("company") && cleaned.includes("logo")) || cleaned.includes("شعار")) {
+    return t ? t("forms.smartFieldCompanyLogoLabel", "Company Logo") : "Company Logo";
+  }
+  if (fid === "preset_booth_selection" || fid === "preset_stand" || fid === "booth" || fid === "stand" || cleaned === "stand" || cleaned === "booth" || cleaned === "stand / booth selection" || cleaned === "exhibition stand" || cleaned === "stand / booth" || cleaned.includes("booth") || cleaned.includes("stand") || cleaned.includes("جناح")) {
+    return t ? t("forms.smartFieldStandLabel", "Stand") : "Stand";
+  }
+  if (fid === "preset_stand_notes" || cleaned.includes("technical requirements") || cleaned.includes("stand requirements") || (cleaned.includes("stand") && cleaned.includes("note"))) {
+    return t ? t("forms.smartFieldStandNotesLabel", "Stand & Technical Requirements") : "Stand & Technical Requirements";
+  }
+  if (fid === "preset_company_nif" || cleaned === "tax id / nif" || cleaned === "tax id" || cleaned === "nif" || cleaned.includes("nif") || cleaned.includes("التعريف الجبائي")) {
+    return t ? t("forms.smartFieldNifLabel", "Tax ID / NIF") : "Tax ID / NIF";
+  }
+  if (fid === "preset_website" || cleaned === "website" || cleaned === "company website" || cleaned.includes("website") || cleaned.includes("site web") || cleaned.includes("الموقع الإلكتروني")) {
+    return t ? t("common.website", "Website") : "Website";
+  }
   if (fid === "f_core_name" || cleaned === "full name") {
     return t ? t("reg.fullName", "Full Name") : "Full Name";
   }
@@ -80,6 +95,27 @@ function getLocalizedCheckoutFieldPlaceholder(field, t) {
   const cleaned = ph.trim().toLowerCase();
   const fid = (field.id || "").toLowerCase();
 
+  if (fid === "preset_company_logo" || cleaned.includes("upload company logo") || (cleaned.includes("logo") && cleaned.includes("png")) || cleaned.includes("شعار")) {
+    return t ? t("forms.smartFieldCompanyLogoPlaceholder", "Upload company logo (PNG, JPG, SVG)...") : "Upload company logo (PNG, JPG, SVG)...";
+  }
+  if (fid === "preset_booth_selection" || cleaned.includes("select your exhibition booth") || cleaned.includes("floor plan")) {
+    return t ? t("forms.smartFieldStandPlaceholder", "Select your exhibition booth from the interactive floor plan...") : "Select your exhibition booth from the interactive floor plan...";
+  }
+  if (fid === "preset_stand_notes" || cleaned.includes("electricity") || cleaned.includes("furniture") || cleaned.includes("custom booth")) {
+    return t ? t("forms.smartFieldStandNotesPlaceholder", "Describe any specific electricity (e.g. 3kW), furniture, lighting, or custom booth needs...") : "Describe any specific electricity (e.g. 3kW), furniture, lighting, or custom booth needs...";
+  }
+  if (fid === "preset_company_nif" || cleaned.includes("000123456789012")) {
+    return t ? t("forms.smartFieldNifPlaceholder", "e.g. 000123456789012") : "e.g. 000123456789012";
+  }
+  if (cleaned.includes("acme corporation") || cleaned.includes("global tech")) {
+    return t ? t("reg.placeholderCompanyName", "e.g. Acme Corporation / Global Tech") : "e.g. Acme Corporation / Global Tech";
+  }
+  if (cleaned.includes("sarah jenkins")) {
+    return t ? t("reg.placeholderLiaisonName", "e.g. Sarah Jenkins (Exhibition Manager / Delegate)") : "e.g. Sarah Jenkins (Exhibition Manager / Delegate)";
+  }
+  if (cleaned.includes("contact@company.com")) {
+    return t ? t("reg.placeholderLiaisonEmail", "e.g. contact@company.com") : "e.g. contact@company.com";
+  }
   if (fid === "preset_company" || cleaned.includes("acme corporation") || cleaned.includes("google, mit")) {
     return t ? t("drawer.companyPlaceholder", "e.g. Acme Corporation, Google, MIT...") : "e.g. Acme Corporation, Google, MIT...";
   }
@@ -4152,7 +4188,8 @@ export default function EventPublicLandingPage({
                                               setCheckoutSectionErrors(prev => ({ ...prev, [field.id]: undefined }));
                                             }
                                           }}
-                                          placeholder={getLocalizedCheckoutFieldPlaceholder(field, t) || t("forms.smartFieldPicturePlaceholder", "Upload or take a photo for your attendee badge...")}
+                                          placeholder={getLocalizedCheckoutFieldPlaceholder(field, t) || (field.id === "preset_company_logo" || (field.label || "").toLowerCase().includes("logo") ? t("forms.smartFieldCompanyLogoPlaceholder", "Upload company logo (PNG, JPG, SVG)...") : t("forms.smartFieldPicturePlaceholder", "Upload or take a photo for your attendee badge..."))}
+                                          preset={field.id === "preset_company_logo" || (field.label || "").toLowerCase().includes("logo") ? "logo" : "badge"}
                                           required={field.required}
                                         />
                                       )}
@@ -4486,7 +4523,8 @@ export default function EventPublicLandingPage({
                                         setCheckoutSectionErrors(prev => ({ ...prev, [field.id]: undefined }));
                                       }
                                     }}
-                                    placeholder={getLocalizedCheckoutFieldPlaceholder(field, t) || t("forms.smartFieldPicturePlaceholder", "Upload or take a photo for your attendee badge...")}
+                                    placeholder={getLocalizedCheckoutFieldPlaceholder(field, t) || (field.id === "preset_company_logo" || (field.label || "").toLowerCase().includes("logo") ? t("forms.smartFieldCompanyLogoPlaceholder", "Upload company logo (PNG, JPG, SVG)...") : t("forms.smartFieldPicturePlaceholder", "Upload or take a photo for your attendee badge..."))}
+                                    preset={field.id === "preset_company_logo" || (field.label || "").toLowerCase().includes("logo") ? "logo" : "badge"}
                                     required={field.required}
                                   />
                                 )}
