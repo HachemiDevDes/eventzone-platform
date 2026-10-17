@@ -861,12 +861,12 @@ function SubmissionDetailsModal({ item, type = "attendee", forms = [], tickets =
     return true;
   });
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-50 overflow-hidden select-none animate-fade-in font-sans">
       {/* Backdrop */}
       <div
         onClick={onClose}
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-200 cursor-pointer"
+        className="absolute inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity duration-200 cursor-pointer"
       />
 
       <div className="fixed inset-y-0 right-0 max-w-full flex pl-6 sm:pl-10">
@@ -933,7 +933,7 @@ function SubmissionDetailsModal({ item, type = "attendee", forms = [], tickets =
                     {ticketName}
                   </span>
                   {type === "pending" ? (
-                    <span className="px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-xs font-semibold flex items-center gap-1">
+                    <span className="px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-xs font-semibold flex items-center gap-1">
                       <Clock size={11} /> Pending Review
                     </span>
                   ) : (
@@ -1109,6 +1109,8 @@ function SubmissionDetailsModal({ item, type = "attendee", forms = [], tickets =
       )}
     </div>
   );
+
+  return typeof document !== "undefined" ? createPortal(modalContent, document.body) : modalContent;
 }
 
 // 2. ALL ATTENDEES VIEW (Dynamic Form Columns + Ticket-Type Switcher)
@@ -3027,7 +3029,7 @@ function PendingView({ state, onUpdateState }) {
               placeholder={t("table.searchPendingPlaceholder", "Search pending applicants by name, email, note, or answer...")} 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-slate-200 bg-white rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-amber-500 shadow-sm"
+              className="w-full pl-10 pr-4 py-2 border border-slate-200 bg-white rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-600 shadow-sm"
             />
           </div>
         </div>
@@ -3101,13 +3103,13 @@ function PendingView({ state, onUpdateState }) {
                                 ticket: getResolvedTicketName(p, tickets)
                               });
                             }}
-                            className="relative group/avatar cursor-zoom-in shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                            className="relative group/avatar cursor-zoom-in shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500/40"
                             title="Click to view full photo"
                           >
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img 
                               src={displayImg} 
-                              className="w-9 h-9 rounded-full object-cover shadow-inner border border-slate-200 group-hover/avatar:ring-2 group-hover/avatar:ring-amber-500 transition-all" 
+                              className="w-9 h-9 rounded-full object-cover shadow-inner border border-slate-200 group-hover/avatar:ring-2 group-hover/avatar:ring-blue-500 transition-all" 
                               alt="" 
                             />
                             <div className="absolute inset-0 bg-slate-900/35 rounded-full opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center transition-opacity text-white">
@@ -3559,7 +3561,7 @@ function OrganizationsView({ state, onUpdateState, onOpenModal, initialTab = "al
             <div className="text-[11px] font-semibold text-slate-500 flex items-center gap-1.5 truncate">
               <span className="text-emerald-600 font-bold">{activeCount} {t("common.active", "active")}</span>
               <span>•</span>
-              <span className={pendingCount > 0 ? "text-amber-600 font-bold" : "text-slate-400"}>
+              <span className={pendingCount > 0 ? "text-blue-600 font-bold" : "text-slate-400"}>
                 {pendingCount} {t("common.pending", "pending")}
               </span>
             </div>
@@ -3573,14 +3575,14 @@ function OrganizationsView({ state, onUpdateState, onOpenModal, initialTab = "al
               {t("table.statReviewQueue", "Review Queue")}
             </span>
             <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-              pendingCount > 0 ? "bg-amber-50 text-amber-600" : "bg-emerald-50 text-emerald-600"
+              pendingCount > 0 ? "bg-blue-50 text-blue-600" : "bg-emerald-50 text-emerald-600"
             }`}>
               {pendingCount > 0 ? <Clock size={16} /> : <CheckCircle2 size={16} />}
             </div>
           </div>
           <div>
             <div className={`text-2xl font-black tracking-tight leading-none mb-1.5 ${
-              pendingCount > 0 ? "text-amber-700" : "text-emerald-700"
+              pendingCount > 0 ? "text-blue-700" : "text-emerald-700"
             }`}>
               {pendingCount > 0 ? `${pendingCount} ${t("common.pending", "Pending")}` : "100%"}
             </div>
@@ -3672,12 +3674,12 @@ function OrganizationsView({ state, onUpdateState, onOpenModal, initialTab = "al
           <button
             onClick={() => setStatusTab("pending")}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-              statusTab === "pending" ? "bg-white text-amber-700 shadow-xs font-extrabold" : "text-slate-500 hover:text-slate-800"
+              statusTab === "pending" ? "bg-white text-blue-700 shadow-xs font-extrabold" : "text-slate-500 hover:text-slate-800"
             }`}
           >
             <span>{t("common.pending", "Pending")}</span>
             {pendingCount > 0 && (
-              <span className="w-4.5 h-4.5 rounded-full bg-amber-500 text-white text-[10px] font-black flex items-center justify-center">
+              <span className="w-4.5 h-4.5 rounded-full bg-blue-600 text-white text-[10px] font-black flex items-center justify-center">
                 {pendingCount}
               </span>
             )}
@@ -3693,7 +3695,7 @@ function OrganizationsView({ state, onUpdateState, onOpenModal, initialTab = "al
           <button
             onClick={() => setStatusTab("sponsors")}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              statusTab === "sponsors" ? "bg-white text-amber-700 shadow-xs font-extrabold" : "text-slate-500 hover:text-slate-800"
+              statusTab === "sponsors" ? "bg-white text-blue-700 shadow-xs font-extrabold" : "text-slate-500 hover:text-slate-800"
             }`}
           >
             {t("dash.sponsors", "Sponsors")} ({activeSponsorsCount})
@@ -3903,7 +3905,7 @@ function OrganizationsView({ state, onUpdateState, onOpenModal, initialTab = "al
                       </span>
 
                       {o.status === 'pending' && (
-                        <span className="text-[10px] font-extrabold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <span className="text-[10px] font-extrabold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full flex items-center gap-1">
                           <Clock size={10} />
                           <span>PENDING APPROVAL</span>
                         </span>
@@ -3979,7 +3981,7 @@ function OrganizationsView({ state, onUpdateState, onOpenModal, initialTab = "al
                   <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2">
                     <button
                       onClick={() => setReviewingOrg(o)}
-                      className="flex-1 py-2 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-black transition-all text-center cursor-pointer shadow-xs flex items-center justify-center gap-1.5"
+                      className="flex-1 py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black transition-all text-center cursor-pointer shadow-xs shadow-blue-500/20 flex items-center justify-center gap-1.5"
                     >
                       <Clock size={13} />
                       <span>Review Application</span>
@@ -4167,7 +4169,7 @@ function OrganizationsView({ state, onUpdateState, onOpenModal, initialTab = "al
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           {o.status === 'pending' && (
-                            <span className="text-[10px] font-extrabold text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-xl flex items-center gap-1">
+                            <span className="text-[10px] font-extrabold text-blue-800 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-xl flex items-center gap-1">
                               <Clock size={10} />
                               <span>PENDING APPROVAL</span>
                             </span>
@@ -4218,7 +4220,7 @@ function OrganizationsView({ state, onUpdateState, onOpenModal, initialTab = "al
                             Archived
                           </span>
                         ) : o.status === 'pending' ? (
-                          <span className="text-[10px] font-extrabold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full flex items-center gap-1 w-fit">
+                          <span className="text-[10px] font-extrabold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full flex items-center gap-1 w-fit">
                             <Clock size={10} />
                             Pending
                           </span>
@@ -4237,7 +4239,7 @@ function OrganizationsView({ state, onUpdateState, onOpenModal, initialTab = "al
                               {o.status === 'pending' ? (
                                 <button
                                   onClick={() => setReviewingOrg(o)}
-                                  className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-black transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
+                                  className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black transition-all cursor-pointer shadow-xs shadow-blue-500/20 flex items-center gap-1.5"
                                   title="Review Application"
                                 >
                                   <Clock size={12} />
@@ -4392,12 +4394,12 @@ function OrganizationsView({ state, onUpdateState, onOpenModal, initialTab = "al
       )}
 
       {/* Corporate Application Review Drawer (Sliding Tab from Right) */}
-      {reviewingOrg && (
+      {reviewingOrg && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 z-50 overflow-hidden flex justify-end font-sans select-none animate-fade-in">
-          {/* Backdrop with clean, subtle platform overlay */}
+          {/* Backdrop with clean, subtle platform overlay covering full viewport including sidebar */}
           <div
             onClick={() => !approvingLoading && setReviewingOrg(null)}
-            className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-300 cursor-pointer"
+            className="absolute inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity duration-300 cursor-pointer"
           />
 
           <div className="relative w-full max-w-xl lg:max-w-2xl bg-white h-full shadow-2xl z-10 flex flex-col border-l border-slate-200 overflow-hidden animate-slide-in-right will-change-transform text-slate-900">
@@ -4407,7 +4409,7 @@ function OrganizationsView({ state, onUpdateState, onOpenModal, initialTab = "al
                 {reviewingOrg.logo ? (
                   <img src={reviewingOrg.logo} className="w-13 h-13 rounded-2xl object-cover border border-slate-200 bg-white shadow-xs shrink-0" alt={reviewingOrg.name} />
                 ) : (
-                  <div className="w-13 h-13 rounded-2xl bg-amber-500 text-white font-black text-2xl flex items-center justify-center shrink-0 shadow-xs">
+                  <div className="w-13 h-13 rounded-2xl bg-blue-600 text-white font-black text-2xl flex items-center justify-center shrink-0 shadow-xs">
                     {reviewingOrg.name ? reviewingOrg.name.charAt(0).toUpperCase() : 'C'}
                   </div>
                 )}
@@ -4416,8 +4418,8 @@ function OrganizationsView({ state, onUpdateState, onOpenModal, initialTab = "al
                     <h3 className="text-lg font-black text-slate-900 tracking-tight truncate max-w-xs">{reviewingOrg.name}</h3>
                     <span className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full shrink-0 ${
                       reviewingOrg.status === 'pending'
-                        ? 'bg-amber-100 text-amber-800 border border-amber-300'
-                        : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                        : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                     }`}>
                       {reviewingOrg.status === 'pending' ? 'Pending Approval' : 'Active Partner'}
                     </span>
@@ -4470,7 +4472,7 @@ function OrganizationsView({ state, onUpdateState, onOpenModal, initialTab = "al
                 {/* Pass Allotment */}
                 <div className="bg-slate-50/80 rounded-2xl p-4 border border-slate-200/80 space-y-2">
                   <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                    <Ticket size={13} className="text-amber-600" />
+                    <Ticket size={13} className="text-blue-600" />
                     <span>Representative Passes</span>
                   </div>
                   <div>
@@ -4480,7 +4482,7 @@ function OrganizationsView({ state, onUpdateState, onOpenModal, initialTab = "al
                     <div className="text-xs text-slate-500 font-medium mt-0.5">
                       Category: {getCorporateRoleLabel(reviewingOrg.companyRole)}
                     </div>
-                    <span className="inline-block mt-2 text-[10px] font-extrabold text-amber-700 bg-amber-100/70 border border-amber-200 px-2.5 py-0.5 rounded-full">
+                    <span className="inline-block mt-2 text-[10px] font-extrabold text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full">
                       Self-managed via Delegation Portal
                     </span>
                   </div>
@@ -4629,7 +4631,8 @@ function OrganizationsView({ state, onUpdateState, onOpenModal, initialTab = "al
               </div>
             </footer>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>

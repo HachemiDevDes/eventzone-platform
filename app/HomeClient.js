@@ -5388,7 +5388,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
                           currentView === "pending_companies" 
                             ? "bg-blue-600 text-white" 
                             : pendingCompaniesCount > 0 
-                              ? "bg-amber-100 text-amber-800 font-extrabold border border-amber-200" 
+                              ? "bg-blue-100 text-blue-700 font-extrabold border border-blue-200" 
                               : "bg-slate-100 text-slate-500"
                         }`}>
                           {pendingCompaniesCount}
@@ -5900,6 +5900,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               influencers={influencers}
               sponsors={sponsors}
               exhibitors={exhibitors}
+              organizations={organizations}
               floorPlans={floorPlans}
               forms={forms}
               formSubmissions={formSubmissions}

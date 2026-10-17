@@ -24,6 +24,7 @@ export default function Overview({
   influencers = [],
   sponsors = [],
   exhibitors = [],
+  organizations = [],
   floorPlans = [],
   forms = [],
   formSubmissions = [],
@@ -72,6 +73,9 @@ export default function Overview({
     if (match && (match.ticketTarget === "company" || match.badgeSettings?.ticketTarget === "company")) return false;
     return true;
   }).length;
+  const pendingCompaniesCount = useMemo(() => {
+    return (organizations || []).filter(o => !o.isArchived && o.status === "pending").length;
+  }, [organizations]);
   const checkedInCount = attendees.filter(a => a.status === 'checked-in' || a.status === 'checked_in' || a.checkedIn || a.checked_in).length;
   const checkinPct = totalAttendees > 0 ? (checkedInCount / totalAttendees) * 100 : 0;
   const capacityPct = capacity > 0 ? Math.min(100, Math.round((totalAttendees / capacity) * 100)) : 0;
@@ -518,27 +522,62 @@ export default function Overview({
       </div>
 
       {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* 2. PENDING REGISTRATIONS ATTENTION STRIP (Conditional Alert)        */}
+      {/* 2. PENDING CORPORATE & REGISTRATION ATTENTION STRIPS (Conditional)  */}
       {/* ─────────────────────────────────────────────────────────────────── */}
-      {pendingCount > 0 && (
-        <div className="p-4 sm:p-5 rounded-3xl bg-amber-500/10 border border-amber-300/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs animate-fade-in">
+      {pendingCompaniesCount > 0 && (
+        <div className="p-4 sm:p-5 rounded-3xl bg-blue-50/70 border border-blue-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs animate-fade-in">
           <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-sm shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-sm shrink-0">
+              <Building2 size={20} className="animate-pulse" />
+            </div>
+            <div>
+              <div className="text-sm font-bold text-blue-950 flex items-center gap-2">
+                <span>
+                  <bdi dir="ltr">{pendingCompaniesCount}</bdi>{" "}
+                  {pendingCompaniesCount === 1
+                    ? t("overview.companyAwaitingReview", "Company Awaiting Organizer Review")
+                    : t("overview.companiesAwaitingReview", "Companies Awaiting Organizer Review")}
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-blue-100 text-blue-800 uppercase">
+                  {t("overview.actionRequired", "Action Required")}
+                </span>
+              </div>
+              <p className="text-xs text-blue-900/80 mt-0.5">
+                {t("overview.pendingCompaniesBannerDesc", "Review pending corporate registrations, allocate stands/booths, and dispatch delegation passes.")}
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => onSwitchView("pending_companies")}
+            className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-sm shadow-blue-600/25 transition-all cursor-pointer shrink-0 flex items-center gap-1.5"
+          >
+            <span>{t("overview.reviewCompanies", "Review Applications")}</span>
+            {isRTL ? <ArrowLeft size={14} /> : <ArrowRight size={14} />}
+          </button>
+        </div>
+      )}
+
+      {pendingCount > 0 && (
+        <div className="p-4 sm:p-5 rounded-3xl bg-blue-50/70 border border-blue-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs animate-fade-in">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-sm shrink-0">
               <Bell size={20} className="animate-bounce" />
             </div>
             <div>
-              <div className="text-sm font-bold text-amber-950 flex items-center gap-2">
+              <div className="text-sm font-bold text-blue-950 flex items-center gap-2">
                 <span>
                   <bdi dir="ltr">{pendingCount}</bdi>{" "}
                   {pendingCount === 1
                     ? t("overview.applicantAwaitingReview", "Applicant Awaiting Organizer Review")
                     : t("overview.applicantsAwaitingReview", "Applicants Awaiting Organizer Review")}
                 </span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-200/80 text-amber-900 uppercase">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-blue-100 text-blue-800 uppercase">
                   {t("overview.actionRequired", "Action Required")}
                 </span>
               </div>
-              <p className="text-xs text-amber-800/90 mt-0.5">
+              <p className="text-xs text-blue-900/80 mt-0.5">
                 {t("overview.pendingApplicantsBannerDesc", "Review pending applicant profiles, approve their access passes, or decline submissions.")}
               </p>
             </div>
@@ -547,7 +586,7 @@ export default function Overview({
           <button
             type="button"
             onClick={() => onSwitchView("pending")}
-            className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-sm shadow-amber-600/25 transition-all cursor-pointer shrink-0 flex items-center gap-1.5"
+            className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-sm shadow-blue-600/25 transition-all cursor-pointer shrink-0 flex items-center gap-1.5"
           >
             <span>{t("overview.reviewApps", "Review Applications")}</span>
             {isRTL ? <ArrowLeft size={14} /> : <ArrowRight size={14} />}
@@ -595,8 +634,8 @@ export default function Overview({
             <div className="flex justify-between items-center text-[11px] font-semibold text-slate-500">
               <span>{capacityPct}% {t("overview.targetFilled", "target filled")}</span>
               {pendingCount > 0 ? (
-                <span className="text-amber-600 font-bold flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                <span className="text-blue-600 font-bold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
                   {pendingCount} {t("dash.pending", "pending")}
                 </span>
               ) : (
@@ -682,15 +721,15 @@ export default function Overview({
 
         {/* Card 4: Summit Ecosystem (Agenda, Speakers & Partners) */}
         <div 
-          onClick={() => onSwitchView("calendar")}
-          className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs hover:border-amber-300 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group"
+          onClick={() => onSwitchView(pendingCompaniesCount > 0 ? "pending_companies" : "calendar")}
+          className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs hover:border-blue-300 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group"
         >
           <div>
             <div className="flex justify-between items-start mb-3">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 {t("calendar.title", "Agenda & Ecosystem")}
               </span>
-              <div className="p-2.5 bg-amber-50 text-amber-600 rounded-2xl group-hover:scale-110 transition-transform">
+              <div className="p-2.5 bg-blue-50 text-blue-600 rounded-2xl group-hover:scale-110 transition-transform">
                 <Calendar size={18} />
               </div>
             </div>
@@ -708,7 +747,14 @@ export default function Overview({
           <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-semibold">
             <span>{uniqueSpeakers.length} {t("dash.speakers", "Speakers")}</span>
             <span>•</span>
-            <span>{sponsors.length + exhibitors.length} {t("dash.sponsors", "Partners")}</span>
+            <span className="flex items-center gap-1">
+              <span>{sponsors.length + exhibitors.length} {t("dash.sponsors", "Partners")}</span>
+              {pendingCompaniesCount > 0 && (
+                <span className="text-blue-600 font-bold">
+                  ({pendingCompaniesCount} {t("dash.pending", "pending")})
+                </span>
+              )}
+            </span>
           </div>
         </div>
 
@@ -1250,7 +1296,7 @@ export default function Overview({
                 <h3 className="text-base font-bold text-slate-900">
                   {t("overview.partnersExpo", "Partners & Expo Floor")}
                 </h3>
-                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-700">
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-700">
                   {t("overview.ecosystem", "Ecosystem")}
                 </span>
               </div>
@@ -1262,7 +1308,7 @@ export default function Overview({
             <button
               type="button"
               onClick={() => onSwitchView("sponsors")}
-              className="text-xs font-bold text-amber-600 hover:text-amber-700 cursor-pointer"
+              className="text-xs font-bold text-blue-600 hover:text-blue-700 cursor-pointer"
             >
               {t("common.manage", "Manage")}
             </button>
@@ -1271,11 +1317,11 @@ export default function Overview({
           <div className="grid grid-cols-2 gap-3.5 flex-1">
             <div 
               onClick={() => onSwitchView("sponsors")}
-              className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between cursor-pointer hover:border-amber-300 transition-colors"
+              className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between cursor-pointer hover:border-blue-300 transition-colors"
             >
               <div className="flex justify-between items-start">
                 <span className="text-[11px] font-bold text-slate-400 uppercase">{t("dash.sponsors", "Sponsors")}</span>
-                <Award size={16} className="text-amber-500" />
+                <Award size={16} className="text-blue-600" />
               </div>
               <div>
                 <div className="text-2xl font-extrabold text-slate-900">{sponsors.length}</div>
@@ -1675,11 +1721,11 @@ export default function Overview({
                     className={`w-full p-2.5 rounded-2xl border text-start transition-all cursor-pointer flex items-center justify-between gap-3 ${
                       item.completed 
                         ? "bg-slate-50/70 border-slate-200/80 hover:bg-slate-100/70"
-                        : "bg-amber-50/50 border-amber-200 hover:bg-amber-50/80"
+                        : "bg-blue-50/50 border-blue-200 hover:bg-blue-50/80"
                     }`}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className={`p-1.5 rounded-xl shrink-0 ${item.completed ? "bg-slate-200/70 text-slate-700" : "bg-amber-100 text-amber-800"}`}>
+                      <div className={`p-1.5 rounded-xl shrink-0 ${item.completed ? "bg-slate-200/70 text-slate-700" : "bg-blue-100 text-blue-800"}`}>
                         <IconComp size={13} />
                       </div>
                       <div className="min-w-0">
@@ -1697,7 +1743,7 @@ export default function Overview({
                     </div>
 
                     <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md shrink-0 ${
-                      item.completed ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60" : "bg-amber-100 text-amber-800 border border-amber-200"
+                      item.completed ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60" : "bg-blue-100 text-blue-800 border border-blue-200"
                     }`}>
                       {item.completed ? t("overview.milestoneDone", "DONE") : t("overview.milestonePending", "PENDING")}
                     </span>
