@@ -24,7 +24,7 @@ import BoothPickerModal from "./BoothPickerModal";
 import { getFormSections, getLocalizedPresetOption } from "../lib/formPresets";
 import { smoothScrollTo } from "../lib/smoothScroll";
 import { getYouTubeEmbedUrl } from "./EventDetailsView";
-import { recordInfluencerClick, fetchEventDetails, fetchTickets } from "../lib/db";
+import { recordInfluencerClick, fetchEventDetails, fetchTickets, fetchForms } from "../lib/db";
 import { LandingPageSkeleton } from "./SkeletonLoaders";
 import Footer from "./Footer";
 
@@ -439,6 +439,16 @@ export default function EventPublicLandingPage({
 
   const [internalTickets, setInternalTickets] = useState(cachedTickets || []);
 
+  // Instant local cache hydration for forms
+  const cachedForms = typeof window !== "undefined" && currentEventId ? (() => {
+    try {
+      const item = localStorage.getItem(`eventzone_cache_forms_${currentEventId}`);
+      return item ? JSON.parse(item) : null;
+    } catch { return null; }
+  })() : null;
+
+  const [internalForms, setInternalForms] = useState(cachedForms || []);
+
   const isMatchingEvent = !currentEventId || !eventDetails?.id || String(eventDetails.id) === String(currentEventId) || currentEventId === "default-summit-2025";
   const validPropDetails = isMatchingEvent ? eventDetails : (eventDetails || null);
   const effectiveDetails = (validPropDetails && (validPropDetails.title || validPropDetails.youtubeUrl || validPropDetails.youtube_url || validPropDetails.banner))
@@ -456,7 +466,7 @@ export default function EventPublicLandingPage({
         banner: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1600&auto=format&fit=crop&q=80"
       });
 
-  // Direct fetch fallback if no matching event details or tickets provided yet
+  // Direct fetch fallback if no matching event details, tickets, or forms provided yet
   useEffect(() => {
     if (!currentEventId) return;
 
@@ -470,6 +480,20 @@ export default function EventPublicLandingPage({
           if (typeof window !== "undefined") {
             try {
               localStorage.setItem(`eventzone_cache_tickets_${currentEventId}`, JSON.stringify(activeOnly));
+            } catch (e) {}
+          }
+        }
+      }).catch(console.warn);
+    }
+
+    if (!forms || forms.length === 0) {
+      fetchForms(currentEventId).then((data) => {
+        if (isMounted && data && Array.isArray(data)) {
+          const activeOnly = data.filter(f => f.status !== "archived" && !f.isArchived);
+          setInternalForms(activeOnly);
+          if (typeof window !== "undefined") {
+            try {
+              localStorage.setItem(`eventzone_cache_forms_${currentEventId}`, JSON.stringify(activeOnly));
             } catch (e) {}
           }
         }
@@ -493,7 +517,7 @@ export default function EventPublicLandingPage({
     }
 
     return () => { isMounted = false; };
-  }, [currentEventId, tickets]);
+  }, [currentEventId, tickets, forms]);
 
   // Real event properties with default fallbacks
   const title = effectiveDetails?.title || "Eventzone Summit";
@@ -1175,14 +1199,22 @@ export default function EventPublicLandingPage({
   // Find active selected ticket object
   const selectedTicket = eventTickets.find(tk => tk.name === selectedTier || tk.tier === selectedTier || tk.id === selectedTier);
 
+  const rawForms = (forms && forms.length > 0)
+    ? forms
+    : (internalForms && internalForms.length > 0
+      ? internalForms
+      : (cachedForms || []));
+
   // Find active ticket registration form manually bound to selected ticket tier
-  const activeTicketForm = forms.find(f => 
+  const activeTicketForm = rawForms.find(f => 
     f.status !== "archived" && !f.isArchived &&
-    (selectedTicket?.formId === f.id || selectedTicket?.form_id === f.id)
-  );
+    ((selectedTicket?.formId && (selectedTicket.formId === f.id || selectedTicket.form_id === f.id)) ||
+     (selectedTicket?.form_id && selectedTicket.form_id === f.id) ||
+     (f.ticketId && selectedTicket?.id && f.ticketId === selectedTicket.id))
+  ) || rawForms.find(f => f.status !== "archived" && !f.isArchived && f.type === "ticket_registration" && (!selectedTicket?.formId || selectedTicket.formId === "default"));
 
   // Find active feedback survey form
-  const activeFeedbackForm = forms.find(f => 
+  const activeFeedbackForm = rawForms.find(f => 
     f.status === "active" && 
     (f.type === "feedback_survey" || f.type === "session_survey")
   );
@@ -3931,8 +3963,8 @@ export default function EventPublicLandingPage({
                             {/* Prominent Company Name Field for Corporate Registrations */}
                             {selectedTicket?.ticketTarget === "company" && (
                               <div>
-                                <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                  {t("reg.companyName", "Company / Organization Name")} <span className="text-rose-500">*</span>
+                                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                                  {t("reg.companyName", "Company / Organization Name")} <span className="text-rose-500 font-bold">*</span>
                                 </label>
                                 <input
                                   type="text"
@@ -3961,11 +3993,11 @@ export default function EventPublicLandingPage({
                             )}
 
                             <div>
-                              <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                              <label className="block text-xs font-bold text-slate-700 mb-1.5">
                                 {selectedTicket?.ticketTarget === "company"
                                   ? t("reg.liaisonName", "Primary Contact / Liaison Full Name")
                                   : t("reg.fullName", "Your Full Name")}{" "}
-                                <span className="text-rose-500">*</span>
+                                <span className="text-rose-500 font-bold">*</span>
                               </label>
                               <input
                                 type="text"
@@ -3993,11 +4025,11 @@ export default function EventPublicLandingPage({
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <div>
-                                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                <label className="block text-xs font-bold text-slate-700 mb-1.5">
                                   {selectedTicket?.ticketTarget === "company"
                                     ? t("reg.liaisonEmail", "Official Company / Liaison Email")
                                     : t("reg.email", "Your Email Address")}{" "}
-                                  <span className="text-rose-500">*</span>
+                                  <span className="text-rose-500 font-bold">*</span>
                                 </label>
                                 <input
                                   type="email"
@@ -4024,11 +4056,11 @@ export default function EventPublicLandingPage({
                               </div>
 
                               <div>
-                                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                <label className="block text-xs font-bold text-slate-700 mb-1.5">
                                   {selectedTicket?.ticketTarget === "company"
                                     ? t("reg.liaisonPhone", "Official Liaison Phone")
                                     : t("reg.phone", "Phone Number")}{" "}
-                                  <span className="text-rose-500">*</span>
+                                  <span className="text-rose-500 font-bold">*</span>
                                 </label>
                                 <CountryPhoneInput
                                   value={rsvpPhone}
@@ -4048,9 +4080,17 @@ export default function EventPublicLandingPage({
                             </div>
                           </div>
 
+                          {/* Form Loading State (if ticket has a bound custom form but fields are still hydrating) */}
+                          {(selectedTicket?.formId || selectedTicket?.form_id) && !activeTicketForm && (
+                            <div className="py-6 flex flex-col items-center justify-center gap-2 text-slate-400 bg-slate-50/70 border border-slate-200/80 rounded-2xl">
+                              <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+                              <span className="text-xs font-semibold text-slate-600">{t("forms.loadingFields", "Loading form fields...")}</span>
+                            </div>
+                          )}
+
                           {/* Custom Questions for Section 1 (or all questions if single section) */}
                           {(!hasMultiSections ? activeTicketForm?.fields : ticketFormSections[0]?.fields) && (
-                            <div className="space-y-3">
+                            <div className="space-y-4 pt-1">
                               {((!hasMultiSections ? activeTicketForm?.fields : ticketFormSections[0]?.fields) || [])
                                 .filter(f => {
                                   if (["f_core_name", "f_core_email", "f_core_phone"].includes(f.id)) return false;
@@ -4061,11 +4101,11 @@ export default function EventPublicLandingPage({
                                 .map(field => {
                                   const hasError = Boolean(checkoutSectionErrors[field.id]);
                                   return (
-                                    <div key={field.id} className={`p-3 rounded-2xl transition-all ${
-                                      hasError ? "bg-rose-50/50 border border-rose-200" : ""
+                                    <div key={field.id} className={`transition-all rounded-xl ${
+                                      hasError ? "p-2.5 bg-rose-50/50 border border-rose-200" : ""
                                     }`}>
-                                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                        {getLocalizedCheckoutFieldLabel(field, t)} {field.required && <span className="text-rose-500">*</span>}
+                                      <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                                        {getLocalizedCheckoutFieldLabel(field, t)} {field.required && <span className="text-rose-500 font-bold ms-0.5">*</span>}
                                       </label>
 
                                       {(field.type === "phone" || field.id === "f_core_phone") && (
@@ -4079,11 +4119,13 @@ export default function EventPublicLandingPage({
                                           }}
                                           placeholder={getLocalizedCheckoutFieldPlaceholder(field, t)}
                                           required={field.required}
+                                          inputClassName="py-3"
                                         />
                                       )}
 
                                       {field.type === "country" && (
                                         <CountrySelect
+                                          size="lg"
                                           value={customAnswers[field.id] || ""}
                                           onChange={(val) => {
                                             setCustomAnswers(prev => ({ ...prev, [field.id]: val }));
@@ -4098,6 +4140,7 @@ export default function EventPublicLandingPage({
 
                                       {field.type === "city" && (
                                         <CitySelect
+                                          size="lg"
                                           value={customAnswers[field.id] || ""}
                                           country={
                                             customAnswers["f_country"] || 
@@ -4206,7 +4249,9 @@ export default function EventPublicLandingPage({
                                             }
                                           }}
                                           placeholder={getLocalizedCheckoutFieldPlaceholder(field, t) || t("common.enterDetails", "Enter details...")}
-                                          className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-xl text-xs font-semibold text-slate-900 outline-none transition-all"
+                                          className={`w-full px-3.5 py-3 bg-slate-50 border focus:bg-white rounded-xl text-xs font-semibold text-slate-900 outline-none transition-all ${
+                                            hasError ? "border-rose-400 bg-rose-50/40" : "border-slate-200 focus:border-blue-600"
+                                          }`}
                                         />
                                       )}
 
@@ -4222,13 +4267,16 @@ export default function EventPublicLandingPage({
                                             }
                                           }}
                                           placeholder={getLocalizedCheckoutFieldPlaceholder(field, t) || t("common.enterDetails", "Enter details...")}
-                                          className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-xl text-xs font-medium text-slate-900 outline-none transition-all"
+                                          className={`w-full px-3.5 py-3 bg-slate-50 border focus:bg-white rounded-xl text-xs font-semibold text-slate-900 outline-none transition-all ${
+                                            hasError ? "border-rose-400 bg-rose-50/40" : "border-slate-200 focus:border-blue-600"
+                                          }`}
                                         />
                                       )}
 
                                       {field.type === "select" && (
                                         <div className="flex flex-col gap-2">
                                           <SearchableSelect
+                                            size="lg"
                                             required={field.required}
                                             value={isOtherValue(customAnswers[field.id]) ? ((field.options || []).find(o => isOtherOption(o)) || "Other") : (customAnswers[field.id] || "")}
                                             onChange={(val) => {
@@ -4387,10 +4435,10 @@ export default function EventPublicLandingPage({
                           {(currentCheckoutSec.fields || []).filter(f => f.type !== "section").map(field => {
                             const hasError = Boolean(checkoutSectionErrors[field.id]);
                             return (
-                              <div key={field.id} className={`p-3 rounded-2xl transition-all ${
-                                hasError ? "bg-rose-50/50 border border-rose-200" : ""
+                              <div key={field.id} className={`transition-all rounded-xl ${
+                                hasError ? "p-2.5 bg-rose-50/50 border border-rose-200" : ""
                               }`}>
-                                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                <label className="block text-xs font-bold text-slate-700 mb-1.5">
                                   {getLocalizedCheckoutFieldLabel(field, t)} {field.required && <span className="text-rose-500">*</span>}
                                 </label>
 
@@ -4405,6 +4453,7 @@ export default function EventPublicLandingPage({
                                     }}
                                     placeholder={getLocalizedCheckoutFieldPlaceholder(field, t)}
                                     required={field.required}
+                                    inputClassName="py-3"
                                   />
                                 )}
 
@@ -4419,6 +4468,7 @@ export default function EventPublicLandingPage({
                                     }}
                                     placeholder={getLocalizedCheckoutFieldPlaceholder(field, t) || t("common.selectCountry", "Select your country...")}
                                     required={field.required}
+                                    size="lg"
                                   />
                                 )}
 
@@ -4439,6 +4489,7 @@ export default function EventPublicLandingPage({
                                     }}
                                     placeholder={getLocalizedCheckoutFieldPlaceholder(field, t) || t("common.selectCity", "Select or enter your city...")}
                                     required={field.required}
+                                    size="lg"
                                   />
                                 )}
 
@@ -4532,7 +4583,7 @@ export default function EventPublicLandingPage({
                                       }
                                     }}
                                     placeholder={getLocalizedCheckoutFieldPlaceholder(field, t) || t("common.enterDetails", "Enter details...")}
-                                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-xl text-xs font-semibold text-slate-900 outline-none transition-all"
+                                    className="w-full px-3.5 py-3 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-xl text-xs font-semibold text-slate-900 outline-none transition-all"
                                   />
                                 )}
 
@@ -4548,7 +4599,7 @@ export default function EventPublicLandingPage({
                                       }
                                     }}
                                     placeholder={getLocalizedCheckoutFieldPlaceholder(field, t) || t("common.enterDetails", "Enter details...")}
-                                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-xl text-xs font-medium text-slate-900 outline-none transition-all"
+                                    className="w-full px-3.5 py-3 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-xl text-xs font-medium text-slate-900 outline-none transition-all"
                                   />
                                 )}
 
@@ -4569,6 +4620,7 @@ export default function EventPublicLandingPage({
                                       }))}
                                       placeholder={t("common.selectOption", "Select option...")}
                                       searchPlaceholder={t("common.searchChoices", "Search choices...")}
+                                      size="lg"
                                     />
                                     {isOtherValue(customAnswers[field.id]) && (
                                       <div className="animate-fade-in flex items-center gap-2 p-2 bg-blue-50/50 border border-blue-200 rounded-xl">

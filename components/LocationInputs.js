@@ -13,7 +13,8 @@ export function CountrySelect({
   required = false,
   disabled = false,
   placeholder = "",
-  className = ""
+  className = "",
+  size = "lg"
 }) {
   const { t } = useLanguage ? useLanguage() : { t: (k, d) => d };
   const countryOptions = useMemo(() => {
@@ -27,6 +28,7 @@ export function CountrySelect({
   return (
     <div className={`relative ${className}`}>
       <SearchableSelect
+        size={size}
         value={value}
         onChange={(val) => onChange && onChange(val)}
         options={countryOptions}
@@ -46,7 +48,8 @@ export function CitySelect({
   required = false,
   disabled = false,
   placeholder = "",
-  className = ""
+  className = "",
+  size = "lg"
 }) {
   const { t } = useLanguage ? useLanguage() : { t: (k, d) => d };
   const [dynamicCities, setDynamicCities] = useState([]);
@@ -95,6 +98,7 @@ export function CitySelect({
     return (
       <div className={`relative ${className}`}>
         <SearchableSelect
+          size={size}
           value={cleanValue}
           onChange={(val) => {
             if (val === otherCustomLabel || val === "Other (Type custom city)") {
@@ -131,7 +135,7 @@ export function CitySelect({
         placeholder={placeholder || (country ? `e.g. City in ${country}` : "e.g. Algiers, Paris, New York...")}
         required={required}
         disabled={disabled}
-        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-xl text-xs font-semibold text-slate-900 outline-none transition-all shadow-2xs"
+        className="w-full px-3.5 py-3 bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-xl text-xs font-semibold text-slate-900 outline-none transition-all shadow-2xs"
       />
       {cityOptions.length > 0 && (
         <datalist id="cities-datalist">

@@ -30,14 +30,19 @@ import { supabase, sanitizeUserForStorage } from "../../lib/supabase";
 import { useLanguage } from "../../lib/i18n";
 import { Home, AlertCircle } from "lucide-react";
 
-export default function EventLandingClient({ slug: propSlug, initialEvent = null }) {
+export default function EventLandingClient({ 
+  slug: propSlug, 
+  initialEvent = null,
+  initialTickets = [],
+  initialForms = []
+}) {
   const router = useRouter();
   const routeParams = useParams();
   const rawSlug = propSlug || routeParams?.slug;
   const slug = Array.isArray(rawSlug) ? rawSlug[0] : (rawSlug || "");
 
   const [eventDetails, setEventDetails] = useState(initialEvent);
-  const [tickets, setTickets] = useState([]);
+  const [tickets, setTickets] = useState(initialTickets);
   const [sessions, setSessions] = useState([]);
   const [sponsors, setSponsors] = useState([]);
   const [exhibitors, setExhibitors] = useState([]);
@@ -46,7 +51,7 @@ export default function EventLandingClient({ slug: propSlug, initialEvent = null
   const [floorPlans, setFloorPlans] = useState([]);
   const [documents, setDocuments] = useState([]);
   const [influencers, setInfluencers] = useState([]);
-  const [forms, setForms] = useState([]);
+  const [forms, setForms] = useState(initialForms);
   const [formSubmissions, setFormSubmissions] = useState([]);
   const [rsvps, setRsvps] = useState([]);
   const [rsvpSettings, setRsvpSettings] = useState({});
@@ -154,8 +159,8 @@ export default function EventLandingClient({ slug: propSlug, initialEvent = null
       }
 
       fetchTickets(eventId).then(res => {
-        if (isMounted) {
-          const activeOnly = (res || []).filter(t => !t.isArchived && String(t.status || '').toLowerCase() !== 'archived');
+        if (isMounted && Array.isArray(res) && res.length > 0) {
+          const activeOnly = res.filter(t => !t.isArchived && String(t.status || '').toLowerCase() !== 'archived');
           setTickets(activeOnly);
         }
       }).catch(() => {});
@@ -168,7 +173,11 @@ export default function EventLandingClient({ slug: propSlug, initialEvent = null
       fetchSponsors(eventId).then(res => isMounted && setSponsors(res || [])).catch(() => {});
       fetchExhibitors(eventId).then(res => isMounted && setExhibitors(res || [])).catch(() => {});
       fetchOrganizations(eventId).then(res => isMounted && setOrganizations(res || [])).catch(() => {});
-      fetchForms(eventId).then(res => isMounted && setForms(res || [])).catch(() => {});
+      fetchForms(eventId).then(res => {
+        if (isMounted && Array.isArray(res) && res.length > 0) {
+          setForms(res);
+        }
+      }).catch(() => {});
       fetchRSVPSettings(eventId).then(res => isMounted && setRsvpSettings(res || {})).catch(() => {});
       fetchFloorPlans(eventId).then(res => isMounted && setFloorPlans(res || [])).catch(() => {});
       fetchDocuments(eventId).then(res => isMounted && setDocuments(res || [])).catch(() => {});

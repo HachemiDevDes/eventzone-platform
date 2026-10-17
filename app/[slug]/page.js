@@ -1,5 +1,4 @@
-import React from "react";
-import { fetchEventDetails, fetchTickets } from "../../lib/db";
+import { fetchEventDetails, fetchTickets, fetchForms } from "../../lib/db";
 import { stripHtml } from "../../lib/constants";
 import EventLandingClient from "./EventLandingClient";
 
@@ -154,6 +153,20 @@ export default async function Page({ params }) {
   const slug = Array.isArray(rawSlug) ? rawSlug[0] : (rawSlug || "");
 
   const event = await fetchEventDetails(slug);
+  let initialTickets = [];
+  let initialForms = [];
+  if (event && event.id) {
+    try {
+      const [tData, fData] = await Promise.all([
+        fetchTickets(event.id).catch(() => []),
+        fetchForms(event.id).catch(() => [])
+      ]);
+      initialTickets = Array.isArray(tData) ? tData.filter(t => !t.isArchived && String(t.status || '').toLowerCase() !== 'archived') : [];
+      initialForms = Array.isArray(fData) ? fData.filter(f => f.status !== 'archived' && !f.isArchived) : [];
+    } catch (e) {
+      console.warn("SSR tickets/forms fetch notice:", e);
+    }
+  }
 
   let jsonLd = null;
   if (event && event.id) {
@@ -305,7 +318,12 @@ export default async function Page({ params }) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
         />
       )}
-      <EventLandingClient slug={slug} initialEvent={event} />
+      <EventLandingClient 
+        slug={slug} 
+        initialEvent={event} 
+        initialTickets={initialTickets}
+        initialForms={initialForms}
+      />
     </>
   );
 }

@@ -1477,6 +1477,30 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
             return;
           }
         } else if (!hasPreVerifiedAccess && !currentUser) {
+          // If viewing public event landing or registration, fetch public entities
+          const isPublicView = currentView === "event-landing" || currentView === "register" || currentView === "rsvp";
+          if (isPublicView && activeEventId) {
+            try {
+              fetchAndSet(fetchEventDetails(activeEventId), (val) => {
+                setEventDetails(val);
+                if (val) safeLocalStorageSet(`eventzone_cached_event_${activeEventId}`, val);
+              }, "event");
+              fetchAndSet(fetchTickets(activeEventId), (data) => {
+                if (Array.isArray(data)) {
+                  setTickets(data);
+                  safeLocalStorageSet(`eventzone_cache_tickets_${activeEventId}`, data);
+                }
+              }, "tickets");
+              fetchAndSet(fetchForms(activeEventId), setForms, "forms");
+              fetchAndSet(fetchFloorPlans(activeEventId), setFloorPlans, "floorPlans");
+              fetchAndSet(fetchSponsors(activeEventId), setSponsors, "sponsors");
+              fetchAndSet(fetchExhibitors(activeEventId), setExhibitors, "exhibitors");
+              fetchAndSet(fetchSessions(activeEventId), setSessions, "sessions");
+              fetchAndSet(fetchRSVPSettings(activeEventId), setRsvpSettings, "rsvpSettings");
+            } catch (pubErr) {
+              console.warn("Public event data fetch error:", pubErr);
+            }
+          }
           setIsLoading(false);
           return;
         }
