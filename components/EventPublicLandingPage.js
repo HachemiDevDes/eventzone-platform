@@ -17,7 +17,7 @@ import PublicRSVPModal from "./PublicRSVPModal";
 import CountryPhoneInput from "./CountryPhoneInput";
 import { CountrySelect, CitySelect } from "./LocationInputs";
 import SearchableSelect from "./SearchableSelect";
-import { getLocalizedIndustry, getCorporateRoleLabel } from "../lib/constants";
+import { getLocalizedIndustry } from "../lib/constants";
 import FormImageUploader from "./FormImageUploader";
 import FormFileUploader from "./FormFileUploader";
 import BoothPickerModal from "./BoothPickerModal";
@@ -3458,25 +3458,9 @@ export default function EventPublicLandingPage({
 
                     <div className="space-y-5 text-start rtl:text-right text-left">
                       <div>
-                        <div className="flex items-center justify-between gap-2">
-                          <h3 className="text-lg font-bold text-slate-900">{ticket.name || ticket.tier}</h3>
-                          {ticket.ticketTarget === "company" && (
-                            <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-extrabold uppercase border border-blue-200">
-                              {getCorporateRoleLabel(ticket.companyRole)}
-                            </span>
-                          )}
-                        </div>
+                        <h3 className="text-lg font-bold text-slate-900">{ticket.name || ticket.tier}</h3>
                         {ticket.description && <p className="text-xs text-slate-500 mt-1 leading-relaxed">{ticket.description}</p>}
                       </div>
-
-                      {ticket.ticketTarget === "company" && (
-                        <div className="flex items-center gap-2 p-2.5 rounded-xl bg-blue-50/80 border border-blue-200/70 text-[11px] font-bold text-blue-900">
-                          <Store size={15} className="text-blue-600 shrink-0" />
-                          <span>
-                            {ticket.badgesIncluded || 2} {t("event.representativePassesIncluded", "Representative Passes Included")}
-                          </span>
-                        </div>
-                      )}
 
                       <div className="flex items-baseline gap-1.5">
                         <span className="text-3xl font-black text-slate-900">{priceNum === 0 ? t("common.free", "Free") : <><bdi dir="ltr">{priceNum.toLocaleString()}</bdi> {t("common.dzd", "DZD")}</>}</span>
