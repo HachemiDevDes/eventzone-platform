@@ -1,0 +1,13 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.eventzone.app",
+      "sha256_cert_fingerprints": [
+        "4F:45:C0:BE:C3:72:42:0B:D2:A1:64:68:C5:77:F3:81:D0:39:E6:24:5E:0E:43:75:D1:58:E2:CB:35:B1:51:21",
+        "97:0D:18:D2:0D:73:AE:59:9B:0B:9D:38:2B:14:1B:9C:84:F9:A6:E2:12:9B:49:AB:5D:2D:C3:0A:BF:D1:CE:80"
+      ]
+    }
+  }
+]
