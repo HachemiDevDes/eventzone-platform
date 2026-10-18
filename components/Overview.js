@@ -62,7 +62,7 @@ export default function Overview({
   // 2. Calculations & KPIs
   const totalAttendees = attendees.length;
   const pendingCount = (pending || []).filter(p => {
-    if (p.ticketTarget === "company" || p.isCompany || p.companyRole) return false;
+    if (p.ticketTarget === "company" || p.isCompany) return false;
     if (p.note && typeof p.note === "string") {
       if (p.note.includes('"ticketTarget":"company"') || p.note.includes('"isCompany":true')) return false;
     }

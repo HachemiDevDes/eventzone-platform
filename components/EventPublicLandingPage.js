@@ -1528,6 +1528,13 @@ export default function EventPublicLandingPage({
     setCheckoutSectionErrors({});
     setRsvpError(null);
     setRsvpSuccess(null);
+    setQrCodeUrl(null);
+    setRsvpName(currentUser?.fullName || "");
+    setRsvpEmail(currentUser?.email || "");
+    setRsvpCompany("");
+    setRsvpJobTitle("");
+    setRsvpPhone("");
+    setCustomAnswers({});
 
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
@@ -1689,9 +1696,9 @@ export default function EventPublicLandingPage({
           photo: badgePhotoUrl || "",
           ticketType: selectedTier,
           ticketId: selectedTicket?.id || null,
-          ticketTarget: selectedTicket?.ticketTarget || (isCompanyTicket ? "company" : "individual"),
-          companyRole: selectedTicket?.companyRole || (isCompanyTicket ? "exhibitor" : null),
-          badgesIncluded: Number(selectedTicket?.badgesIncluded ?? selectedTicket?.badgeSettings?.badgesIncluded ?? (isCompanyTicket ? 2 : 1)),
+          ticketTarget: isCompanyTicket ? "company" : "individual",
+          companyRole: isCompanyTicket ? (selectedTicket?.companyRole || "exhibitor") : null,
+          badgesIncluded: Number(isCompanyTicket ? (selectedTicket?.badgesIncluded ?? selectedTicket?.badgeSettings?.badgesIncluded ?? 2) : 1),
           delegateFormId: selectedTicket?.delegateFormId || selectedTicket?.badgeSettings?.delegateFormId || null,
           selectedBooth: resolvedBooth,
           requiresApproval: isCompanyTicket ? true : Boolean(selectedTicket?.requiresApproval || selectedTicket?.requires_approval),

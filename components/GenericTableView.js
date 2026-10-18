@@ -2785,7 +2785,7 @@ function PendingView({ state, onUpdateState }) {
   // Helper to determine if a pending registration belongs to a corporate / company ticket
   const isCompanyRegistration = (p) => {
     if (!p) return false;
-    if (p.ticketTarget === "company" || p.isCompany || p.companyRole) return true;
+    if (p.ticketTarget === "company" || p.isCompany) return true;
     if (p.note && typeof p.note === "string") {
       if (p.note.includes('"ticketTarget":"company"') || p.note.includes('"isCompany":true')) {
         return true;

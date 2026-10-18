@@ -488,7 +488,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
 
   const pendingAttendeesCount = useMemo(() => {
     return (pending || []).filter(p => {
-      if (p.ticketTarget === "company" || p.isCompany || p.companyRole) return false;
+      if (p.ticketTarget === "company" || p.isCompany) return false;
       if (p.note && typeof p.note === "string") {
         if (p.note.includes('"ticketTarget":"company"') || p.note.includes('"isCompany":true')) return false;
       }
@@ -1751,15 +1751,23 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
       } else if (type === "PENDING_SUBMITTED" && payload) {
         setPending(prev => {
           const exists = prev.some(p => p.id === payload.id);
-          return exists ? prev.map(p => p.id === payload.id ? payload : p) : [payload, ...prev];
+          const next = exists ? prev.map(p => p.id === payload.id ? payload : p) : [payload, ...prev];
+          safeLocalStorageSet(`eventzone_cache_pending_${activeEventId}`, next);
+          return next;
         });
       } else if (type === "PENDING_SAVED" && payload) {
         setPending(prev => {
           const exists = prev.some(p => p.id === payload.id);
-          return exists ? prev.map(p => p.id === payload.id ? payload : p) : [payload, ...prev];
+          const next = exists ? prev.map(p => p.id === payload.id ? payload : p) : [payload, ...prev];
+          safeLocalStorageSet(`eventzone_cache_pending_${activeEventId}`, next);
+          return next;
         });
       } else if (type === "PENDING_DELETED" && payload?.id) {
-        setPending(prev => prev.filter(p => p.id !== payload.id));
+        setPending(prev => {
+          const next = prev.filter(p => p.id !== payload.id);
+          safeLocalStorageSet(`eventzone_cache_pending_${activeEventId}`, next);
+          return next;
+        });
       } else if (type === "logistics_update" && payload?.data) {
         setLogisticsData(payload.data);
       } else if (type === "DOCUMENT_SAVED" && payload) {
@@ -2534,7 +2542,9 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
           answers: visitorData.customAnswers || visitorData.answers || {},
           formAnswers: visitorData.customAnswers || visitorData.answers || {}
         };
-        return [item, ...prev.filter(p => p.id !== newPass.id)];
+        const updated = [item, ...prev.filter(p => p.id !== newPass.id)];
+        safeLocalStorageSet(`eventzone_cache_pending_${activeEventId}`, updated);
+        return updated;
       });
     } else {
       const nameParts = (visitorData.name || 'Guest Attendee').trim().split(' ');

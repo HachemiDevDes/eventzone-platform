@@ -373,15 +373,15 @@ export default function TicketDrawer({
         badgeSettings: {
           ...badgeSettings,
           ticketTarget,
-          companyRole,
-          badgesIncluded: Number(badgesIncluded || 2),
+          companyRole: ticketTarget === "company" ? companyRole : null,
+          badgesIncluded: ticketTarget === "company" ? Number(badgesIncluded || 2) : 1,
           linkedFloorPlanId: linkedFloorPlanId || null,
         },
         requiresApproval: Boolean(requiresApproval),
         isPopular: Boolean(isPopular),
         ticketTarget: ticketTarget,
-        companyRole: companyRole,
-        badgesIncluded: Number(badgesIncluded || 2),
+        companyRole: ticketTarget === "company" ? companyRole : null,
+        badgesIncluded: ticketTarget === "company" ? Number(badgesIncluded || 2) : 1,
         linkedFloorPlanId: linkedFloorPlanId || null,
       };
 
