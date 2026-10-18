@@ -38,7 +38,7 @@ import {
   Maximize2, User, Download, Camera, Loader2, MoreVertical, MoreHorizontal,
   Store, Globe, ExternalLink, DollarSign, LayoutGrid, List, Copy, Smartphone,
   FileSpreadsheet, ChevronDown, WifiOff, RefreshCw, DoorOpen, Shuffle, KeyRound, Receipt,
-  Share2, Send, MessageSquare
+  Share2, Send, MessageSquare, ScanLine, ArrowRight
 } from "lucide-react";
 import QRCode from "qrcode";
 import { useLanguage } from "../lib/i18n";
@@ -6222,6 +6222,9 @@ function CheckInView({ state, onUpdateState }) {
     }
   };
 
+  // Check-In showcase method tab (badge_print | platform_direct | checkin_website)
+  const [activeMethodTab, setActiveMethodTab] = useState("badge_print");
+
   // Status sub-filter for attendees list (all | checked_in | pending)
   const [statusSubFilter, setStatusSubFilter] = useState("all");
   const [isExportingPdf, setIsExportingPdf] = useState(false);
@@ -7233,38 +7236,394 @@ function CheckInView({ state, onUpdateState }) {
             </div>
           </div>
 
-          {/* Offline Sync & Information Strip */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
-              <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("checkin.rapidDoorStatus", "Rapid Door Status")}</span>
-                <div className="text-xl font-extrabold text-slate-800 mt-2">{t("checkin.readyForScans", "Ready for Scans")}</div>
-                <p className="text-xs text-slate-500 mt-1">
-                  Scannable unique QR codes active on eventzone.pro/checkin across all admission gates.
+          {/* ─────────────────────────────────────────────
+              SHOWCASE: ON-SITE CHECK-IN METHODS TABS
+          ───────────────────────────────────────────── */}
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-7 shadow-sm space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-150">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                    <Sparkles size={18} />
+                  </div>
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                    {t("checkin.methodsTitle", "On-Site Check-In Methods")}
+                  </h3>
+                </div>
+                <p className="text-xs text-slate-500 max-w-xl">
+                  {t("checkin.methodsSubtitle", "Choose the admission method that best fits your entrance flow, badge printers, or door staff setup.")}
                 </p>
               </div>
-              <span className="text-[11px] text-emerald-600 font-bold flex items-center gap-1.5 mt-4">
-                <Check size={14} className={isRTL ? "ml-1" : "mr-1"} /> 
-                {t("checkin.instantSyncActive", "Real-time sync active with central database")}
-              </span>
+
+              {/* Status Pill */}
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700 self-start sm:self-auto shrink-0">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>3 Methods Active & Synchronized</span>
+              </div>
             </div>
 
-            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
-              <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("checkin.offlineEngine", "Offline-First Engine")}</span>
-                <div className="text-xl font-extrabold text-slate-800 mt-2">
-                  {isOnline ? "Online & Synchronized" : `Offline (${pendingCount} queued)`}
+            {/* Methods Tab Navigation Pills */}
+            <div className="flex items-center gap-2 p-1.5 bg-slate-100/80 rounded-2xl border border-slate-200/80 overflow-x-auto select-none">
+              <button
+                type="button"
+                onClick={() => setActiveMethodTab("badge_print")}
+                className={`flex-1 min-w-[200px] px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                  activeMethodTab === "badge_print"
+                    ? "bg-white text-slate-900 shadow-xs border border-slate-200"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                }`}
+              >
+                <Printer size={15} className={activeMethodTab === "badge_print" ? "text-blue-600" : "text-slate-400"} />
+                <span className="truncate">{t("checkin.methodBadgePrint", "Check-In by Printing Badge")}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveMethodTab("platform_direct")}
+                className={`flex-1 min-w-[200px] px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                  activeMethodTab === "platform_direct"
+                    ? "bg-white text-slate-900 shadow-xs border border-slate-200"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                }`}
+              >
+                <CheckCircle2 size={15} className={activeMethodTab === "platform_direct" ? "text-emerald-600" : "text-slate-400"} />
+                <span className="truncate">{t("checkin.methodPlatformDirect", "Direct Platform Check-In")}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveMethodTab("checkin_website")}
+                className={`flex-1 min-w-[220px] px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                  activeMethodTab === "checkin_website"
+                    ? "bg-white text-slate-900 shadow-xs border border-slate-200"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                }`}
+              >
+                <Globe size={15} className={activeMethodTab === "checkin_website" ? "text-indigo-600" : "text-slate-400"} />
+                <span className="truncate">{t("checkin.methodCheckinWebsite", "Check-In Web App (eventzone.pro/checkin)")}</span>
+              </button>
+            </div>
+
+            {/* TAB 1: Check-in by printing the badge */}
+            {activeMethodTab === "badge_print" && (
+              <div className="space-y-6 animate-fade-in">
+                {/* Hero Feature Box */}
+                <div className="p-5 rounded-2xl bg-gradient-to-r from-blue-50/70 via-indigo-50/40 to-slate-50 border border-blue-200/80 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                  <div className="space-y-1.5 max-w-xl">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-100 text-blue-800 border border-blue-200">
+                      Automated Admission Workflow
+                    </span>
+                    <h4 className="text-base font-bold text-slate-900">
+                      Attendee Gets Checked In Automatically Once Badge is Printed
+                    </h4>
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      Zero duplicate work. When reception staff prints an attendee’s badge on site, the system automatically marks them as <strong>Checked In</strong> at that exact second, assigns the gate, and logs the admission timestamp.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange("attendees")}
+                    className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white rounded-xl text-xs font-bold shadow-md shadow-blue-600/20 flex items-center gap-2 cursor-pointer transition-all shrink-0"
+                  >
+                    <Printer size={14} />
+                    <span>Go to Attendees & Print Badges</span>
+                    <ArrowRight size={14} />
+                  </button>
                 </div>
-                <p className="text-xs text-slate-500 mt-1">
-                  Even if Wi-Fi or cellular network drops at the door, staff check-ins are saved locally in browser IndexedDB and sync automatically once back online.
-                </p>
+
+                {/* 3 Step Process Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="p-4.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
+                    <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 font-black text-xs flex items-center justify-center">
+                      1
+                    </div>
+                    <h5 className="text-xs font-bold text-slate-900">Search or Scan Attendee</h5>
+                    <p className="text-[11px] text-slate-500 leading-relaxed">
+                      Attendee arrives at the desk. Staff types their name, email or scans their registration badge QR.
+                    </p>
+                  </div>
+
+                  <div className="p-4.5 rounded-2xl bg-blue-50/40 border border-blue-200 space-y-2">
+                    <div className="w-8 h-8 rounded-xl bg-blue-600 text-white font-black text-xs flex items-center justify-center">
+                      2
+                    </div>
+                    <h5 className="text-xs font-bold text-slate-900">1-Click Badge Print</h5>
+                    <p className="text-[11px] text-slate-600 leading-relaxed">
+                      Click the printer icon (<Printer size={11} className="inline text-blue-600" />) next to their name. The official 4-fold A4 badge document opens ready to print.
+                    </p>
+                  </div>
+
+                  <div className="p-4.5 rounded-2xl bg-emerald-50/60 border border-emerald-200 space-y-2">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white font-black text-xs flex items-center justify-center">
+                      3
+                    </div>
+                    <h5 className="text-xs font-bold text-emerald-950">Instant Check-In Logged</h5>
+                    <p className="text-[11px] text-emerald-800 leading-relaxed">
+                      The attendee status flips to <strong>Checked In</strong> immediately, updating live gate tallies and exports without touching another button.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Live Demonstration Example */}
+                <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 font-bold">
+                      <User size={16} />
+                    </div>
+                    <div>
+                      <div className="font-bold text-slate-900 flex items-center gap-2">
+                        <span>Sample Attendee</span>
+                        <span className="px-2 py-0.2 rounded text-[10px] bg-slate-200 text-slate-700 font-mono">VIP Pass</span>
+                      </div>
+                      <span className="text-[11px] text-slate-500">Status: Registered (Pending Arrival)</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-400 text-xs hidden sm:inline">Action in roster:</span>
+                    <button
+                      type="button"
+                      onClick={() => handleTabChange("attendees")}
+                      className="px-3.5 py-1.5 bg-white hover:bg-blue-50 border border-blue-200 text-blue-700 rounded-xl font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
+                    >
+                      <Printer size={13} className="text-blue-600" />
+                      <span>Print Badge & Check In</span>
+                    </button>
+                  </div>
+                </div>
               </div>
-              <div className="mt-4 flex items-center gap-2">
+            )}
+
+            {/* TAB 2: Check-in via the platform directly */}
+            {activeMethodTab === "platform_direct" && (
+              <div className="space-y-6 animate-fade-in">
+                {/* Hero Feature Box */}
+                <div className="p-5 rounded-2xl bg-gradient-to-r from-emerald-50/70 via-teal-50/40 to-slate-50 border border-emerald-200/80 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                  <div className="space-y-1.5 max-w-xl">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200">
+                      Organizer Back-Office Console
+                    </span>
+                    <h4 className="text-base font-bold text-slate-900">
+                      Direct 1-Click Platform Check-In
+                    </h4>
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      Check in attendees directly inside your Eventzone dashboard without extra devices or phones. Simply click the <strong>Check In</strong> button next to any name in the roster, or use the on-screen camera scanner.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleTabChange("attendees")}
+                      className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 active:scale-[0.98] text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-1.5 cursor-pointer transition-all"
+                    >
+                      <Users size={14} />
+                      <span>Open Attendees Roster</span>
+                    </button>
+                    {canEdit && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setScanInputCode("");
+                          setShowScannerModal(true);
+                        }}
+                        className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 flex items-center gap-1.5 cursor-pointer transition-all"
+                      >
+                        <QrCode size={14} />
+                        <span>Launch Camera Scanner</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Two Platform Options */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3 flex flex-col justify-between">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                          <CheckCircle2 size={16} />
+                        </div>
+                        <h5 className="text-sm font-bold text-slate-900">1. Click "Check In" in Roster</h5>
+                      </div>
+                      <p className="text-xs text-slate-500 leading-relaxed">
+                        Navigate to the <strong>Checked-In Attendees</strong> tab. Use real-time search and filters (by Gate or Ticket Type), then click the purple <strong>Check In</strong> button. Toggles immediately to green <strong>Check Out</strong> if needed.
+                      </p>
+                    </div>
+                    <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-xs">
+                      <span className="text-slate-400 font-medium">Available in Tab 3</span>
+                      <button
+                        type="button"
+                        onClick={() => handleTabChange("attendees")}
+                        className="text-emerald-700 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <span>View Roster</span>
+                        <ArrowRight size={12} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3 flex flex-col justify-between">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
+                          <Camera size={16} />
+                        </div>
+                        <h5 className="text-sm font-bold text-slate-900">2. On-Screen Camera / Gun Scanner</h5>
+                      </div>
+                      <p className="text-xs text-slate-500 leading-relaxed">
+                        Launch the on-screen QR scanner modal right from this dashboard. Point your laptop camera or barcode scanner gun at the attendee badge for hands-free instant verification.
+                      </p>
+                    </div>
+                    <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-xs">
+                      <span className="text-slate-400 font-medium">Built-in Modal Scanner</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setScanInputCode("");
+                          setShowScannerModal(true);
+                        }}
+                        className="text-indigo-600 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <span>Launch Scanner</span>
+                        <ArrowRight size={12} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 3: Check-in via the check-in website */}
+            {activeMethodTab === "checkin_website" && (
+              <div className="space-y-6 animate-fade-in">
+                {/* Hero Feature Box */}
+                <div className="p-5 rounded-2xl bg-gradient-to-r from-purple-50/70 via-indigo-50/40 to-slate-50 border border-indigo-200/80 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                  <div className="space-y-1.5 max-w-xl">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-indigo-100 text-indigo-800 border border-indigo-200">
+                        Dedicated Gate Portal
+                      </span>
+                      <span className="text-xs font-mono font-bold text-indigo-600">
+                        eventzone.pro/checkin
+                      </span>
+                    </div>
+                    <h4 className="text-base font-bold text-slate-900">
+                      Mobile & Tablet Web App for Door Staff & Volunteers
+                    </h4>
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      A standalone portal for gate controllers and volunteers with 3 flexible ways to admit attendees quickly and safely.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    <a
+                      href={activeGateUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white rounded-xl text-xs font-bold shadow-md shadow-blue-600/20 flex items-center gap-1.5 cursor-pointer transition-all"
+                    >
+                      <ExternalLink size={14} />
+                      <span>Open Web App Now</span>
+                    </a>
+                  </div>
+                </div>
+
+                {/* 3 Sub-Methods Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Method 3A: Scan QR by Mobile */}
+                  <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 shadow-2xs space-y-3 flex flex-col justify-between">
+                    <div className="space-y-2">
+                      <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 border border-blue-200 flex items-center justify-center">
+                        <Smartphone size={18} />
+                      </div>
+                      <h5 className="text-xs font-bold text-slate-900">
+                        1. Scan QR Code by Mobile Camera
+                      </h5>
+                      <p className="text-[11px] text-slate-500 leading-relaxed">
+                        Staff opens the website on their smartphone (iOS/Android). Tap <strong>Scan QR</strong> to activate the rear camera and point at badge passes. Includes flashlight torch support and instant audio chimes.
+                      </p>
+                    </div>
+                    <div className="pt-2 border-t border-slate-200/60 text-[10px] font-bold text-blue-600 flex items-center gap-1">
+                      <Check size={12} />
+                      <span>Works on any mobile browser</span>
+                    </div>
+                  </div>
+
+                  {/* Method 3B: Scan QR via Scanning Pistol / Barcode Gun */}
+                  <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 shadow-2xs space-y-3 flex flex-col justify-between">
+                    <div className="space-y-2">
+                      <div className="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 border border-purple-200 flex items-center justify-center">
+                        <ScanLine size={18} />
+                      </div>
+                      <h5 className="text-xs font-bold text-slate-900">
+                        2. Scan QR via Scanning Pistol / Gun
+                      </h5>
+                      <p className="text-[11px] text-slate-500 leading-relaxed">
+                        Connect any USB or Bluetooth barcode scanner pistol (Henex, Honeywell, etc.) to a tablet, phone, or laptop. Pull the trigger for ultra-fast queue scanning at 60+ check-ins per minute.
+                      </p>
+                    </div>
+                    <div className="pt-2 border-t border-slate-200/60 text-[10px] font-bold text-purple-600 flex items-center gap-1">
+                      <Check size={12} />
+                      <span>USB & Bluetooth Gun Ready</span>
+                    </div>
+                  </div>
+
+                  {/* Method 3C: Check-in by name in attendees list */}
+                  <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 shadow-2xs space-y-3 flex flex-col justify-between">
+                    <div className="space-y-2">
+                      <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 border border-emerald-200 flex items-center justify-center">
+                        <Users size={18} />
+                      </div>
+                      <h5 className="text-xs font-bold text-slate-900">
+                        3. Check In by Name in the List
+                      </h5>
+                      <p className="text-[11px] text-slate-500 leading-relaxed">
+                        Switch to the <strong>Attendees</strong> tab inside the mobile check-in website. Search attendee by name or email, and tap the <strong>Check In</strong> button right in the list. Perfect for VIPs or lost badges.
+                      </p>
+                    </div>
+                    <div className="pt-2 border-t border-slate-200/60 text-[10px] font-bold text-emerald-600 flex items-center gap-1">
+                      <Check size={12} />
+                      <span>Direct list button admission</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Direct Action Link & WhatsApp Bar */}
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-bold text-slate-700 shrink-0">Gate Link:</span>
+                    <span className="font-mono text-slate-500 truncate max-w-sm">{activeGateUrl}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleCopyGateLink(activeGate)}
+                      className="px-3.5 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl font-bold text-slate-700 cursor-pointer transition-colors shadow-2xs"
+                    >
+                      {copiedLinkGateId === activeGate.id ? "Copied!" : "Copy Link"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleShareWhatsApp}
+                      className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold cursor-pointer transition-colors shadow-2xs"
+                    >
+                      Share via WhatsApp
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Offline Sync Status Footer Strip */}
+            <div className="pt-4 border-t border-slate-150 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-500">
+              <div className="flex items-center gap-2">
                 <span className={`w-2.5 h-2.5 rounded-full ${isOnline ? "bg-emerald-500" : "bg-amber-500 animate-pulse"}`} />
-                <span className="text-xs font-semibold text-slate-600">
-                  {isOnline ? "All entrance queues synchronized" : "Local offline cache active"}
+                <span className="font-semibold text-slate-700">
+                  {isOnline ? "All entrance queues synchronized" : `Offline Mode (${pendingCount} queued)`}
                 </span>
+                <span className="text-slate-400">• Browser IndexedDB local cache active</span>
               </div>
+              <span className="text-slate-400 text-[11px]">
+                Scannable unique QR codes active on eventzone.pro/checkin
+              </span>
             </div>
           </div>
         </div>
