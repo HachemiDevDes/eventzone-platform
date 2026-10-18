@@ -37,7 +37,8 @@ import {
   Eye, Phone, Clock, CheckCircle2, XCircle, Sparkles, Filter, Info, ShieldCheck, ArrowUpRight,
   Maximize2, User, Download, Camera, Loader2, MoreVertical, MoreHorizontal,
   Store, Globe, ExternalLink, DollarSign, LayoutGrid, List, Copy, Smartphone,
-  FileSpreadsheet, ChevronDown, WifiOff, RefreshCw, DoorOpen, Shuffle, KeyRound, Receipt
+  FileSpreadsheet, ChevronDown, WifiOff, RefreshCw, DoorOpen, Shuffle, KeyRound, Receipt,
+  Share2, Send, MessageSquare
 } from "lucide-react";
 import QRCode from "qrcode";
 import { useLanguage } from "../lib/i18n";
@@ -50,7 +51,7 @@ import A4BadgeSheet, { printA4BadgeDocument, printBulkA4BadgeDocuments } from ".
 import SearchableSelect from "./SearchableSelect";
 import AttendeeEmailDrawer from "./AttendeeEmailDrawer";
 import EasyUploadModal from "./EasyUploadModal";
-import { exportAttendeesToExcel } from "../lib/attendeesExport";
+import { exportAttendeesToExcel, exportCheckInListToExcel } from "../lib/attendeesExport";
 import TablePagination from "./TablePagination";
 import { uploadMedia } from "../lib/storage";
 import OpportunitiesView from "./OpportunitiesView";
@@ -6202,6 +6203,30 @@ function CheckInView({ state, onUpdateState }) {
   const [copiedGateId, setCopiedGateId] = useState(null);
   const [copiedLinkGateId, setCopiedLinkGateId] = useState(null);
 
+  // Sub-tab navigation state (webapp | gates | attendees)
+  const [activeSubTab, setActiveSubTab] = useState(() => {
+    return state.checkinTab || "webapp";
+  });
+
+  useEffect(() => {
+    if (state.checkinTab && state.checkinTab !== activeSubTab) {
+      setActiveSubTab(state.checkinTab);
+    }
+  }, [state.checkinTab, activeSubTab]);
+
+  const handleTabChange = (newTab) => {
+    setActiveSubTab(newTab);
+    if (state.onCheckinTabChange) {
+      state.onCheckinTabChange(newTab);
+    }
+  };
+
+  // Status sub-filter for attendees list (all | checked_in | pending)
+  const [statusSubFilter, setStatusSubFilter] = useState("all");
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [copiedInvite, setCopiedInvite] = useState(false);
+  const [webAppQrUrl, setWebAppQrUrl] = useState("");
+
   const [search, setSearch] = useState("");
   const [selectedBadgeAttendee, setSelectedBadgeAttendee] = useState(null);
   const [showScannerModal, setShowScannerModal] = useState(false);
@@ -6416,9 +6441,130 @@ function CheckInView({ state, onUpdateState }) {
     setTimeout(() => setCopiedGateId(null), 2000);
   };
 
+  const getGateCheckinUrl = useCallback((gate) => {
+    if (typeof window === "undefined") return "";
+    const origin = window.location.origin;
+    const baseUrl = origin.includes("eventzone.pro") ? "https://ci.eventzone.pro" : origin;
+    const targetGate = gate || activeGate;
+    const gName = targetGate?.name || "Principal Gate";
+    const gCode = targetGate?.passcode || principalPasscode;
+    if (!eventId) return `${baseUrl}/checkin`;
+    return `${baseUrl}/checkin?eventId=${encodeURIComponent(eventId)}&passcode=${encodeURIComponent(gCode)}&gate=${encodeURIComponent(gName)}`;
+  }, [eventId, principalPasscode, activeGate]);
+
+  const activeGateUrl = useMemo(() => {
+    return getGateCheckinUrl(activeGate);
+  }, [getGateCheckinUrl, activeGate]);
+
+  useEffect(() => {
+    if (!activeGateUrl) return;
+    QRCode.toDataURL(activeGateUrl, {
+      width: 280,
+      margin: 2,
+      color: {
+        dark: "#0f172a",
+        light: "#ffffff"
+      }
+    }).then(url => {
+      setWebAppQrUrl(url);
+    }).catch(err => {
+      console.error("Failed to generate QR code", err);
+    });
+  }, [activeGateUrl]);
+
+  const handleDownloadQr = () => {
+    if (!webAppQrUrl) return;
+    const a = document.createElement("a");
+    a.href = webAppQrUrl;
+    const gateClean = (activeGate?.name || "Gate").replace(/[^a-zA-Z0-9_-]/g, "_");
+    a.download = `Eventzone_CheckIn_QR_${gateClean}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const handleCopyInviteMessage = () => {
+    const eventName = eventDetails?.title || "our event";
+    const msg = `🚪 Eventzone Staff Check-In Passcode & Access\n\nEvent: ${eventName}\nGate: ${activeGate.name}\nPasscode: ${activeGate.passcode}\n\n👉 Open the check-in web app on your phone:\n${activeGateUrl}\n\nScan attendee QR passes or look up names to check them in seamlessly.`;
+    navigator.clipboard?.writeText(msg);
+    setCopiedInvite(true);
+    setTimeout(() => setCopiedInvite(false), 2500);
+  };
+
+  const handleShareWhatsApp = () => {
+    const eventName = eventDetails?.title || "our event";
+    const msg = `🚪 Eventzone Staff Check-In Passcode & Access\n\nEvent: ${eventName}\nGate: ${activeGate.name}\nPasscode: ${activeGate.passcode}\n\n👉 Open the check-in web app on your phone:\n${activeGateUrl}\n\nScan attendee QR passes or look up names to check them in seamlessly.`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
+  };
+
+  const handleShareEmail = () => {
+    const eventName = eventDetails?.title || "Event";
+    const subject = `Eventzone Check-In Access - ${eventName} (${activeGate.name})`;
+    const body = `Hello team,\n\nHere are your on-site check-in credentials for ${eventName}:\n\nGate: ${activeGate.name}\nPasscode: ${activeGate.passcode}\nDirect Web App Link: ${activeGateUrl}\n\nPlease open this link on your smartphone to scan attendee badges.\n\nBest regards,\nEventzone Team`;
+    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
+
+  const handleExportCheckInExcel = () => {
+    const filterLabel = statusSubFilter === "checked_in" 
+      ? "Checked_In" 
+      : statusSubFilter === "pending" 
+      ? "Pending" 
+      : gateFilter !== "all" 
+      ? `Gate_${gateFilter}` 
+      : "All";
+    exportCheckInListToExcel(filtered, eventDetails, filterLabel);
+  };
+
+  const handleExportCheckInPdf = async () => {
+    if (isExportingPdf) return;
+    setIsExportingPdf(true);
+    try {
+      const filterLabel = statusSubFilter === "checked_in" 
+        ? "Checked In Attendees" 
+        : statusSubFilter === "pending" 
+        ? "Pending (Not Checked In)" 
+        : gateFilter !== "all" 
+        ? `Filtered by Gate (${gateFilter})` 
+        : "All Attendees";
+
+      const res = await fetch(`/api/events/${eventId}/attendees/export-pdf`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          attendees: filtered,
+          eventDetails,
+          filterLabel
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to generate PDF");
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const eventTitleClean = (eventDetails?.title || "Event").replace(/[^a-zA-Z0-9_-]/g, "_");
+      const filterClean = (filterLabel || "All").replace(/[^a-zA-Z0-9_-]/g, "_");
+      const dateStr = new Date().toISOString().slice(0, 10);
+      a.download = `Eventzone_${eventTitleClean}_CheckIn_${filterClean}_${dateStr}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }, 150);
+    } catch (err) {
+      console.error("PDF export failed:", err);
+      alert(t("checkin.pdfExportError", "Failed to generate check-in roster PDF. Please try again."));
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   const handleCopyGateLink = (gate) => {
-    if (typeof window === "undefined") return;
-    const link = `${window.location.origin}/checkin?eventId=${eventId}&passcode=${gate.passcode}&gate=${encodeURIComponent(gate.name)}`;
+    const link = getGateCheckinUrl(gate);
     navigator.clipboard.writeText(link);
     setCopiedLinkGateId(gate.id);
     setTimeout(() => setCopiedLinkGateId(null), 2000);
@@ -6426,7 +6572,7 @@ function CheckInView({ state, onUpdateState }) {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, gateFilter]);
+  }, [search, gateFilter, statusSubFilter]);
 
   const handleToggle = async (id) => {
     if (!canEdit) return;
@@ -6608,17 +6754,25 @@ function CheckInView({ state, onUpdateState }) {
   };
 
   const filtered = useMemo(() => {
-    const searchLower = search.toLowerCase();
+    const searchLower = (search || "").toLowerCase().trim();
     return attendees.filter(a => {
-      const matchesSearch =
+      const isChecked = Boolean(a.status === "checked-in" || a.status === "checked_in" || a.checkedIn || a.checked_in);
+
+      // Status Sub-Filter (All, Checked In, Pending)
+      if (statusSubFilter === "checked_in" && !isChecked) return false;
+      if (statusSubFilter === "pending" && isChecked) return false;
+
+      const matchesSearch = !searchLower || (
         (a.name || "").toLowerCase().includes(searchLower) ||
         (a.email || "").toLowerCase().includes(searchLower) ||
-        (a.badgeCode || a.badge_code || "").toLowerCase().includes(searchLower);
+        (a.phone || "").toLowerCase().includes(searchLower) ||
+        (a.ticketType || a.ticket_type || "").toLowerCase().includes(searchLower) ||
+        (a.badgeCode || a.badge_code || "").toLowerCase().includes(searchLower)
+      );
 
       if (!matchesSearch) return false;
 
       if (gateFilter !== "all") {
-        const isChecked = Boolean(a.status === "checked-in" || a.status === "checked_in" || a.checkedIn || a.checked_in);
         if (gateFilter === "not_checked_in") {
           return !isChecked;
         }
@@ -6637,7 +6791,7 @@ function CheckInView({ state, onUpdateState }) {
 
       return true;
     });
-  }, [attendees, search, gateFilter, rawGates]);
+  }, [attendees, search, gateFilter, statusSubFilter, rawGates]);
 
   const paginated = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
@@ -6720,15 +6874,79 @@ function CheckInView({ state, onUpdateState }) {
         </div>
       )}
 
-      {/* Mobile Staff Check-In App Banner & Passcode Card */}
-      {(() => {
-        const localCheckinUrl = eventId
-          ? `/checkin?eventId=${eventId}&passcode=${activeGate.passcode}&gate=${encodeURIComponent(activeGate.name)}`
-          : `/checkin`;
+      {/* ─────────────────────────────────────────────
+          SUB-MODULE TABS NAVIGATION (Matches LogisticsView pattern)
+      ───────────────────────────────────────────── */}
+      <div className="flex items-center border-b border-slate-200 gap-1 overflow-x-auto select-none">
+        {/* Tab 1: Web App & Access */}
+        <button
+          type="button"
+          onClick={() => handleTabChange("webapp")}
+          className={`relative flex items-center gap-2 px-4 py-3 font-bold text-xs transition-all cursor-pointer !rounded-none ${
+            activeSubTab === "webapp"
+              ? "text-blue-600 font-black bg-blue-50/50"
+              : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+          }`}
+        >
+          <Smartphone size={15} />
+          <span>{t("checkin.tabWebApp", "Web App & Access")}</span>
+          <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${activeSubTab === "webapp" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"}`}>
+            ci.eventzone.pro
+          </span>
+          {activeSubTab === "webapp" && (
+            <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-blue-600" />
+          )}
+        </button>
 
-        return (
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm relative overflow-hidden">
-            <div className="relative z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-6">
+        {/* Tab 2: Admission Gates */}
+        <button
+          type="button"
+          onClick={() => handleTabChange("gates")}
+          className={`relative flex items-center gap-2 px-4 py-3 font-bold text-xs transition-all cursor-pointer !rounded-none ${
+            activeSubTab === "gates"
+              ? "text-blue-600 font-black bg-blue-50/50"
+              : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+          }`}
+        >
+          <DoorOpen size={15} />
+          <span>{t("checkin.tabGates", "Admission Gates")}</span>
+          <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${activeSubTab === "gates" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"}`}>
+            <bdi dir="ltr">{allGates.length}</bdi>
+          </span>
+          {activeSubTab === "gates" && (
+            <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-blue-600" />
+          )}
+        </button>
+
+        {/* Tab 3: Checked-In Attendees */}
+        <button
+          type="button"
+          onClick={() => handleTabChange("attendees")}
+          className={`relative flex items-center gap-2 px-4 py-3 font-bold text-xs transition-all cursor-pointer !rounded-none ${
+            activeSubTab === "attendees"
+              ? "text-blue-600 font-black bg-blue-50/50"
+              : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+          }`}
+        >
+          <Users size={15} />
+          <span>{t("checkin.tabAttendees", "Checked-In Attendees")}</span>
+          <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${activeSubTab === "attendees" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"}`}>
+            <bdi dir="ltr">{gateStats.totalCheckedIn} / {attendees.length}</bdi>
+          </span>
+          {activeSubTab === "attendees" && (
+            <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-blue-600" />
+          )}
+        </button>
+      </div>
+
+      {/* ─────────────────────────────────────────────
+          TAB 1: CHECK-IN WEB APP & ACCESS
+      ───────────────────────────────────────────── */}
+      {activeSubTab === "webapp" && (
+        <div className="flex flex-col gap-6 animate-fade-in">
+          {/* Main Access & Banner Card */}
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
+            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 pb-6 border-b border-slate-100">
               <div className="space-y-2 max-w-2xl">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="text-xl font-bold text-slate-900 tracking-tight">
@@ -6745,7 +6963,7 @@ function CheckInView({ state, onUpdateState }) {
                 {/* Gate Selector Pills in Banner */}
                 <div className="flex items-center gap-2 pt-1 flex-wrap">
                   <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                    {t("checkin.activeGateSelector", "Active Gate:")}
+                    {t("checkin.activeGateSelector", "Select Gate:")}
                   </span>
                   <div className="inline-flex items-center gap-1.5 p-1 bg-slate-100/90 rounded-2xl border border-slate-200/80 flex-wrap">
                     {allGates.map((g) => {
@@ -6791,50 +7009,24 @@ function CheckInView({ state, onUpdateState }) {
                 </div>
               </div>
 
-              {/* Passcode & Quick Actions for Active Gate */}
+              {/* Action Buttons */}
               <div className="flex flex-wrap items-center gap-3 shrink-0">
-                {/* Gate Passcode Pill */}
-                <div className="h-10 bg-slate-50 border border-slate-200/90 rounded-full pl-4 pr-1.5 flex items-center gap-2.5 select-none shrink-0 shadow-xs">
-                  <div className="flex flex-col">
-                    <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none">
-                      {activeGate.name} {t("checkin.passcode", "Passcode")}
-                    </span>
-                  </div>
-                  <span className="text-sm font-mono font-black tracking-widest text-slate-900 select-all">
-                    {activeGate.passcode || "—"}
-                  </span>
+                {canEdit && (
                   <button
                     type="button"
-                    onClick={() => handleCopyGatePasscode(activeGate.id, activeGate.passcode)}
-                    title={copiedGateId === activeGate.id ? t("common.copied", "Copied!") : t("checkin.copyPasscode", "Copy Passcode")}
-                    className={`w-7 h-7 rounded-full transition-all cursor-pointer flex items-center justify-center ${
-                      copiedGateId === activeGate.id
-                        ? "bg-emerald-100 text-emerald-700"
-                        : "text-slate-400 hover:text-blue-600 hover:bg-slate-200/70"
-                    }`}
+                    onClick={() => {
+                      setScanInputCode("");
+                      setShowScannerModal(true);
+                    }}
+                    className="h-10 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-full font-bold text-xs shadow-sm flex items-center justify-center gap-2 cursor-pointer transition-all"
                   >
-                    {copiedGateId === activeGate.id ? <Check size={13} className="stroke-[2.5]" /> : <Copy size={13} />}
+                    <QrCode size={14} />
+                    <span>{t("checkin.launchScanner", "Launch On-Screen Scanner")}</span>
                   </button>
-                </div>
+                )}
 
-                {/* Copy Direct Link */}
-                <button
-                  type="button"
-                  onClick={() => handleCopyGateLink(activeGate)}
-                  title={copiedLinkGateId === activeGate.id ? t("common.copied", "Copied Direct Link!") : t("checkin.copyDirectLink", "Copy Web App Link with Passcode")}
-                  className={`h-10 px-3.5 border rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-xs ${
-                    copiedLinkGateId === activeGate.id
-                      ? "bg-emerald-50 border-emerald-300 text-emerald-700"
-                      : "bg-white hover:bg-slate-50 border-slate-200 text-slate-700"
-                  }`}
-                >
-                  {copiedLinkGateId === activeGate.id ? <Check size={14} className="text-emerald-600" /> : <Smartphone size={14} className="text-slate-500" />}
-                  <span>{copiedLinkGateId === activeGate.id ? t("common.copied", "Copied!") : t("checkin.copyLink", "Copy Link")}</span>
-                </button>
-
-                {/* Open Mobile Portal */}
                 <a
-                  href={localCheckinUrl}
+                  href={activeGateUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="h-10 px-5 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white rounded-full font-bold text-xs shadow-md shadow-blue-600/20 flex items-center justify-center gap-1.5 cursor-pointer transition-all shrink-0"
@@ -6844,366 +7036,682 @@ function CheckInView({ state, onUpdateState }) {
                 </a>
               </div>
             </div>
-          </div>
-        );
-      })()}
 
-      {/* Check-In Gates & Admission Points Section */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                <DoorOpen size={18} />
-              </div>
-              <h3 className="text-base font-bold text-slate-900 tracking-tight">
-                {t("checkin.gatesSectionTitle", "Admission Gates & Traffic Breakdown")}
-              </h3>
-            </div>
-            <p className="text-xs text-slate-500">
-              {t("checkin.gatesSectionSubtitle", "Live attendee admissions per gate. Each gate has its own passcode for staff desk isolation.")}
-            </p>
-          </div>
+            {/* Split Grid: Left = Passcode & Staff Invitation, Right = QR Code */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+              {/* Credentials & Sharing (7 cols) */}
+              <div className="lg:col-span-7 flex flex-col justify-between gap-5 bg-slate-50/70 border border-slate-200/80 rounded-2xl p-5">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        {t("checkin.selectedGate", "Selected Gate")}
+                      </span>
+                      <h4 className="text-base font-bold text-slate-900">{activeGate.name}</h4>
+                    </div>
+                    <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
+                      activeGate.isPrincipal 
+                        ? "bg-emerald-100 text-emerald-800 border border-emerald-200" 
+                        : "bg-indigo-100 text-indigo-800 border border-indigo-200"
+                    }`}>
+                      {activeGate.isPrincipal ? "Principal Gate" : "Custom Gate"}
+                    </span>
+                  </div>
 
-          {canEdit && (
-            <button
-              type="button"
-              onClick={handleOpenAddGate}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-sm shadow-blue-600/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 self-start sm:self-auto shrink-0"
-            >
-              <Plus size={14} className="stroke-[2.5]" />
-              <span>{t("checkin.addGateBtn", "+ Add Admission Gate")}</span>
-            </button>
-          )}
-        </div>
-
-        {/* Gates Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {allGates.map((gate) => {
-            const count = gateStats.tallies[gate.id] || 0;
-            const pct = gateStats.totalCheckedIn > 0 ? Math.round((count / gateStats.totalCheckedIn) * 100) : 0;
-            const isSelected = selectedGateId === gate.id;
-            const directUrl = eventId
-              ? `/checkin?eventId=${eventId}&passcode=${gate.passcode}&gate=${encodeURIComponent(gate.name)}`
-              : `/checkin`;
-
-            return (
-              <div
-                key={gate.id}
-                className={`rounded-2xl border p-4.5 flex flex-col justify-between gap-4 transition-all ${
-                  isSelected
-                    ? "bg-blue-50/30 border-blue-300 shadow-sm ring-1 ring-blue-400/30"
-                    : "bg-slate-50/60 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
-                }`}
-              >
-                {/* Gate Card Header */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div
-                        className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                          gate.isPrincipal
-                            ? "bg-emerald-500/10 text-emerald-600 border border-emerald-200"
-                            : "bg-blue-500/10 text-blue-600 border border-blue-200"
-                        }`}
-                      >
-                        <DoorOpen size={14} />
+                  {/* Passcode Box */}
+                  <div className="flex items-center justify-between p-3.5 bg-white border border-slate-200 rounded-xl shadow-2xs">
+                    <div>
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        {t("checkin.gatePasscodeLabel", "6-Character Passcode")}
                       </div>
-                      <h4 className="text-sm font-bold text-slate-900 truncate" title={gate.name}>
-                        {gate.name}
-                      </h4>
+                      <div className="text-xl font-mono font-black text-slate-900 tracking-widest mt-0.5 select-all">
+                        {activeGate.passcode}
+                      </div>
                     </div>
-
-                    <span
-                      className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0 ${
-                        gate.isPrincipal
-                          ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                          : "bg-indigo-100 text-indigo-800 border border-indigo-200"
-                      }`}
-                    >
-                      {gate.isPrincipal ? t("checkin.principalBadge", "Principal") : t("checkin.customBadge", "Custom")}
-                    </span>
-                  </div>
-
-                  {/* Passcode Pill */}
-                  <div className="flex items-center justify-between px-3 py-1.5 bg-white rounded-xl border border-slate-200/80 shadow-2xs">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                      {t("checkin.passcodeShort", "Passcode")}
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-mono font-black text-xs tracking-widest text-slate-800">
-                        {gate.passcode}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleCopyGatePasscode(gate.id, gate.passcode)}
-                        title={copiedGateId === gate.id ? t("common.copied", "Copied!") : t("checkin.copyPasscode", "Copy")}
-                        className={`p-1 rounded-md transition-colors cursor-pointer ${
-                          copiedGateId === gate.id
-                            ? "bg-emerald-100 text-emerald-700"
-                            : "text-slate-400 hover:text-blue-600 hover:bg-slate-100"
-                        }`}
-                      >
-                        {copiedGateId === gate.id ? <Check size={12} className="stroke-[2.5]" /> : <Copy size={12} />}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Progress & Check-in Count */}
-                <div className="space-y-1.5">
-                  <div className="flex items-baseline justify-between text-xs">
-                    <span className="text-slate-500 font-medium">
-                      {t("checkin.gateCheckedIn", "Admitted:")}
-                    </span>
-                    <span className="font-extrabold text-slate-900">
-                      <bdi dir="ltr">{count}</bdi>
-                      <span className="text-[11px] font-normal text-slate-400 ml-1">
-                        ({pct}% {t("checkin.ofTotal", "of total")})
-                      </span>
-                    </span>
-                  </div>
-                  <div className="w-full h-1.5 bg-slate-200/70 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all duration-300 ${
-                        gate.isPrincipal ? "bg-emerald-500" : "bg-blue-600"
-                      }`}
-                      style={{ width: `${gateStats.totalCheckedIn > 0 ? (count / gateStats.totalCheckedIn) * 100 : 0}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Gate Card Footer Actions */}
-                <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between gap-1 text-xs">
-                  <div className="flex items-center gap-1">
-                    <a
-                      href={directUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg font-bold text-[11px] flex items-center gap-1 transition-colors cursor-pointer"
-                      title={t("checkin.openGatePortal", "Open Portal for this Gate")}
-                    >
-                      <ExternalLink size={11} />
-                      <span>{t("checkin.open", "Open")}</span>
-                    </a>
                     <button
                       type="button"
-                      onClick={() => handleCopyGateLink(gate)}
-                      title={copiedLinkGateId === gate.id ? t("common.copied", "Copied Link!") : t("checkin.copyDirectLink", "Copy Direct Portal Link")}
-                      className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-colors cursor-pointer"
+                      onClick={() => handleCopyGatePasscode(activeGate.id, activeGate.passcode)}
+                      className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                        copiedGateId === activeGate.id
+                          ? "bg-emerald-100 text-emerald-700 font-extrabold"
+                          : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                      }`}
                     >
-                      {copiedLinkGateId === gate.id ? <Check size={13} className="text-emerald-600" /> : <Smartphone size={13} />}
+                      {copiedGateId === activeGate.id ? <Check size={14} className="stroke-[2.5]" /> : <Copy size={14} />}
+                      <span>{copiedGateId === activeGate.id ? t("common.copied", "Copied!") : t("checkin.copyPasscode", "Copy Passcode")}</span>
                     </button>
                   </div>
 
-                  {canEdit && !gate.isPrincipal && (
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenEditGate(gate)}
-                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-colors cursor-pointer"
-                        title={t("common.edit", "Edit Gate")}
-                      >
-                        <Pencil size={13} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDeletingGateId(gate.id)}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                        title={t("common.delete", "Delete Gate")}
-                      >
-                        <Trash2 size={13} />
-                      </button>
+                  {/* Direct Link Box */}
+                  <div className="flex items-center justify-between p-3.5 bg-white border border-slate-200 rounded-xl shadow-2xs gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        {t("checkin.directUrlLabel", "Direct Access Link (Passcode Included)")}
+                      </div>
+                      <div className="text-xs font-mono text-slate-600 truncate mt-0.5 select-all">
+                        {activeGateUrl}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyGateLink(activeGate)}
+                      className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 ${
+                        copiedLinkGateId === activeGate.id
+                          ? "bg-emerald-100 text-emerald-700 font-extrabold"
+                          : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                      }`}
+                    >
+                      {copiedLinkGateId === activeGate.id ? <Check size={14} className="stroke-[2.5]" /> : <Smartphone size={14} />}
+                      <span>{copiedLinkGateId === activeGate.id ? t("common.copied", "Copied!") : t("checkin.copyLink", "Copy Link")}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Send to Staff / Share Action Bar */}
+                <div className="pt-3 border-t border-slate-200/70 space-y-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                    {t("checkin.sendToStaffTitle", "Send Credentials to Door Staff & Volunteers")}
+                  </span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleCopyInviteMessage}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs ${
+                        copiedInvite
+                          ? "bg-emerald-600 text-white font-black"
+                          : "bg-white hover:bg-slate-100 text-slate-800 border border-slate-200"
+                      }`}
+                    >
+                      {copiedInvite ? <Check size={14} className="stroke-[2.5]" /> : <Share2 size={14} className="text-slate-500" />}
+                      <span>{copiedInvite ? t("common.inviteCopied", "Invitation Copied!") : t("checkin.copyInvite", "Copy Staff Invitation")}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleShareWhatsApp}
+                      className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                    >
+                      <MessageSquare size={14} className="text-emerald-600" />
+                      <span>{t("checkin.shareWhatsApp", "Send via WhatsApp")}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleShareEmail}
+                      className="px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                    >
+                      <Mail size={14} className="text-blue-600" />
+                      <span>{t("checkin.shareEmail", "Send via Email")}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* QR Code Quick Scan for Mobile Sign In (5 cols) */}
+              <div className="lg:col-span-5 bg-white border border-slate-200 rounded-2xl p-6 flex flex-col items-center justify-between text-center shadow-xs">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 border border-blue-100 px-2.5 py-0.5 rounded-full inline-block">
+                    {t("checkin.scanWithPhone", "Scan with Smartphone")}
+                  </span>
+                  <h4 className="text-sm font-bold text-slate-900">
+                    {t("checkin.instantDeskSignIn", "Instant Staff Desk Sign-In")}
+                  </h4>
+                  <p className="text-[11px] text-slate-400 max-w-xs">
+                    {t("checkin.instantDeskSignInDesc", "Door staff can point their phone camera at this QR code to instantly launch the check-in web app with this gate.")}
+                  </p>
+                </div>
+
+                <div className="my-3 p-3 bg-white rounded-2xl border border-slate-100 shadow-inner flex items-center justify-center">
+                  {webAppQrUrl ? (
+                    <img 
+                      src={webAppQrUrl} 
+                      alt="Gate Check-In QR" 
+                      className="w-48 h-48 rounded-xl object-contain"
+                    />
+                  ) : (
+                    <div className="w-48 h-48 flex items-center justify-center text-slate-300">
+                      <RefreshCw size={24} className="animate-spin" />
                     </div>
                   )}
                 </div>
+
+                <button
+                  type="button"
+                  onClick={handleDownloadQr}
+                  className="px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer"
+                >
+                  <Download size={13} />
+                  <span>{t("checkin.downloadQrCode", "Download QR Code (PNG)")}</span>
+                </button>
               </div>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
-          <div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("checkin.attendanceRate", "Attendance Rate")}</span>
-            <div className="text-2xl font-extrabold text-slate-800 mt-2">
-              <bdi dir="ltr">
-                {attendees.filter(a => a.status === "checked-in" || a.status === "checked_in" || a.checkedIn || a.checked_in).length} <span className="text-sm font-semibold text-slate-400">/ {attendees.length}</span>
-              </bdi>
-            </div>
-          </div>
-          <div className="mt-4">
-            <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-emerald-500 rounded-full" 
-                style={{ width: `${attendees.length > 0 ? (attendees.filter(a => a.status === "checked-in" || a.status === "checked_in" || a.checkedIn || a.checked_in).length / attendees.length) * 100 : 0}%` }}
-              ></div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
-          <div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("checkin.rapidDoorStatus", "Rapid Door Status")}</span>
-            <div className="text-2xl font-extrabold text-slate-800 mt-2">{t("checkin.readyForScans", "Ready for Scans")}</div>
-          </div>
-          <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1 mt-4">
-            <Check size={12} className={isRTL ? "ml-1" : "mr-1"} /> {t("checkin.scannableActive", "Scannable unique QR codes active on ci.eventzone.pro")}
-          </span>
-        </div>
-      </div>
-
-      <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden flex flex-col">
-        <div className="p-5 border-b border-slate-150 bg-slate-50 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full lg:max-w-2xl">
-            {/* Search Input */}
-            <div className="relative flex-1">
-              <input 
-                type="text" 
-                placeholder={t("checkin.searchAttendeesPlaceholder", "Search attendees by name or email...")} 
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-4 pr-4 py-2 border border-slate-200 bg-white rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600"
-              />
-            </div>
-
-            {/* Filter by Gate Dropdown */}
-            <div className="w-full sm:w-60 shrink-0">
-              <SearchableSelect
-                value={gateFilter}
-                onChange={(val) => setGateFilter(val || "all")}
-                options={[
-                  { value: "all", label: t("checkin.filterAllAttendees", "All Attendees & Gates") },
-                  { value: "principal", label: `${t("checkin.principalGate", "Principal Gate")} (${gateStats.tallies["principal"] || 0})` },
-                  ...rawGates.map(g => ({
-                    value: g.id,
-                    label: `${g.name} (${gateStats.tallies[g.id] || 0})`
-                  })),
-                  { value: "not_checked_in", label: `${t("checkin.filterNotCheckedIn", "Pending (Not Checked In)")} (${attendees.length - gateStats.totalCheckedIn})` }
-                ]}
-                placeholder={t("checkin.filterByGatePlaceholder", "Filter by Gate")}
-                isClearable={false}
-                showSearch={rawGates.length > 3}
-                buttonClassName="py-2 text-xs rounded-xl border-slate-200 bg-white"
-              />
             </div>
           </div>
 
-          {/* Barcode input for scanner gun */}
-          {canEdit && (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (scanInputCode) handleScanPass(scanInputCode);
-              }}
-              className="flex items-center gap-2"
-            >
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder={t("checkin.scanBadgePlaceholder", "Scan / Type QR Badge Code...")}
-                  value={scanInputCode}
-                  onChange={(e) => setScanInputCode(e.target.value)}
-                  className="w-48 sm:w-56 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600"
-                />
+          {/* Offline Sync & Information Strip */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("checkin.rapidDoorStatus", "Rapid Door Status")}</span>
+                <div className="text-xl font-extrabold text-slate-800 mt-2">{t("checkin.readyForScans", "Ready for Scans")}</div>
+                <p className="text-xs text-slate-500 mt-1">
+                  Scannable unique QR codes active on ci.eventzone.pro across all admission gates.
+                </p>
               </div>
-              <button
-                type="submit"
-                className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold cursor-pointer transition-colors shrink-0"
-              >
-                Check In
-              </button>
-            </form>
-          )}
-        </div>
+              <span className="text-[11px] text-emerald-600 font-bold flex items-center gap-1.5 mt-4">
+                <Check size={14} className={isRTL ? "ml-1" : "mr-1"} /> 
+                {t("checkin.instantSyncActive", "Real-time sync active with central database")}
+              </span>
+            </div>
 
-        <div className="overflow-x-auto w-full">
-          <table className="w-full border-collapse text-start text-xs font-medium text-slate-700">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-150 text-[10px] text-slate-400 font-bold uppercase tracking-wider select-none">
-                <th className="py-4 px-6">{t("table.attendee", "Attendee")}</th>
-                <th className="py-4 px-6">{t("table.ticketTier", "Ticket Type")}</th>
-                <th className="py-4 px-6">{t("table.gate", "Entrance Gate")}</th>
-                <th className="py-4 px-6">{t("table.checkinStatus", "Check-in Status")}</th>
-                <th className="py-4 px-6">{t("table.checkinTime", "Check-in Time")}</th>
-                <th className="py-4 px-6 w-36">{t("common.action", "Action")}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {paginated.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="text-center text-slate-400 py-12">{t("checkin.noAttendeesYet", "No attendees registered yet.")}</td>
-                </tr>
-              ) : (
-                paginated.map(a => {
-                  const isCheckedIn = Boolean(a.status === "checked-in" || a.status === "checked_in" || a.checkedIn || a.checked_in);
-                  const attendeeGate = a.checkinGate || a.checkin_gate;
-                  return (
-                    <tr key={a.id} className="hover:bg-slate-50/50 transition-colors duration-150">
-                      <td className="py-4 px-6 font-semibold flex items-center gap-3">
-                        <span className="text-slate-850 font-bold">{a.name}</span>
-                      </td>
-                      <td className="py-4 px-6 font-bold text-slate-650">{a.ticketType || a.ticket_type || "Standard"}</td>
-                      <td className="py-4 px-6">
-                        {isCheckedIn ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-blue-500/10 text-blue-700 border border-blue-200/80">
-                            <DoorOpen size={11} className="text-blue-600 shrink-0" />
-                            <span className="truncate max-w-[130px]">{attendeeGate || "Principal Gate"}</span>
-                          </span>
-                        ) : (
-                          <span className="text-slate-300 font-mono text-xs">—</span>
-                        )}
-                      </td>
-                      <td className="py-4 px-6">
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${
-                          isCheckedIn 
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                            : 'bg-slate-100 text-slate-600 border-slate-200'
-                        }`}>
-                          {isCheckedIn ? t("checkin.statusCheckedIn", "Checked In") : t("checkin.statusRegistered", "Registered")}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6 text-slate-400 font-bold">{a.checkinTime || "-"}</td>
-                      <td className="py-4 px-6">
-                        {canEdit ? (
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              onClick={() => handleDirectPrintAttendeeBadge(a)}
-                              className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 border border-transparent hover:border-blue-100 rounded-lg transition-all cursor-pointer flex items-center justify-center"
-                              title={t("checkin.printBadgeTooltip", "Print Attendee Badge (A4 4-Fold)")}
-                            >
-                              <Printer size={15} />
-                            </button>
-                            <button 
-                              onClick={() => handleToggle(a.id)}
-                              className={`font-semibold py-1.5 px-4 rounded-xl text-[11px] shadow-sm transition-all duration-200 cursor-pointer ${isCheckedIn ? 'bg-rose-50 hover:bg-rose-500 hover:text-white text-rose-600' : 'bg-indigo-650 hover:bg-indigo-700 text-white'}`}
-                            >
-                              {isCheckedIn ? t("checkin.checkOutBtn", "Check Out") : t("checkin.checkInBtn", "Check In")}
-                            </button>
+            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("checkin.offlineEngine", "Offline-First Engine")}</span>
+                <div className="text-xl font-extrabold text-slate-800 mt-2">
+                  {isOnline ? "Online & Synchronized" : `Offline (${pendingCount} queued)`}
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  Even if Wi-Fi or cellular network drops at the door, staff check-ins are saved locally in browser IndexedDB and sync automatically once back online.
+                </p>
+              </div>
+              <div className="mt-4 flex items-center gap-2">
+                <span className={`w-2.5 h-2.5 rounded-full ${isOnline ? "bg-emerald-500" : "bg-amber-500 animate-pulse"}`} />
+                <span className="text-xs font-semibold text-slate-600">
+                  {isOnline ? "All entrance queues synchronized" : "Local offline cache active"}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────
+          TAB 2: ADMISSION GATES
+      ───────────────────────────────────────────── */}
+      {activeSubTab === "gates" && (
+        <div className="flex flex-col gap-6 animate-fade-in">
+          {/* Check-In Gates & Admission Points Section */}
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                    <DoorOpen size={18} />
+                  </div>
+                  <h3 className="text-base font-bold text-slate-900 tracking-tight">
+                    {t("checkin.gatesSectionTitle", "Admission Gates & Traffic Breakdown")}
+                  </h3>
+                </div>
+                <p className="text-xs text-slate-500">
+                  {t("checkin.gatesSectionSubtitle", "Live attendee admissions per gate. Each gate has its own passcode for staff desk isolation.")}
+                </p>
+              </div>
+
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={handleOpenAddGate}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-sm shadow-blue-600/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 self-start sm:self-auto shrink-0"
+                >
+                  <Plus size={14} className="stroke-[2.5]" />
+                  <span>{t("checkin.addGateBtn", "+ Add Admission Gate")}</span>
+                </button>
+              )}
+            </div>
+
+            {/* Quick Metrics Bar */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Gates</span>
+                <span className="text-xl font-black text-slate-900 mt-1 block">{allGates.length}</span>
+              </div>
+              <div className="p-4 bg-emerald-50/50 border border-emerald-100 rounded-2xl">
+                <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block">Total Admitted</span>
+                <span className="text-xl font-black text-emerald-950 mt-1 block">{gateStats.totalCheckedIn}</span>
+              </div>
+              <div className="p-4 bg-blue-50/50 border border-blue-100 rounded-2xl">
+                <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider block">Principal Gate</span>
+                <span className="text-xl font-black text-blue-950 mt-1 block">{gateStats.tallies["principal"] || 0}</span>
+              </div>
+              <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Custom Gates</span>
+                <span className="text-xl font-black text-slate-900 mt-1 block">{rawGates.length}</span>
+              </div>
+            </div>
+
+            {/* Gates Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {allGates.map((gate) => {
+                const count = gateStats.tallies[gate.id] || 0;
+                const pct = gateStats.totalCheckedIn > 0 ? Math.round((count / gateStats.totalCheckedIn) * 100) : 0;
+                const isSelected = selectedGateId === gate.id;
+                const directUrl = getGateCheckinUrl(gate);
+
+                return (
+                  <div
+                    key={gate.id}
+                    className={`rounded-2xl border p-4.5 flex flex-col justify-between gap-4 transition-all ${
+                      isSelected
+                        ? "bg-blue-50/30 border-blue-300 shadow-sm ring-1 ring-blue-400/30"
+                        : "bg-slate-50/60 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    {/* Gate Card Header */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div
+                            className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                              gate.isPrincipal
+                                ? "bg-emerald-500/10 text-emerald-600 border border-emerald-200"
+                                : "bg-blue-500/10 text-blue-600 border border-blue-200"
+                            }`}
+                          >
+                            <DoorOpen size={14} />
                           </div>
-                        ) : (
-                          <span className="text-slate-300 font-mono text-xs">—</span>
-                        )}
+                          <h4 className="text-sm font-bold text-slate-900 truncate" title={gate.name}>
+                            {gate.name}
+                          </h4>
+                        </div>
+
+                        <span
+                          className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0 ${
+                            gate.isPrincipal
+                              ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                              : "bg-indigo-100 text-indigo-800 border border-indigo-200"
+                          }`}
+                        >
+                          {gate.isPrincipal ? t("checkin.principalBadge", "Principal") : t("checkin.customBadge", "Custom")}
+                        </span>
+                      </div>
+
+                      {/* Passcode Pill */}
+                      <div className="flex items-center justify-between px-3 py-1.5 bg-white rounded-xl border border-slate-200/80 shadow-2xs">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          {t("checkin.passcodeShort", "Passcode")}
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono font-black text-xs tracking-widest text-slate-800">
+                            {gate.passcode}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleCopyGatePasscode(gate.id, gate.passcode)}
+                            title={copiedGateId === gate.id ? t("common.copied", "Copied!") : t("checkin.copyPasscode", "Copy")}
+                            className={`p-1 rounded-md transition-colors cursor-pointer ${
+                              copiedGateId === gate.id
+                                ? "bg-emerald-100 text-emerald-700"
+                                : "text-slate-400 hover:text-blue-600 hover:bg-slate-100"
+                            }`}
+                          >
+                            {copiedGateId === gate.id ? <Check size={12} className="stroke-[2.5]" /> : <Copy size={12} />}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Progress & Check-in Count */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-baseline justify-between text-xs">
+                        <span className="text-slate-500 font-medium">
+                          {t("checkin.gateCheckedIn", "Admitted:")}
+                        </span>
+                        <span className="font-extrabold text-slate-900">
+                          <bdi dir="ltr">{count}</bdi>
+                          <span className="text-[11px] font-normal text-slate-400 ml-1">
+                            ({pct}% {t("checkin.ofTotal", "of total")})
+                          </span>
+                        </span>
+                      </div>
+                      <div className="w-full h-1.5 bg-slate-200/70 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-300 ${
+                            gate.isPrincipal ? "bg-emerald-500" : "bg-blue-600"
+                          }`}
+                          style={{ width: `${gateStats.totalCheckedIn > 0 ? (count / gateStats.totalCheckedIn) * 100 : 0}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Gate Card Footer Actions */}
+                    <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between gap-1 text-xs">
+                      <div className="flex items-center gap-1">
+                        <a
+                          href={directUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg font-bold text-[11px] flex items-center gap-1 transition-colors cursor-pointer"
+                          title={t("checkin.openGatePortal", "Open Portal for this Gate")}
+                        >
+                          <ExternalLink size={11} />
+                          <span>{t("checkin.open", "Open")}</span>
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyGateLink(gate)}
+                          title={copiedLinkGateId === gate.id ? t("common.copied", "Copied Link!") : t("checkin.copyDirectLink", "Copy Direct Portal Link")}
+                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-colors cursor-pointer"
+                        >
+                          {copiedLinkGateId === gate.id ? <Check size={13} className="text-emerald-600" /> : <Smartphone size={13} />}
+                        </button>
+                      </div>
+
+                      {canEdit && !gate.isPrincipal && (
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditGate(gate)}
+                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-colors cursor-pointer"
+                            title={t("common.edit", "Edit Gate")}
+                          >
+                            <Pencil size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeletingGateId(gate.id)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                            title={t("common.delete", "Delete Gate")}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────
+          TAB 3: CHECKED-IN ATTENDEES (Roster & Exports)
+      ───────────────────────────────────────────── */}
+      {activeSubTab === "attendees" && (
+        <div className="flex flex-col gap-6 animate-fade-in">
+          {/* Top Metrics Row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("checkin.attendanceRate", "Attendance Rate")}</span>
+                <div className="text-2xl font-extrabold text-slate-800 mt-2">
+                  <bdi dir="ltr">
+                    {gateStats.totalCheckedIn} <span className="text-sm font-semibold text-slate-400">/ {attendees.length}</span>
+                  </bdi>
+                  <span className="text-xs font-bold text-emerald-600 ml-2">
+                    ({attendees.length > 0 ? Math.round((gateStats.totalCheckedIn / attendees.length) * 100) : 0}%)
+                  </span>
+                </div>
+              </div>
+              <div className="mt-4">
+                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-emerald-500 rounded-full transition-all duration-500" 
+                    style={{ width: `${attendees.length > 0 ? (gateStats.totalCheckedIn / attendees.length) * 100 : 0}%` }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("checkin.rapidDoorStatus", "Rapid Door Status")}</span>
+                <div className="text-2xl font-extrabold text-slate-800 mt-2">{t("checkin.readyForScans", "Ready for Scans")}</div>
+              </div>
+              <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1 mt-4">
+                <Check size={12} className={isRTL ? "ml-1" : "mr-1"} /> {t("checkin.scannableActive", "Scannable unique QR codes active on ci.eventzone.pro")}
+              </span>
+            </div>
+          </div>
+
+          {/* Table Container with Controls & Exports */}
+          <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden flex flex-col">
+            {/* Top Toolbar: Status Filter Pills + Export Buttons */}
+            <div className="p-4 sm:p-5 border-b border-slate-150 bg-slate-50/70 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              {/* Quick Status Sub-Filters */}
+              <div className="inline-flex items-center p-1 bg-white border border-slate-200 rounded-2xl shadow-2xs self-start">
+                <button
+                  type="button"
+                  onClick={() => setStatusSubFilter("all")}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    statusSubFilter === "all"
+                      ? "bg-slate-900 text-white shadow-xs"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                  }`}
+                >
+                  <span>{t("checkin.filterAll", "All Attendees")}</span>
+                  <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-md ${
+                    statusSubFilter === "all" ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"
+                  }`}>
+                    {attendees.length}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setStatusSubFilter("checked_in")}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    statusSubFilter === "checked_in"
+                      ? "bg-emerald-600 text-white shadow-xs"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                  }`}
+                >
+                  <CheckCircle2 size={13} />
+                  <span>{t("checkin.statusCheckedIn", "Checked In")}</span>
+                  <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-md ${
+                    statusSubFilter === "checked_in" ? "bg-white/20 text-white" : "bg-emerald-50 text-emerald-700"
+                  }`}>
+                    {gateStats.totalCheckedIn}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setStatusSubFilter("pending")}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    statusSubFilter === "pending"
+                      ? "bg-amber-600 text-white shadow-xs"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                  }`}
+                >
+                  <Clock size={13} />
+                  <span>{t("checkin.filterPending", "Pending")}</span>
+                  <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-md ${
+                    statusSubFilter === "pending" ? "bg-white/20 text-white" : "bg-amber-50 text-amber-700"
+                  }`}>
+                    {Math.max(0, attendees.length - gateStats.totalCheckedIn)}
+                  </span>
+                </button>
+              </div>
+
+              {/* Export Buttons */}
+              <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                <button
+                  type="button"
+                  onClick={handleExportCheckInExcel}
+                  className="h-9 px-3.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold shadow-2xs transition-all cursor-pointer flex items-center gap-1.5"
+                  title={t("checkin.exportExcelTooltip", "Download filtered check-in roster as Excel (.xlsx)")}
+                >
+                  <FileSpreadsheet size={14} className="text-emerald-600" />
+                  <span>{t("checkin.exportExcel", "Export Excel")}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleExportCheckInPdf}
+                  disabled={isExportingPdf}
+                  className="h-9 px-3.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold shadow-2xs transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-60"
+                  title={t("checkin.exportPdfTooltip", "Download official check-in roster as PDF (.pdf)")}
+                >
+                  {isExportingPdf ? (
+                    <RefreshCw size={14} className="animate-spin text-blue-600" />
+                  ) : (
+                    <FileText size={14} className="text-rose-600" />
+                  )}
+                  <span>{isExportingPdf ? t("common.exporting", "Exporting...") : t("checkin.exportPdf", "Export PDF")}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Second Toolbar: Search, Gate Filter & Barcode Gun Input */}
+            <div className="p-4 sm:p-5 border-b border-slate-150 bg-white flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full lg:max-w-2xl">
+                {/* Search Input */}
+                <div className="relative flex-1">
+                  <input 
+                    type="text" 
+                    placeholder={t("checkin.searchAttendeesPlaceholder", "Search attendees by name, email or ticket...")} 
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full pl-4 pr-4 py-2 border border-slate-200 bg-slate-50 focus:bg-white rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600"
+                  />
+                </div>
+
+                {/* Filter by Gate Dropdown */}
+                <div className="w-full sm:w-60 shrink-0">
+                  <SearchableSelect
+                    value={gateFilter}
+                    onChange={(val) => setGateFilter(val || "all")}
+                    options={[
+                      { value: "all", label: t("checkin.filterAllAttendees", "All Gates") },
+                      { value: "principal", label: `${t("checkin.principalGate", "Principal Gate")} (${gateStats.tallies["principal"] || 0})` },
+                      ...rawGates.map(g => ({
+                        value: g.id,
+                        label: `${g.name} (${gateStats.tallies[g.id] || 0})`
+                      })),
+                      { value: "not_checked_in", label: `${t("checkin.filterNotCheckedIn", "Pending (Not Checked In)")} (${Math.max(0, attendees.length - gateStats.totalCheckedIn)})` }
+                    ]}
+                    placeholder={t("checkin.filterByGatePlaceholder", "Filter by Gate")}
+                    isClearable={false}
+                    showSearch={rawGates.length > 3}
+                    buttonClassName="py-2 text-xs rounded-xl border-slate-200 bg-slate-50 focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              {/* Barcode input for scanner gun */}
+              {canEdit && (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (scanInputCode) handleScanPass(scanInputCode);
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder={t("checkin.scanBadgePlaceholder", "Scan / Type QR Code...")}
+                      value={scanInputCode}
+                      onChange={(e) => setScanInputCode(e.target.value)}
+                      className="w-48 sm:w-56 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:bg-white"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold cursor-pointer transition-colors shrink-0"
+                  >
+                    {t("checkin.checkInBtnShort", "Check In")}
+                  </button>
+                </form>
+              )}
+            </div>
+
+            {/* Table */}
+            <div className="overflow-x-auto w-full">
+              <table className="w-full border-collapse text-start text-xs font-medium text-slate-700">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-150 text-[10px] text-slate-400 font-bold uppercase tracking-wider select-none">
+                    <th className="py-4 px-6">{t("table.attendee", "Attendee")}</th>
+                    <th className="py-4 px-6">{t("table.ticketTier", "Ticket Type")}</th>
+                    <th className="py-4 px-6">{t("table.gate", "Entrance Gate")}</th>
+                    <th className="py-4 px-6">{t("table.checkinStatus", "Check-in Status")}</th>
+                    <th className="py-4 px-6">{t("table.checkinTime", "Check-in Time")}</th>
+                    <th className="py-4 px-6 w-36">{t("common.action", "Action")}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {paginated.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" className="text-center text-slate-400 py-12">
+                        {search || gateFilter !== "all" || statusSubFilter !== "all"
+                          ? t("checkin.noMatchingAttendees", "No attendees match your current filters.")
+                          : t("checkin.noAttendeesYet", "No attendees registered yet.")}
                       </td>
                     </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                  ) : (
+                    paginated.map(a => {
+                      const isCheckedIn = Boolean(a.status === "checked-in" || a.status === "checked_in" || a.checkedIn || a.checked_in);
+                      const attendeeGate = a.checkinGate || a.checkin_gate;
+                      return (
+                        <tr key={a.id} className="hover:bg-slate-50/50 transition-colors duration-150">
+                          <td className="py-4 px-6 font-semibold flex items-center gap-3">
+                            <span className="text-slate-850 font-bold">{a.name}</span>
+                          </td>
+                          <td className="py-4 px-6 font-bold text-slate-650">{a.ticketType || a.ticket_type || "Standard"}</td>
+                          <td className="py-4 px-6">
+                            {isCheckedIn ? (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-blue-500/10 text-blue-700 border border-blue-200/80">
+                                <DoorOpen size={11} className="text-blue-600 shrink-0" />
+                                <span className="truncate max-w-[130px]">{attendeeGate || "Principal Gate"}</span>
+                              </span>
+                            ) : (
+                              <span className="text-slate-300 font-mono text-xs">—</span>
+                            )}
+                          </td>
+                          <td className="py-4 px-6">
+                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${
+                              isCheckedIn 
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                                : 'bg-slate-100 text-slate-600 border-slate-200'
+                            }`}>
+                              {isCheckedIn ? t("checkin.statusCheckedIn", "Checked In") : t("checkin.statusRegistered", "Registered")}
+                            </span>
+                          </td>
+                          <td className="py-4 px-6 text-slate-400 font-bold">{a.checkinTime || "-"}</td>
+                          <td className="py-4 px-6">
+                            {canEdit ? (
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => handleDirectPrintAttendeeBadge(a)}
+                                  className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 border border-transparent hover:border-blue-100 rounded-lg transition-all cursor-pointer flex items-center justify-center"
+                                  title={t("checkin.printBadgeTooltip", "Print Attendee Badge (A4 4-Fold)")}
+                                >
+                                  <Printer size={15} />
+                                </button>
+                                <button 
+                                  type="button"
+                                  onClick={() => handleToggle(a.id)}
+                                  className={`font-semibold py-1.5 px-4 rounded-xl text-[11px] shadow-sm transition-all duration-200 cursor-pointer ${isCheckedIn ? 'bg-rose-50 hover:bg-rose-500 hover:text-white text-rose-600' : 'bg-indigo-650 hover:bg-indigo-700 text-white'}`}
+                                >
+                                  {isCheckedIn ? t("checkin.checkOutBtn", "Check Out") : t("checkin.checkInBtn", "Check In")}
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-slate-300 font-mono text-xs">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
 
-        {/* Table Pagination */}
-        <TablePagination
-          currentPage={currentPage}
-          totalItems={filtered.length}
-          pageSize={pageSize}
-          onPageChange={setCurrentPage}
-          onPageSizeChange={setPageSize}
-          itemName={t("checkin.attendeesItemName", "attendees")}
-        />
-      </div>
+            {/* Table Pagination */}
+            <TablePagination
+              currentPage={currentPage}
+              totalItems={filtered.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+              itemName={t("checkin.attendeesItemName", "attendees")}
+            />
+          </div>
+        </div>
+      )}
 
       {/* QR CAMERA / SCANNER MODAL */}
       {showScannerModal && (

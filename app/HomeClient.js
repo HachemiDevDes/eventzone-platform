@@ -10,7 +10,7 @@ import {
   Users2, UserCheck, BarChart3, X, Globe, Map as MapIcon, Sparkles, Upload, Mail,
   Building2, Plus, ArrowLeft, ArrowRight, Layers, LogOut, Compass, ExternalLink, ChevronRight, Home as HomeIcon, User,
   FileText, FileEdit, ClipboardList, QrCode, Store, Mic2, Check, TrendingUp, Share2, Boxes, Truck, Package, Files, Code2, Award, Eye,
-  Plane, ClipboardCheck, Receipt, Search
+  Plane, ClipboardCheck, Receipt, Search, Smartphone, DoorOpen, Users
 } from "lucide-react";
 
 import MainHomePage from "../components/MainHomePage";
@@ -388,6 +388,17 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
       }
     }
     return "inventory";
+  });
+  const [checkinOpen, setCheckinOpen] = useState(false);
+  const [checkinTab, setCheckinTab] = useState(() => {
+    if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search);
+      const tabParam = searchParams.get("tab");
+      if (tabParam && ["webapp", "gates", "attendees"].includes(tabParam)) {
+        return tabParam;
+      }
+    }
+    return "webapp";
   });
   const [activeFloorPlanId, setActiveFloorPlanId] = useState(() => {
     if (typeof window !== "undefined") {
@@ -5066,9 +5077,18 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
   const showSubChecklists = !tabQuery || matchGroupLogistics || matchSubChecklists;
 
   const showTabInfluencers = canViewModule("influencers", effectivePermissions.permissions) && matchesTabQuery(t("dash.influencers", "Influencers"), ["Influencers", "creators", "ambassadors", "media", "pr"]);
-  const showTabInvoicing = canViewModule("invoicing", effectivePermissions.permissions) && matchesTabQuery(t("dash.invoicing", "Facturation & Devis"), ["Facturation & Devis", "Invoicing & Quotes", "invoicing", "quotes", "facturation", "devis", "billing", "invoices", "receipts", "finance"]);
-  const showTabCheckIn = canViewModule("check-in", effectivePermissions.permissions) && matchesTabQuery(t("dash.checkIn", "Check In"), ["Check In", "qr", "scanner", "arrival", "gate", "badge scan", "desk"]);
-  const showTabTeam = canViewModule("my-team", effectivePermissions.permissions) && matchesTabQuery(t("dash.myTeam", "My Team"), ["My Team", "team", "members", "staff", "roles", "permissions", "collaborators"]);
+  const matchGroupCheckIn = matchesTabQuery(t("dash.checkIn", "Check In"), ["Check In", "qr", "scanner", "arrival", "gate", "badge scan", "desk", "check-in"]);
+  const matchSubCheckInWebApp = matchesTabQuery(t("checkin.tabWebApp", "Web App & Access"), ["Web App & Access", "web app", "access", "passcode", "link", "qr code", "ci.eventzone.pro"]);
+  const matchSubCheckInGates = matchesTabQuery(t("checkin.tabGates", "Admission Gates"), ["Admission Gates", "gates", "doors", "entrance", "turnstile", "passcodes"]);
+  const matchSubCheckInAttendees = matchesTabQuery(t("checkin.tabAttendees", "Checked-In Attendees"), ["Checked-In Attendees", "attendees list", "checked in roster", "export excel", "export pdf", "roster"]);
+
+  const hasCheckIn = canViewModule("check-in", effectivePermissions.permissions);
+  const showGroupCheckIn = hasCheckIn && (!tabQuery || matchGroupCheckIn || matchSubCheckInWebApp || matchSubCheckInGates || matchSubCheckInAttendees);
+  const isCheckInExpanded = tabQuery ? (matchGroupCheckIn || matchSubCheckInWebApp || matchSubCheckInGates || matchSubCheckInAttendees) : checkinOpen;
+  const showSubCheckInWebApp = !tabQuery || matchGroupCheckIn || matchSubCheckInWebApp;
+  const showSubCheckInGates = !tabQuery || matchGroupCheckIn || matchSubCheckInGates;
+  const showSubCheckInAttendees = !tabQuery || matchGroupCheckIn || matchSubCheckInAttendees;
+  const showTabCheckIn = showGroupCheckIn;
   const showTabAnalytics = canViewModule("analytics", effectivePermissions.permissions) && matchesTabQuery(t("dash.analytics", "Analytics"), ["Analytics", "stats", "reports", "metrics", "insights", "charts"]);
   const showTabCommunications = canViewModule("communications", effectivePermissions.permissions) && matchesTabQuery(t("dash.communications", "Communications"), ["Communications", "emails", "broadcast", "messages", "notifications", "newsletter"]);
   const showTabCertificates = canViewModule("certificates", effectivePermissions.permissions) && matchesTabQuery(t("dash.certificates", "Certificates"), ["Certificates", "badges", "diploma", "awards", "accreditation"]);
@@ -5645,14 +5665,73 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               </button>
             )}
 
-            {showTabCheckIn && (
-              <button 
-                onClick={() => setCurrentView("check-in")}
-                className={`flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "check-in" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"}`}
-              >
-                <QrCode size={14} className={`shrink-0 ${currentView === "check-in" ? "text-white" : "text-slate-400 group-hover:text-blue-600"}`} />
-                <span>{t("dash.checkIn", "Check In")}</span>
-              </button>
+            {showGroupCheckIn && (
+              <div className="flex flex-col">
+                <button 
+                  onClick={() => {
+                    if (currentView !== "check-in") {
+                      setCurrentView("check-in");
+                      setCheckinOpen(true);
+                    } else {
+                      setCheckinOpen(!isCheckInExpanded);
+                    }
+                  }}
+                  className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-xs transition-all text-start group ${currentView === "check-in" ? "text-blue-700 bg-blue-50/50 font-extrabold" : "text-slate-600 hover:bg-slate-50"}`}
+                >
+                  <div className="flex items-center gap-2">
+                    <QrCode size={14} className={`shrink-0 ${currentView === "check-in" ? "text-blue-600" : "text-slate-400 group-hover:text-blue-600"}`} />
+                    <span>{t("dash.checkIn", "Check In")}</span>
+                  </div>
+                  <ChevronDown size={11} className={`text-slate-400 transition-transform ${isCheckInExpanded ? "rotate-180" : ""}`} />
+                </button>
+
+                {isCheckInExpanded && (
+                  <div className="flex flex-col gap-0.5 pl-3 rtl:pr-3 rtl:pl-0 mt-1 border-l rtl:border-r rtl:border-l-0 border-slate-100 ml-4 rtl:mr-4 rtl:ml-0">
+                    {showSubCheckInWebApp && (
+                      <button 
+                        onClick={() => { setCurrentView("check-in"); setCheckinTab("webapp"); }}
+                        className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "check-in" && checkinTab === "webapp" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
+                      >
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Smartphone size={12} className="shrink-0" />
+                          <span className="truncate">{t("checkin.tabWebApp", "Web App & Access")}</span>
+                        </div>
+                        <span className="text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 bg-blue-50 text-blue-700">ci</span>
+                      </button>
+                    )}
+
+                    {showSubCheckInGates && (
+                      <button 
+                        onClick={() => { setCurrentView("check-in"); setCheckinTab("gates"); }}
+                        className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "check-in" && checkinTab === "gates" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
+                      >
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <DoorOpen size={12} className="shrink-0" />
+                          <span className="truncate">{t("checkin.tabGates", "Admission Gates")}</span>
+                        </div>
+                        <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "check-in" && checkinTab === "gates" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>
+                          {(eventDetails.checkinGates || eventDetails.checkin_gates || []).length + 1}
+                        </span>
+                      </button>
+                    )}
+
+                    {showSubCheckInAttendees && (
+                      <button 
+                        onClick={() => { setCurrentView("check-in"); setCheckinTab("attendees"); }}
+                        className={`flex items-center justify-between px-2 py-1.5 rounded-lg font-semibold text-xs text-start transition-all ${currentView === "check-in" && checkinTab === "attendees" ? "text-blue-700 bg-blue-50 font-bold" : "text-slate-500 hover:text-blue-600"}`}
+                      >
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Users size={12} className="shrink-0" />
+                          <span className="truncate">{t("checkin.tabAttendees", "Checked-In Attendees")}</span>
+                        </div>
+                        <span className={`text-[9px] font-extrabold py-0.5 px-1.5 rounded-full shrink-0 ${currentView === "check-in" && checkinTab === "attendees" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>
+                          {attendees.filter(a => a.status === "checked-in" || a.status === "checked_in" || a.checkedIn || a.checked_in).length}
+                        </span>
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
 
             {showTabTeam && (
@@ -6365,6 +6444,8 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
                 documents,
                 currentUser,
                 simulatedMemberId,
+                checkinTab,
+                onCheckinTabChange: setCheckinTab,
                 onSimulateMember: setSimulatedMemberId,
                 onSendInviteEmail: handleSendTeamInvite,
                 effectivePermissions,
