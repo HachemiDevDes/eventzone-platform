@@ -5077,6 +5077,8 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
   const showSubChecklists = !tabQuery || matchGroupLogistics || matchSubChecklists;
 
   const showTabInfluencers = canViewModule("influencers", effectivePermissions.permissions) && matchesTabQuery(t("dash.influencers", "Influencers"), ["Influencers", "creators", "ambassadors", "media", "pr"]);
+  const showTabInvoicing = canViewModule("invoicing", effectivePermissions.permissions) && matchesTabQuery(t("dash.invoicing", "Facturation & Devis"), ["Facturation & Devis", "Invoicing & Quotes", "invoicing", "quotes", "facturation", "devis", "billing", "invoices", "receipts", "finance"]);
+
   const matchGroupCheckIn = matchesTabQuery(t("dash.checkIn", "Check In"), ["Check In", "qr", "scanner", "arrival", "gate", "badge scan", "desk", "check-in"]);
   const matchSubCheckInWebApp = matchesTabQuery(t("checkin.tabWebApp", "Web App & Access"), ["Web App & Access", "web app", "access", "passcode", "link", "qr code", "ci.eventzone.pro"]);
   const matchSubCheckInGates = matchesTabQuery(t("checkin.tabGates", "Admission Gates"), ["Admission Gates", "gates", "doors", "entrance", "turnstile", "passcodes"]);
@@ -5089,6 +5091,8 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
   const showSubCheckInGates = !tabQuery || matchGroupCheckIn || matchSubCheckInGates;
   const showSubCheckInAttendees = !tabQuery || matchGroupCheckIn || matchSubCheckInAttendees;
   const showTabCheckIn = showGroupCheckIn;
+
+  const showTabTeam = canViewModule("my-team", effectivePermissions.permissions) && matchesTabQuery(t("dash.myTeam", "My Team"), ["My Team", "team", "members", "staff", "roles", "permissions", "collaborators"]);
   const showTabAnalytics = canViewModule("analytics", effectivePermissions.permissions) && matchesTabQuery(t("dash.analytics", "Analytics"), ["Analytics", "stats", "reports", "metrics", "insights", "charts"]);
   const showTabCommunications = canViewModule("communications", effectivePermissions.permissions) && matchesTabQuery(t("dash.communications", "Communications"), ["Communications", "emails", "broadcast", "messages", "notifications", "newsletter"]);
   const showTabCertificates = canViewModule("certificates", effectivePermissions.permissions) && matchesTabQuery(t("dash.certificates", "Certificates"), ["Certificates", "badges", "diploma", "awards", "accreditation"]);
