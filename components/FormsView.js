@@ -12,7 +12,7 @@ import {
   QrCode, Award, UserCheck, AlertCircle, X, Layers, RefreshCw,
   Lock, Archive, RotateCcw, Globe, MapPin, Camera, Users,
   Briefcase, Megaphone, Target, Presentation, FileSpreadsheet, Paperclip,
-  Pencil, Building2, FoldVertical, UnfoldVertical, ArrowUp, ArrowDown,
+  Pencil, Building2, FoldVertical, UnfoldVertical, GripVertical,
   Store
 } from "lucide-react";
 import QRCode from "qrcode";
@@ -366,6 +366,11 @@ export default function FormsView({
   // Question Card Accordion Collapse/Expand States in Canvas
   const [collapsedFields, setCollapsedFields] = useState({});
 
+  // Draggable Form Fields State
+  const [draggedFieldIndex, setDraggedFieldIndex] = useState(null);
+  const [dragOverFieldIndex, setDragOverFieldIndex] = useState(null);
+  const isDraggingRef = useRef(false);
+
   const toggleFieldCollapse = (fieldId) => {
     setCollapsedFields(prev => ({
       ...prev,
@@ -640,15 +645,18 @@ function generateUuid() {
     });
   };
 
+  const handleReorderFields = (sourceIndex, targetIndex) => {
+    if (!canEdit || !editingForm || sourceIndex === targetIndex) return;
+    const fields = [...(editingForm.fields || [])];
+    if (sourceIndex < 0 || sourceIndex >= fields.length || targetIndex < 0 || targetIndex >= fields.length) return;
+    const [movedItem] = fields.splice(sourceIndex, 1);
+    fields.splice(targetIndex, 0, movedItem);
+    setEditingForm(prev => ({ ...prev, fields }));
+  };
+
   const handleMoveField = (index, direction) => {
     if (!canEdit || !editingForm) return;
-    const fields = [...(editingForm.fields || [])];
-    const targetIdx = index + direction;
-    if (targetIdx < 0 || targetIdx >= fields.length) return;
-    const temp = fields[index];
-    fields[index] = fields[targetIdx];
-    fields[targetIdx] = temp;
-    setEditingForm(prev => ({ ...prev, fields }));
+    handleReorderFields(index, index + direction);
   };
 
   const handleAddOption = (fieldId) => {
@@ -1150,6 +1158,52 @@ function generateUuid() {
                     (field.label && ["badge picture", "attendee photo", "company", "organization", "job function", "job role", "job title"].some(k => field.label.toLowerCase().includes(k)))
                   );
 
+                  const isBeingDragged = draggedFieldIndex === index;
+                  const isDragTarget = dragOverFieldIndex === index && draggedFieldIndex !== index;
+
+                  const dragProps = canEdit ? {
+                    draggable: true,
+                    onDragStart: (e) => {
+                      if (['INPUT', 'TEXTAREA', 'BUTTON', 'SELECT', 'LABEL'].includes(e.target.tagName)) {
+                        e.preventDefault();
+                        return;
+                      }
+                      isDraggingRef.current = true;
+                      e.dataTransfer.effectAllowed = "move";
+                      e.dataTransfer.setData("text/plain", String(index));
+                      setDraggedFieldIndex(index);
+                    },
+                    onDragOver: (e) => {
+                      if (draggedFieldIndex === null) return;
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = "move";
+                      if (dragOverFieldIndex !== index) {
+                        setDragOverFieldIndex(index);
+                      }
+                    },
+                    onDragLeave: (e) => {
+                      if (e.currentTarget.contains(e.relatedTarget)) return;
+                      if (dragOverFieldIndex === index) {
+                        setDragOverFieldIndex(null);
+                      }
+                    },
+                    onDrop: (e) => {
+                      e.preventDefault();
+                      if (draggedFieldIndex !== null && draggedFieldIndex !== index) {
+                        handleReorderFields(draggedFieldIndex, index);
+                      }
+                      setDraggedFieldIndex(null);
+                      setDragOverFieldIndex(null);
+                    },
+                    onDragEnd: () => {
+                      setDraggedFieldIndex(null);
+                      setDragOverFieldIndex(null);
+                      setTimeout(() => {
+                        isDraggingRef.current = false;
+                      }, 100);
+                    }
+                  } : {};
+
                   if (field.type === "section") {
                     const sectionNumber = (editingForm.fields.slice(0, index).filter(f => f.type === "section").length) + 2;
 
@@ -1158,10 +1212,29 @@ function generateUuid() {
                       return (
                         <div
                           key={field.id}
-                          onClick={() => toggleFieldCollapse(field.id)}
-                          className="bg-gradient-to-r from-blue-50/90 via-indigo-50/40 to-white border-2 border-dashed border-blue-300 hover:border-blue-400 rounded-2xl p-3.5 sm:px-5 sm:py-3.5 shadow-2xs flex items-center justify-between gap-3 transition-all cursor-pointer group/item"
+                          {...dragProps}
+                          onClick={() => {
+                            if (isDraggingRef.current) return;
+                            toggleFieldCollapse(field.id);
+                          }}
+                          className={`bg-gradient-to-r from-blue-50/90 via-indigo-50/40 to-white border-2 border-dashed rounded-2xl p-3.5 sm:px-5 sm:py-3.5 shadow-2xs flex items-center justify-between gap-3 transition-all cursor-pointer group/item ${
+                            isBeingDragged 
+                              ? "opacity-40 scale-[0.99] border-blue-400 bg-blue-50/20" 
+                              : isDragTarget 
+                                ? "border-blue-600 ring-2 ring-blue-500/30 shadow-md bg-blue-100/30" 
+                                : "border-blue-300 hover:border-blue-400"
+                          }`}
                         >
                           <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                            {canEdit && (
+                              <div
+                                className="cursor-grab active:cursor-grabbing text-blue-400 hover:text-blue-700 p-1 -ml-1 rounded-md hover:bg-blue-100/60 transition-colors shrink-0 flex items-center justify-center select-none"
+                                title={t("forms.dragToReorder", "Drag to reorder")}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <GripVertical size={16} className="text-blue-400 group-hover/item:text-blue-600 transition-colors" />
+                              </div>
+                            )}
                             <span className="w-6 h-6 rounded-lg bg-blue-600 text-white font-extrabold text-[11px] flex items-center justify-center shrink-0 shadow-xs">
                               §
                             </span>
@@ -1175,35 +1248,14 @@ function generateUuid() {
 
                           <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
                             {canEdit && (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => handleMoveField(index, -1)}
-                                  disabled={index === 0}
-                                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-white/80 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
-                                  title={t("forms.moveUp", "Move Up")}
-                                >
-                                  <ArrowUp size={13} />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleMoveField(index, 1)}
-                                  disabled={index === editingForm.fields.length - 1}
-                                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-white/80 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
-                                  title={t("forms.moveDown", "Move Down")}
-                                >
-                                  <ArrowDown size={13} />
-                                </button>
-                                <div className="h-4 w-px bg-blue-200 mx-1" />
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteField(field.id)}
-                                  className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 cursor-pointer font-bold text-xs transition-colors"
-                                  title={t("forms.deleteSectionHeader", "Delete Section Header")}
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              </>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteField(field.id)}
+                                className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 cursor-pointer font-bold text-xs transition-colors"
+                                title={t("forms.deleteSectionHeader", "Delete Section Header")}
+                              >
+                                <Trash2 size={14} />
+                              </button>
                             )}
                             <button
                               type="button"
@@ -1222,11 +1274,27 @@ function generateUuid() {
                     return (
                       <div
                         key={field.id}
-                        className="bg-gradient-to-r from-blue-50/90 via-indigo-50/40 to-white border-2 border-dashed border-blue-300 rounded-3xl p-5 shadow-xs flex flex-col gap-3.5 relative group/item hover:border-blue-400 transition-all"
+                        {...dragProps}
+                        className={`bg-gradient-to-r from-blue-50/90 via-indigo-50/40 to-white border-2 border-dashed rounded-3xl p-5 shadow-xs flex flex-col gap-3.5 relative group/item transition-all ${
+                          isBeingDragged 
+                            ? "opacity-40 scale-[0.99] border-blue-400 bg-blue-50/20" 
+                            : isDragTarget 
+                              ? "border-blue-600 ring-2 ring-blue-500/30 shadow-md bg-blue-100/30" 
+                              : "border-blue-300 hover:border-blue-400"
+                        }`}
                       >
-                        {/* Top Bar: Section Badge, Reorder, Delete, Collapse */}
+                        {/* Top Bar: Section Badge, Delete, Collapse */}
                         <div className="flex items-center justify-between gap-3">
                           <div className="flex items-center gap-2 flex-wrap">
+                            {canEdit && (
+                              <div
+                                className="cursor-grab active:cursor-grabbing text-blue-400 hover:text-blue-700 p-1 -ml-1 rounded-md hover:bg-blue-100/60 transition-colors shrink-0 flex items-center justify-center select-none"
+                                title={t("forms.dragToReorder", "Drag to reorder")}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <GripVertical size={16} className="text-blue-400 group-hover/item:text-blue-600 transition-colors" />
+                              </div>
+                            )}
                             <span className="w-6 h-6 rounded-lg bg-blue-600 text-white font-extrabold text-[11px] flex items-center justify-center shrink-0 shadow-xs">
                               §
                             </span>
@@ -1240,35 +1308,14 @@ function generateUuid() {
 
                           <div className="flex items-center gap-1">
                             {canEdit && (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => handleMoveField(index, -1)}
-                                  disabled={index === 0}
-                                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-white/80 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
-                                  title={t("forms.moveUp", "Move Up")}
-                                >
-                                  <ArrowUp size={13} />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleMoveField(index, 1)}
-                                  disabled={index === editingForm.fields.length - 1}
-                                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-white/80 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
-                                  title={t("forms.moveDown", "Move Down")}
-                                >
-                                  <ArrowDown size={13} />
-                                </button>
-                                <div className="h-4 w-px bg-blue-200 mx-1" />
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteField(field.id)}
-                                  className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 cursor-pointer font-bold text-xs transition-colors"
-                                  title={t("forms.deleteSectionHeader", "Delete Section Header")}
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              </>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteField(field.id)}
+                                className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 cursor-pointer font-bold text-xs transition-colors"
+                                title={t("forms.deleteSectionHeader", "Delete Section Header")}
+                              >
+                                <Trash2 size={14} />
+                              </button>
                             )}
                             <button
                               type="button"
@@ -1322,11 +1369,30 @@ function generateUuid() {
                     return (
                       <div
                         key={field.id}
-                        onClick={() => toggleFieldCollapse(field.id)}
-                        className="bg-white border border-slate-200 hover:border-slate-300 rounded-2xl p-3.5 sm:px-5 sm:py-3.5 shadow-2xs flex items-center justify-between gap-3 transition-all cursor-pointer group/item"
+                        {...dragProps}
+                        onClick={() => {
+                          if (isDraggingRef.current) return;
+                          toggleFieldCollapse(field.id);
+                        }}
+                        className={`bg-white border rounded-2xl p-3.5 sm:px-5 sm:py-3.5 shadow-2xs flex items-center justify-between gap-3 transition-all cursor-pointer group/item ${
+                          isBeingDragged 
+                            ? "opacity-40 scale-[0.99] border-blue-400 border-dashed bg-blue-50/20" 
+                            : isDragTarget 
+                              ? "border-blue-500 ring-2 ring-blue-500/30 shadow-md bg-blue-50/20" 
+                              : "border-slate-200 hover:border-slate-300"
+                        }`}
                       >
-                        {/* Left: Number, Icon, Title, Badges */}
+                        {/* Left: 6 Dots Drag Handle, Number, Icon, Title, Badges */}
                         <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                          {canEdit && (
+                            <div
+                              className="cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-700 p-1 -ml-1 rounded-md hover:bg-slate-100 transition-colors shrink-0 flex items-center justify-center select-none"
+                              title={t("forms.dragToReorder", "Drag to reorder")}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <GripVertical size={16} className="text-slate-400 group-hover/item:text-slate-600 transition-colors" />
+                            </div>
+                          )}
                           <span className="w-6 h-6 rounded-lg bg-slate-100 text-slate-500 font-extrabold text-[11px] flex items-center justify-center shrink-0">
                             {index + 1}
                           </span>
@@ -1348,7 +1414,7 @@ function generateUuid() {
                             ) : (
                               <>
                                 {isShowsOnBadgeField && (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200/80 text-amber-700 text-[9px] font-extrabold uppercase tracking-wider shrink-0 shadow-2xs">
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200/80 text-amber-700 text-[9px] font-extrabold uppercase tracking-wider shrink-0 shadow-2xs">
                                     <Award size={9} className="text-amber-600" />
                                     <span>{t("forms.showsOnBadgeBadge", "Shows on Badge")}</span>
                                   </span>
@@ -1363,42 +1429,17 @@ function generateUuid() {
                           </div>
                         </div>
 
-                        {/* Right: Reorder Buttons, Delete, Expand */}
+                        {/* Right: Delete (if not locked), Locked indicator (if locked), Expand */}
                         <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
-                          {canEdit && (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => handleMoveField(index, -1)}
-                                disabled={index === 0}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
-                                title={t("forms.moveUp", "Move Up")}
-                              >
-                                <ArrowUp size={13} />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleMoveField(index, 1)}
-                                disabled={index === editingForm.fields.length - 1}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
-                                title={t("forms.moveDown", "Move Down")}
-                              >
-                                <ArrowDown size={13} />
-                              </button>
-
-                              <div className="h-4 w-px bg-slate-200 mx-1" />
-
-                              {!isLockedField && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteField(field.id)}
-                                  className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 cursor-pointer font-bold text-xs transition-colors"
-                                  title={t("forms.deleteQuestion", "Delete Question")}
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              )}
-                            </>
+                          {canEdit && !isLockedField && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteField(field.id)}
+                              className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 cursor-pointer font-bold text-xs transition-colors"
+                              title={t("forms.deleteQuestion", "Delete Question")}
+                            >
+                              <Trash2 size={14} />
+                            </button>
                           )}
 
                           {isLockedField && (
@@ -1427,11 +1468,27 @@ function generateUuid() {
                   return (
                     <div
                       key={field.id}
-                      className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xs flex flex-col gap-4 relative group/item hover:border-slate-300 transition-all"
+                      {...dragProps}
+                      className={`bg-white border rounded-3xl p-5 shadow-xs flex flex-col gap-4 relative group/item transition-all ${
+                        isBeingDragged 
+                          ? "opacity-40 scale-[0.99] border-blue-400 border-dashed bg-blue-50/20" 
+                          : isDragTarget 
+                            ? "border-blue-500 ring-2 ring-blue-500/30 shadow-md bg-blue-50/20" 
+                            : "border-slate-200 hover:border-slate-300"
+                      }`}
                     >
-                      {/* Top Bar: Drag Handle, Number, Title, Actions, Collapse */}
+                      {/* Top Bar: 6 Dots Drag Handle, Number, Title, Actions, Collapse */}
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                          {canEdit && (
+                            <div
+                              className="cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-700 p-1 -ml-1 rounded-md hover:bg-slate-100 transition-colors shrink-0 flex items-center justify-center select-none"
+                              title={t("forms.dragToReorder", "Drag to reorder")}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <GripVertical size={16} className="text-slate-400 group-hover/item:text-slate-600 transition-colors" />
+                            </div>
+                          )}
                           <span className="w-6 h-6 rounded-lg bg-slate-100 text-slate-500 font-extrabold text-[11px] flex items-center justify-center shrink-0">
                             {index + 1}
                           </span>
@@ -1459,42 +1516,15 @@ function generateUuid() {
                         </div>
 
                         <div className="flex items-center gap-1">
-                          {canEdit && (
-                            <>
-                              {/* Reorder Buttons */}
-                              <button
-                                type="button"
-                                onClick={() => handleMoveField(index, -1)}
-                                disabled={index === 0}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
-                                title={t("forms.moveUp", "Move Up")}
-                              >
-                                <ArrowUp size={13} />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleMoveField(index, 1)}
-                                disabled={index === editingForm.fields.length - 1}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 text-xs font-bold cursor-pointer transition-colors"
-                                title={t("forms.moveDown", "Move Down")}
-                              >
-                                <ArrowDown size={13} />
-                              </button>
-
-                              <div className="h-4 w-px bg-slate-200 mx-1" />
-
-                              {/* Delete Field / Locked State */}
-                              {!isLockedField && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteField(field.id)}
-                                  className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 cursor-pointer font-bold text-xs transition-colors"
-                                  title={t("forms.deleteQuestion", "Delete Question")}
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              )}
-                            </>
+                          {canEdit && !isLockedField && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteField(field.id)}
+                              className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 cursor-pointer font-bold text-xs transition-colors"
+                              title={t("forms.deleteQuestion", "Delete Question")}
+                            >
+                              <Trash2 size={14} />
+                            </button>
                           )}
 
                           {isLockedField && (
