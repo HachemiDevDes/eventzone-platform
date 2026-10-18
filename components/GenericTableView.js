@@ -7514,60 +7514,78 @@ function CheckInView({ state, onUpdateState }) {
           <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden flex flex-col">
             {/* Top Toolbar: Status Filter Pills + Export Buttons */}
             <div className="p-4 sm:p-5 border-b border-slate-150 bg-slate-50/70 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              {/* Quick Status Sub-Filters */}
-              <div className="inline-flex items-center p-1 bg-white border border-slate-200 rounded-2xl shadow-2xs self-start">
-                <button
-                  type="button"
-                  onClick={() => setStatusSubFilter("all")}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                    statusSubFilter === "all"
-                      ? "bg-slate-900 text-white shadow-xs"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-                  }`}
-                >
-                  <span>{t("checkin.filterAll", "All Attendees")}</span>
-                  <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-md ${
-                    statusSubFilter === "all" ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"
-                  }`}>
-                    {attendees.length}
-                  </span>
-                </button>
+              {/* Quick Status Sub-Filters & Active Filter Pills */}
+              <div className="flex flex-wrap items-center gap-2.5">
+                <div className="inline-flex items-center p-1 bg-white border border-slate-200 rounded-2xl shadow-2xs self-start">
+                  <button
+                    type="button"
+                    onClick={() => setStatusSubFilter("all")}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      statusSubFilter === "all"
+                        ? "bg-slate-900 text-white shadow-xs"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span>{t("checkin.filterAll", "All Attendees")}</span>
+                    <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-md ${
+                      statusSubFilter === "all" ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"
+                    }`}>
+                      {attendees.length}
+                    </span>
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => setStatusSubFilter("checked_in")}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                    statusSubFilter === "checked_in"
-                      ? "bg-emerald-600 text-white shadow-xs"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-                  }`}
-                >
-                  <CheckCircle2 size={13} />
-                  <span>{t("checkin.statusCheckedIn", "Checked In")}</span>
-                  <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-md ${
-                    statusSubFilter === "checked_in" ? "bg-white/20 text-white" : "bg-emerald-50 text-emerald-700"
-                  }`}>
-                    {gateStats.totalCheckedIn}
-                  </span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => setStatusSubFilter("checked_in")}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      statusSubFilter === "checked_in"
+                        ? "bg-emerald-600 text-white shadow-xs"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                    }`}
+                  >
+                    <CheckCircle2 size={13} />
+                    <span>{t("checkin.statusCheckedIn", "Checked In")}</span>
+                    <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-md ${
+                      statusSubFilter === "checked_in" ? "bg-white/20 text-white" : "bg-emerald-50 text-emerald-700"
+                    }`}>
+                      {gateStats.totalCheckedIn}
+                    </span>
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => setStatusSubFilter("pending")}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                    statusSubFilter === "pending"
-                      ? "bg-amber-600 text-white shadow-xs"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-                  }`}
-                >
-                  <Clock size={13} />
-                  <span>{t("checkin.filterPending", "Pending")}</span>
-                  <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-md ${
-                    statusSubFilter === "pending" ? "bg-white/20 text-white" : "bg-amber-50 text-amber-700"
-                  }`}>
-                    {Math.max(0, attendees.length - gateStats.totalCheckedIn)}
-                  </span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => setStatusSubFilter("pending")}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      statusSubFilter === "pending"
+                        ? "bg-amber-600 text-white shadow-xs"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                    }`}
+                  >
+                    <Clock size={13} />
+                    <span>{t("checkin.filterPending", "Pending")}</span>
+                    <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-md ${
+                      statusSubFilter === "pending" ? "bg-white/20 text-white" : "bg-amber-50 text-amber-700"
+                    }`}>
+                      {Math.max(0, attendees.length - gateStats.totalCheckedIn)}
+                    </span>
+                  </button>
+                </div>
+
+                {/* Active Ticket Type Filter Pill */}
+                {ticketTypeFilter !== "all" && (
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-xl text-xs font-bold text-blue-700 shadow-2xs">
+                    <Ticket size={13} className="text-blue-600 shrink-0" />
+                    <span className="truncate max-w-[160px]">{ticketTypeFilter}</span>
+                    <button
+                      type="button"
+                      onClick={() => setTicketTypeFilter("all")}
+                      className="p-0.5 hover:bg-blue-200/60 rounded text-blue-500 hover:text-blue-800 cursor-pointer transition-colors"
+                      title={t("common.clearFilter", "Clear ticket type filter")}
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Export Buttons */}
@@ -7601,7 +7619,7 @@ function CheckInView({ state, onUpdateState }) {
 
             {/* Second Toolbar: Search, Gate Filter & Barcode Gun Input */}
             <div className="p-4 sm:p-5 border-b border-slate-150 bg-white flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full lg:max-w-2xl">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full lg:max-w-3xl">
                 {/* Search Input */}
                 <div className="relative flex-1">
                   <input 
@@ -7614,7 +7632,7 @@ function CheckInView({ state, onUpdateState }) {
                 </div>
 
                 {/* Filter by Gate Dropdown */}
-                <div className="w-full sm:w-60 shrink-0">
+                <div className="w-full sm:w-56 shrink-0">
                   <SearchableSelect
                     value={gateFilter}
                     onChange={(val) => setGateFilter(val || "all")}
