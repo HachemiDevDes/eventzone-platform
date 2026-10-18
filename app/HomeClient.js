@@ -1972,9 +1972,11 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
       const currentSearchParams = new URLSearchParams(window.location.search);
       const refVal = currentSearchParams.get("ref") || currentSearchParams.get("referral") || currentSearchParams.get("influencer");
       const rsvpVal = currentSearchParams.get("rsvp");
+      const formIdVal = currentSearchParams.get("formId") || currentSearchParams.get("form");
       const cleanParams = new URLSearchParams();
       if (refVal) cleanParams.set("ref", refVal);
       if (rsvpVal === "true") cleanParams.set("rsvp", "true");
+      if (formIdVal) cleanParams.set("formId", formIdVal);
       const qs = cleanParams.toString();
       const newUrl = qs ? `/${targetSlug}?${qs}` : `/${targetSlug}`;
       if (window.location.pathname !== `/${targetSlug}` || window.location.search.includes("view=event-landing")) {
@@ -2055,9 +2057,10 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
       const planIdParam = searchParams.get("planId");
       const previewParam = searchParams.get("preview");
       const rsvpParam = searchParams.get("rsvp");
+      const formIdParam = searchParams.get("formId") || searchParams.get("form");
 
       const nonEventViews = ["home", "auth", "profile", "events-hub", "my-tickets", "create-event", "admin"];
-      const isEventLanding = rsvpParam === "true" || viewParam === "public-rsvp" || (viewParam === "rsvp" && searchParams.get("public") === "true") || searchParams.get("ref");
+      const isEventLanding = rsvpParam === "true" || viewParam === "public-rsvp" || (viewParam === "rsvp" && searchParams.get("public") === "true") || searchParams.get("ref") || formIdParam;
       const isHome = !viewParam || nonEventViews.includes(viewParam);
 
       if (eventIdParam && eventIdParam !== activeEventId && (!isHome || isEventLanding)) {
@@ -2086,7 +2089,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
             setCurrentView(viewParam);
           }
         }
-      } else if (searchParams.get("ref") || searchParams.get("influencer") || searchParams.get("referral")) {
+      } else if (searchParams.get("ref") || searchParams.get("influencer") || searchParams.get("referral") || formIdParam) {
         setCurrentView("event-landing");
       } else {
         setCurrentView("home");
@@ -6105,6 +6108,8 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
                 setFormSubmissions(prev => [saved, ...prev]);
               }}
               activeEventTitle={eventDetails?.title || "Eventzone Summit"}
+              activeEventId={activeEventId}
+              eventSlug={eventDetails?.slug}
             />
           )}
 

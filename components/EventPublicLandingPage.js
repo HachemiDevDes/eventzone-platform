@@ -9,7 +9,7 @@ import {
   ChevronRight, ChevronLeft, Building2, Check, Download, Mail, X, Globe, Video,
   Star, MessageSquare, Printer, User, Briefcase, Phone, QrCode as QrIcon,
   Tag, AlertCircle, RefreshCw, Smartphone, ChevronDown, ChevronUp, Lock, Image as ImageIcon, Play,
-  Store
+  Store, FileText
 } from "lucide-react";
 import QRCode from "qrcode";
 import { useLanguage } from "../lib/i18n";
@@ -24,7 +24,7 @@ import BoothPickerModal from "./BoothPickerModal";
 import { getFormSections, getLocalizedPresetOption } from "../lib/formPresets";
 import { smoothScrollTo } from "../lib/smoothScroll";
 import { getYouTubeEmbedUrl } from "./EventDetailsView";
-import { recordInfluencerClick, fetchEventDetails, fetchTickets, fetchForms } from "../lib/db";
+import { recordInfluencerClick, fetchEventDetails, fetchTickets, fetchForms, fetchFormById, submitFormResponse } from "../lib/db";
 import { LandingPageSkeleton } from "./SkeletonLoaders";
 import Footer from "./Footer";
 
@@ -428,6 +428,7 @@ export default function EventPublicLandingPage({
   const [feedbackAnswers, setFeedbackAnswers] = useState({});
   const [feedbackSuccess, setFeedbackSuccess] = useState(false);
   const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [directForm, setDirectForm] = useState(null);
 
   // RSVP / Full-Page Registration State
   const [showRsvpModal, setShowRsvpModal] = useState(false);
@@ -1241,16 +1242,57 @@ export default function EventPublicLandingPage({
       ? internalForms
       : (cachedForms || []));
 
-  // Find active ticket registration form manually bound to selected ticket tier
-  const activeTicketForm = rawForms.find(f => 
-    f.status !== "archived" && !f.isArchived &&
-    ((selectedTicket?.formId && (selectedTicket.formId === f.id || selectedTicket.form_id === f.id)) ||
-     (selectedTicket?.form_id && selectedTicket.form_id === f.id) ||
-     (f.ticketId && selectedTicket?.id && f.ticketId === selectedTicket.id))
-  ) || rawForms.find(f => f.status !== "archived" && !f.isArchived && f.type === "ticket_registration" && (!selectedTicket?.formId || selectedTicket.formId === "default"));
+  // Handle shareable form parameter (?formId=...)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sp = new URLSearchParams(window.location.search);
+    const targetFId = sp.get("formId") || sp.get("form");
+    if (!targetFId) return;
 
-  // Find active feedback survey form
-  const activeFeedbackForm = rawForms.find(f => 
+    let isMounted = true;
+    const processFoundForm = (matched) => {
+      if (!isMounted || !matched) return;
+      setDirectForm(matched);
+      if (matched.type === "ticket_registration") {
+        if (matched.ticketId && matched.ticketId !== "all") {
+          const linkedTicket = eventTickets.find(t => t.id === matched.ticketId);
+          if (linkedTicket) {
+            setSelectedTier(linkedTicket.name || linkedTicket.tier);
+          }
+        }
+        setShowRsvpModal(true);
+      } else {
+        setShowFeedbackModal(true);
+      }
+    };
+
+    const matched = rawForms.find(f => f.id === targetFId);
+    if (matched) {
+      processFoundForm(matched);
+    } else {
+      fetchFormById(targetFId).then(fetched => {
+        if (fetched) {
+          processFoundForm(fetched);
+        }
+      }).catch(console.warn);
+    }
+
+    return () => { isMounted = false; };
+  }, [rawForms, eventTickets]);
+
+  const urlFormId = typeof window !== "undefined" ? (new URLSearchParams(window.location.search).get("formId") || new URLSearchParams(window.location.search).get("form")) : null;
+
+  // Find active ticket registration form manually bound to selected ticket tier, or prioritized by direct URL form
+  const activeTicketForm = (urlFormId && (directForm?.type === "ticket_registration" ? directForm : rawForms.find(f => f.id === urlFormId && f.type === "ticket_registration"))) ||
+    rawForms.find(f => 
+      f.status !== "archived" && !f.isArchived &&
+      ((selectedTicket?.formId && (selectedTicket.formId === f.id || selectedTicket.form_id === f.id)) ||
+       (selectedTicket?.form_id && selectedTicket.form_id === f.id) ||
+       (f.ticketId && selectedTicket?.id && f.ticketId === selectedTicket.id))
+    ) || rawForms.find(f => f.status !== "archived" && !f.isArchived && f.type === "ticket_registration" && (!selectedTicket?.formId || selectedTicket.formId === "default"));
+
+  // Find active feedback / survey / direct form
+  const activeFeedbackForm = directForm || rawForms.find(f => 
     f.status === "active" && 
     (f.type === "feedback_survey" || f.type === "session_survey")
   );
@@ -1757,20 +1799,26 @@ export default function EventPublicLandingPage({
 
   const handleFeedbackSubmit = async (e) => {
     e.preventDefault();
-    if (!activeFeedbackForm || !onSubmitFormResponse) return;
+    if (!activeFeedbackForm) return;
     setFeedbackLoading(true);
 
-    const name = feedbackAnswers["f_core_name"] || currentUser?.fullName || "Conference Attendee";
+    const name = feedbackAnswers["f_core_name"] || currentUser?.fullName || "Attendee";
     const email = feedbackAnswers["f_core_email"] || currentUser?.email || "attendee@eventzone.io";
 
     try {
-      await onSubmitFormResponse({
+      const payload = {
         formId: activeFeedbackForm.id,
         respondentName: name,
         respondentEmail: email,
-        ticketTier: "Delegate Pass",
+        ticketTier: activeFeedbackForm.ticketId || "Form Submission",
         answers: feedbackAnswers
-      });
+      };
+
+      if (onSubmitFormResponse) {
+        await onSubmitFormResponse(payload);
+      } else {
+        await submitFormResponse(payload, eventId || eventDetails?.id);
+      }
       setFeedbackSuccess(true);
     } catch (err) {
       console.error("Feedback submit error:", err);
@@ -4854,16 +4902,21 @@ export default function EventPublicLandingPage({
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
           <div className="bg-white border border-slate-200 rounded-3xl p-7 max-w-lg w-full shadow-2xl flex flex-col gap-5 animate-scale-up max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div>
+              <div className="min-w-0 pr-4">
                 <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <Star size={16} className="text-amber-500 fill-amber-500" />
-                  <span>{activeFeedbackForm.title}</span>
+                  <FileText size={18} className="text-blue-600 shrink-0" />
+                  <span className="truncate">{activeFeedbackForm.title}</span>
                 </h3>
-                <p className="text-xs text-slate-400 mt-0.5">{title}</p>
+                <p className="text-xs text-slate-400 mt-0.5 truncate">{title}</p>
+                {activeFeedbackForm.description && (
+                  <p className="text-xs text-slate-600 mt-1 font-medium leading-relaxed">
+                    {activeFeedbackForm.description}
+                  </p>
+                )}
               </div>
               <button
                 onClick={() => setShowFeedbackModal(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 cursor-pointer shrink-0"
               >
                 <X size={16} />
               </button>
@@ -4878,12 +4931,25 @@ export default function EventPublicLandingPage({
                 <p className="text-xs text-slate-500 max-w-xs">
                   {activeFeedbackForm.settings?.successMessage || t("feedback.thankYouDesc", "Your response has been saved and helps us elevate future editions.")}
                 </p>
-                <button
-                  onClick={() => setShowFeedbackModal(false)}
-                  className="mt-3 px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold"
-                >
-                  {t("common.closeWindow", "Close Window")}
-                </button>
+                <div className="flex items-center gap-2 mt-3 flex-wrap justify-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFeedbackSuccess(false);
+                      setFeedbackAnswers({});
+                    }}
+                    className="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                  >
+                    {t("forms.submitAnother", "Submit Another Response")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowFeedbackModal(false)}
+                    className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer"
+                  >
+                    {t("common.closeWindow", "Close Window")}
+                  </button>
+                </div>
               </div>
             ) : (
               <form onSubmit={handleFeedbackSubmit} className="space-y-4 text-start rtl:text-right text-left">
@@ -4956,7 +5022,7 @@ export default function EventPublicLandingPage({
                         />
                       )}
 
-                      {["text", "email", "number"].includes(field.type) && field.id !== "f_core_phone" && (
+                      {["text", "email", "number", "date"].includes(field.type) && field.id !== "f_core_phone" && (
                         <input
                           type={field.type}
                           required={field.required}
@@ -4976,6 +5042,65 @@ export default function EventPublicLandingPage({
                           placeholder={t("common.selectOption", "Select an option...")}
                           searchPlaceholder={t("common.searchChoices", "Search choices...")}
                         />
+                      )}
+
+                      {field.type === "radio" && (
+                        <div className="space-y-1.5 pt-1">
+                          {(field.options || []).map((opt, i) => (
+                            <label key={i} className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 cursor-pointer text-xs font-semibold text-slate-700">
+                              <input
+                                type="radio"
+                                name={`radio_${field.id}`}
+                                value={opt}
+                                checked={feedbackAnswers[field.id] === opt}
+                                onChange={() => setFeedbackAnswers(prev => ({ ...prev, [field.id]: opt }))}
+                                className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-slate-300"
+                              />
+                              <span>{opt}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+
+                      {field.type === "checkbox" && (
+                        <div className="space-y-1.5 pt-1">
+                          {(field.options || []).map((opt, i) => {
+                            const currentVals = Array.isArray(feedbackAnswers[field.id]) ? feedbackAnswers[field.id] : [];
+                            const isChecked = currentVals.includes(opt);
+                            return (
+                              <label key={i} className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 cursor-pointer text-xs font-semibold text-slate-700">
+                                <input
+                                  type="checkbox"
+                                  value={opt}
+                                  checked={isChecked}
+                                  onChange={(e) => {
+                                    const next = e.target.checked
+                                      ? [...currentVals, opt]
+                                      : currentVals.filter(v => v !== opt);
+                                    setFeedbackAnswers(prev => ({ ...prev, [field.id]: next }));
+                                  }}
+                                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-slate-300"
+                                />
+                                <span>{opt}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {field.type === "switch" && (
+                        <div className="flex items-center justify-between py-1.5">
+                          <span className="text-xs text-slate-600 font-medium">{field.placeholder || t("forms.yesOptIn", "Yes, opt-in")}</span>
+                          <button
+                            type="button"
+                            onClick={() => setFeedbackAnswers(prev => ({ ...prev, [field.id]: !prev[field.id] }))}
+                            className={`w-11 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors ${
+                              feedbackAnswers[field.id] ? "bg-blue-600 justify-end" : "bg-slate-300 justify-start"
+                            }`}
+                          >
+                            <span className="bg-white w-4 h-4 rounded-full shadow-md" />
+                          </button>
+                        </div>
                       )}
 
                       {field.type === "rating" && (

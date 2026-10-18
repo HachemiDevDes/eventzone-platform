@@ -217,10 +217,15 @@ export default function EventLandingClient({
   };
 
   // Custom Form Submission Handler
-  const handleFormResponse = async (formId, responseData) => {
-    const res = await submitFormResponse(formId, responseData);
-    if (res && eventDetails?.id) {
-      const updatedSubs = await fetchFormSubmissions(eventDetails.id).catch(() => []);
+  const handleFormResponse = async (subOrFormId, responseData) => {
+    const eid = eventDetails?.id || (typeof subOrFormId === "object" ? subOrFormId?.eventId : null);
+    const submissionPayload = (typeof subOrFormId === "object" && subOrFormId !== null)
+      ? subOrFormId
+      : { formId: subOrFormId, answers: responseData };
+
+    const res = await submitFormResponse(submissionPayload, eid);
+    if (res && eid) {
+      const updatedSubs = await fetchFormSubmissions(eid).catch(() => []);
       setFormSubmissions(updatedSubs);
     }
     return res;

@@ -231,6 +231,8 @@ export default function FormsView({
   onRestoreForm,
   onSubmitResponse,
   activeEventTitle = "Eventzone Conference",
+  activeEventId = null,
+  eventSlug = null,
   effectivePermissions = null,
   floorPlans = []
 }) {
@@ -699,32 +701,147 @@ function generateUuid() {
     }));
   };
 
-  // Open Share Modal & generate QR
+  // Canonical Share URL generator
+  const getFormShareUrl = (form) => {
+    if (typeof window === "undefined" || !form) return "";
+    const targetSlug = eventSlug || activeEventId;
+    if (targetSlug) {
+      return `${window.location.origin}/${targetSlug}?formId=${form.id}`;
+    }
+    return `${window.location.origin}/?formId=${form.id}`;
+  };
+
+  // Open Share Modal & generate high-res QR
   const handleOpenShare = async (form) => {
     setShareModalForm(form);
     setCopiedLink(false);
     try {
-      const shareData = JSON.stringify({
-        event: activeEventTitle,
-        formId: form.id,
-        formTitle: form.title,
-        type: form.type,
-        url: typeof window !== "undefined" ? `${window.location.origin}/?formId=${form.id}` : ""
+      const shareUrl = getFormShareUrl(form);
+      const url = await QRCode.toDataURL(shareUrl, {
+        width: 280,
+        margin: 1.5,
+        color: { dark: "#0b5cdb", light: "#ffffff" }
       });
-      const url = await QRCode.toDataURL(shareData, { width: 240, margin: 1, color: { dark: "#0b5cdb", light: "#ffffff" } });
       setShareQrUrl(url);
     } catch (e) {
       console.warn("QR generation error:", e);
     }
   };
 
-  const handleCopyShareLink = () => {
+  const handleCopyShareLink = (urlOverride) => {
     if (typeof window !== "undefined" && shareModalForm) {
-      const shareUrl = `${window.location.origin}/?formId=${shareModalForm.id}`;
+      const shareUrl = urlOverride || getFormShareUrl(shareModalForm);
       navigator.clipboard.writeText(shareUrl);
       setCopiedLink(true);
       setTimeout(() => setCopiedLink(false), 3000);
     }
+  };
+
+  // Shared Share & QR Code Modal
+  const renderShareModal = () => {
+    if (!shareModalForm) return null;
+    const shareUrl = getFormShareUrl(shareModalForm);
+
+    return (
+      <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in">
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl flex flex-col gap-5 text-center animate-scale-up">
+          {/* Header */}
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3 text-start rtl:text-right text-left">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-9 h-9 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100">
+                <Share2 size={18} />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-base font-bold text-slate-900 truncate">
+                  {t("forms.shareModalTitle", "Share Form & QR Code")}
+                </h3>
+                <p className="text-xs text-slate-500 truncate">
+                  {shareModalForm.title} • {activeEventTitle}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShareModalForm(null)}
+              className="p-1.5 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100 font-bold cursor-pointer transition-colors shrink-0"
+              title={t("common.close", "Close")}
+              aria-label={t("common.close", "Close")}
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          {/* QR Code Canvas */}
+          <div className="flex flex-col items-center gap-3 bg-slate-50/80 rounded-2xl p-5 border border-slate-100">
+            {shareQrUrl ? (
+              <div className="p-3 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
+                <img src={shareQrUrl} alt="Form QR Code" className="w-48 h-48 rounded-xl object-contain" />
+              </div>
+            ) : (
+              <div className="w-48 h-48 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400 text-xs font-semibold animate-pulse">
+                {t("forms.generatingQr", "Generating QR...")}
+              </div>
+            )}
+            <div className="flex items-center gap-2 text-xs text-slate-600 font-medium">
+              <Smartphone size={14} className="text-blue-600 shrink-0" />
+              <span>{t("forms.scanOnMobileToOpen", "Scan with mobile camera to open this form directly")}</span>
+            </div>
+
+            {/* Download QR button */}
+            {shareQrUrl && (
+              <a
+                href={shareQrUrl}
+                download={`${(shareModalForm.title || "form").toLowerCase().replace(/[^a-z0-9]/g, "_")}_qr.png`}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-2xs hover:border-slate-300 transition-all cursor-pointer"
+              >
+                <Download size={13} className="text-blue-600" />
+                <span>{t("forms.downloadQr", "Download QR Image")}</span>
+              </a>
+            )}
+          </div>
+
+          {/* Share Link with Copy & Open in New Tab */}
+          <div className="flex flex-col gap-2 text-start rtl:text-right text-left">
+            <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
+              <span>{t("forms.shareableLink", "Shareable Link")}</span>
+              <span className="text-[10px] text-slate-400 font-normal">
+                {t("forms.publicAccess", "Public Access")}
+              </span>
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                readOnly
+                value={shareUrl}
+                onFocus={(e) => e.target.select()}
+                className="flex-1 min-w-0 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-700 outline-none select-all truncate"
+              />
+              <button
+                type="button"
+                onClick={() => handleCopyShareLink(shareUrl)}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 ${
+                  copiedLink
+                    ? "bg-emerald-600 text-white shadow-xs"
+                    : "bg-blue-600 hover:bg-blue-700 text-white shadow-xs hover:shadow-sm"
+                }`}
+              >
+                {copiedLink ? <Check size={14} /> : <Copy size={14} />}
+                <span>{copiedLink ? t("common.copied", "Copied!") : t("common.copy", "Copy")}</span>
+              </button>
+              <a
+                href={shareUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 rounded-xl border border-slate-200 hover:border-blue-500 hover:bg-blue-50/50 text-slate-600 hover:text-blue-600 transition-all cursor-pointer shrink-0"
+                title={t("forms.openLinkNewTab", "Open link in new tab")}
+                aria-label={t("forms.openLinkNewTab", "Open link in new tab")}
+              >
+                <ExternalLink size={15} />
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   // Export Submissions to CSV
@@ -2718,6 +2835,9 @@ function generateUuid() {
             </div>
           </div>
         )}
+
+        {/* Share & QR Code Modal */}
+        {renderShareModal()}
       </div>
     );
   }
@@ -3043,49 +3163,8 @@ function generateUuid() {
         </div>
       )}
 
-      {/* ===================================================================== */}
-      {/* SHARE / QR CODE MODAL                                                 */}
-      {/* ===================================================================== */}
-      {shareModalForm && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white border border-slate-200 rounded-3xl p-7 max-w-md w-full shadow-2xl flex flex-col gap-6 text-center animate-scale-up">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3 text-start rtl:text-right text-left">
-              <div>
-                <h3 className="text-base font-bold text-slate-900">{t("forms.shareModalTitle", "Share Form & QR Code")}</h3>
-                <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">{shareModalForm.title}</p>
-              </div>
-              <button
-                onClick={() => setShareModalForm(null)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 font-bold cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* QR Code Canvas */}
-            <div className="flex flex-col items-center gap-3 bg-slate-50 rounded-2xl p-6 border border-slate-100">
-              {shareQrUrl ? (
-                <img src={shareQrUrl} alt="Form QR Code" className="w-48 h-48 rounded-xl shadow-xs" />
-              ) : (
-                <div className="w-48 h-48 bg-slate-200 rounded-xl flex items-center justify-center text-slate-400 text-xs">
-                  {t("forms.generatingQr", "Generating QR...")}
-                </div>
-              )}
-              <span className="text-xs text-slate-500 font-semibold">
-                {t("forms.scanOnMobileToOpen", "Scan on mobile to open live feedback form")}
-              </span>
-            </div>
-
-            {/* Share Link Copy */}
-            <button
-              onClick={handleCopyShareLink}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-md shadow-blue-600/20 transition-all flex items-center justify-center cursor-pointer"
-            >
-              <span>{copiedLink ? t("forms.linkCopied", "Link Copied to Clipboard!") : t("forms.copyDirectPublicLink", "Copy Direct Public Link")}</span>
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Share & QR Code Modal */}
+      {renderShareModal()}
     </div>
   );
 }
