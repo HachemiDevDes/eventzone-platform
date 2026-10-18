@@ -5100,7 +5100,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
               <button
                 type="button"
                 onClick={() => setLangDropdownOpen(o => !o)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer shadow-2xs"
+                className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer"
                 title={`Language: ${languages.find(l => l.code === lang)?.label || "Language"}`}
               >
                 <img src={languages.find(l => l.code === lang)?.icon || "https://i.imgur.com/NXtMImD.png"} alt={lang} className="w-4 h-4 object-contain rounded-xs" />
