@@ -208,6 +208,9 @@ const getFormTypeBadgeText = (typeStr, t) => {
   if (s.includes("inquiry") || s.includes("proposal")) {
     return t("forms.catInquiriesProposals", "Inquiries & Proposals");
   }
+  if (s.includes("custom")) {
+    return t("forms.catCustomForm", "Custom Form");
+  }
   return typeStr.replace(/_/g, " ");
 };
 
@@ -433,7 +436,7 @@ export default function FormsView({
   // Submissions for active form
   const activeSubmissions = useMemo(() => {
     if (!activeFormId) return [];
-    return submissions.filter(s => s.formId === activeFormId);
+    return submissions.filter(s => s.formId === activeFormId || s.form_id === activeFormId);
   }, [activeFormId, submissions]);
 
   // Global KPIs across all forms
@@ -505,8 +508,8 @@ function generateUuid() {
       id: generateUuid(),
       title: "New Custom Form",
       description: "Enter instructions or context for this form...",
-      type: "ticket_registration",
-      ticketId: "all",
+      type: "custom",
+      ticketId: null,
       status: "active",
       settings: {
         submitButtonText: "Submit",
@@ -704,11 +707,7 @@ function generateUuid() {
   // Canonical Share URL generator
   const getFormShareUrl = (form) => {
     if (typeof window === "undefined" || !form) return "";
-    const targetSlug = eventSlug || activeEventId;
-    if (targetSlug) {
-      return `${window.location.origin}/${targetSlug}?formId=${form.id}`;
-    }
-    return `${window.location.origin}/?formId=${form.id}`;
+    return `${window.location.origin}/forms/${form.id}`;
   };
 
   // Open Share Modal & generate high-res QR
@@ -1942,9 +1941,14 @@ function generateUuid() {
                   {t("forms.formCategoryPurpose", "Form Category & Purpose")}
                 </label>
                 <SearchableSelect
-                  value={editingForm.type}
-                  onChange={(val) => setEditingForm(prev => ({ ...prev, type: val }))}
+                  value={editingForm.type || "custom"}
+                  onChange={(val) => setEditingForm(prev => ({
+                    ...prev,
+                    type: val,
+                    ticketId: val === "ticket_registration" ? (prev.ticketId || "all") : null
+                  }))}
                   options={[
+                    { value: "custom", label: t("forms.purposeCustomStandalone", "Independent Custom Form (Standalone Public Link)") },
                     { value: "ticket_registration", label: t("forms.purposeTicketReg", "Ticket Registration & Checkout Intake") },
                     { value: "feedback_survey", label: t("forms.purposeFeedbackSurvey", "Post-Event Attendee Feedback & CSAT") },
                     { value: "session_survey", label: t("forms.purposeSessionSurvey", "Breakout Session / Speaker Evaluation") },
@@ -1959,7 +1963,7 @@ function generateUuid() {
                   {t("forms.publicationStatus", "Publication Status")}
                 </label>
                 <SearchableSelect
-                  value={editingForm.status}
+                  value={editingForm.status || "active"}
                   onChange={(val) => setEditingForm(prev => ({ ...prev, status: val }))}
                   options={[
                     { value: "active", label: t("forms.statusActiveAccepting", "Active (Accepting Responses)") },
@@ -1971,31 +1975,60 @@ function generateUuid() {
               </div>
             </div>
 
-            {/* Linked Tickets Info (Manual ticket-to-form linking via Ticket Editor) */}
-            {(() => {
-              const linkedTickets = (tickets || []).filter(t => t.formId === editingForm.id || t.form_id === editingForm.id);
-              return (
-                <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 flex flex-col gap-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-800">{t("forms.linkedTickets", "Linked Tickets")}</span>
-                    <span className="text-[11px] font-semibold text-slate-500">{t("forms.configuredInTicketEditor", "Configured in Ticket Editor")}</span>
-                  </div>
-                  {linkedTickets.length > 0 ? (
-                    <div className="flex flex-wrap gap-1.5 pt-1">
-                      {linkedTickets.map(tk => (
-                        <span key={tk.id || tk.tier || tk.name} className="px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-200 text-blue-800 font-bold text-xs">
-                          {tk.name || tk.tier}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <span className="text-xs text-slate-500 italic">
-                      {t("forms.notLinkedToTicketTier", "This form is currently not linked to any ticket tier. You can link it to any ticket when creating or editing tickets in the Tickets dashboard.")}
+            {/* Ticket Tier Linker (Link to a ticket tier or keep independent) */}
+            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 flex flex-col gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-800 mb-1">
+                  {t("forms.linkToTicketTierLabel", "Link to Ticket Tier (Optional)")}
+                </label>
+                <p className="text-[11px] text-slate-500 mb-2">
+                  {t("forms.linkToTicketTierHint", "Independent forms can be shared with anyone. If linked to a ticket, this form will be loaded during checkout for that ticket tier.")}
+                </p>
+                <SearchableSelect
+                  value={editingForm.ticketId || "none"}
+                  onChange={(val) => {
+                    const isNone = !val || val === "none";
+                    setEditingForm(prev => ({
+                      ...prev,
+                      ticketId: isNone ? null : val,
+                      type: isNone ? (prev.type === "ticket_registration" ? "custom" : (prev.type || "custom")) : "ticket_registration"
+                    }));
+                  }}
+                  options={[
+                    { value: "none", label: t("forms.ticketLinkNone", "None (Independent Standalone Form)") },
+                    { value: "all", label: t("forms.ticketLinkAll", "All Ticket Tiers (Global Event Registration)") },
+                    ...(tickets || [])
+                      .filter(tk => !tk.isArchived && tk.status !== "archived")
+                      .map(tk => ({
+                        value: tk.id,
+                        label: `${tk.name || tk.tier}${tk.price ? ` (${tk.price} DZD)` : " (Free)"}`
+                      }))
+                  ]}
+                  placeholder={t("forms.selectTicketPlaceholder", "Select ticket tier...")}
+                />
+              </div>
+
+              {/* Linked Tickets Info */}
+              {(() => {
+                const linkedTickets = (tickets || []).filter(t => t.formId === editingForm.id || t.form_id === editingForm.id || editingForm.ticketId === t.id || editingForm.ticketId === "all");
+                return linkedTickets.length > 0 ? (
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-slate-200/60">
+                    <span className="text-[11px] font-bold text-slate-600 me-1">
+                      {t("forms.activeLinkedTickets", "Linked to:")}
                     </span>
-                  )}
-                </div>
-              );
-            })()}
+                    {linkedTickets.map(tk => (
+                      <span key={tk.id || tk.tier || tk.name} className="px-2.5 py-0.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-800 font-bold text-[11px]">
+                        {tk.name || tk.tier}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="pt-1 border-t border-slate-200/60 text-[11px] text-slate-500 italic">
+                    {t("forms.standaloneFormInfo", "This form is currently an independent standalone form. Anyone with the shareable link can fill it out.")}
+                  </div>
+                );
+              })()}
+            </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">
@@ -3021,10 +3054,10 @@ function generateUuid() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredForms.map(form => {
             const isArchived = form.status === "archived" || form.isArchived;
-            const formSubs = submissions.filter(s => s.formId === form.id);
+            const formSubs = submissions.filter(s => s.formId === form.id || s.form_id === form.id);
             const formTypeStr = typeof form.type === 'string' && form.type.trim() 
               ? form.type 
-              : (typeof form.category === 'string' && form.category.trim() ? form.category : 'ticket_registration');
+              : (typeof form.category === 'string' && form.category.trim() ? form.category : 'custom');
             const isTicket = formTypeStr.toLowerCase().includes("ticket") || formTypeStr.toLowerCase().includes("registration");
             const isFeedback = formTypeStr.toLowerCase().includes("feedback") || formTypeStr.toLowerCase().includes("survey");
 

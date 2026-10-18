@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { fetchEventDetails, fetchTickets, fetchForms } from "../../lib/db";
 import { stripHtml } from "../../lib/constants";
 import EventLandingClient from "./EventLandingClient";
@@ -147,10 +148,16 @@ export async function generateMetadata(props) {
  * Server Component: Injects Google Event Schema.org JSON-LD Structured Data
  * and passes initialEvent to the interactive client component
  */
-export default async function Page({ params }) {
-  const resolvedParams = await params;
+export default async function Page(props) {
+  const resolvedParams = props?.params ? await props.params : {};
+  const searchParams = props?.searchParams ? await props.searchParams : {};
   const rawSlug = resolvedParams?.slug;
   const slug = Array.isArray(rawSlug) ? rawSlug[0] : (rawSlug || "");
+
+  const targetFormId = searchParams?.formId || searchParams?.form;
+  if (targetFormId) {
+    redirect(`/forms/${targetFormId}`);
+  }
 
   const event = await fetchEventDetails(slug);
   let initialTickets = [];

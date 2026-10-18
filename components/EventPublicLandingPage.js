@@ -1242,43 +1242,15 @@ export default function EventPublicLandingPage({
       ? internalForms
       : (cachedForms || []));
 
-  // Handle shareable form parameter (?formId=...)
+  // Handle shareable form parameter (?formId=...) -> Redirect to dedicated standalone form page
   useEffect(() => {
     if (typeof window === "undefined") return;
     const sp = new URLSearchParams(window.location.search);
     const targetFId = sp.get("formId") || sp.get("form");
     if (!targetFId) return;
 
-    let isMounted = true;
-    const processFoundForm = (matched) => {
-      if (!isMounted || !matched) return;
-      setDirectForm(matched);
-      if (matched.type === "ticket_registration") {
-        if (matched.ticketId && matched.ticketId !== "all") {
-          const linkedTicket = eventTickets.find(t => t.id === matched.ticketId);
-          if (linkedTicket) {
-            setSelectedTier(linkedTicket.name || linkedTicket.tier);
-          }
-        }
-        setShowRsvpModal(true);
-      } else {
-        setShowFeedbackModal(true);
-      }
-    };
-
-    const matched = rawForms.find(f => f.id === targetFId);
-    if (matched) {
-      processFoundForm(matched);
-    } else {
-      fetchFormById(targetFId).then(fetched => {
-        if (fetched) {
-          processFoundForm(fetched);
-        }
-      }).catch(console.warn);
-    }
-
-    return () => { isMounted = false; };
-  }, [rawForms, eventTickets]);
+    window.location.replace(`/forms/${targetFId}`);
+  }, []);
 
   const urlFormId = typeof window !== "undefined" ? (new URLSearchParams(window.location.search).get("formId") || new URLSearchParams(window.location.search).get("form")) : null;
 

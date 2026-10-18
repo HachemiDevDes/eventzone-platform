@@ -185,23 +185,9 @@ export default async function Page(props) {
   const searchParams = props?.searchParams ? await props.searchParams : {};
   const formIdParam = searchParams?.formId || searchParams?.form;
 
-  // If a shareable form link was opened at root, resolve its event and redirect to the canonical event slug URL
+  // If a shareable form link was opened at root, redirect to the canonical standalone /forms/[id] URL
   if (formIdParam) {
-    try {
-      const formObj = await fetchFormById(formIdParam);
-      if (formObj && (formObj.eventId || formObj.event_id)) {
-        const targetEvent = await fetchEventDetails(formObj.eventId || formObj.event_id);
-        if (targetEvent && (targetEvent.slug || targetEvent.id)) {
-          redirect(`/${targetEvent.slug || targetEvent.id}?formId=${formIdParam}`);
-        }
-      }
-    } catch (e) {
-      // In Next.js, redirect throws a NEXT_REDIRECT exception which should be re-thrown
-      if (e?.message === "NEXT_REDIRECT" || e?.digest?.startsWith?.("NEXT_REDIRECT")) {
-        throw e;
-      }
-      console.warn("Direct form resolution notice:", e);
-    }
+    redirect(`/forms/${formIdParam}`);
   }
 
   const rawView = searchParams?.view;
@@ -209,7 +195,7 @@ export default async function Page(props) {
   const rsvpParam = searchParams?.rsvp;
   let initialView = "home";
 
-  if (rsvpParam === "true" || viewParam === "public-rsvp" || (viewParam === "rsvp" && searchParams?.public === "true") || formIdParam) {
+  if (rsvpParam === "true" || viewParam === "public-rsvp" || (viewParam === "rsvp" && searchParams?.public === "true")) {
     initialView = "event-landing";
   } else if (viewParam) {
     const validViews = [

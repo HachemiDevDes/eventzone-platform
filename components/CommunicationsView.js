@@ -978,9 +978,9 @@ export default function CommunicationsView({ state = {}, onUpdateState }) {
       const matched = activeForms.find(f => f.id === selectedFormId);
       if (matched) {
         if (typeof window !== "undefined") {
-          return `${window.location.origin}/?formId=${matched.id}`;
+          return `${window.location.origin}/forms/${matched.id}`;
         }
-        return `/?formId=${matched.id}`;
+        return `/forms/${matched.id}`;
       }
     }
     return customFormUrl.trim() || "";
