@@ -5080,7 +5080,7 @@ export function HomeContent({ initialPublicEvents = [], initialView = "home", in
   const showTabInvoicing = canViewModule("invoicing", effectivePermissions.permissions) && matchesTabQuery(t("dash.invoicing", "Facturation & Devis"), ["Facturation & Devis", "Invoicing & Quotes", "invoicing", "quotes", "facturation", "devis", "billing", "invoices", "receipts", "finance"]);
 
   const matchGroupCheckIn = matchesTabQuery(t("dash.checkIn", "Check In"), ["Check In", "qr", "scanner", "arrival", "gate", "badge scan", "desk", "check-in"]);
-  const matchSubCheckInWebApp = matchesTabQuery(t("checkin.tabWebApp", "Web App & Access"), ["Web App & Access", "web app", "access", "passcode", "link", "qr code", "ci.eventzone.pro"]);
+  const matchSubCheckInWebApp = matchesTabQuery(t("checkin.tabWebApp", "Web App & Access"), ["Web App & Access", "web app", "access", "passcode", "link", "qr code", "eventzone.pro/checkin", "checkin", "ci.eventzone.pro"]);
   const matchSubCheckInGates = matchesTabQuery(t("checkin.tabGates", "Admission Gates"), ["Admission Gates", "gates", "doors", "entrance", "turnstile", "passcodes"]);
   const matchSubCheckInAttendees = matchesTabQuery(t("checkin.tabAttendees", "Checked-In Attendees"), ["Checked-In Attendees", "attendees list", "checked in roster", "export excel", "export pdf", "roster"]);
 

@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import CheckInMobileAppWrapper from "./CheckInMobileAppWrapper";
 
 export const metadata = {
-  title: "Eventzone Check-In Desk | ci.eventzone.pro",
+  title: "Eventzone Check-In Desk | eventzone.pro/checkin",
   description: "Mobile-optimized on-site check-in and QR scanner portal for event organizers and gate staff.",
 };
 

@@ -934,7 +934,7 @@ function VisualGraphicCard({ item, idx, featureSlug, lang = "fr" }) {
           </div>
         </div>
         <div className="text-center text-xs font-mono font-medium text-slate-500">
-          Terminal mobile : ci.eventzone.pro
+          Terminal mobile : eventzone.pro/checkin
         </div>
       </div>
     );

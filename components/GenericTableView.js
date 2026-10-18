@@ -6470,7 +6470,7 @@ function CheckInView({ state, onUpdateState }) {
   const getGateCheckinUrl = useCallback((gate) => {
     if (typeof window === "undefined") return "";
     const origin = window.location.origin;
-    const baseUrl = origin.includes("eventzone.pro") ? "https://ci.eventzone.pro" : origin;
+    const baseUrl = origin.includes("eventzone.pro") ? "https://www.eventzone.pro" : origin;
     const targetGate = gate || activeGate;
     const gName = targetGate?.name || "Principal Gate";
     const gCode = targetGate?.passcode || principalPasscode;
@@ -6937,7 +6937,7 @@ function CheckInView({ state, onUpdateState }) {
           <Smartphone size={15} />
           <span>{t("checkin.tabWebApp", "Web App & Access")}</span>
           <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${activeSubTab === "webapp" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"}`}>
-            ci.eventzone.pro
+            eventzone.pro/checkin
           </span>
           {activeSubTab === "webapp" && (
             <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-blue-600" />
@@ -6999,7 +6999,7 @@ function CheckInView({ state, onUpdateState }) {
                     {t("checkin.mobileStaffApp", "Mobile Staff Check-In Web App")}
                   </h3>
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-50 text-blue-700 border border-blue-200/70 uppercase tracking-wider">
-                    ci.eventzone.pro
+                    eventzone.pro/checkin
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 leading-relaxed">
@@ -7240,7 +7240,7 @@ function CheckInView({ state, onUpdateState }) {
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("checkin.rapidDoorStatus", "Rapid Door Status")}</span>
                 <div className="text-xl font-extrabold text-slate-800 mt-2">{t("checkin.readyForScans", "Ready for Scans")}</div>
                 <p className="text-xs text-slate-500 mt-1">
-                  Scannable unique QR codes active on ci.eventzone.pro across all admission gates.
+                  Scannable unique QR codes active on eventzone.pro/checkin across all admission gates.
                 </p>
               </div>
               <span className="text-[11px] text-emerald-600 font-bold flex items-center gap-1.5 mt-4">
@@ -7505,7 +7505,7 @@ function CheckInView({ state, onUpdateState }) {
                 <div className="text-2xl font-extrabold text-slate-800 mt-2">{t("checkin.readyForScans", "Ready for Scans")}</div>
               </div>
               <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1 mt-4">
-                <Check size={12} className={isRTL ? "ml-1" : "mr-1"} /> {t("checkin.scannableActive", "Scannable unique QR codes active on ci.eventzone.pro")}
+                <Check size={12} className={isRTL ? "ml-1" : "mr-1"} /> {t("checkin.scannableActive", "Scannable unique QR codes active on eventzone.pro/checkin")}
               </span>
             </div>
           </div>
@@ -8067,7 +8067,7 @@ function CheckInView({ state, onUpdateState }) {
               <div className="p-3 rounded-xl bg-blue-50/50 border border-blue-100 text-[11px] text-blue-900 space-y-1">
                 <p className="font-semibold">{t("checkin.gateHowItWorks", "How Gate Passcodes Work:")}</p>
                 <p className="text-slate-600 text-[11px] leading-relaxed">
-                  {t("checkin.gateHowItWorksDesc", "When gate staff sign in at ci.eventzone.pro using this passcode, attendee check-ins and QR scans are instantly tagged to this gate in real time.")}
+                  {t("checkin.gateHowItWorksDesc", "When gate staff sign in at eventzone.pro/checkin using this passcode, attendee check-ins and QR scans are instantly tagged to this gate in real time.")}
                 </p>
               </div>
 
