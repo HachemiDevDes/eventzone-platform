@@ -6193,6 +6193,7 @@ function CheckInView({ state, onUpdateState }) {
 
   const [selectedGateId, setSelectedGateId] = useState("principal");
   const [gateFilter, setGateFilter] = useState("all");
+  const [ticketTypeFilter, setTicketTypeFilter] = useState("all");
   const [showGateModal, setShowGateModal] = useState(false);
   const [editingGate, setEditingGate] = useState(null);
   const [gateFormName, setGateFormName] = useState("");
@@ -6226,6 +6227,31 @@ function CheckInView({ state, onUpdateState }) {
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [copiedInvite, setCopiedInvite] = useState(false);
   const [webAppQrUrl, setWebAppQrUrl] = useState("");
+
+  // Dynamic ticket type options with attendee counts
+  const ticketTypeOptions = useMemo(() => {
+    const counts = {};
+    attendees.forEach(a => {
+      const type = (a.ticketType || a.ticket_type || "Standard").trim();
+      counts[type] = (counts[type] || 0) + 1;
+    });
+
+    (tickets || []).forEach(t => {
+      const name = (t.name || t.tier || "").trim();
+      if (name && !(name in counts)) {
+        counts[name] = 0;
+      }
+    });
+
+    const entries = Object.keys(counts).sort((a, b) => a.localeCompare(b));
+    return [
+      { value: "all", label: `${t("checkin.filterAllTicketTypes", "All Ticket Types")} (${attendees.length})` },
+      ...entries.map(name => ({
+        value: name,
+        label: `${name} (${counts[name]})`
+      }))
+    ];
+  }, [attendees, tickets, t]);
 
   const [search, setSearch] = useState("");
   const [selectedBadgeAttendee, setSelectedBadgeAttendee] = useState(null);
@@ -6504,14 +6530,32 @@ function CheckInView({ state, onUpdateState }) {
     window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 
+  const getExportFilterLabel = useCallback(() => {
+    const parts = [];
+    if (statusSubFilter === "checked_in") parts.push("Checked In");
+    else if (statusSubFilter === "pending") parts.push("Pending");
+    else parts.push("All");
+
+    if (ticketTypeFilter !== "all") {
+      parts.push(ticketTypeFilter);
+    }
+
+    if (gateFilter !== "all") {
+      if (gateFilter === "principal") {
+        parts.push("Principal Gate");
+      } else if (gateFilter === "not_checked_in") {
+        parts.push("Pending Admission");
+      } else {
+        const g = rawGates.find(item => item.id === gateFilter);
+        parts.push(g?.name || gateFilter);
+      }
+    }
+
+    return parts.join(" - ");
+  }, [statusSubFilter, ticketTypeFilter, gateFilter, rawGates]);
+
   const handleExportCheckInExcel = () => {
-    const filterLabel = statusSubFilter === "checked_in" 
-      ? "Checked_In" 
-      : statusSubFilter === "pending" 
-      ? "Pending" 
-      : gateFilter !== "all" 
-      ? `Gate_${gateFilter}` 
-      : "All";
+    const filterLabel = getExportFilterLabel();
     exportCheckInListToExcel(filtered, eventDetails, filterLabel);
   };
 
@@ -6519,13 +6563,7 @@ function CheckInView({ state, onUpdateState }) {
     if (isExportingPdf) return;
     setIsExportingPdf(true);
     try {
-      const filterLabel = statusSubFilter === "checked_in" 
-        ? "Checked In Attendees" 
-        : statusSubFilter === "pending" 
-        ? "Pending (Not Checked In)" 
-        : gateFilter !== "all" 
-        ? `Filtered by Gate (${gateFilter})` 
-        : "All Attendees";
+      const filterLabel = getExportFilterLabel();
 
       const res = await fetch(`/api/events/${eventId}/attendees/export-pdf`, {
         method: "POST",
@@ -6572,7 +6610,7 @@ function CheckInView({ state, onUpdateState }) {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, gateFilter, statusSubFilter]);
+  }, [search, gateFilter, statusSubFilter, ticketTypeFilter]);
 
   const handleToggle = async (id) => {
     if (!canEdit) return;
@@ -6762,6 +6800,14 @@ function CheckInView({ state, onUpdateState }) {
       if (statusSubFilter === "checked_in" && !isChecked) return false;
       if (statusSubFilter === "pending" && isChecked) return false;
 
+      // Ticket Type Filter
+      if (ticketTypeFilter !== "all") {
+        const aType = (a.ticketType || a.ticket_type || "Standard").trim().toLowerCase();
+        if (aType !== ticketTypeFilter.trim().toLowerCase()) {
+          return false;
+        }
+      }
+
       const matchesSearch = !searchLower || (
         (a.name || "").toLowerCase().includes(searchLower) ||
         (a.email || "").toLowerCase().includes(searchLower) ||
@@ -6791,7 +6837,7 @@ function CheckInView({ state, onUpdateState }) {
 
       return true;
     });
-  }, [attendees, search, gateFilter, statusSubFilter, rawGates]);
+  }, [attendees, search, gateFilter, statusSubFilter, ticketTypeFilter, rawGates]);
 
   const paginated = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
@@ -7587,6 +7633,19 @@ function CheckInView({ state, onUpdateState }) {
                     buttonClassName="py-2 text-xs rounded-xl border-slate-200 bg-slate-50 focus:bg-white"
                   />
                 </div>
+
+                {/* Filter by Ticket Type Dropdown */}
+                <div className="w-full sm:w-56 shrink-0">
+                  <SearchableSelect
+                    value={ticketTypeFilter}
+                    onChange={(val) => setTicketTypeFilter(val || "all")}
+                    options={ticketTypeOptions}
+                    placeholder={t("checkin.filterByTicketTypePlaceholder", "Filter by Ticket Type")}
+                    isClearable={false}
+                    showSearch={ticketTypeOptions.length > 4}
+                    buttonClassName="py-2 text-xs rounded-xl border-slate-200 bg-slate-50 focus:bg-white"
+                  />
+                </div>
               </div>
 
               {/* Barcode input for scanner gun */}
@@ -7634,7 +7693,7 @@ function CheckInView({ state, onUpdateState }) {
                   {paginated.length === 0 ? (
                     <tr>
                       <td colSpan="6" className="text-center text-slate-400 py-12">
-                        {search || gateFilter !== "all" || statusSubFilter !== "all"
+                        {search || gateFilter !== "all" || statusSubFilter !== "all" || ticketTypeFilter !== "all"
                           ? t("checkin.noMatchingAttendees", "No attendees match your current filters.")
                           : t("checkin.noAttendeesYet", "No attendees registered yet.")}
                       </td>

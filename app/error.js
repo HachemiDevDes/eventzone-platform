@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { AlertCircle, RefreshCw, Home, ChevronDown, ChevronUp, Copy, Check } from "lucide-react";
+import { AlertCircle, RefreshCw, Home, ChevronDown, ChevronUp, Copy, Check, Send, Loader2 } from "lucide-react";
 import { useLanguage, translations } from "@/lib/i18n";
 
 export default function GlobalErrorPage({ error, reset }) {
@@ -21,6 +21,9 @@ export default function GlobalErrorPage({ error, reset }) {
 
   const [showDetails, setShowDetails] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [sendingReport, setSendingReport] = useState(false);
+  const [reportSent, setReportSent] = useState(false);
+  const [reportError, setReportError] = useState(false);
 
   useEffect(() => {
     // Log the error to client console or monitoring
@@ -33,6 +36,66 @@ export default function GlobalErrorPage({ error, reset }) {
       navigator.clipboard.writeText(errorText);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleSendReport = async () => {
+    if (sendingReport || reportSent) return;
+    setSendingReport(true);
+    setReportError(false);
+
+    try {
+      let userEmail = "";
+      let userId = "";
+      if (typeof window !== "undefined") {
+        try {
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && (key.includes("auth-token") || key.includes("supabase.auth.token"))) {
+              const val = JSON.parse(localStorage.getItem(key) || "{}");
+              const u = val?.user || val?.currentSession?.user;
+              if (u?.email) userEmail = u.email;
+              if (u?.id) userId = u.id;
+              break;
+            }
+          }
+        } catch (_) {}
+      }
+
+      const payload = {
+        error: {
+          name: error?.name || "Error",
+          message: error?.message || "Unknown error",
+          stack: error?.stack || null,
+          digest: error?.digest || null,
+        },
+        url: typeof window !== "undefined" ? window.location.href : "",
+        referrer: typeof document !== "undefined" ? document.referrer : "",
+        userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "",
+        language: currentLang,
+        timestamp: new Date().toISOString(),
+        user: {
+          email: userEmail || undefined,
+          id: userId || undefined,
+        },
+      };
+
+      const res = await fetch("/api/email/report-error", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to send report");
+      }
+
+      setReportSent(true);
+    } catch (err) {
+      console.error("Failed to submit error report:", err);
+      setReportError(true);
+    } finally {
+      setSendingReport(false);
     }
   };
 
@@ -64,23 +127,61 @@ export default function GlobalErrorPage({ error, reset }) {
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 pt-2">
+        <div className="space-y-2 pt-2">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => reset()}
+              className="w-full sm:w-1/2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md shadow-blue-600/20"
+            >
+              <RefreshCw size={13} />
+              <span>{t("error.reloadView", "Reload View")}</span>
+            </button>
+
+            <Link
+              href="/"
+              className="w-full sm:w-1/2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+            >
+              <Home size={13} />
+              <span>{t("error.goToHome", "Go to Home")}</span>
+            </Link>
+          </div>
+
           <button
             type="button"
-            onClick={() => reset()}
-            className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md shadow-blue-600/20"
+            onClick={handleSendReport}
+            disabled={sendingReport || reportSent}
+            className={`w-full px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              reportSent
+                ? "bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default"
+                : reportError
+                ? "bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100"
+                : "bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 hover:border-slate-300"
+            }`}
           >
-            <RefreshCw size={13} />
-            <span>{t("error.reloadView", "Reload View")}</span>
+            {sendingReport ? (
+              <>
+                <Loader2 size={13} className="animate-spin text-blue-600" />
+                <span>{t("error.sendingReport", "Sending Report...")}</span>
+              </>
+            ) : reportSent ? (
+              <>
+                <Check size={14} className="text-emerald-600" />
+                <span>{t("error.reportSent", "Report Sent to Support!")}</span>
+              </>
+            ) : (
+              <>
+                <Send size={13} className={reportError ? "text-rose-600" : "text-slate-500"} />
+                <span>{reportError ? t("error.reportFailed", "Failed to Send — Click to Retry") : t("error.sendReport", "Send Error to Eventzone")}</span>
+              </>
+            )}
           </button>
 
-          <Link
-            href="/"
-            className="w-full sm:w-auto px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
-          >
-            <Home size={13} />
-            <span>{t("error.goToHome", "Go to Home")}</span>
-          </Link>
+          {reportSent && (
+            <p className="text-[11px] text-emerald-600 font-medium pt-0.5">
+              {t("error.reportSentDesc", "Thank you! Our technical team has received the diagnostic report at contact@eventzone.pro.")}
+            </p>
+          )}
         </div>
 
         {/* Diagnostic collapsible details for developer / debugging */}
