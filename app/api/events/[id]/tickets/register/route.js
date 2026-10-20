@@ -264,6 +264,66 @@ export async function POST(request, context) {
 
       if (isValidUuid(eventId)) {
         await supabase.from("pending_registrations").insert(pendingRow);
+
+        // If company registration, also register into organizations with status 'pending' and notify organizer team
+        const isCompanyTicket = (
+          body.ticketTarget === "company" ||
+          body.isCompany === true ||
+          matchedTicket?.ticket_target === "company" ||
+          matchedTicket?.badge_settings?.ticketTarget === "company"
+        );
+
+        if (isCompanyTicket) {
+          try {
+            const delegationToken = `del_${Math.random().toString(36).substring(2, 10)}_${Date.now().toString(36)}`;
+            const compRole = body.companyRole || matchedTicket?.badge_settings?.companyRole || "exhibitor";
+            const badgesInc = Number(body.badgesIncluded || matchedTicket?.badge_settings?.badgesIncluded || 2);
+            const compName = company || rawName || "Company Partner";
+
+            await supabase.from("organizations").upsert({
+              id: validId,
+              event_id: eventId,
+              name: compName,
+              contact: rawName,
+              email: rawEmail,
+              phone: rawPhone,
+              job_title: jobTitle || "Corporate Representative",
+              status: "pending",
+              is_archived: false,
+              fiscal_details: {
+                delegationToken,
+                companyRole: compRole,
+                badgesIncluded: badgesInc,
+                ticketId: matchedTicket?.id || ticketId || null,
+                ticketType: resolvedTier,
+              },
+              created_at: new Date().toISOString(),
+            }, { onConflict: "id" });
+
+            // Dispatch urgent pending company notification to organizer & admin team
+            const origin = process.env.NEXT_PUBLIC_APP_URL || "https://eventzone.pro";
+            fetch(`${origin}/api/email/company-pending-notify`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                eventId,
+                orgId: validId,
+                companyName: compName,
+                contactName: rawName,
+                email: rawEmail,
+                phone: rawPhone,
+                jobTitle,
+                companyRole: compRole,
+                ticketType: resolvedTier,
+                badgesIncluded: badgesInc,
+                answers,
+                eventTitle: eventName,
+              }),
+            }).catch((notifyErr) => console.warn("API ticket registration company notify notice:", notifyErr));
+          } catch (orgErr) {
+            console.warn("Notice: Error registering pending company organization:", orgErr);
+          }
+        }
       }
 
       attendeeRecord = {
