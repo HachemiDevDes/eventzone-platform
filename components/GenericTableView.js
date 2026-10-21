@@ -385,7 +385,7 @@ function EventDetailsView({ state, onUpdateState, onUploadFile }) {
                 Upload Custom Banner
                 <input type="file" accept="image/*" onChange={handleBannerUpload} className="hidden" />
               </label>
-              <span className="text-[10px] text-slate-400 font-semibold uppercase">Recommended size: 1200 x 400 pixels</span>
+              <span className="text-[10px] text-slate-400 font-semibold uppercase">Recommended size: 1200 x 573 pixels</span>
             </div>
           </div>
         )}

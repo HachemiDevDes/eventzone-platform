@@ -1099,7 +1099,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
                       {t("wizard.eventCoverBanner", "Event Cover Banner")}
                     </label>
                     <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
-                      {t("wizard.recommendedBannerSizeBadge", "Recommended: 1200 × 400 px (3:1)")}
+                      {t("wizard.recommendedBannerSizeBadge", "Recommended: 1200 × 573 px")}
                     </span>
                   </div>
                   {isCustomBanner && (
@@ -1180,7 +1180,7 @@ export default function EventCreationWizard({ onCancel, onEventCreated, userId, 
                               {t("wizard.dragDropBanner", "Click or Drag & Drop Your Custom Event Picture")}
                             </span>
                             <span className="text-[10.5px] sm:text-[11px] font-semibold text-blue-600 block mt-1">
-                              {t("wizard.recommendedBannerSizeText", "Recommended size: 1200 × 400 px (3:1 aspect ratio) or 16:9")}
+                              {t("wizard.recommendedBannerSizeText", "Recommended size: 1200 × 573 px")}
                             </span>
                             <span className="text-[10px] sm:text-[10.5px] text-slate-400 block mt-0.5">
                               {t("wizard.supportsBannerFormats", "Supports PNG, JPG, WebP, SVG up to 10MB")}
