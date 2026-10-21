@@ -67,7 +67,7 @@ export default async function sitemap() {
       priority: 0.5,
     },
     {
-      url: `${baseUrl}/compliance`,
+      url: `${baseUrl}/compliance-gdpr`,
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.5,

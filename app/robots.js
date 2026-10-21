@@ -8,6 +8,8 @@ export default function robots() {
         allow: [
           "/",
           "/*",
+          "/sitemap.xml",
+          "/robots.txt",
           "/checkin",
           "/privacy",
           "/terms",
