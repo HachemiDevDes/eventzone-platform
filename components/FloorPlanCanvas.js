@@ -5780,22 +5780,15 @@ const FloorPlanCanvas = React.forwardRef(({
                 return lineCount * (fontSize * 1.25);
               };
 
-              const wMeters = (el.width / 20).toFixed(1);
-              const hMeters = (el.height / 20).toFixed(1);
-              const dimText = `${wMeters}m × ${hMeters}m`;
-              const shouldShowDims = showDimensions || isSelected || isHovered;
-
               const labelFontSize = el.fontSize || 16;
               const subFontSize = surfaceMeters <= 9 ? 10 : 12;
               const statusFontSize = surfaceMeters <= 9 ? 8 : Math.max(7.5, Math.min(16, Math.round(Math.min(el.width, el.height) * 0.09)));
 
               const statusHeight = statusFontSize * 1.25;
               const surfaceHeight = subFontSize * 1.25;
-              const hasTwoSubLines = shouldShowDims && el.height >= 85;
-              const subLinesHeight = hasTwoSubLines ? (surfaceHeight * 2 + gap) : surfaceHeight;
 
               // Calculate available height for the name text before pushing surface out of the booth
-              const nonNameHeight = subLinesHeight + statusHeight + topPadding + bottomPadding + gap * 2;
+              const nonNameHeight = surfaceHeight + statusHeight + topPadding + bottomPadding + gap * 2;
               const maxNameHeight = Math.max(labelFontSize * 1.25, el.height - nonNameHeight);
 
               // Cap the name height estimation at maxNameHeight
@@ -5825,88 +5818,24 @@ const FloorPlanCanvas = React.forwardRef(({
               
               currentY += (showLabels ? nameHeight : 0) + gap;
               
-              // 2. Dimensions & Surface Area (cleanly displayed inside the booth)
-              if (showLabels) {
-                if (hasTwoSubLines) {
-                  // Line A: Dimensions (e.g. 6.0m × 6.0m)
-                  textNodes.push(
-                    <Text
-                      key="dimensions"
-                      x={sidePadding}
-                      y={currentY}
-                      width={labelWidth}
-                      height={surfaceHeight}
-                      text={dimText}
-                      align="center"
-                      fontSize={subFontSize}
-                      fontStyle="bold"
-                      fill="#334155"
-                      fontFamily={el.fontFamily || floorPlanFont || "Inter, sans-serif"}
-                      wrap="none"
-                      ellipsis={true}
-                    />
-                  );
-                  currentY += surfaceHeight + 2;
-
-                  // Line B: Surface Area in m² (e.g. 36.00 m²)
-                  textNodes.push(
-                    <Text
-                      key="surface"
-                      x={sidePadding}
-                      y={currentY}
-                      width={labelWidth}
-                      height={surfaceHeight}
-                      text={`${surfaceMeters.toFixed(2)} m²`}
-                      align="center"
-                      fontSize={Math.max(8, subFontSize - 1)}
-                      fontStyle="normal"
-                      fill="#64748b"
-                      fontFamily={el.fontFamily || floorPlanFont || "Inter, sans-serif"}
-                      wrap="none"
-                      ellipsis={true}
-                    />
-                  );
-                } else if (shouldShowDims) {
-                  const compactText = labelWidth >= 90 
-                    ? `${dimText} • ${surfaceMeters.toFixed(1)} m²` 
-                    : dimText;
-                  textNodes.push(
-                    <Text
-                      key="dimensions-surface"
-                      x={sidePadding}
-                      y={currentY}
-                      width={labelWidth}
-                      height={surfaceHeight}
-                      text={compactText}
-                      align="center"
-                      fontSize={subFontSize}
-                      fontStyle="bold"
-                      fill="#475569"
-                      fontFamily={el.fontFamily || floorPlanFont || "Inter, sans-serif"}
-                      wrap="none"
-                      ellipsis={true}
-                    />
-                  );
-                } else {
-                  textNodes.push(
-                    <Text
-                      key="surface"
-                      x={sidePadding}
-                      y={currentY}
-                      width={labelWidth}
-                      height={surfaceHeight}
-                      text={`${surfaceMeters.toFixed(2)} m²`}
-                      align="center"
-                      fontSize={subFontSize}
-                      fontStyle="normal"
-                      fill="#64748b"
-                      fontFamily={el.fontFamily || floorPlanFont || "Inter, sans-serif"}
-                      wrap="none"
-                      ellipsis={true}
-                    />
-                  );
-                }
-              }
+              // 2. Surface Area only
+              showLabels && textNodes.push(
+                <Text
+                  key="surface"
+                  x={sidePadding}
+                  y={currentY}
+                  width={labelWidth}
+                  height={surfaceHeight}
+                  text={`${surfaceMeters.toFixed(2)} m²`}
+                  align="center"
+                  fontSize={subFontSize}
+                  fontStyle="normal"
+                  fill="#64748b"
+                  fontFamily={el.fontFamily || floorPlanFont || "Inter, sans-serif"}
+                  wrap="word"
+                  ellipsis={true}
+                />
+              );
               
               const maxTextGroupHeight = el.height - statusHeight - bottomPadding - gap;
  
